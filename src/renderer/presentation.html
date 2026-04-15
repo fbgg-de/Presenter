@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Presenter - Presentation</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' blob: http://localhost:* ws://localhost:* https: wss:; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http: blob:; media-src 'self' https: http: blob:; font-src 'self' https: data:; worker-src 'self' blob:"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        cursor: none;
+      }
+      #presentation-root {
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="presentation-root"></div>
+    <script type="module" src="/src/presentation/index.tsx"></script>
+  </body>
+</html>

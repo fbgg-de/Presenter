@@ -1,4 +1,12 @@
-/.idea/
-/css/images/
+.vscode
+.idea
+
+node_modules
+dist
+out
+.DS_Store
+.eslintcache
+*.log*
+
 config.php
 error.log

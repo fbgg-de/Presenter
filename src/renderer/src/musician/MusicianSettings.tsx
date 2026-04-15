@@ -1,0 +1,234 @@
+import { useMemo } from 'react';
+import {
+  Box,
+  Drawer,
+  Stack,
+  Typography,
+  Divider,
+  Switch,
+  TextField,
+  Autocomplete,
+  Slider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Chip,
+} from '@mui/material';
+import { createFilterOptions } from '@mui/material/Autocomplete';
+import {
+  DarkMode as DarkModeIcon,
+  LightMode as LightModeIcon,
+  FormatSize as FormatSizeIcon,
+  TextFields as TextFieldsIcon,
+  Visibility as VisibilityIcon,
+  QrCode2 as QrCodeIcon,
+  PictureAsPdf as PdfIcon,
+  ListAlt as ListAltIcon,
+} from '@mui/icons-material';
+import { useAppDispatch } from '@/store';
+import { updateSetting } from '@/store/settingsSlice';
+import { useI18nContext } from '@/i18n/i18n-react';
+
+interface MusicianSettingsProps {
+  open: boolean;
+  onClose: () => void;
+  musicianName: string;
+  musicianBand: string;
+  musicianTheme: 'light' | 'dark';
+  defaultPageView: 'one-page' | 'two-page';
+  blockIndicator: boolean;
+  textSize: number;
+  showFooter: boolean;
+  musicianNames: string[];
+  availableBands: string[];
+  setQrOpen: (open: boolean) => void;
+  setPdfUploadOpen: (open: boolean) => void;
+}
+
+export const MusicianSettings = ({
+  open,
+  onClose,
+  musicianName,
+  musicianBand,
+  musicianTheme,
+  defaultPageView,
+  blockIndicator,
+  textSize,
+  showFooter,
+  musicianNames,
+  availableBands,
+  setQrOpen,
+  setPdfUploadOpen,
+}: MusicianSettingsProps) => {
+  const { LL } = useI18nContext();
+  const dispatch = useAppDispatch();
+  const autocompleteFilter = useMemo(() => createFilterOptions<string>(), []);
+
+  return (
+    <Drawer anchor="right" open={open} onClose={onClose}>
+      <Stack sx={{ width: 320, p: 2, height: '100%' }} spacing={2.5}>
+        <Typography variant="h6" fontWeight={700}>
+          {LL.MUSICIAN_SETTINGS()}
+        </Typography>
+        <Divider />
+
+        {/* Dark / Light mode */}
+        <Stack direction="row" alignItems="center" spacing={1}>
+          {musicianTheme === 'dark' ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
+          <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
+            {musicianTheme === 'dark' ? LL.MUSICIAN_DARK_MODE() : LL.MUSICIAN_LIGHT_MODE()}
+          </Typography>
+          <Switch
+            size="small"
+            checked={musicianTheme === 'dark'}
+            onChange={() => dispatch(updateSetting({ key: 'musicianTheme', value: musicianTheme === 'dark' ? 'light' : 'dark' }))}
+          />
+        </Stack>
+
+        {/* Block indicator */}
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <VisibilityIcon fontSize="small" />
+          <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
+            {LL.MUSICIAN_BLOCK_INDICATOR()}
+          </Typography>
+          <Switch
+            size="small"
+            checked={blockIndicator}
+            onChange={() => dispatch(updateSetting({ key: 'musicianBlockIndicator', value: !blockIndicator }))}
+          />
+        </Stack>
+
+        {/* Show footer */}
+        <Stack direction="row" alignItems="center" spacing={1}>
+          <ListAltIcon fontSize="small" />
+          <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
+            {LL.MUSICIAN_SHOW_FOOTER()}
+          </Typography>
+          <Switch
+            size="small"
+            checked={showFooter}
+            onChange={() => dispatch(updateSetting({ key: 'musicianShowFooter', value: !showFooter }))}
+          />
+        </Stack>
+        <Divider />
+
+        {/* Default page view */}
+        <FormControl size="small" fullWidth>
+          <InputLabel>{LL.MUSICIAN_DEFAULT_PAGE_MODE()}</InputLabel>
+          <Select
+            value={defaultPageView}
+            label={LL.MUSICIAN_DEFAULT_PAGE_MODE()}
+            onChange={(e) => dispatch(updateSetting({ key: 'musicianPageView', value: e.target.value as any }))}
+          >
+            <MenuItem value="one-page">{LL.MUSICIAN_PAGE_ONE()}</MenuItem>
+            <MenuItem value="two-page">{LL.MUSICIAN_PAGE_TWO()}</MenuItem>
+          </Select>
+        </FormControl>
+        <Divider />
+
+        {/* Musician name */}
+        <Autocomplete
+          freeSolo
+          size="small"
+          value={musicianName || null}
+          options={musicianNames}
+          onChange={(_e, newValue) => {
+            if (typeof newValue === 'string') {
+              dispatch(updateSetting({ key: 'musicianName', value: newValue }));
+            } else {
+              dispatch(updateSetting({ key: 'musicianName', value: newValue ?? '' }));
+            }
+          }}
+          filterOptions={(options, params) => {
+            const filtered = autocompleteFilter(options, params);
+            const { inputValue } = params;
+            const isExisting = options.some((option) => inputValue === option);
+            if (inputValue !== '' && !isExisting) {
+              filtered.push(inputValue);
+            }
+            return filtered;
+          }}
+          renderOption={(props, option) => {
+            const isNew = !musicianNames.includes(option);
+            return (
+              <li {...props} key={option}>
+                {isNew ? `Add "${option}"` : option}
+              </li>
+            );
+          }}
+          renderInput={(params) => <TextField {...params} label={LL.MUSICIAN_NAME_SELECT()} placeholder={LL.MUSICIAN_ADD_NAME()} />}
+        />
+
+        {/* Band / Order select */}
+        <FormControl size="small" fullWidth>
+          <InputLabel>{LL.MUSICIAN_BAND_SELECT()}</InputLabel>
+          <Select
+            value={musicianBand || 'Default'}
+            label={LL.MUSICIAN_BAND_SELECT()}
+            onChange={(e) => dispatch(updateSetting({ key: 'musicianBand', value: e.target.value }))}
+          >
+            {availableBands.map((b) => (
+              <MenuItem key={b} value={b}>
+                {b}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+        <Divider />
+
+        {/* Text size */}
+        <Stack spacing={1}>
+          <Stack direction="row" alignItems="center" spacing={1}>
+            <FormatSizeIcon fontSize="small" color="action" />
+            <Typography variant="body2" fontWeight={600}>
+              {LL.MUSICIAN_TEXT_SIZE()}
+            </Typography>
+          </Stack>
+          <Stack direction="row" spacing={2} alignItems="center">
+            <TextFieldsIcon fontSize="small" sx={{ opacity: 0.5, fontSize: '0.9rem' }} />
+            <Slider
+              value={textSize}
+              min={10}
+              max={32}
+              step={1}
+              valueLabelDisplay="auto"
+              valueLabelFormat={(v) => `${v}px`}
+              onChange={(_e, val) => dispatch(updateSetting({ key: 'musicianTextSize', value: val as number }))}
+              sx={{ flex: 1 }}
+            />
+            <TextFieldsIcon fontSize="small" sx={{ opacity: 0.5, fontSize: '1.3rem' }} />
+          </Stack>
+        </Stack>
+        <Divider />
+
+        <Box sx={{ flex: 1 }} />
+        <Divider />
+        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
+          <Chip
+            icon={<QrCodeIcon />}
+            label={LL.QR_SHARE_TITLE()}
+            onClick={() => {
+              setQrOpen(true);
+              onClose();
+            }}
+            clickable
+            variant="outlined"
+            size="small"
+          />
+          <Chip
+            icon={<PdfIcon />}
+            label={LL.PDF_MANAGE_TITLE()}
+            onClick={() => {
+              setPdfUploadOpen(true);
+              onClose();
+            }}
+            clickable
+            variant="outlined"
+            size="small"
+          />
+        </Stack>
+      </Stack>
+    </Drawer>
+  );
+};

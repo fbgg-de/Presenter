@@ -1,9 +1,51 @@
 <?php
 
-	const DB_HOST = 'localhost';
-	const DB_DATABASE = 'database';
-	const DB_USER = 'user';
-	const DB_PASSWORD = 'password';
+// Development mode flag - set to false in production
+const DEVELOPMENT = true;
 
-	const SEARCH_RESULT_LIMIT = 10;
-	const CUSTOM_NUMBER_LIMIT = 10000; /* update CUSTOM_NUMBER_LIMIT in js/song.js as well */
+if (DEVELOPMENT) {
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+    error_reporting(E_ALL);
+}
+
+const DOMAIN = 'localhost';
+const BASE_URL = 'http://' . DOMAIN . '/';
+
+const DEFAULT_LANGUAGE = 'de'; // Default language: 'en' (English) or 'de' (German)
+
+// Database
+const DB_HOST = 'localhost';
+const DB_DATABASE = 'db';
+const DB_USER = 'user';
+const DB_PASSWORD = 'password';
+
+const SEARCH_RESULT_LIMIT = 10;
+const CUSTOM_NUMBER_LIMIT = 10000;
+
+// OIDC Configuration (Admin)
+const OIDC_DISCOVERY_URL = 'https://idp/.well-known/openid-configuration';
+const OIDC_CLIENT_ID = 'client_id';
+const OIDC_CLIENT_SECRET = 'client_secret';
+const OIDC_ADMIN_GROUP = 'admin';
+const OIDC_REQUIRED_GROUP = ''; // Optional: require user to be in this group (leave empty for no restriction)
+const OIDC_REDIRECT_URI = BASE_URL . 'oidc';
+const OIDC_CLIENT_SCOPES = ['openid', 'email', 'profile', 'groups'];
+
+// Bible API Configuration
+// Only JSON-based APIs are supported. The translation is user-selectable at runtime.
+// See requirements.md §10.2 for details.
+const BIBLE_API = [
+  'name' => 'API.Bible',
+  'base_url' => 'https://api.scripture.api.bible/v1',
+  'api_key' => 'your-api-key-here',       // optional, leave empty if not required
+  'translations_endpoint' => '/bibles',                  // endpoint path that returns available translations
+  'translations_path' => 'data',                     // dot-notation path to extract the translations array from the response
+  'translation_id_field' => 'id',                       // field name for the translation ID
+  'translation_name_field' => 'name',                     // field name for the display name
+  'translation_lang_field' => 'language.id',              // field name for the language code (for filtering)
+  'verse_endpoint' => '/bibles/{translation}/search', // endpoint path for verse lookup ({translation} is replaced)
+  'verse_path' => 'data.passages',            // dot-notation path to extract verse data from the response
+  'verse_text_field' => 'content',                  // field name for verse text content
+  'verse_ref_field' => 'reference',                // field name for verse reference
+];
