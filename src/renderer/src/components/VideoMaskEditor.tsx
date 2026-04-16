@@ -108,7 +108,7 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={1}>
           <CropIcon />
-          <Typography variant="h6">{LL.VIDEO_MASK_TITLE()}</Typography>
+          <Typography variant="h6">{LL.VIDEO.MASK_TITLE()}</Typography>
         </Stack>
       </DialogTitle>
       <DialogContent dividers>
@@ -117,12 +117,12 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
           <Stack direction="row" spacing={1} flexWrap="wrap">
             {PRESETS.map((p) => (
               <Button key={p.id} size="small" variant="outlined" onClick={() => setMask(p.mask)}>
-                {(p.id === 'full' && LL.VIDEO_PRESET_FULL()) ||
-                  (p.id === 'left_half' && LL.VIDEO_PRESET_LEFT_HALF()) ||
-                  (p.id === 'right_half' && LL.VIDEO_PRESET_RIGHT_HALF()) ||
-                  (p.id === 'top_half' && LL.VIDEO_PRESET_TOP_HALF()) ||
-                  (p.id === 'bottom_half' && LL.VIDEO_PRESET_BOTTOM_HALF()) ||
-                  (p.id === 'center_third' && LL.VIDEO_PRESET_CENTER_THIRD())}
+                {(p.id === 'full' && LL.VIDEO.PRESET_FULL()) ||
+                  (p.id === 'left_half' && LL.VIDEO.PRESET_LEFT_HALF()) ||
+                  (p.id === 'right_half' && LL.VIDEO.PRESET_RIGHT_HALF()) ||
+                  (p.id === 'top_half' && LL.VIDEO.PRESET_TOP_HALF()) ||
+                  (p.id === 'bottom_half' && LL.VIDEO.PRESET_BOTTOM_HALF()) ||
+                  (p.id === 'center_third' && LL.VIDEO.PRESET_CENTER_THIRD())}
               </Button>
             ))}
             <Button
@@ -132,7 +132,7 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
               startIcon={<ResetIcon />}
               onClick={() => setMask({ x: 0, y: 0, width: 100, height: 100 })}
             >
-              {LL.VIDEO_MASK_RESET()}
+              {LL.VIDEO.MASK_RESET()}
             </Button>
           </Stack>
 
@@ -166,7 +166,7 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
               }}
             >
               <Typography variant="h4" fontWeight={700}>
-                {LL.VIDEO_PREVIEW()}
+                {LL.VIDEO.PREVIEW()}
               </Typography>
             </Box>
 
@@ -211,7 +211,7 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
           {/* Numeric inputs */}
           <Stack direction="row" spacing={2}>
             <TextField
-              label={LL.VIDEO_MASK_LABEL_X()}
+              label={LL.VIDEO.MASK_LABEL_X()}
               type="number"
               size="small"
               value={Math.round(mask.x)}
@@ -220,7 +220,7 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
               sx={{ flex: 1 }}
             />
             <TextField
-              label={LL.VIDEO_MASK_LABEL_Y()}
+              label={LL.VIDEO.MASK_LABEL_Y()}
               type="number"
               size="small"
               value={Math.round(mask.y)}
@@ -229,7 +229,7 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
               sx={{ flex: 1 }}
             />
             <TextField
-              label={LL.VIDEO_MASK_LABEL_WIDTH()}
+              label={LL.VIDEO.MASK_LABEL_WIDTH()}
               type="number"
               size="small"
               value={Math.round(mask.width)}
@@ -238,7 +238,7 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
               sx={{ flex: 1 }}
             />
             <TextField
-              label={LL.VIDEO_MASK_LABEL_HEIGHT()}
+              label={LL.VIDEO.MASK_LABEL_HEIGHT()}
               type="number"
               size="small"
               value={Math.round(mask.height)}
@@ -250,14 +250,14 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
 
           {/* CSS preview */}
           <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-            {LL.VIDEO_CLIP_PATH_PREFIX()} {clipPath}
+            {LL.VIDEO.CLIP_PATH_PREFIX()} {clipPath}
           </Typography>
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button variant="contained" onClick={handleSave}>
-          {LL.VIDEO_MASK_APPLY()}
+          {LL.VIDEO.MASK_APPLY()}
         </Button>
       </DialogActions>
     </Dialog>

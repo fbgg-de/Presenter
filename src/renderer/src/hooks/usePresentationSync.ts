@@ -71,11 +71,12 @@ export const usePresentationSync = (): void => {
   const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
-  // Use a ref to avoid sending duplicate content
-  const lastContentRef = useRef<string>('');
+  // Use a ref to avoid sending duplicate content — compare key fields only
+  const lastKeyRef = useRef('');
 
   useEffect(() => {
     if (!currentShow) return;
+    // ...existing code for building content...
 
     let contentType: ContentType = 'empty';
     let blocks: PresentationBlock[] = [];
@@ -171,10 +172,10 @@ export const usePresentationSync = (): void => {
       nextLinePreviewColor,
     };
 
-    // Deduplicate broadcasts
-    const contentKey = JSON.stringify(content);
-    if (contentKey === lastContentRef.current) return;
-    lastContentRef.current = contentKey;
+    // Deduplicate broadcasts using a lightweight key (not full JSON.stringify)
+    const contentKey = `${contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${globalStyleId}|${currentShow?.styleId}|${activeItem?.styleId}|${blocks.length}|${nextLinePreview}|${nextLinePreviewColor}|${activeItem?.mediaPath}|${activeItem?.mediaColor}|${allStyles?.length}`;
+    if (contentKey === lastKeyRef.current) return;
+    lastKeyRef.current = contentKey;
 
     broadcastContent(content);
 

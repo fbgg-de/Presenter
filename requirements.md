@@ -1986,17 +1986,7 @@ _This document is the complete requirements specification for the Presenter appl
 
 This section captures inconsistencies, undefined cases, and items needing reconsideration discovered during a full audit of the specification.
 
-### 30.1 Resolved Ambiguities (Confirmed Decisions)
-
-| #   | Topic                           | Resolution                                                                                                                                                           |
-| --- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Song.orders `"Default"` key** | Every song must have a `"Default"` order. It is auto-populated during import and serves as the canonical fallback. Confirmed in §9.1 and §18.1.                      |
-| 2   | **State management**            | All client state is managed via Redux slices. No React Context is used. Confirmed in §6.3.                                                                           |
-| 3   | **No auto-save**                | All entities require explicit Save. Confirmed as a global UX principle in §6.1.                                                                                      |
-| 4   | **PDFs server-side**            | PDFs stored in `data/{account}/pdfs/` on the server. Served via authenticated REST. Electron's `pdfServer.ts` demoted to optional offline cache. Confirmed in §11.2. |
-| 5   | **Bible translation selection** | `config.php` defines the API connection; the user selects the translation at runtime from a dynamically fetched list. Confirmed in §10.2–10.3.                       |
-
-### 30.2 Open Questions
+### 30.1 Open Questions
 
 | #   | Topic                                                        | Description                                                                                                                                                                                                        | Recommendation                                                                                                                                                                                                                                       |
 | --- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -2015,20 +2005,3 @@ This section captures inconsistencies, undefined cases, and items needing recons
 | 13  | **Style JSON validation**                                    | With the `styles.data` JSON column (§5.1), there's no schema validation at the DB level. A malformed JSON blob could break the style editor.                                                                       | The backend should validate the incoming JSON against the `Style` interface structure on write. Return a clear 400 error for invalid data.                                                                                                           |
 | 14  | **Bible API error handling**                                 | If the configured bible API is down or the `translations_endpoint` returns an error (§10.2), the BibleVersePicker will show an empty translation list.                                                             | Show a user-friendly error message in the picker UI. Cache the last successful translation list in localStorage as a fallback.                                                                                                                       |
 | 15  | **`PdfDashboard.tsx` scope**                                 | `PdfDashboard.tsx` in §4 covers both PDF browsing/searching and import/upload. It's a combined component.                                                                                                          | Acceptable. If it grows too large during implementation, split into `PdfBrowser.tsx` + `PdfUploader.tsx`.                                                                                                                                            |
-
-### 30.3 Cross-Reference Consistency Checks
-
-| Check                                                                        | Status  | Notes                                                                                      |
-| ---------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------ |
-| All Redux slices listed in §6.3 have matching files in §4 project structure  | ✅ Pass | `showSlice`, `presentationSlice`, `settingsSlice`, `themeSlice`, `songsSlice` all present. |
-| All REST endpoints in §5.2 have matching controller files in §4              | ✅ Pass | `BibleTranslations.php` and `Pdfs.php` added.                                              |
-| All localStorage settings in §21.3 are referenced somewhere in the spec      | ✅ Pass | New settings (`presenter_ui_language`, `presenter_midi_*`) referenced in §24, §11.10.      |
-| All WebSocket actions in §22.2 are described                                 | ✅ Pass | `midi_event` added with description.                                                       |
-| `ShowItem` fields match the descriptions in §6.4, §8.2, §17.5                | ✅ Pass | `translations`, `key`, `bibleFormattedSegments` documented in all relevant sections.       |
-| `Song` interface fields match §9.1, §9.4 (editor), §18 (orders)              | ✅ Pass | `key` field added to interface and to editor metadata tab.                                 |
-| PDF folder structure in §11.2 matches resolution rules                       | ✅ Pass | 6-step priority with key variants documented.                                              |
-| `presenter_pdf_path` removed from §21.3                                      | ✅ Pass | Replaced by server-side `data/` folder.                                                    |
-| No remaining references to `ThemeContext`                                    | ✅ Pass | Replaced with `themeSlice` in §6.3 and §15.                                                |
-| No remaining references to `SongsProvider` or `SettingsProvider` as contexts | ✅ Pass | Removed from §4 and §6.3.                                                                  |
-| Explicit save referenced in §6.1, §6.4, §8.3                                 | ✅ Pass | Consistent across all sections.                                                            |
-| `PdfDashboard.tsx` in §4 aligns with §11.6                                   | ✅ Pass | Renamed from `PdfImporter.tsx` to match section title.                                     |

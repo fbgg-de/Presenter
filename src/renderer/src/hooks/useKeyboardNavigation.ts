@@ -57,6 +57,12 @@ export const useKeyboardNavigation = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (keyboardDisabled) return;
 
+      // Don't intercept keyboard events when focus is inside form elements
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) {
+        return;
+      }
+
       const combo = eventToCombo(e);
       const action = comboToAction[combo];
       if (!action) return;

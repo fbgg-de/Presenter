@@ -101,21 +101,21 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
   const getGroupLabel = (group: string): string => {
     switch (group) {
       case 'General':
-        return LL.SETTINGS_GROUP_GENERAL();
+        return LL.SETTINGS.GROUP_GENERAL();
       case 'Behavior':
-        return LL.SETTINGS_GROUP_BEHAVIOR();
+        return LL.SETTINGS.GROUP_BEHAVIOR();
       case 'Keyboard':
-        return LL.SETTINGS_GROUP_KEYBOARD();
+        return LL.SETTINGS.GROUP_KEYBOARD();
       case 'Confirmations':
-        return LL.SETTINGS_GROUP_CONFIRMATIONS();
+        return LL.SETTINGS.GROUP_CONFIRMATIONS();
       case 'Notifications':
-        return LL.SETTINGS_GROUP_NOTIFICATIONS();
+        return LL.SETTINGS.GROUP_NOTIFICATIONS();
       case 'Presentation':
-        return LL.SETTINGS_GROUP_PRESENTATION();
+        return LL.SETTINGS.GROUP_PRESENTATION();
       case 'Musician':
-        return LL.SETTINGS_GROUP_MUSICIAN();
+        return LL.SETTINGS.GROUP_MUSICIAN();
       case 'Electron':
-        return LL.SETTINGS_GROUP_ELECTRON();
+        return LL.SETTINGS.GROUP_ELECTRON();
       default:
         return group;
     }
@@ -150,7 +150,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
 
         {/* Search */}
         <Box sx={{ px: 2, py: 1 }}>
-          <TextField size="small" fullWidth placeholder={LL.SETTINGS_FILTER()} value={filter} onChange={(e) => setFilter(e.target.value)} />
+          <TextField size="small" fullWidth placeholder={LL.SETTINGS.FILTER()} value={filter} onChange={(e) => setFilter(e.target.value)} />
         </Box>
 
         <Stack sx={{ flex: 1, overflow: 'auto', px: 1 }}>
@@ -158,17 +158,17 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
           {(!filterLower || 'global style'.includes(filterLower)) && (
             <Accordion defaultExpanded={false}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight={600}>{LL.SETTINGS_GLOBAL_STYLE()}</Typography>
+                <Typography fontWeight={600}>{LL.SETTINGS.GLOBAL_STYLE()}</Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <FormControl size="small" fullWidth>
-                  <InputLabel>{LL.STYLE_SELECT()}</InputLabel>
+                  <InputLabel>{LL.STYLE.SELECT()}</InputLabel>
                   <Select
                     value={settings.globalStyleId || 0}
-                    label={LL.STYLE_SELECT()}
+                    label={LL.STYLE.SELECT()}
                     onChange={(e) => dispatch(updateSetting({ key: 'globalStyleId', value: Number(e.target.value) }))}
                   >
-                    <MenuItem value={0}>{LL.STYLE_NONE()}</MenuItem>
+                    <MenuItem value={0}>{LL.STYLE.NONE()}</MenuItem>
                     {styles.map((s) => (
                       <MenuItem key={s.id} value={s.id}>
                         {s.name}
@@ -200,7 +200,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
           {(!filterLower || 'keyboard shortcut'.includes(filterLower)) && (
             <Accordion defaultExpanded={false}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight={600}>{LL.SETTINGS_GROUP_KEYBOARD()}</Typography>
+                <Typography fontWeight={600}>{LL.SETTINGS.GROUP_KEYBOARD()}</Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <KeyboardMappingEditor />
@@ -212,16 +212,16 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
           {(!filterLower || 'export import backup'.includes(filterLower)) && (
             <Accordion defaultExpanded={false}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight={600}>{LL.SETTINGS_EXPORT_IMPORT()}</Typography>
+                <Typography fontWeight={600}>{LL.SETTINGS.EXPORT_IMPORT()}</Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <Stack spacing={2}>
                   <Typography variant="body2" color="text.secondary">
-                    {LL.SETTINGS_EXPORT_IMPORT_DESC()}
+                    {LL.SETTINGS.EXPORT_IMPORT_DESC()}
                   </Typography>
                   <Stack direction="row" spacing={2}>
                     <Button variant="outlined" startIcon={<ExportIcon />} onClick={() => exportSettings()}>
-                      {LL.SETTINGS_EXPORT_BUTTON()}
+                      {LL.SETTINGS.EXPORT_BUTTON()}
                     </Button>
                     <Button
                       variant="outlined"
@@ -233,7 +233,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                           if (changeCount > 0) {
                             if (
                               window.confirm(
-                                LL.SETTINGS_IMPORT_CONFIRM({
+                                LL.SETTINGS.IMPORT_CONFIRM({
                                   count: changeCount,
                                   added: Object.keys(diff.added).length,
                                   changed: Object.keys(diff.changed).length,
@@ -243,12 +243,12 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                               await applyImportedSettings(diff);
                             }
                           } else {
-                            window.alert(LL.SETTINGS_NO_CHANGES());
+                            window.alert(LL.SETTINGS.NO_CHANGES());
                           }
                         }
                       }}
                     >
-                      {LL.SETTINGS_IMPORT_BUTTON()}
+                      {LL.SETTINGS.IMPORT_BUTTON()}
                     </Button>
                   </Stack>
                 </Stack>
@@ -276,7 +276,7 @@ const SettingRow = ({
   const getLabel = (cfg: SettingConfig) => {
     switch (cfg.key) {
       case 'uiLanguage':
-        return LL.LANGUAGE();
+        return LL.COMMON.LANGUAGE();
       case 'backendUrl':
         return LL.SETTINGS.OPTIONS.BACKEND_URL.TITLE();
       case 'showLimit':

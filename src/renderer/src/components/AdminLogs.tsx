@@ -133,17 +133,17 @@ export const AdminLogs = () => {
     <Box>
       <Stack direction="row" spacing={2} mb={2} alignItems="center">
         <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>{LL.ADMIN_LOGS_SEVERITY_LABEL()}</InputLabel>
-          <Select value={severity} label={LL.ADMIN_LOGS_SEVERITY_LABEL()} onChange={(e) => setSeverity(e.target.value)}>
-            <MenuItem value="">{LL.ADMIN_LOGS_SEVERITY_ALL()}</MenuItem>
-            <MenuItem value="ERROR">{LL.ADMIN_LOGS_SEVERITY_ERROR()}</MenuItem>
-            <MenuItem value="WARNING">{LL.ADMIN_LOGS_SEVERITY_WARNING()}</MenuItem>
-            <MenuItem value="INFO">{LL.ADMIN_LOGS_SEVERITY_INFO()}</MenuItem>
+          <InputLabel>{LL.ADMIN_LOGS.SEVERITY_LABEL()}</InputLabel>
+          <Select value={severity} label={LL.ADMIN_LOGS.SEVERITY_LABEL()} onChange={(e) => setSeverity(e.target.value)}>
+            <MenuItem value="">{LL.ADMIN_LOGS.SEVERITY_ALL()}</MenuItem>
+            <MenuItem value="ERROR">{LL.ADMIN_LOGS.SEVERITY_ERROR()}</MenuItem>
+            <MenuItem value="WARNING">{LL.ADMIN_LOGS.SEVERITY_WARNING()}</MenuItem>
+            <MenuItem value="INFO">{LL.ADMIN_LOGS.SEVERITY_INFO()}</MenuItem>
           </Select>
         </FormControl>
 
         <Button startIcon={<RefreshIcon />} onClick={handleRefresh} disabled={isLoading || isFetching}>
-          {LL.ADMIN_LOGS_REFRESH()}
+          {LL.ADMIN_LOGS.REFRESH()}
         </Button>
 
         <Button
@@ -152,14 +152,14 @@ export const AdminLogs = () => {
           onClick={() => setConfirmClear(true)}
           disabled={isClearing || allLogs.length === 0}
         >
-          {LL.ADMIN_LOGS_CLEAR_LOGS()}
+          {LL.ADMIN_LOGS.CLEAR_LOGS()}
         </Button>
 
         <Box flexGrow={1} />
 
         {data && (
           <Typography variant="body2" color="text.secondary">
-            {LL.ADMIN_LOGS_SHOWING({ shown: allLogs.length, total: data.total })}
+            {LL.ADMIN_LOGS.SHOWING({ shown: allLogs.length, total: data.total })}
           </Typography>
         )}
       </Stack>
@@ -169,7 +169,7 @@ export const AdminLogs = () => {
           <CircularProgress />
         </Box>
       ) : allLogs.length === 0 ? (
-        <Alert severity="info">{LL.ADMIN_LOGS_NO_LOGS()}</Alert>
+        <Alert severity="info">{LL.ADMIN_LOGS.NO_LOGS()}</Alert>
       ) : (
         <TableContainer
           component={Paper}
@@ -182,11 +182,11 @@ export const AdminLogs = () => {
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
-                <TableCell width="180">{LL.ADMIN_LOGS_TIMESTAMP()}</TableCell>
-                <TableCell width="100">{LL.ADMIN_LOGS_SEVERITY_LABEL()}</TableCell>
-                <TableCell width="200">{LL.ADMIN_LOGS_LOCATION()}</TableCell>
-                <TableCell width="200">{LL.ADMIN_LOGS_FUNCTION()}</TableCell>
-                <TableCell>{LL.ADMIN_LOGS_MESSAGE()}</TableCell>
+                <TableCell width="180">{LL.ADMIN_LOGS.TIMESTAMP()}</TableCell>
+                <TableCell width="100">{LL.ADMIN_LOGS.SEVERITY_LABEL()}</TableCell>
+                <TableCell width="200">{LL.ADMIN_LOGS.LOCATION()}</TableCell>
+                <TableCell width="200">{LL.ADMIN_LOGS.FUNCTION()}</TableCell>
+                <TableCell>{LL.ADMIN_LOGS.MESSAGE()}</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -215,14 +215,14 @@ export const AdminLogs = () => {
 
       {/* Clear confirmation dialog */}
       <Dialog open={confirmClear} onClose={() => setConfirmClear(false)}>
-        <DialogTitle>{LL.ADMIN_LOGS_CLEAR_TITLE()}</DialogTitle>
+        <DialogTitle>{LL.ADMIN_LOGS.CLEAR_TITLE()}</DialogTitle>
         <DialogContent>
-          <DialogContentText>{LL.ADMIN_LOGS_CLEAR_MESSAGE()}</DialogContentText>
+          <DialogContentText>{LL.ADMIN_LOGS.CLEAR_MESSAGE()}</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmClear(false)}>{LL.CANCEL()}</Button>
+          <Button onClick={() => setConfirmClear(false)}>{LL.COMMON.CANCEL()}</Button>
           <Button onClick={handleClearLogs} color="error" variant="contained" disabled={isClearing}>
-            {LL.ADMIN_LOGS_CLEAR_LOGS()}
+            {LL.ADMIN_LOGS.CLEAR_LOGS()}
           </Button>
         </DialogActions>
       </Dialog>

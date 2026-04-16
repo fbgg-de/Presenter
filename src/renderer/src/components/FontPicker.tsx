@@ -171,7 +171,7 @@ export const FontPicker = ({ value, onChange, label = 'Font Family', size = 'sma
   }, []);
 
   const fontMissing = value && !isFontAvailable(value);
-  const labelText = label || LL.FONT_PICKER_LABEL();
+  const labelText = label || LL.FONT.PICKER_LABEL();
 
   return (
     <Stack spacing={0.5}>
@@ -188,7 +188,7 @@ export const FontPicker = ({ value, onChange, label = 'Font Family', size = 'sma
             {...params}
             label={labelText}
             error={!!fontMissing}
-            helperText={fontMissing ? LL.FONT_NOT_FOUND({ font: value }) : undefined}
+            helperText={fontMissing ? LL.FONT.NOT_FOUND({ font: value }) : undefined}
           />
         )}
         renderOption={(props, option) => {
@@ -251,7 +251,7 @@ export const FontFallbackEditor = ({ fallbacks, onChange }: FontFallbackEditorPr
   return (
     <Stack spacing={1}>
       <Typography variant="caption" color="text.secondary">
-        {LL.FONT_FALLBACK_CASCADE()}
+        {LL.FONT.FALLBACK_CASCADE()}
       </Typography>
 
       {fallbacks.map((font, index) => {
@@ -260,7 +260,7 @@ export const FontFallbackEditor = ({ fallbacks, onChange }: FontFallbackEditorPr
           <Stack key={`${font}-${index}`} direction="row" alignItems="center" spacing={0.5}>
             <Stack direction="column" spacing={0}>
               <IconButton size="small" onClick={() => handleMoveUp(index)} disabled={index === 0} sx={{ p: 0, fontSize: '0.7rem' }}>
-                {LL.ARROW_UP()}
+                {LL.FONT.ARROW_UP()}
               </IconButton>
               <IconButton
                 size="small"
@@ -268,7 +268,7 @@ export const FontFallbackEditor = ({ fallbacks, onChange }: FontFallbackEditorPr
                 disabled={index >= fallbacks.length - 1}
                 sx={{ p: 0, fontSize: '0.7rem' }}
               >
-                {LL.ARROW_DOWN()}
+                {LL.FONT.ARROW_DOWN()}
               </IconButton>
             </Stack>
             <Chip
@@ -294,16 +294,16 @@ export const FontFallbackEditor = ({ fallbacks, onChange }: FontFallbackEditorPr
           freeSolo
           size="small"
           sx={{ flex: 1 }}
-          renderInput={(params) => <TextField {...params} placeholder={LL.ADD_FALLBACK_PLACEHOLDER()} size="small" />}
+          renderInput={(params) => <TextField {...params} placeholder={LL.FONT.ADD_FALLBACK_PLACEHOLDER()} size="small" />}
         />
         <Button size="small" onClick={handleAdd} disabled={!newFont.trim()} startIcon={<AddIcon />}>
-          {LL.ADD()}
+          {LL.COMMON.ADD()}
         </Button>
       </Stack>
 
       <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-        {LL.FONT_FALLBACK_RESULT_PREFIX()} {fallbacks.length > 0 ? fallbacks.map((f) => `"${f}"`).join(', ') + ', ' : ''}
-        {LL.SANS_SERIF()}
+        {LL.FONT.FALLBACK_RESULT_PREFIX()} {fallbacks.length > 0 ? fallbacks.map((f) => `"${f}"`).join(', ') + ', ' : ''}
+        {LL.FONT.SANS_SERIF()}
       </Typography>
     </Stack>
   );

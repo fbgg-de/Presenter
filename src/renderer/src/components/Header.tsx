@@ -75,12 +75,12 @@ const Header = () => {
       <AppBar position="static" color="default" elevation={1} sx={{ zIndex: (t) => t.zIndex.drawer + 1 }}>
         <Toolbar variant="dense" sx={{ minHeight: 48 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, mr: 2 }}>
-            {LL.APP_NAME()}
+            {LL.COMMON.APP_NAME()}
           </Typography>
           <Box flexGrow={1} />
 
           {/* Language Switcher */}
-          <Tooltip title={LL.SWITCH_LANGUAGE()}>
+          <Tooltip title={LL.HEADER.SWITCH_LANGUAGE()}>
             <IconButton size="small" onClick={(e) => setLangAnchorEl(e.currentTarget)} sx={{ mr: 0.5 }}>
               <Typography variant="body2" sx={{ fontSize: '1.1rem', lineHeight: 1 }}>
                 {currentLangLabel}
@@ -98,13 +98,13 @@ const Header = () => {
               <ListItemIcon>
                 <Typography>🇬🇧</Typography>
               </ListItemIcon>
-              <ListItemText>{LL.LANGUAGE_EN()}</ListItemText>
+              <ListItemText>{LL.HEADER.LANGUAGE_EN()}</ListItemText>
             </MenuItem>
             <MenuItem onClick={() => handleLanguageChange('de')} selected={uiLanguage === 'de'}>
               <ListItemIcon>
                 <Typography>🇩🇪</Typography>
               </ListItemIcon>
-              <ListItemText>{LL.LANGUAGE_DE()}</ListItemText>
+              <ListItemText>{LL.HEADER.LANGUAGE_DE()}</ListItemText>
             </MenuItem>
           </Menu>
 
@@ -116,14 +116,14 @@ const Header = () => {
           </Tooltip>
 
           {/* Style Inspector */}
-          <Tooltip title={LL.STYLE_INSPECTOR()}>
+          <Tooltip title={LL.STYLE.INSPECTOR()}>
             <IconButton size="small" onClick={() => setStyleInspectorOpen(true)} sx={{ mr: 0.5 }}>
               <InfoIcon />
             </IconButton>
           </Tooltip>
 
           {/* Style Editor */}
-          <Tooltip title={LL.STYLE_EDITOR()}>
+          <Tooltip title={LL.STYLE.EDITOR()}>
             <IconButton
               size="small"
               onClick={() => {
@@ -137,21 +137,21 @@ const Header = () => {
           </Tooltip>
 
           {/* Musician View */}
-          <Tooltip title={LL.MUSICIAN_OPEN()}>
+          <Tooltip title={LL.MUSICIAN.OPEN()}>
             <IconButton size="small" onClick={() => window.open('/notes', '_blank')} sx={{ mr: 0.5 }}>
               <PdfIcon />
             </IconButton>
           </Tooltip>
 
           {/* Companion Helper */}
-          <Tooltip title={LL.COMPANION_HELPER_TITLE()}>
+          <Tooltip title={LL.COMPANION.HELPER_TITLE()}>
             <IconButton size="small" onClick={() => setCompanionHelperOpen(true)} sx={{ mr: 0.5 }}>
               <CableIcon />
             </IconButton>
           </Tooltip>
 
           {/* Window Manager Toggle */}
-          <Tooltip title={LL.WINDOW_MANAGER()}>
+          <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
             <IconButton
               size="small"
               onClick={() => setWindowManagerOpen(true)}
@@ -165,7 +165,7 @@ const Header = () => {
           </Tooltip>
 
           {/* Account Menu */}
-          <Tooltip title={LL.ACCOUNT_MENU()}>
+          <Tooltip title={LL.HEADER.ACCOUNT_MENU()}>
             <IconButton size="small" onClick={(e) => setAccountAnchorEl(e.currentTarget)}>
               <AccountCircleIcon />
             </IconButton>
@@ -181,7 +181,7 @@ const Header = () => {
               <MenuItem disabled>
                 <ListItemText>
                   <Typography variant="body2" color="text.secondary">
-                    {LL.LOGGED_IN_AS()}
+                    {LL.AUTH.LOGGED_IN_AS()}
                   </Typography>
                   <Typography variant="body2" fontWeight={600}>
                     {session.mail}
@@ -200,14 +200,14 @@ const Header = () => {
                 <ListItemIcon>
                   <AdminIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>{LL.ADMIN_DASHBOARD()}</ListItemText>
+                <ListItemText>{LL.HEADER.ADMIN_DASHBOARD()}</ListItemText>
               </MenuItem>
             )}
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />
               </ListItemIcon>
-              <ListItemText>{LL.LOGOUT()}</ListItemText>
+              <ListItemText>{LL.AUTH.LOGOUT()}</ListItemText>
             </MenuItem>
           </Menu>
         </Toolbar>

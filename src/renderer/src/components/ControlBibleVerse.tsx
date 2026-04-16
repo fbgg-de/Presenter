@@ -24,14 +24,14 @@ const ControlBibleVerse = ({ item }: ControlBibleVerseProps) => {
           <Stack direction="row" alignItems="center" spacing={1} sx={{ padding: '6px 12px' }}>
             <MenuBookIcon sx={{ color: '#fff' }} />
             <Typography variant="h6" sx={{ color: '#fff' }}>
-              {item.bibleRef || LL.BIBLE_VERSE()}
+              {item.bibleRef || LL.BIBLE.VERSE()}
             </Typography>
           </Stack>
         </CardMedia>
         <CardContent>
           {item.bibleTranslation && <Chip label={item.bibleTranslation} size="small" color="success" sx={{ mb: 2 }} />}
           <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>
-            {item.label || item.bibleRef || LL.BIBLE_NO_RESULTS()}
+            {item.label || item.bibleRef || LL.BIBLE.NO_RESULTS()}
           </Typography>
         </CardContent>
       </Card>

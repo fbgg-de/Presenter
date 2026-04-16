@@ -1,5 +1,6 @@
 <?php
 
+require_once(__DIR__ . '/classes/Cors.php');
 require_once(__DIR__ . '/classes/OidcClient.php');
 require_once(__DIR__ . '/classes/Auth.php');
 require_once(__DIR__ . '/classes/MetricsHelper.php');
@@ -9,6 +10,9 @@ require_once(__DIR__ . '/classes/DB.php');
 
 // OIDC callback handler for browser redirects
 // This file is called directly by the OIDC provider after login
+
+Cors::handle();
+Cors::configureSession();
 
 session_start();
 

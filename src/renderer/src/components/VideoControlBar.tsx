@@ -80,13 +80,13 @@ const VideoControlBar = ({ label }: VideoControlBarProps) => {
         </Typography>
       )}
 
-      <Tooltip title={isPlaying ? LL.VIDEO_PAUSE() : LL.VIDEO_PLAY()}>
+      <Tooltip title={isPlaying ? LL.VIDEO.PAUSE() : LL.VIDEO.PLAY()}>
         <IconButton size="small" onClick={handlePlayPause}>
           {isPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
         </IconButton>
       </Tooltip>
 
-      <Tooltip title={LL.VIDEO_STOP()}>
+      <Tooltip title={LL.VIDEO.STOP()}>
         <IconButton size="small" onClick={handleStop}>
           <StopIcon fontSize="small" />
         </IconButton>
@@ -102,7 +102,7 @@ const VideoControlBar = ({ label }: VideoControlBarProps) => {
         {formatTime(duration)}
       </Typography>
 
-      <Tooltip title={isMuted ? LL.VIDEO_UNMUTE() : LL.VIDEO_MUTE()}>
+      <Tooltip title={isMuted ? LL.VIDEO.UNMUTE() : LL.VIDEO.MUTE()}>
         <IconButton size="small" onClick={handleMuteToggle}>
           {isMuted ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
         </IconButton>

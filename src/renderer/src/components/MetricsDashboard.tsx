@@ -226,7 +226,7 @@ export const MetricsDashboard = () => {
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
           <TextField
             type="date"
-            label={LL.METRICS_DATE_FROM()}
+            label={LL.METRICS.DATE_FROM()}
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             size="small"
@@ -234,16 +234,16 @@ export const MetricsDashboard = () => {
           />
           <TextField
             type="date"
-            label={LL.METRICS_DATE_TO()}
+            label={LL.METRICS.DATE_TO()}
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             size="small"
             slotProps={{ inputLabel: { shrink: true } }}
           />
           <FormControl size="small" sx={{ minWidth: 160 }}>
-            <InputLabel>{LL.METRICS_EVENT_TYPE()}</InputLabel>
-            <Select value={eventFilter} label={LL.METRICS_EVENT_TYPE()} onChange={(e) => setEventFilter(e.target.value)}>
-              <MenuItem value="">{LL.UNIFIED_SEARCH_ALL()}</MenuItem>
+            <InputLabel>{LL.METRICS.EVENT_TYPE()}</InputLabel>
+            <Select value={eventFilter} label={LL.METRICS.EVENT_TYPE()} onChange={(e) => setEventFilter(e.target.value)}>
+              <MenuItem value="">{LL.UNIFIED_SEARCH.ALL()}</MenuItem>
               {uniqueEvents.map((ev) => (
                 <MenuItem key={ev} value={ev}>
                   {ev}
@@ -252,45 +252,45 @@ export const MetricsDashboard = () => {
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 120 }}>
-            <InputLabel>{LL.METRICS_GRANULARITY()}</InputLabel>
-            <Select value={granularity} label={LL.METRICS_GRANULARITY()} onChange={(e) => setGranularity(e.target.value as Granularity)}>
-              <MenuItem value="day">{LL.METRICS_DAILY()}</MenuItem>
-              <MenuItem value="week">{LL.METRICS_WEEKLY()}</MenuItem>
-              <MenuItem value="month">{LL.METRICS_MONTHLY()}</MenuItem>
+            <InputLabel>{LL.METRICS.GRANULARITY()}</InputLabel>
+            <Select value={granularity} label={LL.METRICS.GRANULARITY()} onChange={(e) => setGranularity(e.target.value as Granularity)}>
+              <MenuItem value="day">{LL.METRICS.DAILY()}</MenuItem>
+              <MenuItem value="week">{LL.METRICS.WEEKLY()}</MenuItem>
+              <MenuItem value="month">{LL.METRICS.MONTHLY()}</MenuItem>
             </Select>
           </FormControl>
           <Button startIcon={<RefreshIcon />} onClick={() => refetch()} disabled={isFetching}>
-            {LL.METRICS_REFRESH()}
+            {LL.METRICS.REFRESH()}
           </Button>
           <Box flexGrow={1} />
-          <Tooltip title={LL.METRICS_EXPORT_CSV()}>
+          <Tooltip title={LL.METRICS.EXPORT_CSV()}>
             <IconButton onClick={handleExportAll} disabled={metrics.length === 0}>
               <DownloadIcon />
             </IconButton>
           </Tooltip>
           <Typography variant="body2" color="text.secondary">
-            {LL.METRICS_TOTAL_EVENTS({ count: data?.total ?? 0 })}
+            {LL.METRICS.TOTAL_EVENTS({ count: data?.total ?? 0 })}
           </Typography>
         </Stack>
       </Paper>
 
       {metrics.length === 0 ? (
-        <Alert severity="info">{LL.METRICS_NO_DATA()}</Alert>
+        <Alert severity="info">{LL.METRICS.NO_DATA()}</Alert>
       ) : (
         <>
           {/* Summary Cards */}
           <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
             <SummaryCard
               icon={<BarChartIcon />}
-              label={LL.METRICS_TOTAL_EVENTS({ count: metrics.length })}
+              label={LL.METRICS.TOTAL_EVENTS({ count: metrics.length })}
               value={metrics.length}
               color="#1976d2"
             />
-            <SummaryCard icon={<TrendingUpIcon />} label={LL.METRICS_EVENT_TYPES()} value={eventTypeDistribution.length} color="#388e3c" />
-            <SummaryCard icon={<PieChartIcon />} label={LL.METRICS_ENTITY_TYPES()} value={entityTypeDistribution.length} color="#f9a825" />
+            <SummaryCard icon={<TrendingUpIcon />} label={LL.METRICS.EVENT_TYPES()} value={eventTypeDistribution.length} color="#388e3c" />
+            <SummaryCard icon={<PieChartIcon />} label={LL.METRICS.ENTITY_TYPES()} value={entityTypeDistribution.length} color="#f9a825" />
             <SummaryCard
               icon={<TableChartIcon />}
-              label={LL.METRICS_TOP_SONGS()}
+              label={LL.METRICS.TOP_SONGS()}
               value={topSongs.length > 0 ? topSongs[0].name : '—'}
               color="#e65100"
             />
@@ -302,7 +302,7 @@ export const MetricsDashboard = () => {
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
-                  {LL.METRICS_EVENTS_OVER_TIME()}
+                  {LL.METRICS.EVENTS_OVER_TIME()}
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={eventsOverTime}>
@@ -310,7 +310,7 @@ export const MetricsDashboard = () => {
                     <XAxis dataKey="date" tick={{ fontSize: 12 }} />
                     <YAxis allowDecimals={false} />
                     <RechartsTooltip />
-                    <Bar dataKey="count" fill="#1976d2" name={LL.METRICS_EVENTS()} radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="count" fill="#1976d2" name={LL.METRICS.EVENTS()} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -320,7 +320,7 @@ export const MetricsDashboard = () => {
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   <PieChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
-                  {LL.METRICS_EVENT_DISTRIBUTION()}
+                  {LL.METRICS.EVENT_DISTRIBUTION()}
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -353,7 +353,7 @@ export const MetricsDashboard = () => {
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
-                  {LL.METRICS_USAGE_TREND()}
+                  {LL.METRICS.USAGE_TREND()}
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <LineChart data={eventsOverTime}>
@@ -362,7 +362,7 @@ export const MetricsDashboard = () => {
                     <YAxis allowDecimals={false} />
                     <RechartsTooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="count" stroke="#1976d2" strokeWidth={2} dot={{ r: 3 }} name={LL.METRICS_EVENTS()} />
+                    <Line type="monotone" dataKey="count" stroke="#1976d2" strokeWidth={2} dot={{ r: 3 }} name={LL.METRICS.EVENTS()} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -372,7 +372,7 @@ export const MetricsDashboard = () => {
               <CardContent>
                 <Typography variant="h6" gutterBottom>
                   <PieChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
-                  {LL.METRICS_ENTITY_DISTRIBUTION()}
+                  {LL.METRICS.ENTITY_DISTRIBUTION()}
                 </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -404,8 +404,8 @@ export const MetricsDashboard = () => {
             <Card sx={{ flex: 1 }}>
               <CardContent>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography variant="h6">{LL.METRICS_TOP_SONGS()}</Typography>
-                  <Tooltip title={LL.METRICS_EXPORT_CSV()}>
+                  <Typography variant="h6">{LL.METRICS.TOP_SONGS()}</Typography>
+                  <Tooltip title={LL.METRICS.EXPORT_CSV()}>
                     <IconButton size="small" onClick={() => exportToCsv(topSongs, 'top_songs.csv')} disabled={topSongs.length === 0}>
                       <DownloadIcon fontSize="small" />
                     </IconButton>
@@ -413,7 +413,7 @@ export const MetricsDashboard = () => {
                 </Stack>
                 {topSongs.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
-                    {LL.METRICS_NO_DATA()}
+                    {LL.METRICS.NO_DATA()}
                   </Typography>
                 ) : (
                   <>
@@ -423,7 +423,7 @@ export const MetricsDashboard = () => {
                         <XAxis type="number" allowDecimals={false} />
                         <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
                         <RechartsTooltip />
-                        <Bar dataKey="count" fill="#e65100" name={LL.METRICS_PLAY_COUNT()} radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="count" fill="#e65100" name={LL.METRICS.PLAY_COUNT()} radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                     <TableContainer sx={{ mt: 1, maxHeight: 200, overflow: 'auto' }}>
@@ -431,8 +431,8 @@ export const MetricsDashboard = () => {
                         <TableHead>
                           <TableRow>
                             <TableCell>#</TableCell>
-                            <TableCell>{LL.METRICS_SONG_NAME()}</TableCell>
-                            <TableCell align="right">{LL.METRICS_PLAY_COUNT()}</TableCell>
+                            <TableCell>{LL.METRICS.SONG_NAME()}</TableCell>
+                            <TableCell align="right">{LL.METRICS.PLAY_COUNT()}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -454,8 +454,8 @@ export const MetricsDashboard = () => {
             <Card sx={{ flex: 1 }}>
               <CardContent>
                 <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography variant="h6">{LL.METRICS_TOP_SHOWS()}</Typography>
-                  <Tooltip title={LL.METRICS_EXPORT_CSV()}>
+                  <Typography variant="h6">{LL.METRICS.TOP_SHOWS()}</Typography>
+                  <Tooltip title={LL.METRICS.EXPORT_CSV()}>
                     <IconButton size="small" onClick={() => exportToCsv(topShows, 'top_shows.csv')} disabled={topShows.length === 0}>
                       <DownloadIcon fontSize="small" />
                     </IconButton>
@@ -463,7 +463,7 @@ export const MetricsDashboard = () => {
                 </Stack>
                 {topShows.length === 0 ? (
                   <Typography variant="body2" color="text.secondary">
-                    {LL.METRICS_NO_DATA()}
+                    {LL.METRICS.NO_DATA()}
                   </Typography>
                 ) : (
                   <>
@@ -473,7 +473,7 @@ export const MetricsDashboard = () => {
                         <XAxis type="number" allowDecimals={false} />
                         <YAxis type="category" dataKey="name" width={120} tick={{ fontSize: 12 }} />
                         <RechartsTooltip />
-                        <Bar dataKey="count" fill="#9c27b0" name={LL.METRICS_USAGE_COUNT()} radius={[0, 4, 4, 0]} />
+                        <Bar dataKey="count" fill="#9c27b0" name={LL.METRICS.USAGE_COUNT()} radius={[0, 4, 4, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                     <TableContainer sx={{ mt: 1, maxHeight: 200, overflow: 'auto' }}>
@@ -481,8 +481,8 @@ export const MetricsDashboard = () => {
                         <TableHead>
                           <TableRow>
                             <TableCell>#</TableCell>
-                            <TableCell>{LL.METRICS_SHOW_NAME()}</TableCell>
-                            <TableCell align="right">{LL.METRICS_USAGE_COUNT()}</TableCell>
+                            <TableCell>{LL.METRICS.SHOW_NAME()}</TableCell>
+                            <TableCell align="right">{LL.METRICS.USAGE_COUNT()}</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
@@ -506,8 +506,8 @@ export const MetricsDashboard = () => {
           <Card>
             <CardContent>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
-                <Typography variant="h6">{LL.METRICS_RECENT_EVENTS()}</Typography>
-                <Tooltip title={LL.METRICS_EXPORT_CSV()}>
+                <Typography variant="h6">{LL.METRICS.RECENT_EVENTS()}</Typography>
+                <Tooltip title={LL.METRICS.EXPORT_CSV()}>
                   <IconButton
                     size="small"
                     onClick={() =>
@@ -531,11 +531,11 @@ export const MetricsDashboard = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell>{LL.METRICS_TIMESTAMP()}</TableCell>
-                      <TableCell>{LL.METRICS_EVENT()}</TableCell>
-                      <TableCell>{LL.METRICS_ENTITY_TYPE_LABEL()}</TableCell>
-                      <TableCell>{LL.METRICS_ENTITY_ID()}</TableCell>
-                      <TableCell>{LL.METRICS_USER()}</TableCell>
+                      <TableCell>{LL.METRICS.TIMESTAMP()}</TableCell>
+                      <TableCell>{LL.METRICS.EVENT()}</TableCell>
+                      <TableCell>{LL.METRICS.ENTITY_TYPE_LABEL()}</TableCell>
+                      <TableCell>{LL.METRICS.ENTITY_ID()}</TableCell>
+                      <TableCell>{LL.METRICS.USER()}</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>

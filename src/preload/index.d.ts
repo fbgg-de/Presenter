@@ -40,6 +40,7 @@ export interface FrontendAPI {
   freezeWindow: (windowName: string) => Promise<void>;
   unfreezeWindow: (windowName: string) => Promise<void>;
   identifyWindows: () => Promise<void>;
+  hideIdentifyWindows: () => Promise<void>;
 
   // ── Media ──
   checkMediaFiles: (files: string[]) => Promise<MediaCheckResult>;

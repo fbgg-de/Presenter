@@ -189,10 +189,10 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
         {/* Header */}
         <Stack direction="row" alignItems="center" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            {LL.WINDOW_PANEL_TITLE()}
+            {LL.WINDOW.PANEL_TITLE()}
           </Typography>
           <Box flexGrow={1} />
-          <Tooltip title={LL.FOOTER_IDENTIFY()}>
+          <Tooltip title={LL.FOOTER.IDENTIFY()}>
             <IconButton
               onClick={() => {
                 if (isIdentifying) {
@@ -223,7 +223,7 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
               startIcon={isBlack ? <ShowIcon /> : <BlackIcon />}
               onClick={() => dispatch(toggleBlack())}
             >
-              {isBlack ? LL.FOOTER_SHOW() : LL.FOOTER_BLACK()}
+              {isBlack ? LL.FOOTER.SHOW() : LL.FOOTER.BLACK()}
             </Button>
             {activeWindows.length > 0 && (
               <Button
@@ -235,7 +235,7 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
                   setOpenWindowsList([]);
                 }}
               >
-                {LL.WINDOW_CLOSE_ALL()}
+                {LL.WINDOW.CLOSE_ALL()}
               </Button>
             )}
           </Stack>
@@ -244,12 +244,12 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
 
           {/* Window list */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.WINDOW_OPEN()} ({activeWindows.length})
+            {LL.WINDOW.OPEN()} ({activeWindows.length})
           </Typography>
 
           {activeWindows.length === 0 ? (
             <Typography color="text.secondary" variant="body2">
-              {LL.WINDOW_NO_OPEN()}
+              {LL.WINDOW.NO_OPEN()}
             </Typography>
           ) : (
             <List dense disablePadding>
@@ -263,12 +263,12 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
                     key={entry.id}
                     secondaryAction={
                       <Stack direction="row" spacing={0.5}>
-                        <Tooltip title={isFrozen ? LL.FOOTER_UNFREEZE() : LL.FOOTER_FREEZE()}>
+                        <Tooltip title={isFrozen ? LL.FOOTER.UNFREEZE() : LL.FOOTER.FREEZE()}>
                           <IconButton size="small" onClick={() => dispatch(toggleFreezeWindow(name))} color={isFrozen ? 'info' : 'default'}>
                             {isFrozen ? <UnfreezeIcon fontSize="small" /> : <FreezeIcon fontSize="small" />}
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title={LL.WINDOW_CLOSE()}>
+                        <Tooltip title={LL.WINDOW.CLOSE()}>
                           <IconButton size="small" onClick={() => handleCloseWindow(entry.id)} color="error">
                             <CloseIcon fontSize="small" />
                           </IconButton>
@@ -285,17 +285,17 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
                       secondary={
                         <Stack direction="row" spacing={0.5} sx={{ mt: 0.5 }}>
                           <Chip
-                            label={isStream ? LL.FOOTER_STREAM_MODE() : LL.FOOTER_NORMAL_MODE()}
+                            label={isStream ? LL.FOOTER.STREAM_MODE() : LL.FOOTER.NORMAL_MODE()}
                             size="small"
                             variant="outlined"
                             sx={{ height: 20, fontSize: '0.65rem' }}
                           />
                           {isFrozen && (
-                            <Chip label={LL.WINDOW_STATUS_FROZEN()} size="small" color="info" sx={{ height: 20, fontSize: '0.65rem' }} />
+                            <Chip label={LL.WINDOW.STATUS_FROZEN()} size="small" color="info" sx={{ height: 20, fontSize: '0.65rem' }} />
                           )}
                           {entry.config.transparent && (
                             <Chip
-                              label={LL.WINDOW_TRANSPARENT()}
+                              label={LL.WINDOW.TRANSPARENT()}
                               size="small"
                               variant="outlined"
                               sx={{ height: 20, fontSize: '0.65rem' }}
@@ -317,19 +317,19 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Stack direction="row" alignItems="center" spacing={1}>
                 <AddIcon fontSize="small" />
-                <Typography fontWeight={600}>{LL.WINDOW_CREATE()}</Typography>
+                <Typography fontWeight={600}>{LL.WINDOW.CREATE()}</Typography>
               </Stack>
             </AccordionSummary>
             <AccordionDetails>
               <Stack spacing={2}>
-                <TextField label={LL.WINDOW_NAME()} value={newName} onChange={(e) => setNewName(e.target.value)} size="small" fullWidth />
+                <TextField label={LL.WINDOW.NAME()} value={newName} onChange={(e) => setNewName(e.target.value)} size="small" fullWidth />
                 <Select value={newMode} onChange={(e) => setNewMode(e.target.value as 'normal' | 'stream')} size="small" fullWidth>
-                  <MenuItem value="normal">{LL.FOOTER_NORMAL_MODE()}</MenuItem>
-                  <MenuItem value="stream">{LL.FOOTER_STREAM_MODE()}</MenuItem>
+                  <MenuItem value="normal">{LL.FOOTER.NORMAL_MODE()}</MenuItem>
+                  <MenuItem value="stream">{LL.FOOTER.STREAM_MODE()}</MenuItem>
                 </Select>
                 <Stack direction="row" spacing={2}>
                   <TextField
-                    label={LL.WINDOW_WIDTH()}
+                    label={LL.WINDOW.WIDTH()}
                     type="number"
                     value={newWidth}
                     onChange={(e) => setNewWidth(Number(e.target.value))}
@@ -337,7 +337,7 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
                     sx={{ flex: 1 }}
                   />
                   <TextField
-                    label={LL.WINDOW_HEIGHT()}
+                    label={LL.WINDOW.HEIGHT()}
                     type="number"
                     value={newHeight}
                     onChange={(e) => setNewHeight(Number(e.target.value))}
@@ -379,10 +379,10 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
                 />
                 <FormControlLabel
                   control={<Switch checked={newTransparent} onChange={(e) => setNewTransparent(e.target.checked)} size="small" />}
-                  label={LL.WINDOW_TRANSPARENT()}
+                  label={LL.WINDOW.TRANSPARENT()}
                 />
                 <Button variant="contained" onClick={handleCreateWindow} startIcon={<AddIcon />}>
-                  {LL.WINDOW_CREATE()}
+                  {LL.WINDOW.CREATE()}
                 </Button>
               </Stack>
             </AccordionDetails>
@@ -391,14 +391,14 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
           {/* Presets */}
           <Accordion>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Typography fontWeight={600}>{LL.WINDOW_PRESETS()}</Typography>
+              <Typography fontWeight={600}>{LL.WINDOW.PRESETS()}</Typography>
             </AccordionSummary>
             <AccordionDetails>
               <Stack spacing={2}>
                 {/* Save preset */}
                 <Stack direction="row" spacing={1}>
                   <TextField
-                    label={LL.WINDOW_PRESET_NAME()}
+                    label={LL.WINDOW.PRESET_NAME()}
                     value={presetName}
                     onChange={(e) => setPresetName(e.target.value)}
                     size="small"
@@ -411,7 +411,7 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
                     onClick={handleSavePreset}
                     disabled={!presetName.trim() || activeWindows.length === 0}
                   >
-                    {LL.SAVE()}
+                    {LL.COMMON.SAVE()}
                   </Button>
                 </Stack>
 
@@ -429,14 +429,14 @@ export const WindowManager = ({ open, onClose }: WindowManagerProps) => {
                       >
                         <ListItemText primary={name} secondary={`${(configs as WindowConfig[]).length} window(s)`} />
                         <Button size="small" onClick={() => handleLoadPreset(name)} sx={{ mr: 4 }}>
-                          {LL.WINDOW_PRESET_LOAD()}
+                          {LL.WINDOW.PRESET_LOAD()}
                         </Button>
                       </ListItem>
                     ))}
                   </List>
                 ) : (
                   <Typography variant="body2" color="text.secondary">
-                    {LL.STYLE_NONE()}
+                    {LL.STYLE.NONE()}
                   </Typography>
                 )}
               </Stack>

@@ -17,7 +17,7 @@ const Control = () => {
   if (!currentShow || !currentShow.order || currentShow.order.length === 0) {
     return (
       <Stack sx={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Typography color="text.secondary">{LL.CONTROL_NO_ITEM()}</Typography>
+        <Typography color="text.secondary">{LL.CONTROL.NO_ITEM()}</Typography>
       </Stack>
     );
   }
@@ -26,7 +26,7 @@ const Control = () => {
   if (!activeItem) {
     return (
       <Stack sx={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Typography color="text.secondary">{LL.CONTROL_NO_ITEM()}</Typography>
+        <Typography color="text.secondary">{LL.CONTROL.NO_ITEM()}</Typography>
       </Stack>
     );
   }

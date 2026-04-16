@@ -103,7 +103,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
   // Editor state
   const [selectedStyleId, setSelectedStyleId] = useState<number | 'new'>('new');
-  const [styleName, setStyleName] = useState<string>(LL.STYLE_NEW());
+  const [styleName, setStyleName] = useState<string>(LL.STYLE.NEW());
   const [styleEnabled, setStyleEnabled] = useState(true);
   const [styleData, setStyleData] = useState<StyleData>(createEmptyStyleData());
   const [isDirty, setIsDirty] = useState(false);
@@ -125,7 +125,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
         loadStyleEntity(styles[0]);
       } else {
         setSelectedStyleId('new');
-        setStyleName(LL.STYLE_NEW());
+        setStyleName(LL.STYLE.NEW());
         setStyleData(createEmptyStyleData());
         setStyleEnabled(true);
       }
@@ -150,7 +150,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   const handleStyleSelect = (id: number | 'new') => {
     setSelectedStyleId(id);
     if (id === 'new') {
-      setStyleName(LL.STYLE_NEW());
+      setStyleName(LL.STYLE.NEW());
       setStyleData(createEmptyStyleData());
       setStyleEnabled(true);
       setIsDirty(false);
@@ -216,7 +216,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
       try {
         await deleteStyleMutation({ id: selectedStyleId }).unwrap();
         setSelectedStyleId('new');
-        setStyleName(LL.STYLE_NEW());
+        setStyleName(LL.STYLE.NEW());
         setStyleData(createEmptyStyleData());
         setIsDirty(false);
       } catch (error) {
@@ -240,9 +240,9 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
         {/* Header */}
         <Stack direction="row" alignItems="center" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
-            {LL.STYLE_EDITOR()}
+            {LL.STYLE.EDITOR()}
           </Typography>
-          {isDirty && <Chip label={LL.STYLE_UNSAVED()} size="small" color="warning" sx={{ ml: 1 }} />}
+          {isDirty && <Chip label={LL.STYLE.UNSAVED()} size="small" color="warning" sx={{ ml: 1 }} />}
           <Box flexGrow={1} />
           <IconButton onClick={onClose}>
             <CloseIcon />
@@ -256,7 +256,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
               <InputLabel>Style</InputLabel>
               <Select value={selectedStyleId} label="Style" onChange={(e) => handleStyleSelect(e.target.value as number | 'new')}>
                 <MenuItem value="new">
-                  <em>+ {LL.STYLE_NEW()}</em>
+                  <em>+ {LL.STYLE.NEW()}</em>
                 </MenuItem>
                 {styles.map((s) => (
                   <MenuItem key={s.id} value={s.id}>
@@ -274,7 +274,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
           {/* Style Name */}
           <TextField
-            label={LL.STYLE_NAME()}
+            label={LL.STYLE.NAME()}
             value={styleName}
             onChange={(e) => {
               setStyleName(e.target.value);
@@ -294,18 +294,18 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                 }}
               />
             }
-            label={LL.STYLE_ENABLED()}
+            label={LL.STYLE.ENABLED()}
           />
 
           <Divider />
 
           {/* ── Background Section ── */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.STYLE_BACKGROUND()}
+            {LL.STYLE.BACKGROUND()}
           </Typography>
 
           <StylePropRow
-            label={LL.STYLE_BACKGROUND_COLOR()}
+            label={LL.STYLE.BACKGROUND_COLOR()}
             enabled={getProp<string>('backgroundColor').enabled}
             onToggle={(e) => togglePropEnabled('backgroundColor', e)}
           >
@@ -328,7 +328,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_BACKGROUND_IMAGE()}
+            label={LL.STYLE.BACKGROUND_IMAGE()}
             enabled={getProp<string>('backgroundImage').enabled}
             onToggle={(e) => togglePropEnabled('backgroundImage', e)}
           >
@@ -342,7 +342,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_BACKGROUND_VIDEO()}
+            label={LL.STYLE.BACKGROUND_VIDEO()}
             enabled={getProp<string>('backgroundVideo').enabled}
             onToggle={(e) => togglePropEnabled('backgroundVideo', e)}
           >
@@ -359,11 +359,11 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
           {/* ── Font Section ── */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.STYLE_FONT()}
+            {LL.STYLE.FONT()}
           </Typography>
 
           <StylePropRow
-            label={LL.STYLE_FONT_FAMILY()}
+            label={LL.STYLE.FONT_FAMILY()}
             enabled={getProp<string>('fontFamily').enabled}
             onToggle={(e) => togglePropEnabled('fontFamily', e)}
           >
@@ -385,7 +385,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_FONT_COLOR()}
+            label={LL.STYLE.FONT_COLOR()}
             enabled={getProp<string>('fontColor').enabled}
             onToggle={(e) => togglePropEnabled('fontColor', e)}
           >
@@ -406,7 +406,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_FONT_SIZE()}
+            label={LL.STYLE.FONT_SIZE()}
             enabled={getProp<string>('fontSize').enabled}
             onToggle={(e) => togglePropEnabled('fontSize', e)}
           >
@@ -420,7 +420,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_FONT_BOLD_ITALIC()}
+            label={LL.STYLE.FONT_BOLD_ITALIC()}
             enabled={
               getProp<boolean>('fontBold').enabled || getProp<boolean>('fontItalic').enabled || getProp<boolean>('fontUnderline').enabled
             }
@@ -459,11 +459,11 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
           {/* ── Spacing Section ── */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.STYLE_SPACING()}
+            {LL.STYLE.SPACING()}
           </Typography>
 
           <StylePropRow
-            label={LL.STYLE_LINE_HEIGHT()}
+            label={LL.STYLE.LINE_HEIGHT()}
             enabled={getProp<string>('lineHeight').enabled}
             onToggle={(e) => togglePropEnabled('lineHeight', e)}
           >
@@ -476,7 +476,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_LETTER_SPACING()}
+            label={LL.STYLE.LETTER_SPACING()}
             enabled={getProp<string>('letterSpacing').enabled}
             onToggle={(e) => togglePropEnabled('letterSpacing', e)}
           >
@@ -489,7 +489,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_PADDING()}
+            label={LL.STYLE.PADDING()}
             enabled={getProp<string>('padding').enabled}
             onToggle={(e) => togglePropEnabled('padding', e)}
           >
@@ -506,11 +506,11 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
           {/* ── Text Section ── */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.STYLE_TEXT()}
+            {LL.STYLE.TEXT()}
           </Typography>
 
           <StylePropRow
-            label={LL.STYLE_ALIGNMENT()}
+            label={LL.STYLE.ALIGNMENT()}
             enabled={getProp<string>('textAlign').enabled}
             onToggle={(e) => togglePropEnabled('textAlign', e)}
           >
@@ -536,7 +536,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_TRANSFORM()}
+            label={LL.STYLE.TRANSFORM()}
             enabled={getProp<string>('textTransform').enabled}
             onToggle={(e) => togglePropEnabled('textTransform', e)}
           >
@@ -556,7 +556,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_TEXT_SHADOW()}
+            label={LL.STYLE.TEXT_SHADOW()}
             enabled={getProp<string>('textShadow').enabled}
             onToggle={(e) => togglePropEnabled('textShadow', e)}
           >
@@ -570,7 +570,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_SHADOW_COLOR()}
+            label={LL.STYLE.SHADOW_COLOR()}
             enabled={getProp<string>('textShadowColor').enabled}
             onToggle={(e) => togglePropEnabled('textShadowColor', e)}
           >
@@ -585,7 +585,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           </StylePropRow>
 
           <StylePropRow
-            label={LL.STYLE_TEXT_STROKE()}
+            label={LL.STYLE.TEXT_STROKE()}
             enabled={getProp<string>('textStroke').enabled}
             onToggle={(e) => togglePropEnabled('textStroke', e)}
           >
@@ -602,11 +602,11 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
           {/* ── Effects Section ── */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.STYLE_EFFECTS()}
+            {LL.STYLE.EFFECTS()}
           </Typography>
 
           <StylePropRow
-            label={LL.STYLE_OPACITY()}
+            label={LL.STYLE.OPACITY()}
             enabled={getProp<number>('opacity').enabled}
             onToggle={(e) => togglePropEnabled('opacity', e)}
           >
@@ -625,7 +625,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
           {/* ── Visibility Section ── */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.STYLE_VISIBILITY()}
+            {LL.STYLE.VISIBILITY()}
           </Typography>
 
           <FormControlLabel
@@ -641,7 +641,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
             label={
               <Stack direction="row" spacing={1} alignItems="center">
                 {styleData.hideText ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-                <Typography variant="body2">{LL.STYLE_HIDE_TEXT()}</Typography>
+                <Typography variant="body2">{LL.STYLE.HIDE_TEXT()}</Typography>
               </Stack>
             }
           />
@@ -659,7 +659,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
             label={
               <Stack direction="row" spacing={1} alignItems="center">
                 {styleData.hideBackground ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-                <Typography variant="body2">{LL.STYLE_HIDE_BACKGROUND()}</Typography>
+                <Typography variant="body2">{LL.STYLE.HIDE_BACKGROUND()}</Typography>
               </Stack>
             }
           />
@@ -668,11 +668,11 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
           {/* ── Next-Line Preview Section ── */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.STYLE_NEXT_LINE_PREVIEW()}
+            {LL.STYLE.NEXT_LINE_PREVIEW()}
           </Typography>
 
           <StylePropRow
-            label={LL.STYLE_NEXT_LINE_COLOR()}
+            label={LL.STYLE.NEXT_LINE_COLOR()}
             enabled={getProp<string>('nextLinePreviewColor').enabled}
             onToggle={(e) => togglePropEnabled('nextLinePreviewColor', e)}
           >
@@ -780,7 +780,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           {/* ── Raw CSS Section ── */}
           <Stack direction="row" alignItems="center" spacing={1}>
             <Typography variant="subtitle2" fontWeight={700}>
-              {LL.STYLE_CUSTOM_CSS()}
+              {LL.STYLE.CUSTOM_CSS()}
             </Typography>
             <IconButton size="small" onClick={() => setShowRawCss(!showRawCss)}>
               <CodeIcon fontSize="small" />
@@ -806,7 +806,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
           {/* ── Live Preview ── */}
           <Typography variant="subtitle2" fontWeight={700}>
-            {LL.STYLE_PREVIEW()}
+            {LL.STYLE.PREVIEW()}
           </Typography>
           <Box
             sx={{
@@ -830,10 +830,10 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
         {/* Footer actions */}
         <Stack direction="row" spacing={2} sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
           <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={!isDirty && selectedStyleId !== 'new'}>
-            {selectedStyleId === 'new' ? LL.STYLE_CREATE() : LL.SAVE()}
+            {selectedStyleId === 'new' ? LL.STYLE.CREATE() : LL.COMMON.SAVE()}
           </Button>
           <Button variant="outlined" onClick={onClose}>
-            {LL.CANCEL()}
+            {LL.COMMON.CANCEL()}
           </Button>
         </Stack>
       </Stack>

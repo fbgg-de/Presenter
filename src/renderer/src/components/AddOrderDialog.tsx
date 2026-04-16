@@ -18,17 +18,17 @@ const AddOrderDialog = ({ open, onClose, orders, onCreate }: Props) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{LL.SONG_EDITOR_ADD_ORDER_TITLE()}</DialogTitle>
+      <DialogTitle>{LL.SONG_EDITOR.ADD_ORDER_TITLE()}</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           margin="dense"
-          label={LL.SONG_EDITOR_ORDER_NAME_LABEL()}
+          label={LL.SONG_EDITOR.ORDER_NAME_LABEL()}
           fullWidth
           variant="outlined"
           value={newOrderName}
           onChange={(e) => setNewOrderName(e.target.value)}
-          placeholder={LL.SONG_EDITOR_ORDER_NAME_PLACEHOLDER()}
+          placeholder={LL.SONG_EDITOR.ORDER_NAME_PLACEHOLDER()}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -40,7 +40,7 @@ const AddOrderDialog = ({ open, onClose, orders, onCreate }: Props) => {
         />
         {trimmed && exists && (
           <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block' }}>
-            {LL.SONG_EDITOR_ORDER_EXISTS()}
+            {LL.SONG_EDITOR.ORDER_EXISTS()}
           </Typography>
         )}
       </DialogContent>
@@ -51,7 +51,7 @@ const AddOrderDialog = ({ open, onClose, orders, onCreate }: Props) => {
             setNewOrderName('');
           }}
         >
-          {LL.CANCEL()}
+          {LL.COMMON.CANCEL()}
         </Button>
         <Button
           onClick={() => {
@@ -62,7 +62,7 @@ const AddOrderDialog = ({ open, onClose, orders, onCreate }: Props) => {
           variant="contained"
           disabled={!trimmed || exists}
         >
-          {LL.ADD()}
+          {LL.COMMON.ADD()}
         </Button>
       </DialogActions>
     </Dialog>

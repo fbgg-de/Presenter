@@ -75,17 +75,17 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
     <>
       <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {LL.SONG_LIBRARY()}
+          {LL.SONGS.LIBRARY()}
           {filteredSongs && <Chip label={filteredSongs.length} size="small" variant="outlined" />}
           <Box flexGrow={1} />
           <ToggleButtonGroup value={sortOrder} exclusive onChange={(_e, val) => val && setSortOrder(val)} size="small" sx={{ mr: 1 }}>
             <ToggleButton value="lexicographic">
-              <Tooltip title={LL.SONG_SORT_BY_NAME()}>
+              <Tooltip title={LL.SONGS.SORT_BY_NAME()}>
                 <SortByAlphaIcon fontSize="small" />
               </Tooltip>
             </ToggleButton>
             <ToggleButton value="numeric">
-              <Tooltip title={LL.SONG_SORT_BY_NUMBER()}>
+              <Tooltip title={LL.SONGS.SORT_BY_NUMBER()}>
                 <SortByNumberIcon fontSize="small" />
               </Tooltip>
             </ToggleButton>
@@ -97,7 +97,7 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
         <DialogContent>
           <TextField
             fullWidth
-            placeholder={LL.FILTER_SONGS()}
+            placeholder={LL.SONGS.FILTER()}
             variant="outlined"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
@@ -126,7 +126,7 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
                   disablePadding
                   secondaryAction={
                     showDeleteFromDb ? (
-                      <Tooltip title={LL.DELETE()}>
+                      <Tooltip title={LL.COMMON.DELETE()}>
                         <IconButton
                           edge="end"
                           size="small"
@@ -163,7 +163,7 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
                           )}
                           {Number(song.orderCount ?? 0) > 0 && (
                             <Chip
-                              label={LL.SONG_ORDERS_COUNT({ count: song.orderCount! })}
+                              label={LL.SONG_EDITOR.ORDERS_COUNT({ count: song.orderCount! })}
                               size="small"
                               variant="outlined"
                               sx={{ fontSize: '0.65rem', height: 18, flexShrink: 0 }}
@@ -181,7 +181,7 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
             </List>
           ) : (
             <Box display="flex" justifyContent="center" py={4}>
-              <Typography color="text.secondary">{LL.NO_SONGS_FOUND()}</Typography>
+              <Typography color="text.secondary">{LL.SONGS.NO_FOUND()}</Typography>
             </Box>
           )}
         </DialogContent>
@@ -189,10 +189,10 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onClose={() => !isDeleting && setDeleteConfirmOpen(false)}>
-        <DialogTitle>{LL.CONFIRM_DELETE_SONG()}</DialogTitle>
+        <DialogTitle>{LL.SONGS.CONFIRM_DELETE()}</DialogTitle>
         <DialogContent>
           <Typography>
-            {LL.CONFIRM_DELETE_SONG_MESSAGE({
+            {LL.SONGS.CONFIRM_DELETE_MESSAGE({
               title: songToDelete?.title || '',
               number: songToDelete?.songNumber || 0,
             })}
@@ -200,10 +200,10 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteConfirmOpen(false)} disabled={isDeleting}>
-            {LL.CANCEL()}
+            {LL.COMMON.CANCEL()}
           </Button>
           <Button onClick={handleDelete} color="error" variant="contained" disabled={isDeleting}>
-            {isDeleting ? <CircularProgress size={20} /> : LL.DELETE()}
+            {isDeleting ? <CircularProgress size={20} /> : LL.COMMON.DELETE()}
           </Button>
         </DialogActions>
       </Dialog>

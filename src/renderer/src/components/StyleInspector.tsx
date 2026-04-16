@@ -104,8 +104,8 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
   const inspectedProperties = useMemo(() => {
     // Localized formatter (depends on LL)
     const formatValue = (value: unknown): string => {
-      if (value === undefined || value === null) return LL.STYLE_EMPTY();
-      if (typeof value === 'boolean') return value ? LL.STYLE_BOOL_YES() : LL.STYLE_BOOL_NO();
+      if (value === undefined || value === null) return LL.STYLE.EMPTY();
+      if (typeof value === 'boolean') return value ? LL.STYLE.BOOL_YES() : LL.STYLE.BOOL_NO();
       if (Array.isArray(value)) return value.join(', ');
       return String(value);
     };
@@ -113,13 +113,13 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
     const sourceLabel = (level: StyleLevel) => {
       switch (level) {
         case 'Default':
-          return LL.STYLE_LEVEL_DEFAULT();
+          return LL.STYLE.LEVEL_DEFAULT();
         case 'Global':
-          return LL.STYLE_LEVEL_GLOBAL();
+          return LL.STYLE.LEVEL_GLOBAL();
         case 'Show':
-          return LL.STYLE_LEVEL_SHOW();
+          return LL.STYLE.LEVEL_SHOW();
         case 'Item':
-          return LL.STYLE_LEVEL_ITEM();
+          return LL.STYLE.LEVEL_ITEM();
       }
     };
 
@@ -136,7 +136,7 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
     for (const prop of PROPERTY_NAMES) {
       let value: unknown = defaultResolved[prop];
       let source: StyleLevel = 'Default';
-      let sourceStyleName: string | LocalizedString = LL.STYLE_INSPECTOR_BUILTIN_DEFAULT();
+      let sourceStyleName: string | LocalizedString = LL.STYLE.INSPECTOR_BUILTIN_DEFAULT();
 
       if (globalResolved[prop] !== undefined) {
         value = globalResolved[prop];
@@ -173,8 +173,8 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={1}>
-          <Typography variant="h6">{LL.STYLE_INSPECTOR()}</Typography>
-          {windowName && <Chip label={LL.STYLE_INSPECTOR_WINDOW({ name: windowName })} size="small" variant="outlined" />}
+          <Typography variant="h6">{LL.STYLE.INSPECTOR()}</Typography>
+          {windowName && <Chip label={LL.STYLE.INSPECTOR_WINDOW({ name: windowName })} size="small" variant="outlined" />}
         </Stack>
       </DialogTitle>
       <DialogContent>
@@ -182,21 +182,21 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
         <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              {LL.STYLE_GLOBAL()}
+              {LL.STYLE.GLOBAL()}
             </Typography>
-            <Typography variant="body2">{globalStyle?.name || `(${LL.STYLE_NONE()})`}</Typography>
+            <Typography variant="body2">{globalStyle?.name || `(${LL.STYLE.NONE()})`}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              {LL.STYLE_SHOW()}
+              {LL.STYLE.SHOW()}
             </Typography>
-            <Typography variant="body2">{showStyle?.name || `(${LL.STYLE_NONE()})`}</Typography>
+            <Typography variant="body2">{showStyle?.name || `(${LL.STYLE.NONE()})`}</Typography>
           </Box>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              {LL.STYLE_ITEM()}
+              {LL.STYLE.ITEM()}
             </Typography>
-            <Typography variant="body2">{itemStyle?.name || `(${LL.STYLE_NONE()})`}</Typography>
+            <Typography variant="body2">{itemStyle?.name || `(${LL.STYLE.NONE()})`}</Typography>
           </Box>
         </Stack>
 
@@ -205,16 +205,16 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
             <TableHead>
               <TableRow>
                 <TableCell>
-                  <strong>{LL.STYLE_INSPECTOR_PROPERTY()}</strong>
+                  <strong>{LL.STYLE.INSPECTOR_PROPERTY()}</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>{LL.STYLE_INSPECTOR_VALUE()}</strong>
+                  <strong>{LL.STYLE.INSPECTOR_VALUE()}</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>{LL.STYLE_INSPECTOR_SOURCE()}</strong>
+                  <strong>{LL.STYLE.INSPECTOR_SOURCE()}</strong>
                 </TableCell>
                 <TableCell>
-                  <strong>{LL.STYLE_INSPECTOR_STYLE()}</strong>
+                  <strong>{LL.STYLE.INSPECTOR_STYLE()}</strong>
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -251,12 +251,12 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
                     <Chip
                       label={
                         prop.source === 'Default'
-                          ? LL.STYLE_LEVEL_DEFAULT()
+                          ? LL.STYLE.LEVEL_DEFAULT()
                           : prop.source === 'Global'
-                            ? LL.STYLE_LEVEL_GLOBAL()
+                            ? LL.STYLE.LEVEL_GLOBAL()
                             : prop.source === 'Show'
-                              ? LL.STYLE_LEVEL_SHOW()
-                              : LL.STYLE_LEVEL_ITEM()
+                              ? LL.STYLE.LEVEL_SHOW()
+                              : LL.STYLE.LEVEL_ITEM()
                       }
                       size="small"
                       color={getLevelColor(prop.source)}
@@ -277,21 +277,21 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
       <DialogActions>
         {onEditStyle && globalStyle && (
           <Button size="small" onClick={() => onEditStyle(globalStyle.id)}>
-            {LL.EDIT()} {LL.STYLE_GLOBAL()}
+            {LL.COMMON.EDIT()} {LL.STYLE.GLOBAL()}
           </Button>
         )}
         {onEditStyle && showStyle && (
           <Button size="small" onClick={() => onEditStyle(showStyle.id)}>
-            {LL.EDIT()} {LL.STYLE_SHOW()}
+            {LL.COMMON.EDIT()} {LL.STYLE.SHOW()}
           </Button>
         )}
         {onEditStyle && itemStyle && (
           <Button size="small" onClick={() => onEditStyle(itemStyle.id)}>
-            {LL.EDIT()} {LL.STYLE_ITEM()}
+            {LL.COMMON.EDIT()} {LL.STYLE.ITEM()}
           </Button>
         )}
         <Box flexGrow={1} />
-        <Button onClick={onClose}>{LL.CLOSE()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>
     </Dialog>
   );

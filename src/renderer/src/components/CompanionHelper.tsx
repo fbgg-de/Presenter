@@ -97,7 +97,7 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack direction="row" spacing={1} alignItems="center">
             <CableIcon />
-            <Typography variant="h6">{LL.COMPANION_HELPER_TITLE()}</Typography>
+            <Typography variant="h6">{LL.COMPANION.HELPER_TITLE()}</Typography>
           </Stack>
           <IconButton onClick={onClose}>
             <CloseIcon />
@@ -111,10 +111,10 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
             <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
               <Stack direction="row" spacing={2} alignItems="center">
                 <Typography variant="body2" fontWeight={600}>
-                  {LL.COMPANION_WS_URL()}:
+                  {LL.COMPANION.WS_URL()}:
                 </Typography>
                 <Chip label={wsUrl} variant="outlined" size="small" sx={{ fontFamily: 'monospace' }} />
-                <Tooltip title={LL.COMPANION_COPY()}>
+                <Tooltip title={LL.COMPANION.COPY()}>
                   <IconButton
                     size="small"
                     onClick={() => {
@@ -131,16 +131,16 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
           {/* Target Window Selector */}
           <Stack direction="row" spacing={2} alignItems="center">
             <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel>{LL.COMPANION_TARGET_WINDOW()}</InputLabel>
-              <Select value={targetWindow} label={LL.COMPANION_TARGET_WINDOW()} onChange={(e) => setTargetWindow(e.target.value)}>
-                <MenuItem value="">{LL.COMPANION_NO_TARGET()}</MenuItem>
+              <InputLabel>{LL.COMPANION.TARGET_WINDOW()}</InputLabel>
+              <Select value={targetWindow} label={LL.COMPANION.TARGET_WINDOW()} onChange={(e) => setTargetWindow(e.target.value)}>
+                <MenuItem value="">{LL.COMPANION.NO_TARGET()}</MenuItem>
                 <MenuItem value="Main Lyrics">Main Lyrics</MenuItem>
                 <MenuItem value="Stream">Stream</MenuItem>
               </Select>
             </FormControl>
             <TextField
               size="small"
-              label={LL.COMPANION_CUSTOM_TARGET()}
+              label={LL.COMPANION.CUSTOM_TARGET()}
               value={targetWindow}
               onChange={(e) => setTargetWindow(e.target.value)}
               sx={{ minWidth: 200 }}
@@ -154,9 +154,9 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell>{LL.COMPANION_ACTION()}</TableCell>
-                  <TableCell>{LL.COMPANION_DESCRIPTION()}</TableCell>
-                  <TableCell>{LL.COMPANION_TARGET()}</TableCell>
+                  <TableCell>{LL.COMPANION.ACTION()}</TableCell>
+                  <TableCell>{LL.COMPANION.DESCRIPTION()}</TableCell>
+                  <TableCell>{LL.COMPANION.TARGET()}</TableCell>
                   <TableCell width={60} />
                 </TableRow>
               </TableHead>
@@ -173,7 +173,7 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
                       {action.hasTarget ? <Chip label={targetWindow || '—'} size="small" color="info" variant="outlined" /> : '—'}
                     </TableCell>
                     <TableCell>
-                      <Tooltip title={copiedAction === action.action ? LL.COMPANION_COPIED() : LL.COMPANION_COPY()}>
+                      <Tooltip title={copiedAction === action.action ? LL.COMPANION.COPIED() : LL.COMPANION.COPY()}>
                         <IconButton size="small" onClick={() => handleCopy(action)}>
                           <CopyIcon fontSize="small" color={copiedAction === action.action ? 'success' : 'inherit'} />
                         </IconButton>
@@ -186,7 +186,7 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
           </TableContainer>
 
           {/* Preview */}
-          <Typography variant="subtitle2">{LL.COMPANION_EXAMPLES()}:</Typography>
+          <Typography variant="subtitle2">{LL.COMPANION.EXAMPLES()}:</Typography>
           <Box
             sx={{
               bgcolor: 'grey.900',

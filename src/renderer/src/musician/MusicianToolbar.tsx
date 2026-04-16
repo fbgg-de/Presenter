@@ -290,7 +290,7 @@ export const MusicianToolbar = ({
         </SpeedDial>
         <FloatingButton
           icon={toolbarExpanded ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
-          tooltip={LL.MUSICIAN_TOOLBAR_TOGGLE()}
+          tooltip={LL.MUSICIAN.TOOLBAR_TOGGLE()}
           onClick={toggleExpanded}
         />
       </Stack>
@@ -301,7 +301,7 @@ export const MusicianToolbar = ({
           {/* Sidebar toggle */}
           <FloatingButton
             icon={<MenuIcon fontSize="small" />}
-            tooltip={LL.MUSICIAN_SIDEBAR_TOGGLE()}
+            tooltip={LL.MUSICIAN.SIDEBAR_TOGGLE()}
             onClick={onToggleSidebar}
             active={sidebarOpen}
           />
@@ -309,7 +309,7 @@ export const MusicianToolbar = ({
           {/* Fullscreen */}
           <FloatingButton
             icon={isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
-            tooltip={isFullscreen ? LL.MUSICIAN_EXIT_FULLSCREEN() : LL.MUSICIAN_FULLSCREEN()}
+            tooltip={isFullscreen ? LL.MUSICIAN.EXIT_FULLSCREEN() : LL.MUSICIAN.FULLSCREEN()}
             onClick={toggleFullscreen}
             active={isFullscreen}
           />
@@ -318,7 +318,7 @@ export const MusicianToolbar = ({
           {supportsWakeLock && (
             <FloatingButton
               icon={wakeLock ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
-              tooltip={wakeLock ? LL.MUSICIAN_WAKE_LOCK_OFF() : LL.MUSICIAN_WAKE_LOCK_ON()}
+              tooltip={wakeLock ? LL.MUSICIAN.WAKE_LOCK_OFF() : LL.MUSICIAN.WAKE_LOCK_ON()}
               onClick={toggleWakeLock}
               active={!!wakeLock}
             />
@@ -337,7 +337,7 @@ export const MusicianToolbar = ({
           >
             <SpeedDialAction
               icon={<OnePageIcon fontSize="small" />}
-              tooltipTitle={LL.MUSICIAN_PAGE_ONE()}
+              tooltipTitle={LL.MUSICIAN.PAGE_ONE()}
               tooltipPlacement="bottom"
               onClick={() => {
                 onSetPageView('one-page');
@@ -347,7 +347,7 @@ export const MusicianToolbar = ({
             />
             <SpeedDialAction
               icon={<LooksTwoIcon fontSize="small" />}
-              tooltipTitle={LL.MUSICIAN_PAGE_TWO()}
+              tooltipTitle={LL.MUSICIAN.PAGE_TWO()}
               tooltipPlacement="bottom"
               onClick={() => {
                 onSetPageView('two-page');
@@ -361,7 +361,7 @@ export const MusicianToolbar = ({
           {isSongItem && activeSongNumber != null && (
             <FloatingButton
               icon={<PdfIcon fontSize="small" />}
-              tooltip={hasPdfs ? LL.PDF_MANAGE_TITLE() : LL.PDF_IMPORT_TITLE()}
+              tooltip={hasPdfs ? LL.PDF.MANAGE_TITLE() : LL.PDF.IMPORT_TITLE()}
               onClick={onOpenPdfModal}
             />
           )}
@@ -370,7 +370,7 @@ export const MusicianToolbar = ({
           {showPdfTools && (
             <FloatingButton
               icon={<AnnotateIcon fontSize="small" />}
-              tooltip={LL.MUSICIAN_ANNOTATE()}
+              tooltip={LL.MUSICIAN.ANNOTATE()}
               onClick={onToggleAnnotate}
               active={annotateMode}
             />
@@ -380,7 +380,7 @@ export const MusicianToolbar = ({
           {showPdfTools && onRefetchAnnotations && (
             <FloatingButton
               icon={<RefetchAnnotationsIcon fontSize="small" />}
-              tooltip={LL.ANNOTATION_REFETCH()}
+              tooltip={LL.ANNOTATION.REFETCH()}
               onClick={onRefetchAnnotations}
             />
           )}
@@ -404,19 +404,19 @@ export const MusicianToolbar = ({
             >
               <SpeedDialAction
                 icon={<ZoomInIcon fontSize="small" />}
-                tooltipTitle={LL.MUSICIAN_ZOOM_IN()}
+                tooltipTitle={LL.MUSICIAN.ZOOM_IN()}
                 tooltipPlacement="bottom"
                 onClick={() => onZoomIn()}
               />
               <SpeedDialAction
                 icon={<ZoomOutIcon fontSize="small" />}
-                tooltipTitle={LL.MUSICIAN_ZOOM_OUT()}
+                tooltipTitle={LL.MUSICIAN.ZOOM_OUT()}
                 tooltipPlacement="bottom"
                 onClick={() => onZoomOut()}
               />
               <SpeedDialAction
                 icon={<Zoom100Icon fontSize="small" />}
-                tooltipTitle={LL.MUSICIAN_ZOOM_100()}
+                tooltipTitle={LL.MUSICIAN.ZOOM_100()}
                 tooltipPlacement="bottom"
                 onClick={() => {
                   onZoomReset();
@@ -426,7 +426,7 @@ export const MusicianToolbar = ({
               />
               <SpeedDialAction
                 icon={<FitWidthIcon fontSize="small" />}
-                tooltipTitle={LL.MUSICIAN_ZOOM_FIT_WIDTH()}
+                tooltipTitle={LL.MUSICIAN.ZOOM_FIT_WIDTH()}
                 tooltipPlacement="bottom"
                 onClick={() => {
                   onZoomFitWidth();
@@ -437,7 +437,7 @@ export const MusicianToolbar = ({
           )}
 
           {/* 7. Settings */}
-          <FloatingButton icon={<SettingsIcon fontSize="small" />} tooltip={LL.MUSICIAN_SETTINGS()} onClick={onOpenSettings} />
+          <FloatingButton icon={<SettingsIcon fontSize="small" />} tooltip={LL.MUSICIAN.SETTINGS()} onClick={onOpenSettings} />
         </>
       )}
     </Stack>

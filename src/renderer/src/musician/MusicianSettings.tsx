@@ -69,7 +69,7 @@ export const MusicianSettings = ({
     <Drawer anchor="right" open={open} onClose={onClose}>
       <Stack sx={{ width: 320, p: 2, height: '100%' }} spacing={2.5}>
         <Typography variant="h6" fontWeight={700}>
-          {LL.MUSICIAN_SETTINGS()}
+          {LL.MUSICIAN.SETTINGS()}
         </Typography>
         <Divider />
 
@@ -77,7 +77,7 @@ export const MusicianSettings = ({
         <Stack direction="row" alignItems="center" spacing={1}>
           {musicianTheme === 'dark' ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
           <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
-            {musicianTheme === 'dark' ? LL.MUSICIAN_DARK_MODE() : LL.MUSICIAN_LIGHT_MODE()}
+            {musicianTheme === 'dark' ? LL.MUSICIAN.DARK_MODE() : LL.MUSICIAN.LIGHT_MODE()}
           </Typography>
           <Switch
             size="small"
@@ -90,7 +90,7 @@ export const MusicianSettings = ({
         <Stack direction="row" alignItems="center" spacing={1}>
           <VisibilityIcon fontSize="small" />
           <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
-            {LL.MUSICIAN_BLOCK_INDICATOR()}
+            {LL.MUSICIAN.BLOCK_INDICATOR()}
           </Typography>
           <Switch
             size="small"
@@ -103,7 +103,7 @@ export const MusicianSettings = ({
         <Stack direction="row" alignItems="center" spacing={1}>
           <ListAltIcon fontSize="small" />
           <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
-            {LL.MUSICIAN_SHOW_FOOTER()}
+            {LL.MUSICIAN.SHOW_FOOTER()}
           </Typography>
           <Switch
             size="small"
@@ -115,14 +115,14 @@ export const MusicianSettings = ({
 
         {/* Default page view */}
         <FormControl size="small" fullWidth>
-          <InputLabel>{LL.MUSICIAN_DEFAULT_PAGE_MODE()}</InputLabel>
+          <InputLabel>{LL.MUSICIAN.DEFAULT_PAGE_MODE()}</InputLabel>
           <Select
             value={defaultPageView}
-            label={LL.MUSICIAN_DEFAULT_PAGE_MODE()}
+            label={LL.MUSICIAN.DEFAULT_PAGE_MODE()}
             onChange={(e) => dispatch(updateSetting({ key: 'musicianPageView', value: e.target.value as any }))}
           >
-            <MenuItem value="one-page">{LL.MUSICIAN_PAGE_ONE()}</MenuItem>
-            <MenuItem value="two-page">{LL.MUSICIAN_PAGE_TWO()}</MenuItem>
+            <MenuItem value="one-page">{LL.MUSICIAN.PAGE_ONE()}</MenuItem>
+            <MenuItem value="two-page">{LL.MUSICIAN.PAGE_TWO()}</MenuItem>
           </Select>
         </FormControl>
         <Divider />
@@ -157,15 +157,15 @@ export const MusicianSettings = ({
               </li>
             );
           }}
-          renderInput={(params) => <TextField {...params} label={LL.MUSICIAN_NAME_SELECT()} placeholder={LL.MUSICIAN_ADD_NAME()} />}
+          renderInput={(params) => <TextField {...params} label={LL.MUSICIAN.NAME_SELECT()} placeholder={LL.MUSICIAN.ADD_NAME()} />}
         />
 
         {/* Band / Order select */}
         <FormControl size="small" fullWidth>
-          <InputLabel>{LL.MUSICIAN_BAND_SELECT()}</InputLabel>
+          <InputLabel>{LL.MUSICIAN.BAND_SELECT()}</InputLabel>
           <Select
             value={musicianBand || 'Default'}
-            label={LL.MUSICIAN_BAND_SELECT()}
+            label={LL.MUSICIAN.BAND_SELECT()}
             onChange={(e) => dispatch(updateSetting({ key: 'musicianBand', value: e.target.value }))}
           >
             {availableBands.map((b) => (
@@ -182,7 +182,7 @@ export const MusicianSettings = ({
           <Stack direction="row" alignItems="center" spacing={1}>
             <FormatSizeIcon fontSize="small" color="action" />
             <Typography variant="body2" fontWeight={600}>
-              {LL.MUSICIAN_TEXT_SIZE()}
+              {LL.MUSICIAN.TEXT_SIZE()}
             </Typography>
           </Stack>
           <Stack direction="row" spacing={2} alignItems="center">
@@ -207,7 +207,7 @@ export const MusicianSettings = ({
         <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
           <Chip
             icon={<QrCodeIcon />}
-            label={LL.QR_SHARE_TITLE()}
+            label={LL.QR.SHARE_TITLE()}
             onClick={() => {
               setQrOpen(true);
               onClose();
@@ -218,7 +218,7 @@ export const MusicianSettings = ({
           />
           <Chip
             icon={<PdfIcon />}
-            label={LL.PDF_MANAGE_TITLE()}
+            label={LL.PDF.MANAGE_TITLE()}
             onClick={() => {
               setPdfUploadOpen(true);
               onClose();

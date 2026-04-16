@@ -12,6 +12,15 @@ if (DEVELOPMENT) {
 const DOMAIN = 'localhost';
 const BASE_URL = 'http://' . DOMAIN . '/';
 
+// CORS: list of origins that may call the API.
+// In development, include the Vite dev server and Electron's file:// origin ("null").
+// In production, set this to your frontend's actual origin, e.g. 'https://presenter.example.com'.
+const CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',  // Vite dev server
+    'http://localhost:4173',  // Vite preview
+    'null',                   // Electron packaged (file:// sends Origin: null)
+];
+
 const DEFAULT_LANGUAGE = 'de'; // Default language: 'en' (English) or 'de' (German)
 
 // Database

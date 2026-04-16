@@ -71,23 +71,23 @@ const useActionLabel = (): ((action: ActionId) => string) => {
     (action: ActionId): string => {
       switch (action) {
         case 'prev_item':
-          return LL.KEYBOARD_ACTION_PREV_ITEM();
+          return LL.KEYBOARD.ACTION_PREV_ITEM();
         case 'next_item':
-          return LL.KEYBOARD_ACTION_NEXT_ITEM();
+          return LL.KEYBOARD.ACTION_NEXT_ITEM();
         case 'prev_block':
-          return LL.KEYBOARD_ACTION_PREV_BLOCK();
+          return LL.KEYBOARD.ACTION_PREV_BLOCK();
         case 'next_block':
-          return LL.KEYBOARD_ACTION_NEXT_BLOCK();
+          return LL.KEYBOARD.ACTION_NEXT_BLOCK();
         case 'prev_line':
-          return LL.KEYBOARD_ACTION_PREV_LINE();
+          return LL.KEYBOARD.ACTION_PREV_LINE();
         case 'next_line':
-          return LL.KEYBOARD_ACTION_NEXT_LINE();
+          return LL.KEYBOARD.ACTION_NEXT_LINE();
         case 'toggle_black':
-          return LL.KEYBOARD_ACTION_TOGGLE_BLACK();
+          return LL.KEYBOARD.ACTION_TOGGLE_BLACK();
         case 'toggle_fullscreen':
-          return LL.KEYBOARD_ACTION_TOGGLE_FULLSCREEN();
+          return LL.KEYBOARD.ACTION_TOGGLE_FULLSCREEN();
         case 'close_drawer':
-          return LL.KEYBOARD_ACTION_CLOSE_DRAWER();
+          return LL.KEYBOARD.ACTION_CLOSE_DRAWER();
         default:
           return action;
       }
@@ -138,10 +138,10 @@ export const KeyboardMappingEditor = () => {
         <TableHead>
           <TableRow>
             <TableCell>
-              <strong>{LL.KEYBOARD_MAPPING_ACTION()}</strong>
+              <strong>{LL.KEYBOARD.MAPPING_ACTION()}</strong>
             </TableCell>
             <TableCell>
-              <strong>{LL.KEYBOARD_MAPPING_KEY()}</strong>
+              <strong>{LL.KEYBOARD.MAPPING_KEY()}</strong>
             </TableCell>
             <TableCell width={50} />
           </TableRow>
@@ -166,7 +166,7 @@ export const KeyboardMappingEditor = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <IconButton size="small" onClick={() => setCaptureAction(action)} title={LL.KEYBOARD_MAPPING_EDIT()}>
+                  <IconButton size="small" onClick={() => setCaptureAction(action)} title={LL.KEYBOARD.MAPPING_EDIT()}>
                     <EditIcon fontSize="small" />
                   </IconButton>
                 </TableCell>
@@ -177,22 +177,22 @@ export const KeyboardMappingEditor = () => {
       </Table>
 
       <Button variant="outlined" size="small" startIcon={<ResetIcon />} onClick={handleReset}>
-        {LL.KEYBOARD_MAPPING_RESET()}
+        {LL.KEYBOARD.MAPPING_RESET()}
       </Button>
 
       {/* Key capture dialog */}
       <Dialog open={!!captureAction} onClose={() => setCaptureAction(null)}>
-        <DialogTitle>{LL.KEYBOARD_MAPPING()}</DialogTitle>
+        <DialogTitle>{LL.KEYBOARD.MAPPING()}</DialogTitle>
         <DialogContent>
           <Stack alignItems="center" spacing={2} sx={{ py: 3, px: 4 }}>
             <Typography variant="body1">{captureAction && getActionLabel(captureAction)}</Typography>
             <Typography variant="h6" color="primary" sx={{ fontFamily: 'monospace' }}>
-              {LL.KEYBOARD_MAPPING_PRESS()}
+              {LL.KEYBOARD.MAPPING_PRESS()}
             </Typography>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setCaptureAction(null)}>{LL.CANCEL()}</Button>
+          <Button onClick={() => setCaptureAction(null)}>{LL.COMMON.CANCEL()}</Button>
         </DialogActions>
       </Dialog>
     </Stack>

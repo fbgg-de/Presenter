@@ -75,7 +75,7 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={1}>
           <MenuBookIcon color="success" />
-          <Typography variant="h6">{LL.BIBLE_VERSE()}</Typography>
+          <Typography variant="h6">{LL.BIBLE.VERSE()}</Typography>
           <Box flexGrow={1} />
           <IconButton size="small" onClick={onClose}>
             <CloseIcon />
@@ -86,8 +86,8 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
         <Stack spacing={2} sx={{ mt: 1 }}>
           {/* Quick reference input */}
           <TextField
-            label={LL.BIBLE_REFERENCE()}
-            placeholder={LL.BIBLE_REFERENCE_PLACEHOLDER()}
+            label={LL.BIBLE.REFERENCE()}
+            placeholder={LL.BIBLE.REFERENCE_PLACEHOLDER()}
             value={reference}
             onChange={(e) => {
               setReference(e.target.value);
@@ -115,13 +115,13 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
               }}
               loading={translationsLoading}
               sx={{ flex: 2 }}
-              renderInput={(params) => <TextField {...params} label={LL.BIBLE_TRANSLATION()} size="small" />}
+              renderInput={(params) => <TextField {...params} label={LL.BIBLE.TRANSLATION()} size="small" />}
               isOptionEqualToValue={(option, value) => option.id === value.id}
             />
 
             {/* Language filter */}
             <TextField
-              label={LL.BIBLE_FILTER_LANGUAGE()}
+              label={LL.BIBLE.FILTER_LANGUAGE()}
               value={languageFilter}
               onChange={(e) => setLanguageFilter(e.target.value)}
               size="small"
@@ -130,27 +130,27 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
             />
 
             <Button variant="contained" onClick={handleSearch} disabled={!reference.trim()}>
-              {LL.SEARCH()}
+              {LL.COMMON.SEARCH()}
             </Button>
           </Stack>
 
-          {translationsError && <Alert severity="warning">{LL.BIBLE_NO_TRANSLATIONS()}</Alert>}
+          {translationsError && <Alert severity="warning">{LL.BIBLE.NO_TRANSLATIONS()}</Alert>}
 
           <Divider />
 
           {/* Preview */}
           <Typography variant="subtitle2" color="text.secondary">
-            {LL.BIBLE_PREVIEW()}
+            {LL.BIBLE.PREVIEW()}
           </Typography>
 
           {verseFetching && (
             <Box display="flex" justifyContent="center" py={3}>
               <CircularProgress />
-              <Typography sx={{ ml: 2 }}>{LL.BIBLE_LOADING()}</Typography>
+              <Typography sx={{ ml: 2 }}>{LL.BIBLE.LOADING()}</Typography>
             </Box>
           )}
 
-          {verseError && <Alert severity="error">{LL.BIBLE_FETCH_ERROR()}</Alert>}
+          {verseError && <Alert severity="error">{LL.BIBLE.FETCH_ERROR()}</Alert>}
 
           {verseResult && !verseFetching && (
             <Paper variant="outlined" sx={{ p: 2 }}>
@@ -185,13 +185,13 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
             </Paper>
           )}
 
-          {!verseResult && !verseFetching && !verseError && shouldFetch && <Alert severity="info">{LL.BIBLE_NO_RESULTS()}</Alert>}
+          {!verseResult && !verseFetching && !verseError && shouldFetch && <Alert severity="info">{LL.BIBLE.NO_RESULTS()}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button onClick={handleAdd} variant="contained" color="success" disabled={!verseResult} startIcon={<AddIcon />}>
-          {LL.BIBLE_ADD_TO_SHOW()}
+          {LL.BIBLE.ADD_TO_SHOW()}
         </Button>
       </DialogActions>
     </Dialog>

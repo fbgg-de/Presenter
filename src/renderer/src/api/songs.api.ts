@@ -80,3 +80,6 @@ export const {
   useDeleteSongMutation,
   useSongExistsQuery,
 } = songsApi;
+
+export { songsApi };
+

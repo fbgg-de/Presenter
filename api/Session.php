@@ -27,9 +27,11 @@ class Session extends RestController
                 $licenseRaw = $req->query->get('license', null, false);
                 $license = $licenseRaw !== null ? intval($licenseRaw) : null;
 
-                // Return a same-origin /oidc path. On production, .htaccess rewrites this to oidc.php.
-                // On dev, the Vite proxy forwards /oidc to the PHP server.
-                $url = '/oidc?redirect=' . urlencode($redirect);
+                // Return an absolute URL pointing to the backend oidc handler.
+                // This is required when the frontend is on a different origin (e.g. Electron
+                // dev server on localhost:5173 vs the PHP backend on its own domain).
+                // On production, BASE_URL already points to the correct server.
+                $url = BASE_URL . 'oidc?redirect=' . urlencode($redirect);
                 if ($admin) {
                     $url .= '&admin=1';
                 } elseif ($license !== null) {

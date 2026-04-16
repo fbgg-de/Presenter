@@ -190,18 +190,18 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
         <DialogTitle>
           <Stack direction="row" alignItems="center" spacing={1}>
             <EventIcon />
-            <Typography variant="h6">{isCreatingNew ? LL.NEW_SHOW() : LL.SHOWS()}</Typography>
+            <Typography variant="h6">{isCreatingNew ? LL.SHOWS.NEW() : LL.SHOWS.TITLE()}</Typography>
           </Stack>
         </DialogTitle>
         <DialogContent>
           {isCreatingNew ? (
             <Stack spacing={3} sx={{ mt: 1 }}>
               <Alert severity="info" icon={<AddIcon />}>
-                {LL.SHOWS_CREATE_INFO()}
+                {LL.SHOWS.CREATE_INFO()}
               </Alert>
               <TextField
                 autoFocus
-                label={LL.TITLE()}
+                label={LL.COMMON.TITLE()}
                 fullWidth
                 value={newShowTitle}
                 onChange={(e) => setNewShowTitle(e.target.value)}
@@ -210,7 +210,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                     handleCreateOrOverride();
                   }
                 }}
-                placeholder={LL.SHOWS_PLACEHOLDER()}
+                placeholder={LL.SHOWS.PLACEHOLDER()}
               />
             </Stack>
           ) : (
@@ -223,19 +223,19 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                 <Paper sx={{ p: 4, textAlign: 'center', bgcolor: 'background.default' }}>
                   <EventIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
                   <Typography variant="h6" gutterBottom>
-                    {LL.SHOWS_NO_SHOWS()}
+                    {LL.SHOWS.NO_SHOWS()}
                   </Typography>
                   <Typography color="text.secondary" paragraph>
-                    {LL.SHOWS_EMPTY_HELP()}
+                    {LL.SHOWS.EMPTY_HELP()}
                   </Typography>
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsCreatingNew(true)}>
-                    {LL.NEW_SHOW()}
+                    {LL.SHOWS.NEW()}
                   </Button>
                 </Paper>
               ) : (
                 <>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                    {LL.SHOWS_SELECT_PROMPT()}
+                    {LL.SHOWS.SELECT_PROMPT()}
                   </Typography>
                   <Paper variant="outlined">
                     <List sx={{ maxHeight: 450, overflow: 'auto' }}>
@@ -250,7 +250,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                             divider={index < shows.length - 1}
                             secondaryAction={
                               <Stack direction="row" spacing={0.5}>
-                                <Tooltip title={LL.SHOWS_SAVE_CURRENT_TOOLTIP()}>
+                                <Tooltip title={LL.SHOWS.SAVE_CURRENT_TOOLTIP()}>
                                   <IconButton
                                     edge="end"
                                     size="small"
@@ -262,7 +262,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                                     <UploadIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title={LL.SHOWS_RENAME_TOOLTIP()}>
+                                <Tooltip title={LL.SHOWS.RENAME_TOOLTIP()}>
                                   <IconButton
                                     edge="end"
                                     size="small"
@@ -275,7 +275,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                                     <EditIcon fontSize="small" />
                                   </IconButton>
                                 </Tooltip>
-                                <Tooltip title={LL.SHOWS_DELETE_TOOLTIP()}>
+                                <Tooltip title={LL.SHOWS.DELETE_TOOLTIP()}>
                                   <IconButton
                                     edge="end"
                                     size="small"
@@ -346,23 +346,23 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                   setNewShowTitle('');
                 }}
               >
-                {LL.CANCEL()}
+                {LL.COMMON.CANCEL()}
               </Button>
               <Button onClick={handleCreateOrOverride} variant="contained" disabled={!newShowTitle.trim()} startIcon={<AddIcon />}>
-                {LL.SAVE()}
+                {LL.COMMON.SAVE()}
               </Button>
             </>
           ) : (
             <>
               {shows.length > 0 && (
                 <Button startIcon={<AddIcon />} onClick={() => setIsCreatingNew(true)}>
-                  {LL.NEW_SHOW()}
+                  {LL.SHOWS.NEW()}
                 </Button>
               )}
               <Box flexGrow={1} />
-              {allowClose && <Button onClick={onClose}>{LL.CANCEL()}</Button>}
+              {allowClose && <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>}
               <Button onClick={handleConfirmSelection} variant="contained" disabled={!selectedShow}>
-                {LL.CONFIRM()}
+                {LL.COMMON.CONFIRM()}
               </Button>
             </>
           )}
@@ -371,68 +371,68 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
 
       {/* Delete confirmation dialog */}
       <Dialog open={!!showToDelete} onClose={() => setShowToDelete(null)} maxWidth="xs">
-        <DialogTitle>{LL.CONFIRM_DELETE()}</DialogTitle>
+        <DialogTitle>{LL.ADMIN.CONFIRM_DELETE()}</DialogTitle>
         <DialogContent>
           <Typography>
-            {LL.SHOWS_DELETE_CONFIRMATION_START()}
+            {LL.SHOWS.DELETE_CONFIRMATION_START()}
             <strong>"{showToDelete}"</strong>?
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {LL.ACTION_CANNOT_BE_UNDONE()}
+            {LL.ADMIN.ACTION_CANNOT_BE_UNDONE()}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowToDelete(null)}>{LL.CANCEL()}</Button>
+          <Button onClick={() => setShowToDelete(null)}>{LL.COMMON.CANCEL()}</Button>
           <Button onClick={() => showToDelete && handleDeleteShow(showToDelete)} color="error" variant="contained">
-            {LL.DELETE()}
+            {LL.COMMON.DELETE()}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Override confirmation dialog */}
       <Dialog open={!!confirmOverride} onClose={() => setConfirmOverride(null)} maxWidth="xs">
-        <DialogTitle>{LL.SHOWS_SAVE_OVERRIDE_TITLE()}</DialogTitle>
+        <DialogTitle>{LL.SHOWS.SAVE_OVERRIDE_TITLE()}</DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
             {newShowTitle ? (
               <>
-                {LL.SHOWS_SAVE_OVERRIDE_EXISTING()}
+                {LL.SHOWS.SAVE_OVERRIDE_EXISTING()}
                 <strong>"{newShowTitle}"</strong>
               </>
             ) : (
               <>
-                {LL.SHOWS_SAVE_OVERRIDE_TO()}
+                {LL.SHOWS.SAVE_OVERRIDE_TO()}
                 <strong>"{confirmOverride?.title}"</strong>
               </>
             )}
           </Alert>
           <Typography variant="body2">
-            {LL.SHOWS_SAVE_OVERRIDE_DESCRIPTION_START()}
+            {LL.SHOWS.SAVE_OVERRIDE_DESCRIPTION_START()}
             <strong>
-              {confirmOverride?.order?.length || 0} {LL.SONGS()}
+              {confirmOverride?.order?.length || 0} {LL.COMMON.SONGS()}
             </strong>
-            {LL.SHOWS_SAVE_OVERRIDE_DESCRIPTION_END()}
+            {LL.SHOWS.SAVE_OVERRIDE_DESCRIPTION_END()}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            {LL.ACTION_CANNOT_BE_UNDONE()}
+            {LL.ADMIN.ACTION_CANNOT_BE_UNDONE()}
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setConfirmOverride(null)}>{LL.CANCEL()}</Button>
+          <Button onClick={() => setConfirmOverride(null)}>{LL.COMMON.CANCEL()}</Button>
           <Button onClick={handleConfirmOverride} color="warning" variant="contained" startIcon={<UploadIcon />}>
-            {LL.SAVE()} & {LL.OVERRIDE()}
+            {LL.COMMON.SAVE()} & {LL.COMMON.OVERRIDE()}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Rename dialog */}
       <Dialog open={!!showToRename} onClose={() => setShowToRename(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>{LL.SHOWS_RENAME_DIALOG_TITLE()}</DialogTitle>
+        <DialogTitle>{LL.SHOWS.RENAME_DIALOG_TITLE()}</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            label={LL.TITLE()}
+            label={LL.COMMON.TITLE()}
             fullWidth
             value={renameTitle}
             onChange={(e) => setRenameTitle(e.target.value)}
@@ -444,9 +444,9 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowToRename(null)}>{LL.CANCEL()}</Button>
+          <Button onClick={() => setShowToRename(null)}>{LL.COMMON.CANCEL()}</Button>
           <Button onClick={handleRenameShow} variant="contained" disabled={!renameTitle.trim() || renameTitle === showToRename?.title}>
-            {LL.SAVE()}
+            {LL.COMMON.SAVE()}
           </Button>
         </DialogActions>
       </Dialog>

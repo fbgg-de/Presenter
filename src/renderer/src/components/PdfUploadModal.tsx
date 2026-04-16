@@ -218,7 +218,7 @@ export const PdfUploadModal = ({
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack direction="row" spacing={1} alignItems="center">
             <PdfIcon />
-            <Typography variant="h6">{LL.PDF_MANAGE_TITLE()}</Typography>
+            <Typography variant="h6">{LL.PDF.MANAGE_TITLE()}</Typography>
             <Chip label={`#${songNumber}`} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
           </Stack>
           <IconButton onClick={handleClose} size="small">
@@ -234,7 +234,7 @@ export const PdfUploadModal = ({
             <TextField
               size="small"
               fullWidth
-              placeholder={LL.PDF_SEARCH()}
+              placeholder={LL.PDF.SEARCH()}
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               slotProps={{
@@ -251,9 +251,9 @@ export const PdfUploadModal = ({
               <CircularProgress />
             </Box>
           ) : filteredPdfs.length === 0 && !filter ? (
-            <Alert severity="info">{LL.PDF_NO_FILES()}</Alert>
+            <Alert severity="info">{LL.PDF.NO_FILES()}</Alert>
           ) : filteredPdfs.length === 0 ? (
-            <Alert severity="info">{LL.PDF_NO_FILES()}</Alert>
+            <Alert severity="info">{LL.PDF.NO_FILES()}</Alert>
           ) : (
             <List dense disablePadding>
               {filteredPdfs.map((pdf: PdfFileInfo) => {
@@ -274,7 +274,7 @@ export const PdfUploadModal = ({
                       <Stack direction="row" spacing={0.5}>
                         {/* Use this PDF button */}
                         {!isActive && (
-                          <Tooltip title={LL.PDF_SELECT_FILE()}>
+                          <Tooltip title={LL.PDF.SELECT_FILE()}>
                             <IconButton
                               size="small"
                               color="primary"
@@ -289,7 +289,7 @@ export const PdfUploadModal = ({
                         )}
                         {/* Block area mapping */}
                         {onOpenAreaMapping && (
-                          <Tooltip title={LL.MUSICIAN_AREA_MAPPING()}>
+                          <Tooltip title={LL.MUSICIAN.AREA_MAPPING()}>
                             <IconButton
                               size="small"
                               onClick={(e) => {
@@ -305,7 +305,7 @@ export const PdfUploadModal = ({
                         )}
                         {/* Set as default */}
                         {!isDefault && (
-                          <Tooltip title={LL.PDF_SET_DEFAULT()}>
+                          <Tooltip title={LL.PDF.SET_DEFAULT()}>
                             <IconButton
                               size="small"
                               onClick={(e) => {
@@ -318,7 +318,7 @@ export const PdfUploadModal = ({
                           </Tooltip>
                         )}
                         {/* Delete */}
-                        <Tooltip title={LL.PDF_DELETE()}>
+                        <Tooltip title={LL.PDF.DELETE()}>
                           <IconButton
                             edge="end"
                             size="small"
@@ -346,7 +346,7 @@ export const PdfUploadModal = ({
                           {isDefault && (
                             <Chip
                               icon={<StarIcon sx={{ fontSize: '0.8rem !important' }} />}
-                              label={LL.PDF_IS_DEFAULT()}
+                              label={LL.PDF.IS_DEFAULT()}
                               size="small"
                               color="primary"
                               variant="outlined"
@@ -398,7 +398,7 @@ export const PdfUploadModal = ({
               <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
                 <UploadIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
                 <Typography variant="body2" color="text.secondary">
-                  {LL.PDF_DRAG_DROP()}
+                  {LL.PDF.DRAG_DROP()}
                 </Typography>
               </Stack>
             ) : (
@@ -423,16 +423,16 @@ export const PdfUploadModal = ({
 
                 {detectedKey && (
                   <Alert severity="info" sx={{ py: 0.5 }}>
-                    {LL.PDF_KEY_AUTODETECTED()}: <strong>{detectedKey}</strong>
+                    {LL.PDF.KEY_AUTODETECTED()}: <strong>{detectedKey}</strong>
                   </Alert>
                 )}
 
                 <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap', gap: 1 }}>
                   {/* Key selector */}
                   <FormControl size="small" sx={{ minWidth: 100 }}>
-                    <InputLabel>{LL.PDF_KEY_LABEL()}</InputLabel>
-                    <Select value={selectedKey} label={LL.PDF_KEY_LABEL()} onChange={(e) => setSelectedKey(e.target.value)}>
-                      <MenuItem value="">{LL.PDF_KEY_NONE()}</MenuItem>
+                    <InputLabel>{LL.PDF.KEY_LABEL()}</InputLabel>
+                    <Select value={selectedKey} label={LL.PDF.KEY_LABEL()} onChange={(e) => setSelectedKey(e.target.value)}>
+                      <MenuItem value="">{LL.PDF.KEY_NONE()}</MenuItem>
                       {MUSICAL_KEYS.map((k) => (
                         <MenuItem key={k} value={k}>
                           {k}
@@ -444,9 +444,9 @@ export const PdfUploadModal = ({
                   {/* Assign to musician */}
                   {!markDefault && (
                     <FormControl size="small" sx={{ minWidth: 130 }}>
-                      <InputLabel>{LL.PDF_ASSIGN_MUSICIAN()}</InputLabel>
-                      <Select value={assignMusician} label={LL.PDF_ASSIGN_MUSICIAN()} onChange={(e) => setAssignMusician(e.target.value)}>
-                        <MenuItem value="">{LL.PDF_MUSICIAN_NONE()}</MenuItem>
+                      <InputLabel>{LL.PDF.ASSIGN_MUSICIAN()}</InputLabel>
+                      <Select value={assignMusician} label={LL.PDF.ASSIGN_MUSICIAN()} onChange={(e) => setAssignMusician(e.target.value)}>
+                        <MenuItem value="">{LL.PDF.MUSICIAN_NONE()}</MenuItem>
                         {allMusicianNames.map((name) => (
                           <MenuItem key={name} value={name}>
                             {name}
@@ -467,7 +467,7 @@ export const PdfUploadModal = ({
                         size="small"
                       />
                     }
-                    label={<Typography variant="body2">{LL.PDF_MARK_DEFAULT()}</Typography>}
+                    label={<Typography variant="body2">{LL.PDF.MARK_DEFAULT()}</Typography>}
                     sx={{ mr: 0 }}
                   />
                 </Stack>
@@ -482,13 +482,13 @@ export const PdfUploadModal = ({
                     disabled={isUploading}
                     startIcon={isUploading ? <CircularProgress size={14} /> : <UploadIcon />}
                   >
-                    {isDuplicate ? LL.PDF_OVERRIDE_CONFIRM() : LL.PDF_UPLOAD()}
+                    {isDuplicate ? LL.PDF.OVERRIDE_CONFIRM() : LL.PDF.UPLOAD()}
                   </Button>
                 </Stack>
 
                 {isDuplicate && (
                   <Alert severity="warning" sx={{ py: 0.5 }}>
-                    {LL.PDF_DUPLICATE_WARNING({ filename: targetFilename })}
+                    {LL.PDF.DUPLICATE_WARNING({ filename: targetFilename })}
                   </Alert>
                 )}
               </Stack>
@@ -499,19 +499,19 @@ export const PdfUploadModal = ({
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={handleClose}>{LL.CLOSE()}</Button>
+        <Button onClick={handleClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>
 
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle>{LL.PDF_DELETE()}</DialogTitle>
+        <DialogTitle>{LL.PDF.DELETE()}</DialogTitle>
         <DialogContent>
-          <Typography>{LL.PDF_DELETE_CONFIRM({ filename: deleteTarget || '' })}</Typography>
+          <Typography>{LL.PDF.DELETE_CONFIRM({ filename: deleteTarget || '' })}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>{LL.CANCEL()}</Button>
+          <Button onClick={() => setDeleteTarget(null)}>{LL.COMMON.CANCEL()}</Button>
           <Button onClick={handleDelete} color="error" variant="contained" disabled={isDeleting}>
-            {LL.DELETE()}
+            {LL.COMMON.DELETE()}
           </Button>
         </DialogActions>
       </Dialog>

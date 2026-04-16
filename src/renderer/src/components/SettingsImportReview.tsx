@@ -46,18 +46,18 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
     <Dialog open={open} onClose={onCancel} maxWidth="md" fullWidth>
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={2}>
-          <Typography variant="h6">{LL.SETTINGS_IMPORT_REVIEW_TITLE()}</Typography>
+          <Typography variant="h6">{LL.SETTINGS.IMPORT_REVIEW_TITLE()}</Typography>
           <Stack direction="row" spacing={0.5}>
             {addedCount > 0 && (
-              <Chip icon={<AddIcon />} label={LL.SETTINGS_IMPORT_SUMMARY_ADDED({ count: addedCount })} color="success" size="small" />
+              <Chip icon={<AddIcon />} label={LL.SETTINGS.IMPORT_SUMMARY_ADDED({ count: addedCount })} color="success" size="small" />
             )}
             {changedCount > 0 && (
-              <Chip icon={<EditIcon />} label={LL.SETTINGS_IMPORT_SUMMARY_CHANGED({ count: changedCount })} color="warning" size="small" />
+              <Chip icon={<EditIcon />} label={LL.SETTINGS.IMPORT_SUMMARY_CHANGED({ count: changedCount })} color="warning" size="small" />
             )}
             {removedCount > 0 && (
               <Chip
                 icon={<RemoveIcon />}
-                label={LL.SETTINGS_IMPORT_SUMMARY_REMOVED({ count: removedCount })}
+                label={LL.SETTINGS.IMPORT_SUMMARY_REMOVED({ count: removedCount })}
                 color="default"
                 size="small"
               />
@@ -68,17 +68,17 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
       <DialogContent dividers>
         {totalChanges === 0 ? (
           <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
-            {LL.SETTINGS_IMPORT_NO_CHANGES()}
+            {LL.SETTINGS.IMPORT_NO_CHANGES()}
           </Typography>
         ) : (
           <TableContainer sx={{ maxHeight: 400 }}>
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700 }}>{LL.SETTINGS_IMPORT_COL_SETTING()}</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>{LL.SETTINGS_IMPORT_COL_CHANGE()}</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>{LL.SETTINGS_IMPORT_COL_CURRENT()}</TableCell>
-                  <TableCell sx={{ fontWeight: 700 }}>{LL.SETTINGS_IMPORT_COL_NEW()}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>{LL.SETTINGS.IMPORT_COL_SETTING()}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>{LL.SETTINGS.IMPORT_COL_CHANGE()}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>{LL.SETTINGS.IMPORT_COL_CURRENT()}</TableCell>
+                  <TableCell sx={{ fontWeight: 700 }}>{LL.SETTINGS.IMPORT_COL_NEW()}</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -90,7 +90,7 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip label={LL.SETTINGS_IMPORT_TAG_NEW()} size="small" color="success" sx={{ height: 20, fontSize: '0.65rem' }} />
+                      <Chip label={LL.SETTINGS.IMPORT_TAG_NEW()} size="small" color="success" sx={{ height: 20, fontSize: '0.65rem' }} />
                     </TableCell>
                     <TableCell>
                       <Typography variant="caption" color="text.secondary">
@@ -113,7 +113,7 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={LL.SETTINGS_IMPORT_TAG_CHANGED()}
+                        label={LL.SETTINGS.IMPORT_TAG_CHANGED()}
                         size="small"
                         color="warning"
                         sx={{ height: 20, fontSize: '0.65rem' }}
@@ -140,15 +140,15 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
           <>
             <Divider sx={{ my: 1 }} />
             <Typography variant="caption" color="text.secondary">
-              {LL.SETTINGS_IMPORT_REMOVED_NOTICE({ count: removedCount })}
+              {LL.SETTINGS.IMPORT_REMOVED_NOTICE({ count: removedCount })}
             </Typography>
           </>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCancel}>{LL.CANCEL()}</Button>
+        <Button onClick={onCancel}>{LL.COMMON.CANCEL()}</Button>
         <Button variant="contained" onClick={onConfirm} disabled={totalChanges === 0}>
-          {LL.SETTINGS_IMPORT_APPLY({ count: totalChanges })}
+          {LL.SETTINGS.IMPORT_APPLY({ count: totalChanges })}
         </Button>
       </DialogActions>
     </Dialog>

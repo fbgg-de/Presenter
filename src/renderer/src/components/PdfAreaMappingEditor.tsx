@@ -196,7 +196,7 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={2}>
           <CropIcon />
-          <Typography variant="h6">{LL.PDF_AREA_MAPPING_TITLE()}</Typography>
+          <Typography variant="h6">{LL.PDF.AREA_MAPPING_TITLE()}</Typography>
         </Stack>
       </DialogTitle>
       <DialogContent dividers>
@@ -206,11 +206,11 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
             {/* Page navigation */}
             <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
               <Button size="small" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => p - 1)}>
-                {LL.PDF_PAGE_PREV()}
+                {LL.PDF.PAGE_PREV()}
               </Button>
-              <Typography variant="body2">{LL.PDF_PAGE_OF({ current: currentPage, total: numPages })}</Typography>
+              <Typography variant="body2">{LL.PDF.PAGE_OF({ current: currentPage, total: numPages })}</Typography>
               <Button size="small" disabled={currentPage >= numPages} onClick={() => setCurrentPage((p) => p + 1)}>
-                {LL.PDF_PAGE_NEXT()}
+                {LL.PDF.PAGE_NEXT()}
               </Button>
             </Stack>
 
@@ -291,7 +291,7 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
           {/* Right panel: block selector + mappings list */}
           <Stack sx={{ flex: 1, minWidth: 220 }} spacing={2}>
             <Typography variant="subtitle2" fontWeight={700}>
-              {LL.PDF_SELECT_BLOCK_TO_MAP()}
+              {LL.PDF.SELECT_BLOCK_TO_MAP()}
             </Typography>
             <Select value={selectedBlock} onChange={(e) => setSelectedBlock(e.target.value)} size="small" fullWidth>
               {blockNames.map((name) => (
@@ -312,11 +312,11 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
             </Select>
 
             <Typography variant="body2" color="text.secondary">
-              {LL.PDF_DRAW_RECTANGLE_HELP()}
+              {LL.PDF.DRAW_RECTANGLE_HELP()}
             </Typography>
 
             <Typography variant="subtitle2" fontWeight={700} sx={{ mt: 2 }}>
-              {LL.PDF_MAPPINGS_TITLE({ count: mappings.length })}
+              {LL.PDF.MAPPINGS_TITLE({ count: mappings.length })}
             </Typography>
             <List dense disablePadding sx={{ flex: 1, overflow: 'auto' }}>
               {mappings.map((m) => (
@@ -344,14 +344,14 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
                     }
                     secondary={
                       m.region
-                        ? LL.PDF_MAPPING_REGION({
+                        ? LL.PDF.MAPPING_REGION({
                             page: m.page,
                             x: String(Math.round(m.region.x)),
                             y: String(Math.round(m.region.y)),
                             width: String(Math.round(m.region.width)),
                             height: String(Math.round(m.region.height)),
                           })
-                        : LL.PDF_MAPPING_PAGE({ page: m.page })
+                        : LL.PDF.MAPPING_PAGE({ page: m.page })
                     }
                   />
                 </ListItem>
@@ -360,16 +360,16 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
 
             {mappings.length === 0 && (
               <Typography variant="body2" color="text.secondary" textAlign="center">
-                {LL.PDF_NO_MAPPINGS_YET()}
+                {LL.PDF.NO_MAPPINGS_YET()}
               </Typography>
             )}
           </Stack>
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave}>
-          {LL.PDF_SAVE_MAPPINGS()}
+          {LL.PDF.SAVE_MAPPINGS()}
         </Button>
       </DialogActions>
     </Dialog>

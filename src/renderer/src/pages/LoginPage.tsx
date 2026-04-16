@@ -21,30 +21,30 @@ export const LoginPage = () => {
 
   // License selection - load from localStorage on mount
   const { data: accounts, isLoading: accountsLoading, error: accountsError } = useGetAccountsQuery();
-  const [selectedLicense, setSelectedLicense] = useState<SelectedAccount>(() => {
+  // Start with '' so the MUI Select never gets an out-of-range value during first render.
+  // The saved account is restored once the accounts list has loaded and the value is validated.
+  const [selectedLicense, setSelectedLicense] = useState<SelectedAccount>('');
+
+  // Restore saved account after accounts have loaded and validated
+  useEffect(() => {
+    if (accountsLoading || !accounts) return;
     try {
       const saved = localStorage.getItem(LAST_SELECTED_ACCOUNT_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return parsed === 'admin' ? 'admin' : typeof parsed === 'number' ? parsed : '';
-      }
-    } catch (e) {
-      console.error('Failed to load last selected account:', e);
-    }
-    return '';
-  });
-
-  // Validate saved selection when accounts are loaded
-  useEffect(() => {
-    if (!accountsLoading && accounts && selectedLicense !== '' && selectedLicense !== 'admin') {
-      const accountExists = accounts.some((a) => a.license === selectedLicense);
-      if (!accountExists) {
-        console.warn('Previously selected account no longer exists, resetting selection');
-        setSelectedLicense('');
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (parsed === 'admin') {
+        setSelectedLicense('admin');
+      } else if (typeof parsed === 'number' && accounts.some((a) => a.license === parsed)) {
+        setSelectedLicense(parsed);
+      } else {
+        // Saved value is no longer valid — clean it up
         localStorage.removeItem(LAST_SELECTED_ACCOUNT_KEY);
       }
+    } catch {
+      // ignore
     }
-  }, [accounts, accountsLoading, selectedLicense]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountsLoading]);
 
   const redirectUrl = window.location.origin + next;
 
@@ -107,15 +107,15 @@ export const LoginPage = () => {
       <Card sx={{ width: 480, maxWidth: '100%' }}>
         <CardContent>
           <Stack gap={2}>
-            <Typography variant="h5">{LL.LOGIN()}</Typography>
+            <Typography variant="h5">{LL.AUTH.LOGIN()}</Typography>
 
             {errorText && <Alert severity="error">{errorText}</Alert>}
 
-            {accountsError && <Alert severity="error">{LL.ERROR_LOAD_LICENSES()}</Alert>}
+            {accountsError && <Alert severity="error">{LL.ERRORS.LOAD_LICENSES()}</Alert>}
 
             <TextField
               select
-              label={LL.ACCOUNT()}
+              label={LL.AUTH.ACCOUNT()}
               value={selectedLicense}
               disabled={accountsLoading}
               onChange={(e) => {
@@ -126,10 +126,10 @@ export const LoginPage = () => {
                   onSelectLicense(Number(v));
                 }
               }}
-              helperText={LL.SELECT_HELP()}
+              helperText={LL.AUTH.SELECT_HELP()}
             >
-              <MenuItem value="">{LL.SELECT_PROMPT()}</MenuItem>
-              <MenuItem value="admin">{LL.ADMIN_LABEL()}</MenuItem>
+              <MenuItem value="">{LL.AUTH.SELECT_PROMPT()}</MenuItem>
+              <MenuItem value="admin">{LL.AUTH.ADMIN_LABEL()}</MenuItem>
               {(accounts ?? []).map((a) => (
                 <MenuItem key={a.license} value={a.license}>
                   {a.name ? a.name : `#${a.license}`}
@@ -139,7 +139,7 @@ export const LoginPage = () => {
 
             {selectedLicense === '' && (
               <Typography variant="body2" color="text.secondary">
-                {LL.SELECT_PROMPT()}
+                {LL.AUTH.SELECT_PROMPT()}
               </Typography>
             )}
 
@@ -154,29 +154,29 @@ export const LoginPage = () => {
                     setErrorText(null);
                     const url = isAdminSelected ? adminOidcUrlData?.url : oidcUrlData?.url;
                     if (!url) {
-                      setErrorText(isAdminSelected ? LL.ERROR_ADMIN_CONFIG_MISSING() : LL.ERROR_NO_PROVIDER_FOR_ACCOUNT());
+                      setErrorText(isAdminSelected ? LL.ERRORS.ADMIN_CONFIG_MISSING() : LL.ERRORS.NO_PROVIDER_FOR_ACCOUNT());
                       return;
                     }
                     openUrl(url);
                   }}
                 >
-                  {LL.LOGIN()}
+                  {LL.AUTH.LOGIN()}
                 </Button>
 
                 {isAdminSelected && adminOidcError && (
                   <Alert severity="error">
                     <Typography variant="subtitle2" gutterBottom>
-                      {LL.ERROR_ADMIN_OIDC_CONFIG()}
+                      {LL.ERRORS.ADMIN_OIDC_CONFIG()}
                     </Typography>
-                    <Typography variant="body2">{LL.ERROR_LOGIN_UNAVAILABLE()}</Typography>
+                    <Typography variant="body2">{LL.ERRORS.LOGIN_UNAVAILABLE()}</Typography>
                   </Alert>
                 )}
                 {isTenantSelected && oidcError && (
                   <Alert severity="error">
                     <Typography variant="subtitle2" gutterBottom>
-                      {LL.ERROR_PROVIDER_CONFIG()}
+                      {LL.ERRORS.PROVIDER_CONFIG()}
                     </Typography>
-                    <Typography variant="body2">{LL.ERROR_CONTACT_ADMIN_ASSIGN_PROVIDER()}</Typography>
+                    <Typography variant="body2">{LL.ERRORS.CONTACT_ADMIN_ASSIGN_PROVIDER()}</Typography>
                   </Alert>
                 )}
               </Stack>

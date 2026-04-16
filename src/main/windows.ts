@@ -42,7 +42,7 @@ export class PresentationWindowManager {
       autoHideMenuBar: true,
       show: false,
       webPreferences: {
-        preload: join(__dirname, '../preload/presentation.js'),
+        preload: join(__dirname, '../preload/presentation.mjs'),
         sandbox: false,
         contextIsolation: true,
         nodeIntegration: false,
@@ -232,16 +232,18 @@ export class PresentationWindowManager {
         windowName: managed.config.name || `Window ${managed.id}`,
         number: counter++,
       });
+    }
+  }
 
-      // Auto-hide after 3 seconds
-      const win = managed.browserWindow;
-      setTimeout(() => {
-        if (!win.isDestroyed()) {
-          win.webContents.send('presentation-command', {
-            type: 'HIDE_IDENTIFY',
-          });
-        }
-      }, 3000);
+  /**
+   * Hide the identification overlay on all windows.
+   */
+  hideIdentifyWindows(): void {
+    for (const [, managed] of this.windows) {
+      if (managed.browserWindow.isDestroyed()) continue;
+      managed.browserWindow.webContents.send('presentation-command', {
+        type: 'HIDE_IDENTIFY',
+      });
     }
   }
 
@@ -294,7 +296,7 @@ export class PresentationWindowManager {
       y: config.positionY,
       autoHideMenuBar: true,
       webPreferences: {
-        preload: join(__dirname, '../preload/index.js'),
+        preload: join(__dirname, '../preload/index.mjs'),
         sandbox: false,
         contextIsolation: true,
         nodeIntegration: false,

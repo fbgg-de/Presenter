@@ -193,7 +193,7 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
             <ListItemIcon>
               <MusicNoteIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{LL.MUSICIAN_ITEM_SELECT_KEY()}</ListItemText>
+            <ListItemText>{LL.MUSICIAN.ITEM_SELECT_KEY()}</ListItemText>
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
@@ -202,7 +202,7 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
             <ListItemIcon>
               <FolderOpenIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{LL.MUSICIAN_ITEM_SELECT_ORDER()}</ListItemText>
+            <ListItemText>{LL.MUSICIAN.ITEM_SELECT_ORDER()}</ListItemText>
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
@@ -216,7 +216,7 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
             <ListItemIcon>
               <PdfIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{LL.MUSICIAN_MANAGE_PDFS()}</ListItemText>
+            <ListItemText>{LL.MUSICIAN.MANAGE_PDFS()}</ListItemText>
           </MenuItem>
         )}
         {menuItem?.type === 'song' && <Divider />}
@@ -224,7 +224,7 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
           <ListItemIcon>
             <DeleteIcon fontSize="small" color="error" />
           </ListItemIcon>
-          <ListItemText sx={{ color: 'error.main' }}>{LL.MUSICIAN_ITEM_DELETE()}</ListItemText>
+          <ListItemText sx={{ color: 'error.main' }}>{LL.MUSICIAN.ITEM_DELETE()}</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -300,18 +300,18 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
               </Box>
             ) : (
               <>
-                <Tooltip title={LL.SEARCH_SONGS()}>
+                <Tooltip title={LL.SONGS.SEARCH()}>
                   <IconButton size="small" onClick={() => setSearchOpen(true)}>
                     <SearchIcon />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title={LL.SHOWS()}>
+                <Tooltip title={LL.SHOWS.TITLE()}>
                   <IconButton size="small" onClick={() => dispatch(setShowSelectorOpen(true))}>
                     <ViewListIcon />
                   </IconButton>
                 </Tooltip>
                 {isDirty && (
-                  <Tooltip title={LL.SAVE_SHOW()}>
+                  <Tooltip title={LL.SHOWS.SAVE()}>
                     <IconButton size="small" onClick={handleSaveShow} color="warning">
                       <Badge variant="dot" color="warning">
                         <SaveIcon />
@@ -398,7 +398,7 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
                       <Chip label="●" size="small" color="primary" sx={{ height: 16, fontSize: '0.6rem', ml: 0.25 }} />
                     )}
                     {item.type === 'song' && item.songNumber != null && pdfCounts && (pdfCounts[String(item.songNumber)] ?? 0) > 0 && (
-                      <Tooltip title={LL.MUSICIAN_PDF_COUNT({ count: pdfCounts[String(item.songNumber)] })}>
+                      <Tooltip title={LL.MUSICIAN.PDF_COUNT({ count: pdfCounts[String(item.songNumber)] })}>
                         <Chip
                           label={pdfCounts[String(item.songNumber)]}
                           deleteIcon={<PdfIcon sx={{ fontSize: '0.7rem !important' }} />}

@@ -69,7 +69,7 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={1}>
           <QrCodeIcon color="primary" />
-          <Typography variant="h6">{LL.QR_SHARE_TITLE()}</Typography>
+          <Typography variant="h6">{LL.QR.SHARE_TITLE()}</Typography>
           <Stack flexGrow={1} />
           <IconButton size="small" onClick={onClose}>
             <CloseIcon />
@@ -92,13 +92,13 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
           </Stack>
 
           <Typography variant="body2" color="text.secondary" textAlign="center">
-            {LL.QR_SHARE_DESCRIPTION()}
+            {LL.QR.SHARE_DESCRIPTION()}
           </Typography>
 
           {/* Musician View URL */}
           <Stack spacing={1} sx={{ width: '100%' }}>
             <Typography variant="caption" fontWeight={600} color="text.secondary">
-              {LL.QR_SHARE_MUSICIAN_URL()}
+              {LL.QR.SHARE_MUSICIAN_URL()}
             </Typography>
             <Stack direction="row" spacing={1}>
               <TextField
@@ -108,7 +108,7 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
                 slotProps={{ input: { readOnly: true } }}
                 sx={{ '& .MuiInputBase-input': { fontFamily: 'monospace', fontSize: '0.85rem' } }}
               />
-              <Tooltip title={copied ? LL.QR_SHARE_COPIED() : LL.QR_SHARE_COPY_URL()}>
+              <Tooltip title={copied ? LL.QR.SHARE_COPIED() : LL.QR.SHARE_COPY_URL()}>
                 <IconButton onClick={handleCopyUrl} color={copied ? 'success' : 'default'}>
                   {copied ? <CheckIcon /> : <CopyIcon />}
                 </IconButton>
@@ -119,7 +119,7 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
           {/* WebSocket URL */}
           <Stack spacing={1} sx={{ width: '100%' }}>
             <Typography variant="caption" fontWeight={600} color="text.secondary">
-              {LL.QR_SHARE_WS_URL()}
+              {LL.QR.SHARE_WS_URL()}
             </Typography>
             <TextField
               value={wsUrl}
@@ -132,7 +132,7 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CLOSE()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>
     </Dialog>
   );

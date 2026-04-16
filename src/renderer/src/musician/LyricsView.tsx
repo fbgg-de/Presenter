@@ -49,7 +49,7 @@ export const LyricsView = ({
         </Typography>
         {activeSongNumber != null && activeSongNumber < SONG_CUSTOM_NUMBER_LIMIT && (
           <Chip
-            label={LL.MUSICIAN_SONG_NUMBER({ number: activeSongNumber })}
+            label={LL.MUSICIAN.SONG_NUMBER({ number: activeSongNumber })}
             size="small"
             variant="outlined"
             sx={{ fontSize: textSize * 0.65 }}
@@ -57,7 +57,7 @@ export const LyricsView = ({
         )}
         {activeSongNumber != null && activeSongNumber >= SONG_CUSTOM_NUMBER_LIMIT && (
           <Chip
-            label={LL.MUSICIAN_CCLI_NUMBER({ number: activeSongNumber })}
+            label={LL.MUSICIAN.CCLI_NUMBER({ number: activeSongNumber })}
             size="small"
             variant="outlined"
             component="a"
@@ -69,7 +69,7 @@ export const LyricsView = ({
         )}
         {activeKey && (
           <Chip
-            label={LL.MUSICIAN_KEY_LABEL({ key: activeKey })}
+            label={LL.MUSICIAN.KEY_LABEL({ key: activeKey })}
             size="small"
             sx={{ fontSize: textSize * 0.65, backgroundColor: 'primary.main', color: 'primary.contrastText' }}
           />

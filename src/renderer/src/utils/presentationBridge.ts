@@ -33,6 +33,9 @@ interface PresentationWindowEntry {
 const openWindows: Map<string, PresentationWindowEntry> = new Map();
 let windowCounter = 0;
 
+/** Last broadcast content — sent to newly opened windows for initial display */
+let lastBroadcastContent: PresentationContent | null = null;
+
 /**
  * Check if Electron API is available.
  */
@@ -86,6 +89,12 @@ async function openPresentationWindowElectron(config: WindowConfig): Promise<str
   };
 
   openWindows.set(id, entry);
+
+  // Push current content to the new window so it doesn't start black
+  if (lastBroadcastContent) {
+    setTimeout(() => sendContent(id, lastBroadcastContent!), 500);
+  }
+
   return id;
 }
 
@@ -149,6 +158,11 @@ function openPresentationWindowBrowser(config: WindowConfig): string {
         clearInterval(checkClosed);
       }
     }, 1000);
+
+    // Push current content once the window has loaded
+    if (lastBroadcastContent) {
+      win.addEventListener('load', () => sendContent(id, lastBroadcastContent!));
+    }
   }
 
   return id;
@@ -208,6 +222,7 @@ export async function sendContent(id: string, content: PresentationContent): Pro
  * Broadcast content to ALL open presentation windows.
  */
 export async function broadcastContent(content: PresentationContent): Promise<void> {
+  lastBroadcastContent = content;
   // In Electron mode, we can use a single broadcast IPC call for Electron windows
   const hasElectronWindows = [...openWindows.values()].some((e) => e.isElectron && !e.closed);
   if (hasElectronWindows && isElectron()) {
@@ -315,6 +330,12 @@ export async function identifyWindows(styleName?: string): Promise<void> {
  * Hide the identify overlay on all windows (toggle OFF).
  */
 export async function hideIdentify(): Promise<void> {
+  // In Electron mode, send hide-identify to all Electron windows
+  if (isElectron()) {
+    await window.api.hideIdentifyWindows();
+  }
+
+  // Also handle browser windows
   for (const [, entry] of openWindows) {
     if (!entry.closed && !entry.isElectron && entry.window && !entry.window.closed) {
       entry.window.postMessage({ type: 'HIDE_IDENTIFY' }, '*');

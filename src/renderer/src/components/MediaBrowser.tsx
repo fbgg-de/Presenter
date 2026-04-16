@@ -168,7 +168,7 @@ export const MediaBrowser = ({ open, onClose, onAdd }: MediaBrowserProps) => {
     if (loading) {
       return (
         <Box sx={{ minHeight: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography color="text.secondary">{LL.LOADING()}</Typography>
+          <Typography color="text.secondary">{LL.COMMON.LOADING()}</Typography>
         </Box>
       );
     }
@@ -188,7 +188,7 @@ export const MediaBrowser = ({ open, onClose, onAdd }: MediaBrowserProps) => {
           <TextField
             size="small"
             fullWidth
-            placeholder={type === 'image' ? LL.MEDIA_SEARCH_IMAGES() : LL.MEDIA_SEARCH_VIDEOS()}
+            placeholder={type === 'image' ? LL.MEDIA.SEARCH_IMAGES() : LL.MEDIA.SEARCH_VIDEOS()}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             slotProps={{
@@ -226,7 +226,7 @@ export const MediaBrowser = ({ open, onClose, onAdd }: MediaBrowserProps) => {
               }}
             />
             <Button size="small" variant="contained" onClick={handleAddUrl} disabled={!urlInput.trim()} startIcon={<AddIcon />}>
-              {LL.ADD()}
+              {LL.COMMON.ADD()}
             </Button>
           </Stack>
         )}
@@ -294,14 +294,14 @@ export const MediaBrowser = ({ open, onClose, onAdd }: MediaBrowserProps) => {
             ) : (
               <FileIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
             )}
-            <Typography color="text.secondary">{LL.MEDIA_NO_FILES()}</Typography>
+            <Typography color="text.secondary">{LL.MEDIA.NO_FILES()}</Typography>
             {!mediaBaseUrl && (
               <Typography variant="caption" color="text.secondary" textAlign="center">
-                {LL.MEDIA_CONFIGURE_PATH()}
+                {LL.MEDIA.CONFIGURE_PATH()}
               </Typography>
             )}
             <Button size="small" variant="outlined" startIcon={<LinkIcon />} onClick={() => setShowUrlInput(true)}>
-              {LL.MEDIA_ADD_BY_URL()}
+              {LL.MEDIA.ADD_BY_URL()}
             </Button>
           </Box>
         ) : null}
@@ -314,7 +314,7 @@ export const MediaBrowser = ({ open, onClose, onAdd }: MediaBrowserProps) => {
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={1}>
           <ImageIcon color="warning" />
-          <Typography variant="h6">{LL.MEDIA_BROWSER()}</Typography>
+          <Typography variant="h6">{LL.MEDIA.BROWSER()}</Typography>
           <Box flexGrow={1} />
           <IconButton size="small" onClick={onClose}>
             <CloseIcon />
@@ -331,9 +331,9 @@ export const MediaBrowser = ({ open, onClose, onAdd }: MediaBrowserProps) => {
           }}
           sx={{ mb: 2 }}
         >
-          <Tab icon={<ImageIcon />} label={LL.MEDIA_IMAGE()} iconPosition="start" />
-          <Tab icon={<VideocamIcon />} label={LL.MEDIA_VIDEO()} iconPosition="start" />
-          <Tab icon={<PaletteIcon />} label={LL.MEDIA_COLOR()} iconPosition="start" />
+          <Tab icon={<ImageIcon />} label={LL.MEDIA.IMAGE()} iconPosition="start" />
+          <Tab icon={<VideocamIcon />} label={LL.MEDIA.VIDEO()} iconPosition="start" />
+          <Tab icon={<PaletteIcon />} label={LL.MEDIA.COLOR()} iconPosition="start" />
         </Tabs>
 
         {/* Images tab */}
@@ -346,22 +346,22 @@ export const MediaBrowser = ({ open, onClose, onAdd }: MediaBrowserProps) => {
         {activeTab === 2 && (
           <Stack spacing={2} sx={{ maxWidth: 400, mx: 'auto' }}>
             <Typography variant="body2" color="text.secondary">
-              {LL.MEDIA_SELECT_COLOR()}
+              {LL.MEDIA.SELECT_COLOR()}
             </Typography>
             <ColorPicker value={selectedColor} onChange={setSelectedColor} />
           </Stack>
         )}
       </DialogContent>
       <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         {(activeTab === 0 || activeTab === 1) && selectedFile && (
           <Button onClick={() => handleAddFile(selectedFile)} variant="contained" color="warning" startIcon={<AddIcon />}>
-            {LL.MEDIA_ADD_TO_SHOW()}
+            {LL.MEDIA.ADD_TO_SHOW()}
           </Button>
         )}
         {activeTab === 2 && (
           <Button onClick={handleAddColor} variant="contained" color="warning" startIcon={<AddIcon />}>
-            {LL.MEDIA_ADD_TO_SHOW()}
+            {LL.MEDIA.ADD_TO_SHOW()}
           </Button>
         )}
       </DialogActions>

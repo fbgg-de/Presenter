@@ -139,7 +139,7 @@ export const PdfLayerViewer = ({
   const [renameLayerMutation, { isLoading: isRenaming }] = useRenameAnnotationLayerMutation();
 
   const handleOpen = useCallback(
-    (event: MouseEvent<HTMLButtonElement>) => {
+    (event: MouseEvent<HTMLElement>) => {
       const rect = event.currentTarget.getBoundingClientRect();
       setAnchorPos({ top: rect.top, left: rect.left + rect.width / 2 });
       setOpen(true);
@@ -222,14 +222,14 @@ export const PdfLayerViewer = ({
         <Chip
           size="small"
           icon={<LayersIcon />}
-          label={triggerLabel ?? LL.ANNOTATION_LAYERS()}
+          label={triggerLabel ?? LL.ANNOTATION.LAYERS()}
           onClick={handleOpen}
           clickable
           color="primary"
           variant="outlined"
         />
       ) : (
-        <Tooltip title={LL.ANNOTATION_LAYERS()}>
+        <Tooltip title={LL.ANNOTATION.LAYERS()}>
           <IconButton size="small" onClick={handleOpen} sx={{ p: 0.25 }}>
             <LayersIcon fontSize="small" />
           </IconButton>
@@ -246,7 +246,7 @@ export const PdfLayerViewer = ({
       >
         <Stack sx={{ p: 1.5 }} spacing={0}>
           <Typography variant="subtitle2" sx={{ px: 0.5, pb: 0.5 }}>
-            {LL.ANNOTATION_LAYERS()}
+            {LL.ANNOTATION.LAYERS()}
           </Typography>
 
           {/* ── "Show layers" master-visibility row ── */}
@@ -260,7 +260,7 @@ export const PdfLayerViewer = ({
                   sx={{ mr: 1 }}
                 />
                 <ListItemText
-                  primary={LL.ANNOTATION_LAYER_SHOW_LAYERS()}
+                  primary={LL.ANNOTATION.LAYER_SHOW_LAYERS()}
                   primaryTypographyProps={{
                     variant: 'body2',
                     fontWeight: 600,
@@ -279,7 +279,7 @@ export const PdfLayerViewer = ({
             </Stack>
           ) : layerNames.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ px: 0.5, py: 1 }}>
-              {LL.ANNOTATION_NO_LAYERS()}
+              {LL.ANNOTATION.NO_LAYERS()}
             </Typography>
           ) : (
             <List dense disablePadding>
@@ -292,7 +292,7 @@ export const PdfLayerViewer = ({
                   <ListItem key={layer} disablePadding sx={{ py: 0.25 }}>
                     {/* ① In edit mode: Radio button to select active layer */}
                     {showDelete && onLayerSelect && !isBeingRenamed && (
-                      <Tooltip title={LL.ANNOTATION_SET_ACTIVE_LAYER()}>
+                      <Tooltip title={LL.ANNOTATION.SET_ACTIVE_LAYER()}>
                         <IconButton
                           size="small"
                           onClick={() => onLayerSelect(layer)}
@@ -306,7 +306,7 @@ export const PdfLayerViewer = ({
 
                     {/* ② Visibility eye icon */}
                     {!isBeingRenamed && showVisibilityToggle && (
-                      <Tooltip title={isVisible ? LL.ANNOTATION_HIDE_LAYER() : LL.ANNOTATION_SHOW_LAYER()}>
+                      <Tooltip title={isVisible ? LL.ANNOTATION.HIDE_LAYER() : LL.ANNOTATION.SHOW_LAYER()}>
                         <IconButton size="small" onClick={() => onToggleLayerVisibility(layer)} sx={{ flexShrink: 0, p: 0.25 }}>
                           {isVisible ? <VisibilityIcon sx={{ fontSize: 16 }} /> : <VisibilityOffIcon sx={{ fontSize: 16 }} />}
                         </IconButton>
@@ -387,12 +387,12 @@ export const PdfLayerViewer = ({
                     {/* ④ Edit + delete (edit mode only) */}
                     {showDelete && !isBeingRenamed && (
                       <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
-                        <Tooltip title={LL.ANNOTATION_RENAME_LAYER()}>
+                        <Tooltip title={LL.ANNOTATION.RENAME_LAYER()}>
                           <IconButton size="small" onClick={() => handleStartRename(layer)} sx={{ p: 0.25 }}>
                             <EditIcon sx={{ fontSize: 14 }} />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title={LL.ANNOTATION_REMOVE_LAYER()}>
+                        <Tooltip title={LL.ANNOTATION.REMOVE_LAYER()}>
                           <IconButton size="small" onClick={() => handleDelete(layer)} sx={{ p: 0.25 }}>
                             <DeleteIcon sx={{ fontSize: 14 }} />
                           </IconButton>
@@ -413,7 +413,7 @@ export const PdfLayerViewer = ({
                 <Stack direction="row" spacing={0.5} alignItems="center" sx={{ pt: 0.5 }}>
                   <TextField
                     size="small"
-                    placeholder={LL.ANNOTATION_NEW_LAYER_PLACEHOLDER()}
+                    placeholder={LL.ANNOTATION.NEW_LAYER_PLACEHOLDER()}
                     value={newLayerName}
                     onChange={(e) => setNewLayerName(e.target.value)}
                     onKeyDown={(e) => {
@@ -445,7 +445,7 @@ export const PdfLayerViewer = ({
                     <AddIcon sx={{ fontSize: 16 }} />
                   </IconButton>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                    {LL.ANNOTATION_NEW_LAYER()}
+                    {LL.ANNOTATION.NEW_LAYER()}
                   </Typography>
                 </Stack>
               )}

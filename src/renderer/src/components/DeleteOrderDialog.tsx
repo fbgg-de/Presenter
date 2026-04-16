@@ -13,14 +13,14 @@ const DeleteOrderDialog = ({ open, onClose, orderName, onDelete }: Props) => {
 
   return (
     <Dialog open={open} onClose={onClose}>
-      <DialogTitle>{LL.SONG_EDITOR_DELETE_ORDER_TITLE()}</DialogTitle>
+      <DialogTitle>{LL.SONG_EDITOR.DELETE_ORDER_TITLE()}</DialogTitle>
       <DialogContent>
-        <Typography>{LL.SONG_EDITOR_DELETE_ORDER_MESSAGE({ name: orderName })}</Typography>
+        <Typography>{LL.SONG_EDITOR.DELETE_ORDER_MESSAGE({ name: orderName })}</Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button onClick={onDelete} color="error" variant="contained">
-          {LL.DELETE()}
+          {LL.COMMON.DELETE()}
         </Button>
       </DialogActions>
     </Dialog>

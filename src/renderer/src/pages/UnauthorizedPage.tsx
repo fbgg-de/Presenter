@@ -32,31 +32,31 @@ export const UnauthorizedPage = () => {
   const getErrorTitle = () => {
     switch (error) {
       case 'oidc.admin_access_denied':
-        return LL.ERROR_ADMIN_ACCESS_DENIED();
+        return LL.ERRORS.ADMIN_ACCESS_DENIED();
       case 'oidc.admin_config_missing':
-        return LL.ERROR_ADMIN_CONFIG_MISSING();
+        return LL.ERRORS.ADMIN_CONFIG_MISSING();
       case 'oidc.access_denied':
-        return LL.ERROR_ACCESS_DENIED();
+        return LL.ERRORS.ACCESS_DENIED();
       case 'oidc.no_account':
-        return LL.ERROR_NO_ACCOUNT();
+        return LL.ERRORS.NO_ACCOUNT();
       case 'oidc.no_license':
-        return LL.ERROR_NO_LICENSE_TITLE();
+        return LL.ERRORS.NO_LICENSE_TITLE();
       case 'oidc.invalid_license':
-        return LL.ERROR_INVALID_LICENSE_TITLE();
+        return LL.ERRORS.INVALID_LICENSE_TITLE();
       case 'oidc.no_provider':
-        return LL.ERROR_NO_PROVIDER_TITLE();
+        return LL.ERRORS.NO_PROVIDER_TITLE();
       case 'oidc.invalid_state':
-        return LL.ERROR_INVALID_STATE();
+        return LL.ERRORS.INVALID_STATE();
       case 'oidc.token_exchange_failed':
-        return LL.ERROR_TOKEN_EXCHANGE_FAILED();
+        return LL.ERRORS.TOKEN_EXCHANGE_FAILED();
       case 'oidc.userinfo_failed':
-        return LL.ERROR_USERINFO_FAILED();
+        return LL.ERRORS.USERINFO_FAILED();
       case 'oidc.authentication_failed':
-        return LL.ERROR_AUTHENTICATION_FAILED();
+        return LL.ERRORS.AUTHENTICATION_FAILED();
       case 'oidc.auth_url_failed':
-        return LL.ERROR_AUTH_URL_FAILED();
+        return LL.ERRORS.AUTH_URL_FAILED();
       default:
-        return LL.ERROR_UNKNOWN();
+        return LL.ERRORS.UNKNOWN();
     }
   };
 
@@ -66,12 +66,12 @@ export const UnauthorizedPage = () => {
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_ADMIN_ACCESS_DENIED_MESSAGE()}
+              {LL.ERRORS.ADMIN_ACCESS_DENIED_MESSAGE()}
             </Typography>
             {requiredGroup && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  {LL.REQUIRED_GROUP()}
+                  {LL.AUTH.REQUIRED_GROUP()}
                 </Typography>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
                   {decodeURIComponent(requiredGroup)}
@@ -81,7 +81,7 @@ export const UnauthorizedPage = () => {
             {userGroups && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  {LL.YOUR_GROUPS()}
+                  {LL.AUTH.YOUR_GROUPS()}
                 </Typography>
                 <List dense sx={{ bgcolor: 'action.hover', borderRadius: 1, mt: 0.5 }}>
                   {decodeURIComponent(userGroups)
@@ -97,7 +97,7 @@ export const UnauthorizedPage = () => {
               </Box>
             )}
             <Alert severity="info" sx={{ mt: 2 }}>
-              {LL.CONTACT_ADMIN_MESSAGE()}
+              {LL.AUTH.CONTACT_ADMIN()}
             </Alert>
           </>
         );
@@ -106,11 +106,11 @@ export const UnauthorizedPage = () => {
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_ADMIN_OIDC_CONFIG_MISSING_MESSAGE()}
+              {LL.ERRORS.ADMIN_OIDC_CONFIG_MISSING_MESSAGE()}
             </Typography>
             <Alert severity="error" sx={{ mt: 2 }}>
               <Typography variant="subtitle2" gutterBottom>
-                {LL.ERROR_ADMIN_OIDC_CONFIG_REQUIRED_TITLE()}
+                {LL.ERRORS.ADMIN_OIDC_CONFIG_REQUIRED_TITLE()}
               </Typography>
               <Typography variant="body2" component="pre" sx={{ fontFamily: 'monospace', mt: 1 }}>
                 {`define('OIDC_DISCOVERY_URL', '...');
@@ -121,7 +121,7 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
               </Typography>
             </Alert>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-              {LL.ERROR_ADMIN_OIDC_CONFIG_CONTACT()}
+              {LL.ERRORS.ADMIN_OIDC_CONFIG_CONTACT()}
             </Typography>
           </>
         );
@@ -130,12 +130,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_ACCESS_DENIED_MESSAGE()}
+              {LL.ERRORS.ACCESS_DENIED_MESSAGE()}
             </Typography>
             {requiredGroup && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  {LL.REQUIRED_GROUP()}
+                  {LL.AUTH.REQUIRED_GROUP()}
                 </Typography>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
                   {decodeURIComponent(requiredGroup)}
@@ -145,7 +145,7 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
             {userGroups && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  {LL.YOUR_GROUPS()}
+                  {LL.AUTH.YOUR_GROUPS()}
                 </Typography>
                 <List dense sx={{ bgcolor: 'action.hover', borderRadius: 1, mt: 0.5 }}>
                   {decodeURIComponent(userGroups)
@@ -161,7 +161,7 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
               </Box>
             )}
             <Alert severity="info" sx={{ mt: 2 }}>
-              {LL.CONTACT_ADMIN_MESSAGE()}
+              {LL.AUTH.CONTACT_ADMIN()}
             </Alert>
           </>
         );
@@ -170,12 +170,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_NO_ACCOUNT_MESSAGE()}
+              {LL.ERRORS.NO_ACCOUNT_MESSAGE()}
             </Typography>
             {sub && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  {LL.USER_ID()}
+                  {LL.AUTH.USER_ID()}
                 </Typography>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
                   {decodeURIComponent(sub)}
@@ -189,10 +189,10 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_NO_LICENSE_MESSAGE()}
+              {LL.ERRORS.NO_LICENSE_MESSAGE()}
             </Typography>
             <Alert severity="warning" sx={{ mt: 2 }}>
-              {LL.ERROR_NO_LICENSE_ACTION()}
+              {LL.ERRORS.NO_LICENSE_ACTION()}
             </Alert>
           </>
         );
@@ -201,10 +201,10 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_INVALID_LICENSE_MESSAGE()}
+              {LL.ERRORS.INVALID_LICENSE_MESSAGE()}
             </Typography>
             <Alert severity="info" sx={{ mt: 2 }}>
-              {LL.CONTACT_ADMIN_MESSAGE()}
+              {LL.AUTH.CONTACT_ADMIN()}
             </Alert>
           </>
         );
@@ -213,10 +213,10 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_CONTACT_ADMIN_ASSIGN_PROVIDER()}
+              {LL.ERRORS.CONTACT_ADMIN_ASSIGN_PROVIDER()}
             </Typography>
             <Alert severity="info" sx={{ mt: 2 }}>
-              {LL.ERROR_CONTACT_ADMIN_ASSIGN_PROVIDER()}
+              {LL.ERRORS.CONTACT_ADMIN_ASSIGN_PROVIDER()}
             </Alert>
           </>
         );
@@ -225,10 +225,10 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_INVALID_STATE_MESSAGE()}
+              {LL.ERRORS.INVALID_STATE_MESSAGE()}
             </Typography>
             <Alert severity="warning" sx={{ mt: 2 }}>
-              {LL.PLEASE_TRY_AGAIN()}
+              {LL.AUTH.PLEASE_TRY_AGAIN()}
             </Alert>
           </>
         );
@@ -237,12 +237,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_AUTHENTICATION_FAILED_MESSAGE()}
+              {LL.ERRORS.AUTHENTICATION_FAILED_MESSAGE()}
             </Typography>
             {details && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  {LL.TECHNICAL_DETAILS()}
+                  {LL.AUTH.TECHNICAL_DETAILS()}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -253,7 +253,7 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
               </Box>
             )}
             <Alert severity="warning" sx={{ mt: 2 }}>
-              {LL.PLEASE_TRY_AGAIN()}
+              {LL.AUTH.PLEASE_TRY_AGAIN()}
             </Alert>
           </>
         );
@@ -262,12 +262,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
         return (
           <>
             <Typography variant="body1" gutterBottom>
-              {LL.ERROR_UNKNOWN_MESSAGE()}
+              {LL.ERRORS.UNKNOWN_MESSAGE()}
             </Typography>
             {details && (
               <Box sx={{ mt: 2 }}>
                 <Typography variant="subtitle2" color="text.secondary">
-                  {LL.ERROR_CODE()}
+                  {LL.AUTH.ERROR_CODE()}
                 </Typography>
                 <Typography
                   variant="body2"
@@ -298,7 +298,7 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
 
             <Stack direction="row" gap={2}>
               <Button variant="contained" startIcon={<BackIcon />} onClick={() => navigate('/login')} fullWidth>
-                {LL.BACK_TO_LOGIN()}
+                {LL.AUTH.BACK_TO_LOGIN()}
               </Button>
             </Stack>
           </Stack>

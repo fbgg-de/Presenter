@@ -2,7 +2,11 @@
 
 const API = __DIR__ . '/api/';
 
+require_once(__DIR__ . '/config.php');
+require_once(__DIR__ . '/classes/Cors.php');
 require_once(__DIR__ . '/api/utils.php');
+
+Cors::handle();
 
 $path = trim(strtok($_SERVER['REQUEST_URI'], '?'));
 
@@ -22,7 +26,9 @@ if ($index === false) {
 $restClass = ucfirst($paths[$index]);
 $restFile = API . $restClass . '.php';
 
+Cors::configureSession();
 session_start();
+
 if (!isset($_SESSION['authType']) || empty($_SESSION['authType'])) {
     if (!in_array($restClass, ['Session', 'Accounts'])) {
         (new Response())->error(401, 'permission denied for accessing "/rest/' . $restClass . '"');

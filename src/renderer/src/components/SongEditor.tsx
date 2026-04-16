@@ -312,7 +312,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
 
       <Stack sx={{ width: 'calc(100vw - 400px)', padding: '20px 25px' }} gap={2}>
         <Stack direction="row" alignItems="center">
-          <Typography variant="h4">{LL.SONG_EDITOR()}</Typography>
+          <Typography variant="h4">{LL.SONG_EDITOR.TITLE()}</Typography>
           {isDirty && <Chip label="Unsaved" size="small" color="warning" sx={{ ml: 2 }} />}
           <Box flexGrow={1} />
           <IconButton
@@ -342,7 +342,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                   setTitle(target.value);
                   markDirty();
                 }}
-                startAdornment={LL.TITLE()}
+                startAdornment={LL.COMMON.TITLE()}
                 endAdornment={song.songNumber > 0 ? `# ${song.songNumber}` : undefined}
               />
               <Input
@@ -351,7 +351,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                   setAuthors(target.value);
                   markDirty();
                 }}
-                startAdornment={LL.AUTHORS()}
+                startAdornment={LL.COMMON.AUTHORS()}
               />
               <Input
                 value={copyright}
@@ -359,7 +359,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                   setCopyright(target.value);
                   markDirty();
                 }}
-                startAdornment={LL.COPYRIGHT()}
+                startAdornment={LL.COMMON.COPYRIGHT()}
               />
             </Stack>
           ) : tab <= blocks.length ? (
@@ -383,7 +383,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
               />
               <Stack gap={1}>
                 <IconButton
-                  title={LL.DELETE()}
+                  title={LL.COMMON.DELETE()}
                   onClick={(e) => {
                     e.stopPropagation();
                     const newBlocks = [...blocks];
@@ -396,7 +396,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                 </IconButton>
                 <Box flexGrow={1} />
                 <SpeedDialTranslate
-                  title={LL.LANGUAGE()}
+                  title={LL.COMMON.LANGUAGE()}
                   ariaLabel="translation"
                   open={openTranslation}
                   direction="left"
@@ -424,7 +424,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                   ))}
                 </SpeedDialTranslate>
                 <IconButton
-                  title={LL.PAGE_BREAK()}
+                  title={LL.COMMON.PAGE_BREAK()}
                   onClick={() => {
                     const inputElement = inputRef.current;
                     if (inputElement) {
@@ -457,7 +457,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                   }
                 }}
               >
-                {LL.ADD()}
+                {LL.COMMON.ADD()}
               </Button>
             </Stack>
           )}
@@ -537,7 +537,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
         <Stack direction="row" gap={2}>
           <Badge variant="dot" color="warning" invisible={!isDirty}>
             <Button variant="outlined" color="success" onClick={saveSong} startIcon={<SaveIcon />}>
-              {LL.APPLY()}
+              {LL.COMMON.APPLY()}
             </Button>
           </Badge>
           <Button
@@ -548,7 +548,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
               init();
             }}
           >
-            {LL.CANCEL()}
+            {LL.COMMON.CANCEL()}
           </Button>
         </Stack>
       </Stack>

@@ -43,32 +43,32 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
   function StatusChip({ status }: { status: MidiStatus }) {
     switch (status) {
       case 'connected':
-        return <Chip icon={<BluetoothIcon />} label={LL.MIDI_STATUS_CONNECTED()} color="success" size="small" />;
+        return <Chip icon={<BluetoothIcon />} label={LL.MIDI.STATUS_CONNECTED()} color="success" size="small" />;
       case 'scanning':
-        return <Chip label={LL.MIDI_STATUS_SCANNING()} color="info" size="small" />;
+        return <Chip label={LL.MIDI.STATUS_SCANNING()} color="info" size="small" />;
       case 'unsupported':
-        return <Chip icon={<DisconnectedIcon />} label={LL.MIDI_STATUS_UNSUPPORTED()} color="error" size="small" />;
+        return <Chip icon={<DisconnectedIcon />} label={LL.MIDI.STATUS_UNSUPPORTED()} color="error" size="small" />;
       default:
-        return <Chip icon={<DisconnectedIcon />} label={LL.MIDI_STATUS_DISCONNECTED()} color="default" size="small" />;
+        return <Chip icon={<DisconnectedIcon />} label={LL.MIDI.STATUS_DISCONNECTED()} color="default" size="small" />;
     }
   }
 
   const actionLabel = (key: MidiAction) => {
     switch (key) {
       case 'next_page':
-        return LL.MIDI_NEXT_PAGE();
+        return LL.MIDI.NEXT_PAGE();
       case 'prev_page':
-        return LL.MIDI_PREV_PAGE();
+        return LL.MIDI.PREV_PAGE();
       case 'next_song':
-        return LL.MIDI_NEXT_SONG();
+        return LL.MIDI.NEXT_SONG();
       case 'prev_song':
-        return LL.MIDI_PREV_SONG();
+        return LL.MIDI.PREV_SONG();
       case 'next_block':
-        return LL.MIDI_NEXT_BLOCK();
+        return LL.MIDI.NEXT_BLOCK();
       case 'prev_block':
-        return LL.MIDI_PREV_BLOCK();
+        return LL.MIDI.PREV_BLOCK();
       case 'toggle_tracking':
-        return LL.MIDI_TOGGLE_TRACKING();
+        return LL.MIDI.TOGGLE_TRACKING();
       default:
         return key;
     }
@@ -78,22 +78,22 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         <Stack direction="row" alignItems="center" spacing={2}>
-          <Typography variant="h6">{LL.MIDI_SETTINGS()}</Typography>
+          <Typography variant="h6">{LL.MIDI.SETTINGS()}</Typography>
           <StatusChip status={midi.status} />
         </Stack>
       </DialogTitle>
       <DialogContent dividers>
         {!midi.isSupported ? (
-          <Typography color="error">{LL.MIDI_NOT_SUPPORTED()}</Typography>
+          <Typography color="error">{LL.MIDI.NOT_SUPPORTED()}</Typography>
         ) : (
           <Stack spacing={2}>
             {/* Connected Devices */}
             <Typography variant="subtitle2" fontWeight={700}>
-              {LL.MIDI_DEVICES({ count: midi.devices.length })}
+              {LL.MIDI.DEVICES({ count: midi.devices.length })}
             </Typography>
             {midi.devices.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                {LL.MIDI_NO_DEVICES()}
+                {LL.MIDI.NO_DEVICES()}
               </Typography>
             ) : (
               <Stack direction="row" spacing={1} flexWrap="wrap">
@@ -113,7 +113,7 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
 
             {/* MIDI Learn */}
             <Typography variant="subtitle2" fontWeight={700}>
-              {LL.MIDI_LEARN()}
+              {LL.MIDI.LEARN()}
             </Typography>
             {midi.isLearning && (
               <Stack
@@ -129,11 +129,11 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
               >
                 <RecordIcon sx={{ animation: 'pulse 1s infinite' }} />
                 <Typography variant="body2" fontWeight={600}>
-                  {LL.MIDI_PRESS_FOR({ action: actionLabel(midi.learnAction as MidiAction) })}
+                  {LL.MIDI.PRESS_FOR({ action: actionLabel(midi.learnAction as MidiAction) })}
                 </Typography>
                 <Box flexGrow={1} />
                 <Button size="small" variant="outlined" color="inherit" startIcon={<StopIcon />} onClick={midi.cancelLearn}>
-                  {LL.CANCEL()}
+                  {LL.COMMON.CANCEL()}
                 </Button>
               </Stack>
             )}
@@ -151,7 +151,7 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
                       onClick={() => midi.startLearn(actKey)}
                       disabled={midi.devices.length === 0}
                     >
-                      {LL.MIDI_LEARN_BUTTON()}
+                      {LL.MIDI.LEARN_BUTTON()}
                     </Button>
                   }
                 >
@@ -164,11 +164,11 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
 
             {/* Current Mappings */}
             <Typography variant="subtitle2" fontWeight={700}>
-              {LL.MIDI_CURRENT_MAPPINGS()}
+              {LL.MIDI.CURRENT_MAPPINGS()}
             </Typography>
             {Object.keys(midi.midiMappings).length === 0 ? (
               <Typography variant="body2" color="text.secondary">
-                {LL.MIDI_NO_MAPPINGS()}
+                {LL.MIDI.NO_MAPPINGS()}
               </Typography>
             ) : (
               Object.entries(midi.midiMappings).map(([deviceName, mappings]) => (
@@ -192,7 +192,7 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
                         }
                       >
                         <ListItemText
-                          primary={LL.MIDI_MAPPING_ENTRY({ key, action: actionLabel(action as MidiAction) })}
+                          primary={LL.MIDI.MAPPING_ENTRY({ key, action: actionLabel(action as MidiAction) })}
                           slotProps={{ primary: { variant: 'body2', fontFamily: 'monospace' } }}
                         />
                       </ListItem>
@@ -205,7 +205,7 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
       </DialogActions>
     </Dialog>
   );

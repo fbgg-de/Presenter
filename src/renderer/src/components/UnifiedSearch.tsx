@@ -63,17 +63,17 @@ const TYPE_CHIPS: { type: SearchType; icon: typeof AllIcon; colorKey: string }[]
 const getTypeLabel = (type: SearchType, LL: ReturnType<typeof useI18nContext>['LL']): string => {
   switch (type) {
     case '':
-      return LL.UNIFIED_SEARCH_ALL();
+      return LL.UNIFIED_SEARCH.ALL();
     case 'song':
-      return LL.UNIFIED_SEARCH_SONGS();
+      return LL.UNIFIED_SEARCH.SONGS();
     case 'media':
-      return LL.UNIFIED_SEARCH_MEDIA();
+      return LL.UNIFIED_SEARCH.MEDIA();
     case 'style':
-      return LL.UNIFIED_SEARCH_STYLES();
+      return LL.UNIFIED_SEARCH.STYLES();
     case 'bible':
-      return LL.UNIFIED_SEARCH_BIBLE();
+      return LL.UNIFIED_SEARCH.BIBLE();
     case 'ccli':
-      return LL.UNIFIED_SEARCH_CCLI();
+      return LL.UNIFIED_SEARCH.CCLI();
     default:
       return type;
   }
@@ -222,7 +222,7 @@ export const UnifiedSearch = ({
           {!hasSearchResults && !searchFetching && (
             <Box sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                {LL.UNIFIED_SEARCH_NO_RESULTS()}
+                {LL.UNIFIED_SEARCH.NO_RESULTS()}
               </Typography>
             </Box>
           )}
@@ -278,7 +278,7 @@ export const UnifiedSearch = ({
           {allSongs.length === 0 ? (
             <Box sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                {LL.UNIFIED_SEARCH_NO_RESULTS()}
+                {LL.UNIFIED_SEARCH.NO_RESULTS()}
               </Typography>
             </Box>
           ) : (
@@ -324,7 +324,7 @@ export const UnifiedSearch = ({
               setQuery(e.target.value);
               setDeepSearch(false);
             }}
-            placeholder={LL.UNIFIED_SEARCH_PLACEHOLDER()}
+            placeholder={LL.UNIFIED_SEARCH.PLACEHOLDER()}
             size="small"
             fullWidth
             autoFocus
@@ -347,7 +347,7 @@ export const UnifiedSearch = ({
                   <InputAdornment position="end">
                     {searchFetching && <CircularProgress size={18} />}
                     {onOpenSongLibrary && (
-                      <Tooltip title={LL.SONG_LIBRARY()}>
+                      <Tooltip title={LL.SONGS.LIBRARY()}>
                         <IconButton
                           size="small"
                           onClick={(e) => {
@@ -394,7 +394,7 @@ export const UnifiedSearch = ({
         {deepSearch && isSearching && (
           <Stack direction="row" spacing={0.5} sx={{ px: 0.5 }}>
             <Chip
-              label={LL.UNIFIED_SEARCH_DEEP()}
+              label={LL.UNIFIED_SEARCH.DEEP()}
               size="small"
               color="info"
               variant="outlined"

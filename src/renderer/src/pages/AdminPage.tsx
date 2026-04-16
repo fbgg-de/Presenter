@@ -185,18 +185,18 @@ export const AdminPage = () => {
           <Stack gap={3}>
             {/* Header */}
             <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h4">{LL.ADMIN_PANEL()}</Typography>
+              <Typography variant="h4">{LL.ADMIN.PANEL()}</Typography>
               <Button variant="outlined" color="error" startIcon={<LogoutIcon />} onClick={handleLogout}>
-                {LL.LOGOUT()}
+                {LL.AUTH.LOGOUT()}
               </Button>
             </Stack>
 
             {/* Tabs */}
             <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
-              <Tab label={LL.ACCOUNTS()} />
-              <Tab label={LL.OIDC_PROVIDERS()} />
-              <Tab label={LL.METRICS()} />
-              <Tab label={LL.LOGS()} />
+              <Tab label={LL.ADMIN.ACCOUNTS()} />
+              <Tab label={LL.ADMIN.OIDC_PROVIDERS()} />
+              <Tab label={LL.METRICS.METRICS()} />
+              <Tab label={LL.ADMIN_LOGS.NAV_TITLE()} />
             </Tabs>
 
             {/* Accounts Tab */}
@@ -204,28 +204,28 @@ export const AdminPage = () => {
               <Stack gap={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="h6">
-                    {LL.ACCOUNTS()} ({accounts.length})
+                    {LL.ADMIN.ACCOUNTS()} ({accounts.length})
                   </Typography>
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setAccountDialog({ open: true })}>
-                    {LL.ADD_ACCOUNT()}
+                    {LL.ADMIN.ADD_ACCOUNT()}
                   </Button>
                 </Stack>
 
-                {accountsError && <Alert severity="error">{LL.FAILED_TO_LOAD_ACCOUNTS()}</Alert>}
+                {accountsError && <Alert severity="error">{LL.ADMIN.FAILED_TO_LOAD_ACCOUNTS()}</Alert>}
 
                 {accountsLoading ? (
-                  <Typography>{LL.LOADING()}</Typography>
+                  <Typography>{LL.COMMON.LOADING()}</Typography>
                 ) : (
                   <TableContainer component={Paper}>
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell>{LL.LICENSE()}</TableCell>
-                          <TableCell>{LL.NAME()}</TableCell>
-                          <TableCell>{LL.EMAIL()}</TableCell>
-                          <TableCell>{LL.STATUS()}</TableCell>
-                          <TableCell>{LL.OIDC_PROVIDERS()}</TableCell>
-                          <TableCell>{LL.ACTIONS()}</TableCell>
+                          <TableCell>{LL.AUTH.LICENSE()}</TableCell>
+                          <TableCell>{LL.COMMON.NAME()}</TableCell>
+                          <TableCell>{LL.COMMON.EMAIL()}</TableCell>
+                          <TableCell>{LL.COMMON.STATUS()}</TableCell>
+                          <TableCell>{LL.ADMIN.OIDC_PROVIDERS()}</TableCell>
+                          <TableCell>{LL.COMMON.ACTIONS()}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -236,7 +236,7 @@ export const AdminPage = () => {
                             <TableCell>{account.mail}</TableCell>
                             <TableCell>
                               <Chip
-                                label={account.active ? LL.ACTIVE() : LL.INACTIVE()}
+                                label={account.active ? LL.COMMON.ACTIVE() : LL.COMMON.INACTIVE()}
                                 color={account.active ? 'success' : 'default'}
                                 size="small"
                               />
@@ -252,7 +252,7 @@ export const AdminPage = () => {
                                     onDelete={() => handleUnassignProvider(account.license, p.provider_id)}
                                   />
                                 ))}
-                                <Tooltip title={LL.ASSIGN_PROVIDER()}>
+                                <Tooltip title={LL.ADMIN.ASSIGN_PROVIDER()}>
                                   <IconButton size="small" onClick={() => setAssignDialog({ open: true, license: account.license })}>
                                     <LinkIcon fontSize="small" />
                                   </IconButton>
@@ -294,27 +294,27 @@ export const AdminPage = () => {
               <Stack gap={2}>
                 <Stack direction="row" justifyContent="space-between" alignItems="center">
                   <Typography variant="h6">
-                    {LL.OIDC_PROVIDERS()} ({providers.length})
+                    {LL.ADMIN.OIDC_PROVIDERS()} ({providers.length})
                   </Typography>
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setProviderDialog({ open: true })}>
-                    {LL.ADD_PROVIDER()}
+                    {LL.ADMIN.ADD_PROVIDER()}
                   </Button>
                 </Stack>
 
-                {providersError && <Alert severity="error">{LL.FAILED_TO_LOAD_PROVIDERS()}</Alert>}
+                {providersError && <Alert severity="error">{LL.ADMIN.FAILED_TO_LOAD_PROVIDERS()}</Alert>}
 
                 {providersLoading ? (
-                  <Typography>{LL.LOADING()}</Typography>
+                  <Typography>{LL.COMMON.LOADING()}</Typography>
                 ) : (
                   <TableContainer component={Paper}>
                     <Table>
                       <TableHead>
                         <TableRow>
-                          <TableCell>{LL.NAME()}</TableCell>
-                          <TableCell>{LL.DISCOVERY_URL()}</TableCell>
-                          <TableCell>{LL.CLIENT_ID()}</TableCell>
-                          <TableCell>{LL.STATUS()}</TableCell>
-                          <TableCell>{LL.ACTIONS()}</TableCell>
+                          <TableCell>{LL.COMMON.NAME()}</TableCell>
+                          <TableCell>{LL.ADMIN.DISCOVERY_URL()}</TableCell>
+                          <TableCell>{LL.ADMIN.CLIENT_ID()}</TableCell>
+                          <TableCell>{LL.COMMON.STATUS()}</TableCell>
+                          <TableCell>{LL.COMMON.ACTIONS()}</TableCell>
                         </TableRow>
                       </TableHead>
                       <TableBody>
@@ -327,7 +327,7 @@ export const AdminPage = () => {
                             <TableCell sx={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis' }}>{provider.client_id}</TableCell>
                             <TableCell>
                               <Chip
-                                label={provider.enabled ? LL.ENABLED() : LL.DISABLED()}
+                                label={provider.enabled ? LL.COMMON.ENABLED() : LL.COMMON.DISABLED()}
                                 color={provider.enabled ? 'success' : 'default'}
                                 size="small"
                               />
@@ -365,7 +365,7 @@ export const AdminPage = () => {
             {/* Logs Tab */}
             {activeTab === 3 && (
               <Stack gap={2}>
-                <Typography variant="h6">{LL.ADMIN_LOGS_TITLE()}</Typography>
+                <Typography variant="h6">{LL.ADMIN_LOGS.TITLE()}</Typography>
                 <AdminLogs />
               </Stack>
             )}
@@ -373,7 +373,7 @@ export const AdminPage = () => {
             {/* Metrics Tab */}
             {activeTab === 2 && (
               <Stack gap={2}>
-                <Typography variant="h6">{LL.METRICS_DASHBOARD()}</Typography>
+                <Typography variant="h6">{LL.METRICS.DASHBOARD()}</Typography>
                 <MetricsDashboard />
               </Stack>
             )}
@@ -458,11 +458,11 @@ const AccountDialog = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{account ? LL.EDIT_ACCOUNT() : LL.CREATE_ACCOUNT()}</DialogTitle>
+      <DialogTitle>{account ? LL.ADMIN.EDIT_ACCOUNT() : LL.ADMIN.CREATE_ACCOUNT()}</DialogTitle>
       <DialogContent>
         <Stack gap={2} sx={{ mt: 1 }}>
           <TextField
-            label={LL.LICENSE_NUMBER()}
+            label={LL.AUTH.LICENSE_NUMBER()}
             type="number"
             value={formData.license}
             onChange={(e) => setFormData({ ...formData, license: parseInt(e.target.value) || 0 })}
@@ -470,28 +470,28 @@ const AccountDialog = ({
             fullWidth
           />
           <TextField
-            label={LL.EMAIL()}
+            label={LL.COMMON.EMAIL()}
             type="email"
             value={formData.mail}
             onChange={(e) => setFormData({ ...formData, mail: e.target.value })}
             fullWidth
           />
           <TextField
-            label={LL.NAME_OPTIONAL()}
+            label={LL.ADMIN.NAME_OPTIONAL()}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             fullWidth
           />
           <FormControlLabel
             control={<Switch checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} />}
-            label={LL.ACTIVE()}
+            label={LL.COMMON.ACTIVE()}
           />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button onClick={handleSubmit} variant="contained">
-          {LL.SAVE()}
+          {LL.COMMON.SAVE()}
         </Button>
       </DialogActions>
     </Dialog>
@@ -549,59 +549,59 @@ const ProviderDialog = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>{provider ? LL.EDIT_PROVIDER() : LL.CREATE_PROVIDER()}</DialogTitle>
+      <DialogTitle>{provider ? LL.ADMIN.EDIT_PROVIDER() : LL.ADMIN.CREATE_PROVIDER()}</DialogTitle>
       <DialogContent>
         <Stack gap={2} sx={{ mt: 1 }}>
           <TextField
-            label={LL.PROVIDER_NAME()}
+            label={LL.ADMIN.PROVIDER_NAME()}
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             fullWidth
           />
           <TextField
-            label={LL.DISCOVERY_URL()}
+            label={LL.ADMIN.DISCOVERY_URL()}
             value={formData.discovery_url}
             onChange={(e) => setFormData({ ...formData, discovery_url: e.target.value })}
             fullWidth
             placeholder="https://idp.example.com/.well-known/openid-configuration"
           />
           <TextField
-            label={LL.CLIENT_ID()}
+            label={LL.ADMIN.CLIENT_ID()}
             value={formData.client_id}
             onChange={(e) => setFormData({ ...formData, client_id: e.target.value })}
             fullWidth
           />
           <TextField
-            label={LL.CLIENT_SECRET()}
+            label={LL.ADMIN.CLIENT_SECRET()}
             value={formData.client_secret}
             onChange={(e) => setFormData({ ...formData, client_secret: e.target.value })}
             fullWidth
             type="password"
           />
           <TextField
-            label={LL.SCOPES()}
+            label={LL.ADMIN.SCOPES()}
             value={formData.scopes}
             onChange={(e) => setFormData({ ...formData, scopes: e.target.value })}
             fullWidth
-            helperText={LL.SCOPES_HELP()}
+            helperText={LL.ADMIN.SCOPES_HELP()}
           />
           <TextField
-            label={LL.REQUIRED_GROUP_OPTIONAL()}
+            label={LL.ADMIN.REQUIRED_GROUP_OPTIONAL()}
             value={formData.required_group}
             onChange={(e) => setFormData({ ...formData, required_group: e.target.value })}
             fullWidth
-            helperText={LL.REQUIRED_GROUP_HELP()}
+            helperText={LL.ADMIN.REQUIRED_GROUP_HELP()}
           />
           <FormControlLabel
             control={<Switch checked={formData.enabled} onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })} />}
-            label={LL.ENABLED()}
+            label={LL.COMMON.ENABLED()}
           />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button onClick={handleSubmit} variant="contained">
-          {LL.SAVE()}
+          {LL.COMMON.SAVE()}
         </Button>
       </DialogActions>
     </Dialog>
@@ -640,12 +640,12 @@ const AssignProviderDialog = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{LL.ASSIGN_PROVIDER_TO_ACCOUNT({ license: license?.toString() || '' })}</DialogTitle>
+      <DialogTitle>{LL.ADMIN.ASSIGN_PROVIDER_TO_ACCOUNT({ license: license?.toString() || '' })}</DialogTitle>
       <DialogContent>
         <Stack gap={2} sx={{ mt: 1 }}>
           <FormControl fullWidth>
-            <InputLabel>{LL.PROVIDER()}</InputLabel>
-            <Select value={selectedProvider} onChange={(e) => setSelectedProvider(e.target.value as number)} label={LL.PROVIDER()}>
+            <InputLabel>{LL.ADMIN.PROVIDER()}</InputLabel>
+            <Select value={selectedProvider} onChange={(e) => setSelectedProvider(e.target.value as number)} label={LL.ADMIN.PROVIDER()}>
               {availableProviders.map((provider) => (
                 <MenuItem key={provider.id} value={provider.id}>
                   {provider.name}
@@ -655,14 +655,14 @@ const AssignProviderDialog = ({
           </FormControl>
           <FormControlLabel
             control={<Switch checked={isDefault} onChange={(e) => setIsDefault(e.target.checked)} />}
-            label={LL.SET_AS_DEFAULT()}
+            label={LL.ADMIN.SET_AS_DEFAULT()}
           />
         </Stack>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button onClick={handleAssign} variant="contained" disabled={!selectedProvider}>
-          {LL.ASSIGN()}
+          {LL.COMMON.ASSIGN()}
         </Button>
       </DialogActions>
     </Dialog>
@@ -687,19 +687,21 @@ const DeleteConfirmDialog = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{LL.CONFIRM_DELETE()}</DialogTitle>
+      <DialogTitle>{LL.ADMIN.CONFIRM_DELETE()}</DialogTitle>
       <DialogContent>
         <Typography>
-          {type === 'account' ? LL.CONFIRM_DELETE_ACCOUNT({ name: name || '' }) : LL.CONFIRM_DELETE_PROVIDER({ name: name || '' })}
+          {type === 'account'
+            ? LL.ADMIN.CONFIRM_DELETE_ACCOUNT({ name: name || '' })
+            : LL.ADMIN.CONFIRM_DELETE_PROVIDER({ name: name || '' })}
         </Typography>
         <Alert severity="warning" sx={{ mt: 2 }}>
-          {LL.ACTION_CANNOT_BE_UNDONE()}
+          {LL.ADMIN.ACTION_CANNOT_BE_UNDONE()}
         </Alert>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>{LL.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button onClick={onConfirm} color="error" variant="contained">
-          {LL.DELETE()}
+          {LL.COMMON.DELETE()}
         </Button>
       </DialogActions>
     </Dialog>

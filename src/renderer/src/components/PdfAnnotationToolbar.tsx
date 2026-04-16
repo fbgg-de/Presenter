@@ -1,5 +1,5 @@
-﻿/**
- * PDF Annotation Toolbar — allows musicians to annotate PDF sheet music.
+/**
+ * PDF Annotation Toolbar � allows musicians to annotate PDF sheet music.
  * Stores each annotation as an individual row in the database (immediate auto-save).
  * Supports text comments, freehand drawings, highlights, and uploaded SVG icons.
  *
@@ -158,7 +158,7 @@ interface PdfAnnotationToolbarProps {
   pdfUrl: string;
   musicianName: string;
   songNumber: number;
-  /** Optional display name of the song — included in the exported PDF filename. */
+  /** Optional display name of the song � included in the exported PDF filename. */
   songName?: string;
   filename: string;
   containerRef: RefObject<HTMLDivElement>;
@@ -226,14 +226,14 @@ export const PdfAnnotationToolbar = ({
   const [activeDrawPage, setActiveDrawPage] = useState(currentPage);
   const textInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Eraser state: drag-to-erase ──
+  // -- Eraser state: drag-to-erase --
   const [isErasing, setIsErasing] = useState(false);
   /** Track which annotation IDs have already been erased this drag to avoid double-deletes */
   const erasedIdsRef = useRef<Set<string>>(new Set());
   /** Live canvas-space position of the eraser cursor for the on-canvas indicator */
   const [eraserPos, setEraserPos] = useState<{ pageNum: number; x: number; y: number } | null>(null);
 
-  // ── Stylus eraser detection ──
+  // -- Stylus eraser detection --
   // pointerType === 'pen' and button === 5 (eraser end) signals an eraser stylus
   const [penEraserActive, setPenEraserActive] = useState(false);
   const penEraserActiveRef = useRef(false);
@@ -242,7 +242,7 @@ export const PdfAnnotationToolbar = ({
   /** Guard against duplicate icon placement from simultaneous mouse + touch events */
   const lastIconPlacedRef = useRef(0);
 
-  // ── Layer management ──
+  // -- Layer management --
   const musicianKey = musicianName || 'default';
   const [activeLayerKey, setActiveLayerKey] = useState(musicianKey);
 
@@ -262,7 +262,7 @@ export const PdfAnnotationToolbar = ({
   /** Intrinsic PDF page width in points */
   const [pdfPageWidth, setPdfPageWidth] = useState(612);
 
-  // ── RTK Query ──
+  // -- RTK Query --
   const [addAnnotation] = useAddAnnotationMutation();
   const [clearLayerMutation] = useClearLayerMutation();
   const [deleteAnnotation] = useDeleteAnnotationMutation();
@@ -285,7 +285,7 @@ export const PdfAnnotationToolbar = ({
     onRegisterRefetch?.(refetchAnnotations);
   }, [onRegisterRefetch, refetchAnnotations, songNumber, filename]);
 
-  // ── Icon management ──
+  // -- Icon management --
   const { data: iconsData } = useListPdfIconsQuery();
   const icons = (iconsData as PdfIconDto[] | undefined) ?? [];
   const [uploadIcon] = useUploadPdfIconMutation();
@@ -305,7 +305,7 @@ export const PdfAnnotationToolbar = ({
     }
   }, [icons, selectedIconFilename]);
 
-  // ── Derive annotations for rendering ──
+  // -- Derive annotations for rendering --
   // In edit mode always show the active layer; in read-only respect hiddenLayers for all layers
   const activeLayerAnnotations: AnnotationEntry[] = allAnnotations
     .filter((a) => a.layer === activeLayerKey && (editMode || !hiddenLayers.has(a.layer)))
@@ -315,7 +315,7 @@ export const PdfAnnotationToolbar = ({
     .filter((a) => a.layer !== activeLayerKey && !hiddenLayers.has(a.layer))
     .map(dtoToEntry);
 
-  // ── Preload icon images for annotations that reference them ──
+  // -- Preload icon images for annotations that reference them --
   const iconImageCache = useRef<Map<string, HTMLImageElement>>(new Map());
   useEffect(() => {
     const allEntries = [...activeLayerAnnotations, ...bgAnnotations];
@@ -331,7 +331,7 @@ export const PdfAnnotationToolbar = ({
     }
   }, [activeLayerAnnotations, bgAnnotations]);
 
-  // ── Load PDF page width ──
+  // -- Load PDF page width --
   useEffect(() => {
     if (!pdfUrl) return;
     let cancelled = false;
@@ -347,7 +347,7 @@ export const PdfAnnotationToolbar = ({
     };
   }, [pdfUrl]);
 
-  // ── Coordinate helpers ──
+  // -- Coordinate helpers --
   const getCoordsFromClient = useCallback((clientX: number, clientY: number, pageNum: number): Point | null => {
     const canvas = canvasRefs.current.get(pageNum);
     if (!canvas) return null;
@@ -368,7 +368,7 @@ export const PdfAnnotationToolbar = ({
     [currentPage],
   );
 
-  // ── Auto-save helper ──
+  // -- Auto-save helper --
   const saveAnnotation = useCallback(
     async (params: { tool: string; page: number; x: number; y: number; color: string; opacity: number; data: AnnotationData }) => {
       if (!songNumber || !filename) return;
@@ -386,14 +386,14 @@ export const PdfAnnotationToolbar = ({
     [songNumber, filename, activeLayerKey, addAnnotation],
   );
 
-  // ── Eraser hit-test ──
+  // -- Eraser hit-test --
   const hitTestAnnotation = useCallback(
     (coords: Point, pageNum: number): AnnotationEntry | null => {
       const pageAnns = activeLayerAnnotations.filter((a) => a.page === pageNum);
       // Check in reverse order (top-most first)
       for (let i = pageAnns.length - 1; i >= 0; i--) {
         const ann = pageAnns[i];
-        // Tight threshold — the pointer must nearly touch the annotation
+        // Tight threshold � the pointer must nearly touch the annotation
         const strokeThreshold = 0.8; // percentage units for strokes/points
 
         if (ann.tool === 'draw' && ann.points && ann.points.length > 1) {
@@ -448,7 +448,7 @@ export const PdfAnnotationToolbar = ({
   // Determine effective tool (stylus eraser overrides)
   const effectiveTool = penEraserActive ? 'eraser' : tool;
 
-  // ── Mouse / Pointer event handlers ──
+  // -- Mouse / Pointer event handlers --
   const handleCanvasMouseDown = useCallback(
     (e: MouseEvent<HTMLCanvasElement>) => {
       const pageNum = getPageFromCanvas(e.currentTarget);
@@ -566,7 +566,7 @@ export const PdfAnnotationToolbar = ({
     (e: MouseEvent<HTMLCanvasElement>) => {
       const pageNum = getPageFromCanvas(e.currentTarget);
 
-      // ── Text drag release: persist new position ──
+      // -- Text drag release: persist new position --
       if (draggingTextId && dragTextPos && songNumber && filename) {
         updateAnnotation({
           songNumber,
@@ -644,7 +644,7 @@ export const PdfAnnotationToolbar = ({
     ],
   );
 
-  // ── Pointer events for stylus eraser detection ──
+  // -- Pointer events for stylus eraser detection --
   const handlePointerDown = useCallback(
     (e: PointerEvent<HTMLCanvasElement>) => {
       // Detect stylus eraser: pointerType=pen with button 5 (eraser end)
@@ -671,7 +671,7 @@ export const PdfAnnotationToolbar = ({
     }
   }, []);
 
-  // ── Touch event handlers ──
+  // -- Touch event handlers --
   const handleCanvasTouchStart = useCallback(
     (e: TouchEvent<HTMLCanvasElement>) => {
       if (e.touches.length !== 1) return;
@@ -784,7 +784,7 @@ export const PdfAnnotationToolbar = ({
   );
 
   const handleCanvasTouchEnd = useCallback(() => {
-    // ── Text drag release: persist new position ──
+    // -- Text drag release: persist new position --
     if (draggingTextId && dragTextPos && songNumber && filename) {
       updateAnnotation({
         songNumber,
@@ -858,7 +858,7 @@ export const PdfAnnotationToolbar = ({
     filename,
   ]);
 
-  // ── Text annotation confirmation ──
+  // -- Text annotation confirmation --
   const handleTextConfirm = useCallback(() => {
     if (textInput.trim() && textPosition) {
       saveAnnotation({
@@ -917,7 +917,7 @@ export const PdfAnnotationToolbar = ({
     [activeLayerKey],
   );
 
-  // ── Icon upload handler ──
+  // -- Icon upload handler --
   const handleIconUpload = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -988,7 +988,7 @@ export const PdfAnnotationToolbar = ({
     }
   }, [pdfUrl, songNumber, filename, allAnnotations, hiddenLayers]);
 
-  // ── Blinking cursor for text tool ──
+  // -- Blinking cursor for text tool --
   const [cursorVisible, setCursorVisible] = useState(true);
   useEffect(() => {
     if (tool !== 'text' || !textPosition || !editMode) return;
@@ -996,7 +996,7 @@ export const PdfAnnotationToolbar = ({
     return () => clearInterval(iv);
   }, [tool, textPosition, editMode]);
 
-  // ── Render annotations on per-page canvases ──
+  // -- Render annotations on per-page canvases --
   useEffect(() => {
     for (const [pageNum, canvas] of canvasRefs.current.entries()) {
       if (!canvas) continue;
@@ -1017,7 +1017,7 @@ export const PdfAnnotationToolbar = ({
 
       const scaleFactor = cw / pdfPageWidth;
 
-      // ── Draw background annotations (other visible layers) ──
+      // -- Draw background annotations (other visible layers) --
       // In edit mode: reduced opacity; in view mode: full opacity (same as active)
       const bgPageAnns = bgAnnotations.filter((a) => a.page === pageNum);
       if (bgPageAnns.length > 0) {
@@ -1061,7 +1061,7 @@ export const PdfAnnotationToolbar = ({
         ctx.restore();
       }
 
-      // ── Draw active layer annotations ──
+      // -- Draw active layer annotations --
       const pageAnns = activeLayerAnnotations.filter((a) => a.page === pageNum);
       for (const ann of pageAnns) {
         const annOpacity = ann.opacity ?? 1;
@@ -1187,7 +1187,7 @@ export const PdfAnnotationToolbar = ({
         }
       }
 
-      // ── Eraser cursor indicator ──
+      // -- Eraser cursor indicator --
       // Draws a small eraser symbol (circle + inner cross) under the pointer
       // while the eraser tool is active on this page.
       if (editMode && effectiveTool === 'eraser' && eraserPos && eraserPos.pageNum === pageNum) {
@@ -1196,13 +1196,13 @@ export const PdfAnnotationToolbar = ({
         const r = 8; // fixed pixel radius for the indicator circle
         ctx.save();
         ctx.globalAlpha = 0.85;
-        // Outer circle — white outline for contrast
+        // Outer circle � white outline for contrast
         ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.arc(ex, ey, r, 0, Math.PI * 2);
         ctx.stroke();
-        // Inner circle — dark ring
+        // Inner circle � dark ring
         ctx.strokeStyle = '#333333';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
@@ -1255,7 +1255,7 @@ export const PdfAnnotationToolbar = ({
     eraserPos,
   ]);
 
-  // ── Per-page overlay wrappers ──
+  // -- Per-page overlay wrappers --
   const [pageWrappers, setPageWrappers] = useState<Map<number, HTMLElement>>(new Map());
 
   useEffect(() => {
@@ -1303,10 +1303,10 @@ export const PdfAnnotationToolbar = ({
           : effectiveTool === 'icon'
             ? 'copy'
             : effectiveTool === 'eraser'
-              ? 'none' // hide the OS cursor — the canvas indicator takes over
+              ? 'none' // hide the OS cursor � the canvas indicator takes over
               : 'default';
 
-  /** Style for SVG icon previews — apply filter in dark mode for visibility */
+  /** Style for SVG icon previews � apply filter in dark mode for visibility */
   const iconPreviewStyle: CSSProperties = {
     width: 24,
     height: 24,
@@ -1316,7 +1316,7 @@ export const PdfAnnotationToolbar = ({
 
   return (
     <>
-      {/* ── Canvas overlays — always rendered (read-only when not editing) ── */}
+      {/* -- Canvas overlays � always rendered (read-only when not editing) -- */}
       {Array.from(pageWrappers.entries()).map(([pageNum, wrapper]) =>
         createPortal(
           <canvas
@@ -1349,14 +1349,14 @@ export const PdfAnnotationToolbar = ({
         ),
       )}
 
-      {/* ── Toolbar UI — only visible in edit mode ── */}
+      {/* -- Toolbar UI � only visible in edit mode -- */}
       {editMode && (
         <Stack alignItems="center" sx={{ display: 'inline-flex' }}>
-          {/* ── Tool-specific options (secondary bar — above main toolbar) ── */}
+          {/* -- Tool-specific options (secondary bar � above main toolbar) -- */}
           {tool === 'draw' && (
             <Paper elevation={1} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, mb: 0.5, borderRadius: 1 }}>
               <Typography variant="caption" sx={{ minWidth: 60 }}>
-                {LL.ANNOTATION_DRAW()}
+                {LL.ANNOTATION.DRAW()}
               </Typography>
               <Slider size="small" min={1} max={10} value={lineWidth} onChange={(_, v) => setLineWidth(v as number)} sx={{ width: 100 }} />
               <Typography variant="caption" sx={{ width: 20 }}>
@@ -1364,7 +1364,7 @@ export const PdfAnnotationToolbar = ({
               </Typography>
               <Divider orientation="vertical" flexItem />
               <Typography variant="caption" sx={{ minWidth: 50 }}>
-                {LL.ANNOTATION_OPACITY()}
+                {LL.ANNOTATION.OPACITY()}
               </Typography>
               <Slider
                 size="small"
@@ -1388,7 +1388,7 @@ export const PdfAnnotationToolbar = ({
             >
               <TextField
                 size="small"
-                placeholder={LL.ANNOTATION_TEXT_PLACEHOLDER()}
+                placeholder={LL.ANNOTATION.TEXT_PLACEHOLDER()}
                 value={textInput}
                 onChange={(e) => setTextInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -1398,27 +1398,27 @@ export const PdfAnnotationToolbar = ({
                 sx={{ flex: 1, minWidth: 120, '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' } }}
               />
               <Button size="small" variant="contained" onClick={handleTextConfirm} disabled={!textInput.trim() || !textPosition}>
-                {LL.ANNOTATION_TEXT_ADD()}
+                {LL.ANNOTATION.TEXT_ADD()}
               </Button>
               <Divider orientation="vertical" flexItem />
-              <Tooltip title={LL.ANNOTATION_BOLD()}>
+              <Tooltip title={LL.ANNOTATION.BOLD()}>
                 <IconButton size="small" onClick={() => setFontBold((v) => !v)} color={fontBold ? 'primary' : 'default'}>
                   <BoldIcon sx={{ fontSize: 16 }} />
                 </IconButton>
               </Tooltip>
-              <Tooltip title={LL.ANNOTATION_ITALIC()}>
+              <Tooltip title={LL.ANNOTATION.ITALIC()}>
                 <IconButton size="small" onClick={() => setFontItalic((v) => !v)} color={fontItalic ? 'primary' : 'default'}>
                   <ItalicIcon sx={{ fontSize: 16 }} />
                 </IconButton>
               </Tooltip>
-              <Tooltip title={LL.ANNOTATION_UNDERLINE()}>
+              <Tooltip title={LL.ANNOTATION.UNDERLINE()}>
                 <IconButton size="small" onClick={() => setFontUnderline((v) => !v)} color={fontUnderline ? 'primary' : 'default'}>
                   <UnderlineIcon sx={{ fontSize: 16 }} />
                 </IconButton>
               </Tooltip>
               <Divider orientation="vertical" flexItem />
               <Typography variant="caption" sx={{ minWidth: 50 }}>
-                {LL.ANNOTATION_FONT_SIZE()}
+                {LL.ANNOTATION.FONT_SIZE()}
               </Typography>
               <Slider size="small" min={8} max={48} value={fontSize} onChange={(_, v) => setFontSize(v as number)} sx={{ width: 80 }} />
               <Typography variant="caption" sx={{ width: 20 }}>
@@ -1426,7 +1426,7 @@ export const PdfAnnotationToolbar = ({
               </Typography>
               <Divider orientation="vertical" flexItem />
               <Typography variant="caption" sx={{ minWidth: 50 }}>
-                {LL.ANNOTATION_OPACITY()}
+                {LL.ANNOTATION.OPACITY()}
               </Typography>
               <Slider
                 size="small"
@@ -1446,7 +1446,7 @@ export const PdfAnnotationToolbar = ({
           {tool === 'highlight' && (
             <Paper elevation={1} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, mb: 0.5, borderRadius: 1 }}>
               <Typography variant="caption" sx={{ minWidth: 80 }}>
-                {LL.ANNOTATION_RECT_OPACITY()}
+                {LL.ANNOTATION.RECT_OPACITY()}
               </Typography>
               <Slider
                 size="small"
@@ -1469,12 +1469,12 @@ export const PdfAnnotationToolbar = ({
               sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.5, px: 1, py: 0.5, mb: 0.5, borderRadius: 1 }}
             >
               <Typography variant="caption" sx={{ mr: 1 }}>
-                {LL.ANNOTATION_ICON()}
+                {LL.ANNOTATION.ICON()}
               </Typography>
 
               {icons.length === 0 ? (
                 <Typography variant="caption" color="text.secondary">
-                  {LL.ANNOTATION_ICON_NONE()}
+                  {LL.ANNOTATION.ICON_NONE()}
                 </Typography>
               ) : (
                 icons.map((icon) => (
@@ -1503,7 +1503,7 @@ export const PdfAnnotationToolbar = ({
 
               <Divider orientation="vertical" flexItem />
 
-              <Tooltip title={LL.ANNOTATION_ICON_MANAGE()}>
+              <Tooltip title={LL.ANNOTATION.ICON_MANAGE()}>
                 <IconButton size="small" onClick={(e) => setIconPopoverAnchor(e.currentTarget)}>
                   <SettingsIcon fontSize="small" />
                 </IconButton>
@@ -1516,10 +1516,10 @@ export const PdfAnnotationToolbar = ({
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               >
                 <Stack sx={{ p: 1.5, minWidth: 200, maxWidth: 300 }} spacing={1}>
-                  <Typography variant="subtitle2">{LL.ANNOTATION_ICON_MANAGE()}</Typography>
+                  <Typography variant="subtitle2">{LL.ANNOTATION.ICON_MANAGE()}</Typography>
                   {icons.length === 0 ? (
                     <Typography variant="body2" color="text.secondary">
-                      {LL.ANNOTATION_ICON_NONE()}
+                      {LL.ANNOTATION.ICON_NONE()}
                     </Typography>
                   ) : (
                     icons.map((icon) => (
@@ -1530,7 +1530,7 @@ export const PdfAnnotationToolbar = ({
                         <Typography variant="body2" sx={{ flex: 1 }} noWrap>
                           {icon.name}
                         </Typography>
-                        <Tooltip title={LL.ANNOTATION_ICON_DELETE()}>
+                        <Tooltip title={LL.ANNOTATION.ICON_DELETE()}>
                           <IconButton size="small" onClick={() => handleIconDelete(icon.filename)}>
                             <DeleteIcon sx={{ fontSize: 14 }} />
                           </IconButton>
@@ -1540,7 +1540,7 @@ export const PdfAnnotationToolbar = ({
                   )}
                   <Divider />
                   <Button size="small" variant="outlined" component="label" startIcon={<UploadIcon />}>
-                    {LL.ANNOTATION_ICON_UPLOAD()}
+                    {LL.ANNOTATION.ICON_UPLOAD()}
                     <input type="file" accept=".svg" hidden onChange={handleIconUpload} />
                   </Button>
                 </Stack>
@@ -1548,7 +1548,7 @@ export const PdfAnnotationToolbar = ({
 
               <Divider orientation="vertical" flexItem />
               <Typography variant="caption" sx={{ minWidth: 40 }}>
-                {LL.ANNOTATION_ICON_SIZE()}
+                {LL.ANNOTATION.ICON_SIZE()}
               </Typography>
               <Slider
                 size="small"
@@ -1564,7 +1564,7 @@ export const PdfAnnotationToolbar = ({
               </Typography>
               <Divider orientation="vertical" flexItem />
               <Typography variant="caption" sx={{ minWidth: 50 }}>
-                {LL.ANNOTATION_OPACITY()}
+                {LL.ANNOTATION.OPACITY()}
               </Typography>
               <Slider
                 size="small"
@@ -1584,12 +1584,12 @@ export const PdfAnnotationToolbar = ({
           {tool === 'eraser' && (
             <Paper elevation={1} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, mb: 0.5, borderRadius: 1 }}>
               <Typography variant="caption" color="text.secondary">
-                {LL.ANNOTATION_ERASER_HINT()}
+                {LL.ANNOTATION.ERASER_HINT()}
               </Typography>
             </Paper>
           )}
 
-          {/* ── Main toolbar (primary bar) ── */}
+          {/* -- Main toolbar (primary bar) -- */}
           <Paper
             elevation={2}
             sx={{
@@ -1603,27 +1603,27 @@ export const PdfAnnotationToolbar = ({
           >
             <ToggleButtonGroup size="small" value={tool} exclusive onChange={(_, val) => setTool((val ?? 'none') as AnnotationTool)}>
               <ToggleButton value="draw">
-                <Tooltip title={LL.ANNOTATION_DRAW()}>
+                <Tooltip title={LL.ANNOTATION.DRAW()}>
                   <DrawIcon fontSize="small" />
                 </Tooltip>
               </ToggleButton>
               <ToggleButton value="text">
-                <Tooltip title={LL.ANNOTATION_TEXT()}>
+                <Tooltip title={LL.ANNOTATION.TEXT()}>
                   <TextIcon fontSize="small" />
                 </Tooltip>
               </ToggleButton>
               <ToggleButton value="highlight">
-                <Tooltip title={LL.ANNOTATION_HIGHLIGHT()}>
+                <Tooltip title={LL.ANNOTATION.HIGHLIGHT()}>
                   <HighlightIcon fontSize="small" />
                 </Tooltip>
               </ToggleButton>
               <ToggleButton value="icon">
-                <Tooltip title={LL.ANNOTATION_ICON()}>
+                <Tooltip title={LL.ANNOTATION.ICON()}>
                   <IconToolIcon fontSize="small" />
                 </Tooltip>
               </ToggleButton>
               <ToggleButton value="eraser">
-                <Tooltip title={LL.ANNOTATION_ERASER()}>
+                <Tooltip title={LL.ANNOTATION.ERASER()}>
                   <EraserIcon fontSize="small" />
                 </Tooltip>
               </ToggleButton>
@@ -1651,7 +1651,7 @@ export const PdfAnnotationToolbar = ({
 
             <Divider orientation="vertical" flexItem />
 
-            <Tooltip title={LL.ANNOTATION_CLEAR_LAYER()}>
+            <Tooltip title={LL.ANNOTATION.CLEAR_LAYER()}>
               <IconButton size="small" onClick={() => setClearConfirmOpen(true)}>
                 <DeleteIcon fontSize="small" />
               </IconButton>
@@ -1679,7 +1679,7 @@ export const PdfAnnotationToolbar = ({
 
             <Divider orientation="vertical" flexItem />
 
-            <Tooltip title={LL.ANNOTATION_DOWNLOAD_PDF()}>
+            <Tooltip title={LL.ANNOTATION.DOWNLOAD_PDF()}>
               <IconButton size="small" onClick={handleDownloadWithAnnotations}>
                 <DownloadIcon fontSize="small" />
               </IconButton>
@@ -1688,16 +1688,16 @@ export const PdfAnnotationToolbar = ({
         </Stack>
       )}
 
-      {/* ── Clear confirmation dialog ── */}
+      {/* -- Clear confirmation dialog -- */}
       <Dialog open={clearConfirmOpen} onClose={() => setClearConfirmOpen(false)}>
-        <DialogTitle>{LL.ANNOTATION_CLEAR_LAYER()}</DialogTitle>
+        <DialogTitle>{LL.ANNOTATION.CLEAR_LAYER()}</DialogTitle>
         <DialogContent>
-          <DialogContentText>{LL.ANNOTATION_REMOVE_LAYER_CONFIRM()}</DialogContentText>
+          <DialogContentText>{LL.ANNOTATION.REMOVE_LAYER_CONFIRM()}</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setClearConfirmOpen(false)}>{LL.CANCEL()}</Button>
+          <Button onClick={() => setClearConfirmOpen(false)}>{LL.COMMON.CANCEL()}</Button>
           <Button onClick={handleClearLayer} color="error">
-            {LL.ANNOTATION_CLEAR_LAYER()}
+            {LL.ANNOTATION.CLEAR_LAYER()}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1705,7 +1705,7 @@ export const PdfAnnotationToolbar = ({
   );
 };
 
-// ── Geometry helpers (eraser hit-testing) ──
+// -- Geometry helpers (eraser hit-testing) --
 
 /** Distance from a point to a line segment (in percentage coordinates) */
 function pointToSegmentDist(p: Point, a: Point, b: Point): number {

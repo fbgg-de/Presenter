@@ -83,7 +83,7 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
 
       {/* Hex input */}
       <TextField
-        label={LL.MEDIA_HEX_INPUT()}
+        label={LL.MEDIA.HEX_INPUT()}
         value={hexInput}
         onChange={(e) => handleHexChange(e.target.value)}
         size="small"
@@ -118,7 +118,7 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
 
       {/* Preset swatches */}
       <Typography variant="caption" color="text.secondary">
-        {LL.MEDIA_COLOR_PRESETS()}
+        {LL.MEDIA.COLOR_PRESETS()}
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
         {COLOR_PRESETS.map((preset) => (

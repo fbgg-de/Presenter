@@ -102,7 +102,7 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
           <Stack direction="row" spacing={1} alignItems="center">
             <PdfIcon />
             <Typography variant="h6">
-              {LL.PDF_DASHBOARD()} — {LL.PDF_SONG_NUMBER({ number: String(songNumber) })}
+              {LL.PDF.DASHBOARD()} — {LL.PDF.SONG_NUMBER({ number: String(songNumber) })}
             </Typography>
           </Stack>
           <IconButton onClick={onClose}>
@@ -117,7 +117,7 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
           <TextField
             size="small"
             fullWidth
-            placeholder={LL.PDF_SEARCH()}
+            placeholder={LL.PDF.SEARCH()}
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             slotProps={{
@@ -149,7 +149,7 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
           >
             <UploadIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
             <Typography variant="body2" color="text.secondary">
-              {LL.PDF_DRAG_DROP()}
+              {LL.PDF.DRAG_DROP()}
             </Typography>
             {isUploading && <CircularProgress size={24} sx={{ mt: 1 }} />}
             <input ref={fileInputRef} type="file" accept=".pdf" multiple hidden onChange={handleFileInput} />
@@ -163,14 +163,14 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
               <CircularProgress />
             </Box>
           ) : filteredPdfs.length === 0 ? (
-            <Alert severity="info">{LL.PDF_NO_FILES()}</Alert>
+            <Alert severity="info">{LL.PDF.NO_FILES()}</Alert>
           ) : (
             <List dense disablePadding>
               {filteredPdfs.map((pdf: PdfFileInfo) => (
                 <ListItem
                   key={pdf.filename}
                   secondaryAction={
-                    <Tooltip title={LL.PDF_DELETE()}>
+                    <Tooltip title={LL.PDF.DELETE()}>
                       <IconButton edge="end" size="small" color="error" onClick={() => setDeleteTarget(pdf.filename)}>
                         <DeleteIcon fontSize="small" />
                       </IconButton>
@@ -206,14 +206,14 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
 
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
-        <DialogTitle>{LL.PDF_DELETE()}</DialogTitle>
+        <DialogTitle>{LL.PDF.DELETE()}</DialogTitle>
         <DialogContent>
-          <Typography>{LL.PDF_DELETE_CONFIRM({ filename: deleteTarget || '' })}</Typography>
+          <Typography>{LL.PDF.DELETE_CONFIRM({ filename: deleteTarget || '' })}</Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)}>{LL.CANCEL()}</Button>
+          <Button onClick={() => setDeleteTarget(null)}>{LL.COMMON.CANCEL()}</Button>
           <Button onClick={handleDelete} color="error" variant="contained" disabled={isDeleting}>
-            {LL.DELETE()}
+            {LL.COMMON.DELETE()}
           </Button>
         </DialogActions>
       </Dialog>

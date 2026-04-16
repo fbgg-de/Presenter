@@ -71,7 +71,7 @@ import { useSaveShowMutation } from '@/api/shows.api';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
 import { useMetrics } from '@/hooks/useMetrics';
-import { fetchShowSongs } from '@/utils/fetchShowSongs';
+import { loadShowSongs } from '@/store/songsSlice';
 import { toggleTheme } from '@/store/themeSlice';
 import { StyleEditor } from '@/components/StyleEditor';
 import { WindowManager } from '@/components/WindowManager';
@@ -284,7 +284,7 @@ const Sidebar = () => {
       dispatch(setCurrentShow(show));
 
       if (!isNew && !override) {
-        await fetchShowSongs(show, dispatch);
+        await dispatch(loadShowSongs(show));
       } else if (!override) {
         dispatch(setSongsOrderAction([]));
         dispatch(setSongOrdersAction({}));
@@ -342,10 +342,10 @@ const Sidebar = () => {
         return song?.title ?? `Song #${item.songNumber ?? index}`;
       }
       case 'bible_verse':
-        return item.bibleRef || item.label || LL.BIBLE_VERSE();
+        return item.bibleRef || item.label || LL.BIBLE.VERSE();
       case 'media':
-        if (item.mediaSubType === 'color') return item.mediaColor || LL.MEDIA_COLOR();
-        return item.mediaPath || item.label || LL.MEDIA_IMAGE();
+        if (item.mediaSubType === 'color') return item.mediaColor || LL.MEDIA.COLOR();
+        return item.mediaPath || item.label || LL.MEDIA.IMAGE();
       default:
         return `Item ${index + 1}`;
     }
@@ -466,14 +466,14 @@ const Sidebar = () => {
           </Box>
         ) : (
           <>
-            <Tooltip title={LL.SEARCH_SONGS()}>
+            <Tooltip title={LL.SONGS.SEARCH()}>
               <IconButton size="small" onClick={() => setOpenSongSearch(true)}>
                 <SearchIcon />
               </IconButton>
             </Tooltip>
 
             {/* Add Item Menu */}
-            <Tooltip title={LL.ADD_ITEM()}>
+            <Tooltip title={LL.SHOW_ITEMS.ADD()}>
               <IconButton size="small" onClick={(e) => setAddMenuAnchor(e.currentTarget)}>
                 <AddIcon />
               </IconButton>
@@ -488,7 +488,7 @@ const Sidebar = () => {
                 <ListItemIcon>
                   <MusicNoteIcon fontSize="small" sx={{ color: '#1976d2' }} />
                 </ListItemIcon>
-                <ListItemText>{LL.ADD_SONG()}</ListItemText>
+                <ListItemText>{LL.SONGS.ADD()}</ListItemText>
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -499,7 +499,7 @@ const Sidebar = () => {
                 <ListItemIcon>
                   <ImageIcon fontSize="small" sx={{ color: '#f9a825' }} />
                 </ListItemIcon>
-                <ListItemText>{LL.ADD_MEDIA()}</ListItemText>
+                <ListItemText>{LL.SHOW_ITEMS.ADD_MEDIA()}</ListItemText>
               </MenuItem>
               <MenuItem
                 onClick={() => {
@@ -510,12 +510,12 @@ const Sidebar = () => {
                 <ListItemIcon>
                   <MenuBookIcon fontSize="small" sx={{ color: '#388e3c' }} />
                 </ListItemIcon>
-                <ListItemText>{LL.ADD_BIBLE_VERSE()}</ListItemText>
+                <ListItemText>{LL.SHOW_ITEMS.ADD_BIBLE_VERSE()}</ListItemText>
               </MenuItem>
             </Menu>
 
             {isDirty && (
-              <Tooltip title={LL.SAVE_SHOW()}>
+              <Tooltip title={LL.SHOWS.SAVE()}>
                 <IconButton size="small" onClick={handleSaveShow} color="warning">
                   <Badge variant="dot" color="warning">
                     <SaveIcon />
@@ -524,7 +524,7 @@ const Sidebar = () => {
               </Tooltip>
             )}
 
-            <Tooltip title={LL.SHOWS()}>
+            <Tooltip title={LL.SHOWS.TITLE()}>
               <IconButton size="small" onClick={() => setOpenShowSwitcher(true)}>
                 <ViewListIcon />
               </IconButton>
@@ -533,28 +533,28 @@ const Sidebar = () => {
             <Box flexGrow={1} />
 
             {/* Style Editor */}
-            <Tooltip title={LL.STYLE_EDITOR()}>
+            <Tooltip title={LL.STYLE.EDITOR()}>
               <IconButton size="small" onClick={() => setStyleEditorOpen(true)}>
                 <PaletteIcon />
               </IconButton>
             </Tooltip>
 
             {/* Musician View */}
-            <Tooltip title={LL.MUSICIAN_OPEN()}>
+            <Tooltip title={LL.MUSICIAN.OPEN()}>
               <IconButton size="small" onClick={() => window.open('/notes', '_blank')}>
                 <PdfIcon />
               </IconButton>
             </Tooltip>
 
             {/* Companion Helper */}
-            <Tooltip title={LL.COMPANION_HELPER_TITLE()}>
+            <Tooltip title={LL.COMPANION.HELPER_TITLE()}>
               <IconButton size="small" onClick={() => setCompanionHelperOpen(true)}>
                 <CableIcon />
               </IconButton>
             </Tooltip>
 
             {/* Window Manager */}
-            <Tooltip title={LL.WINDOW_MANAGER()}>
+            <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
               <IconButton
                 size="small"
                 onClick={() => setWindowManagerOpen(true)}
@@ -572,7 +572,7 @@ const Sidebar = () => {
             </Tooltip>
 
             {/* Account Menu */}
-            <Tooltip title={LL.ACCOUNT_MENU()}>
+            <Tooltip title={LL.HEADER.ACCOUNT_MENU()}>
               <IconButton size="small" onClick={(e) => setAccountMenuAnchor(e.currentTarget)}>
                 <AccountCircleIcon />
               </IconButton>
@@ -588,7 +588,7 @@ const Sidebar = () => {
                 <MenuItem disabled>
                   <ListItemText>
                     <Typography variant="body2" color="text.secondary">
-                      {LL.LOGGED_IN_AS()}
+                      {LL.AUTH.LOGGED_IN_AS()}
                     </Typography>
                     <Typography variant="body2" fontWeight={600}>
                       {session.mail}
@@ -615,7 +615,7 @@ const Sidebar = () => {
                 <ListItemIcon>
                   <LogoutIcon fontSize="small" />
                 </ListItemIcon>
-                <ListItemText>{LL.LOGOUT()}</ListItemText>
+                <ListItemText>{LL.AUTH.LOGOUT()}</ListItemText>
               </MenuItem>
             </Menu>
 
@@ -643,7 +643,7 @@ const Sidebar = () => {
             <ListItemIcon>
               <EditIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{LL.MUSICIAN_ITEM_EDIT()}</ListItemText>
+            <ListItemText>{LL.MUSICIAN.ITEM_EDIT()}</ListItemText>
           </MenuItem>
         )}
         {/* Key submenu */}
@@ -652,7 +652,7 @@ const Sidebar = () => {
             <ListItemIcon>
               <MusicNoteIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{LL.MUSICIAN_ITEM_SELECT_KEY()}</ListItemText>
+            <ListItemText>{LL.MUSICIAN.ITEM_SELECT_KEY()}</ListItemText>
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
@@ -662,7 +662,7 @@ const Sidebar = () => {
             <ListItemIcon>
               <FolderOpenIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{LL.MUSICIAN_ITEM_SELECT_ORDER()}</ListItemText>
+            <ListItemText>{LL.MUSICIAN.ITEM_SELECT_ORDER()}</ListItemText>
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
@@ -672,7 +672,7 @@ const Sidebar = () => {
           <ListItemIcon>
             <DeleteIcon fontSize="small" color="error" />
           </ListItemIcon>
-          <ListItemText sx={{ color: 'error.main' }}>{LL.MUSICIAN_ITEM_DELETE()}</ListItemText>
+          <ListItemText sx={{ color: 'error.main' }}>{LL.MUSICIAN.ITEM_DELETE()}</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -780,7 +780,7 @@ const Sidebar = () => {
                   )}
                   {/* Style badge */}
                   {item.styleId && (
-                    <Tooltip title={availableStyles.find((s) => s.id === item.styleId)?.name || LL.STYLE()}>
+                    <Tooltip title={availableStyles.find((s) => s.id === item.styleId)?.name || LL.STYLE.STYLE()}>
                       <PaletteIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : 'text.secondary', opacity: 0.7 }} />
                     </Tooltip>
                   )}

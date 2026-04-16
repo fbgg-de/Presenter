@@ -58,10 +58,10 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
         )}
         <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap' }}>
           <Typography variant="caption" color="text.secondary">
-            {LL.PDF_NO_PDF_AVAILABLE()}
+            {LL.PDF.NO_PDF_AVAILABLE()}
           </Typography>
           <Chip
-            label={LL.PDF_IMPORT_TITLE()}
+            label={LL.PDF.IMPORT_TITLE()}
             size="small"
             icon={<PdfIcon />}
             onClick={onImportPdf}
@@ -101,7 +101,7 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
       <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
         {/* Zoom controls: [−] percentage [+] then 100%, fit-width */}
         {onZoomOut && (
-          <Tooltip title={LL.MUSICIAN_ZOOM_OUT()}>
+          <Tooltip title={LL.MUSICIAN.ZOOM_OUT()}>
             <IconButton size="small" onClick={onZoomOut} sx={{ p: 0.25 }}>
               <ZoomOutIcon fontSize="small" />
             </IconButton>
@@ -118,7 +118,7 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
         />
 
         {onZoomIn && (
-          <Tooltip title={LL.MUSICIAN_ZOOM_IN()}>
+          <Tooltip title={LL.MUSICIAN.ZOOM_IN()}>
             <IconButton size="small" onClick={onZoomIn} sx={{ p: 0.25 }}>
               <ZoomInIcon fontSize="small" />
             </IconButton>
@@ -126,7 +126,7 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
         )}
 
         {onZoomReset && (
-          <Tooltip title={LL.MUSICIAN_ZOOM_100()}>
+          <Tooltip title={LL.MUSICIAN.ZOOM_100()}>
             <IconButton size="small" onClick={onZoomReset} color={zoomPercent === 100 ? 'primary' : 'default'} sx={{ p: 0.25 }}>
               <Zoom100Icon fontSize="small" />
             </IconButton>
@@ -134,7 +134,7 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
         )}
 
         {onZoomFitWidth && (
-          <Tooltip title={LL.MUSICIAN_ZOOM_FIT_WIDTH()}>
+          <Tooltip title={LL.MUSICIAN.ZOOM_FIT_WIDTH()}>
             <IconButton size="small" onClick={onZoomFitWidth} sx={{ p: 0.25 }}>
               <FitWidthIcon fontSize="small" />
             </IconButton>
@@ -143,7 +143,7 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
 
         {numPages > 0 && (
           <Typography variant="caption" color="text.secondary">
-            {LL.MUSICIAN_PAGE_COUNT({ count: numPages })}
+            {LL.MUSICIAN.PAGE_COUNT({ count: numPages })}
           </Typography>
         )}
 
@@ -175,7 +175,7 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
 
         {onOpenPdfModal && (
           <Chip
-            label={LL.MUSICIAN_MANAGE_PDFS()}
+            label={LL.MUSICIAN.MANAGE_PDFS()}
             size="small"
             icon={<PdfIcon />}
             onClick={onOpenPdfModal}

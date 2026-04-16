@@ -9,11 +9,10 @@ import type { Show, ShowItem } from '@/api/shows.api';
 import { useSaveShowMutation } from '@/api/shows.api';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setCurrentShow, closeShowSelector } from '@/store/showSlice';
-import { setSongsOrder as setSongsOrderAction, setSongOrders as setSongOrdersAction } from '@/store/songsSlice';
+import { setSongsOrder as setSongsOrderAction, setSongOrders as setSongOrdersAction, loadShowSongs } from '@/store/songsSlice';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import { usePresentationSync } from '@/hooks/usePresentationSync';
 import { useMetrics } from '@/hooks/useMetrics';
-import { fetchShowSongs } from '@/utils/fetchShowSongs';
 
 export const MainPage = () => {
   const dispatch = useAppDispatch();
@@ -33,7 +32,7 @@ export const MainPage = () => {
   useEffect(() => {
     if (!initialLoadDone.current && currentShow && !isShowSelectorOpen) {
       initialLoadDone.current = true;
-      void fetchShowSongs(currentShow, dispatch);
+      void dispatch(loadShowSongs(currentShow));
     }
   }, [currentShow, isShowSelectorOpen]);
 
@@ -58,7 +57,7 @@ export const MainPage = () => {
       trackEvent(isNew ? 'show_created' : 'show_loaded', 'show', show.title);
 
       if (!isNew && !override) {
-        await fetchShowSongs(show, dispatch);
+        await dispatch(loadShowSongs(show));
       } else if (!override) {
         dispatch(setSongsOrderAction([]));
         dispatch(setSongOrdersAction({}));

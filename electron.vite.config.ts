@@ -1,7 +1,7 @@
 import { resolve } from 'path';
 import { defineConfig } from 'electron-vite';
-import { viteStaticCopy } from 'vite-plugin-static-copy';
 import react from '@vitejs/plugin-react';
+import { rendererAliases, rendererInputs, sharedServerConfig } from './vite.shared';
 
 export default defineConfig({
   main: {
@@ -44,59 +44,16 @@ export default defineConfig({
   },
   renderer: {
     resolve: {
-      alias: {
-        '@': resolve('src/renderer/src'),
-        '@renderer': resolve('src/renderer/src'),
-      },
+      alias: rendererAliases,
     },
     build: {
       rollupOptions: {
-        input: {
-          main: resolve('src/renderer/index.html'),
-          presentation: resolve('src/renderer/presentation.html'),
-          musician: resolve('src/renderer/musician.html'),
-        },
+        input: rendererInputs,
       },
     },
-    server: {
-      port: 5173,
-      proxy: {
-        '/rest': {
-          target: 'http://localhost:8000',
-          changeOrigin: false,
-          secure: false,
-          rewrite: (path) => path.replace(/^\/rest(?=\/|$|\?)/, '/rest.php/rest'),
-        },
-        '/oidc': {
-          target: 'http://localhost:8000',
-          changeOrigin: false,
-          secure: false,
-          rewrite: (path) => path.replace(/^\/oidc(?=\/|$|\?)/, '/oidc.php'),
-        },
-      },
-    },
+    server: sharedServerConfig,
     plugins: [
-      react(),
-      viteStaticCopy({
-        silent: true,
-        targets: [
-          { src: 'api/**', dest: 'api' },
-          { src: 'classes/**', dest: 'classes' },
-          {
-            src: [
-              '.htaccess',
-              'config-sample.php',
-              'favicon.ico',
-              'favicon.svg',
-              'oidc.php',
-              'rest.php',
-              'presentation.html',
-              'musician.html',
-            ],
-            dest: '.',
-          },
-        ],
-      }),
+      react()
     ],
   },
 });

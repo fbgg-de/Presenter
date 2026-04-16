@@ -22,7 +22,7 @@ import { LyricsView } from './LyricsView';
 import { usePdfViewer } from './usePdfViewer';
 import { PdfUploadModal } from '@/components/PdfUploadModal';
 import { PdfAreaMappingEditor } from '@/components/PdfAreaMappingEditor';
-import { fetchShowSongs } from '@/utils/fetchShowSongs';
+import { loadShowSongs } from '@/store/songsSlice';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import type { Show, ShowItem } from '@/api/shows.api';
 
@@ -176,7 +176,7 @@ export const MusicianPage = () => {
   useEffect(() => {
     if (!initialLoadDone.current && currentShow && !isShowSelectorOpen) {
       initialLoadDone.current = true;
-      void fetchShowSongs(currentShow, dispatch);
+      void dispatch(loadShowSongs(currentShow));
     }
   }, [currentShow, isShowSelectorOpen, dispatch]);
 
@@ -186,7 +186,7 @@ export const MusicianPage = () => {
       dispatch(setCurrentShow(show));
       dispatch(closeShowSelector());
       if (!isNew) {
-        await fetchShowSongs(show, dispatch);
+        await dispatch(loadShowSongs(show));
       } else {
         dispatch(setSongsOrder([]));
         dispatch(setSongOrders({}));
@@ -350,10 +350,10 @@ export const MusicianPage = () => {
           {!currentShow ? (
             <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, p: 4 }}>
               <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
-                {LL.MUSICIAN_NO_SHOW()}
+                {LL.MUSICIAN.NO_SHOW()}
               </Typography>
               <Button variant="contained" onClick={() => dispatch(closeShowSelector())}>
-                {LL.MUSICIAN_SELECT_SHOW()}
+                {LL.MUSICIAN.SELECT_SHOW()}
               </Button>
             </Stack>
           ) : !activeItem ? (
@@ -426,7 +426,7 @@ export const MusicianPage = () => {
               pointerEvents: 'none',
             }}
           >
-            <Tooltip title={LL.MUSICIAN_PREV_PAGE()} placement="top">
+            <Tooltip title={LL.MUSICIAN.PREV_PAGE()} placement="top">
               <IconButton
                 onClick={() => canGoPrevPage && pdfViewer.setCurrentPage(pdfViewer.currentPage - 1)}
                 size="small"
@@ -439,7 +439,7 @@ export const MusicianPage = () => {
                 <PrevPageIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <Tooltip title={LL.MUSICIAN_PREV_SONG()} placement="top">
+            <Tooltip title={LL.MUSICIAN.PREV_SONG()} placement="top">
               <IconButton
                 onClick={() => canGoPrev && handleManualNav(activeItemIndex - 1)}
                 size="small"
@@ -466,7 +466,7 @@ export const MusicianPage = () => {
               pointerEvents: 'none',
             }}
           >
-            <Tooltip title={LL.MUSICIAN_NEXT_SONG()} placement="top">
+            <Tooltip title={LL.MUSICIAN.NEXT_SONG()} placement="top">
               <IconButton
                 onClick={() => canGoNext && handleManualNav(activeItemIndex + 1)}
                 size="small"
@@ -479,7 +479,7 @@ export const MusicianPage = () => {
                 <NextSongIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <Tooltip title={LL.MUSICIAN_NEXT_PAGE()} placement="top">
+            <Tooltip title={LL.MUSICIAN.NEXT_PAGE()} placement="top">
               <IconButton
                 onClick={() => canGoNextPage && pdfViewer.setCurrentPage(pdfViewer.currentPage + 1)}
                 size="small"

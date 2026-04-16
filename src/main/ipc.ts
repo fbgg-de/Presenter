@@ -5,7 +5,6 @@
 import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { existsSync } from 'fs';
-import fontList from 'font-list';
 import { PresentationWindowManager } from './windows';
 import type { WindowConfig, MusicianViewConfig, PresentationContentIPC, SettingsDiff } from '../shared/types';
 
@@ -120,6 +119,10 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
 
   ipcMain.handle('identify-windows', () => {
     windowManager.identifyWindows();
+  });
+
+  ipcMain.handle('hide-identify-windows', () => {
+    windowManager.hideIdentifyWindows();
   });
 
   // ── Media file checks ──
@@ -257,11 +260,16 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
   // ── System fonts ──
   ipcMain.handle('get-system-fonts', async () => {
     try {
-      const fonts = await fontList.getFonts();
+      // Require font-list dynamically at runtime. Some bundlers may break
+      // static imports for font-list's internal files, so load it lazily and
+      // guard with try/catch.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const fontList = require('font-list');
+      const fonts: string[] = await fontList.getFonts();
       // font-list returns names wrapped in quotes on some platforms; strip them
       return fonts.map((f: string) => f.replace(/^"|"$/g, ''));
     } catch (err) {
-      console.error('Failed to enumerate system fonts:', err);
+      console.error('Failed to enumerate system fonts (font-list unavailable):', err);
       return [];
     }
   });

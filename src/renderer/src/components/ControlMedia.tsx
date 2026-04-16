@@ -32,7 +32,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
             </Typography>
             <Stack direction="row" alignItems="center" spacing={1}>
               <PaletteIcon color="warning" />
-              <Typography color="text.secondary">{LL.MEDIA_COLOR()}</Typography>
+              <Typography color="text.secondary">{LL.MEDIA.COLOR()}</Typography>
             </Stack>
           </Stack>
         );
@@ -42,9 +42,9 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
           <Stack alignItems="center" spacing={2} sx={{ py: 4 }}>
             <VideocamIcon sx={{ fontSize: 80, color: 'text.secondary' }} />
             <Typography variant="h6" color="text.secondary">
-              {item.mediaPath || LL.CONTROL_VIDEO_PLACEHOLDER()}
+              {item.mediaPath || LL.CONTROL.VIDEO_PLACEHOLDER()}
             </Typography>
-            <Typography color="text.secondary">{LL.MEDIA_VIDEO()}</Typography>
+            <Typography color="text.secondary">{LL.MEDIA.VIDEO()}</Typography>
           </Stack>
         );
 
@@ -72,7 +72,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
               <ImageIcon sx={{ fontSize: 80, color: 'text.secondary' }} />
             )}
             <Typography variant="h6" color="text.secondary">
-              {item.mediaPath || item.label || LL.MEDIA_IMAGE()}
+              {item.mediaPath || item.label || LL.MEDIA.IMAGE()}
             </Typography>
           </Stack>
         );
@@ -92,7 +92,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
         <CardContent>{renderContent()}</CardContent>
       </Card>
       {/* Video controls at bottom */}
-      {item.mediaSubType === 'video' && <VideoControlBar label={item.mediaPath || item.label || LL.MEDIA_VIDEO()} />}
+      {item.mediaSubType === 'video' && <VideoControlBar label={item.mediaPath || item.label || LL.MEDIA.VIDEO()} />}
     </Stack>
   );
 };

@@ -87,7 +87,7 @@ const ControlSong = () => {
                   }}
                   onDoubleClick={() => dispatch(setActiveBlockIndex(blockIndex))}
                 >
-                  (#{currentSong.songNumber}) {currentSong.title ?? LL.TITLE_UNKNOWN()}
+                  (#{currentSong.songNumber}) {currentSong.title ?? LL.COMMON.TITLE_UNKNOWN()}
                   {currentSong.authors && `\n${currentSong.authors}`}
                   {currentSong.copyright && `\n${currentSong.copyright}`}
                 </Typography>

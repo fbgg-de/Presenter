@@ -32,6 +32,7 @@ const api = {
   freezeWindow: (windowName: string) => electronAPI.ipcRenderer.invoke('freeze-window', windowName),
   unfreezeWindow: (windowName: string) => electronAPI.ipcRenderer.invoke('unfreeze-window', windowName),
   identifyWindows: () => electronAPI.ipcRenderer.invoke('identify-windows'),
+  hideIdentifyWindows: () => electronAPI.ipcRenderer.invoke('hide-identify-windows'),
 
   // ── Media ──
   checkMediaFiles: (files: string[]) => electronAPI.ipcRenderer.invoke('check-media-files', files),

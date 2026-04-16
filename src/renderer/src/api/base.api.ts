@@ -11,36 +11,43 @@ export type ApiSuccess<T> = T;
 // Base API instance
 // ─────────────────────────────────────────────
 
-const getBackendBaseUrl = (): string => {
-  if (import.meta.env.DEV) {
-    return '';
+/** Read the backend base URL from localStorage. Called per-request so runtime changes take effect.
+ *  In DEV mode the Vite proxy is used by default (empty string = relative URL),
+ *  but an explicit localStorage value overrides that so users can test against a real backend. */
+export const getBackendBaseUrl = (): string => {
+  const normalized = localStorage.getItem('presenter_backend_url') || ''.trim().replace(/\/+$/, '');
+  if (normalized) {
+    return normalized;
   }
-  const override = import.meta.env.VITE_BACKEND_URL;
-  const fromStorage = localStorage.getItem('presenter_backend_url') || '';
-  return (override ?? fromStorage).trim().replace(/\/+$/, '');
+  // In DEV mode with no explicit URL, use relative URLs so the Vite proxy handles them.
+  return '';
 };
 
-const baseUrl = getBackendBaseUrl();
+/**
+ * Dynamic base query — resolves the backend URL on every request so that
+ * changes made by ConnectivityChecker or Settings take effect immediately.
+ */
+const dynamicBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extraOptions) => {
+  const baseUrl = getBackendBaseUrl();
+  const rawBaseQuery = fetchBaseQuery({
+    baseUrl: baseUrl ? `${baseUrl}/` : '/',
+    credentials: 'include',
+    prepareHeaders: (headers) => {
+      headers.set('Accept', 'application/json');
+      return headers;
+    },
+  });
 
-const rawBaseQuery = fetchBaseQuery({
-  baseUrl: baseUrl ? `${baseUrl}/` : '/',
-  credentials: 'include',
-  prepareHeaders: (headers) => {
-    headers.set('Accept', 'application/json');
-    return headers;
-  },
-});
-
-/** Wrapper that detects 401 and broadcasts a session-expired event */
-const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extraOptions) => {
   const result = await rawBaseQuery(args, api, extraOptions);
+
+  // Detect 401 and broadcast session-expired (except for Session endpoint itself)
   if (result.error && result.error.status === 401) {
-    // Don't fire for the Session endpoint itself (expected to 401 when not logged in)
     const url = typeof args === 'string' ? args : args.url;
     if (!url.includes('rest/Session')) {
       window.dispatchEvent(new CustomEvent(SESSION_EXPIRED_EVENT));
     }
   }
+
   return result;
 };
 
@@ -50,7 +57,7 @@ const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQue
  */
 export const presenterApi = createApi({
   reducerPath: 'presenterApi',
-  baseQuery: baseQueryWithReauth,
+  baseQuery: dynamicBaseQuery,
   tagTypes: [
     'Session',
     'Songs',

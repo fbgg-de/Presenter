@@ -12,6 +12,7 @@ import { MainPage } from '@/pages/MainPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage';
 import { MusicianPage } from '@/musician/MusicianPage';
+import ConnectivityChecker from '@/components/ConnectivityChecker';
 import { useAppSelector } from '@/store';
 import { SESSION_EXPIRED_EVENT } from '@/api/base.api';
 
@@ -79,6 +80,9 @@ const App = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <TypesafeI18n locale={activeLocale}>
+        {/* Connectivity helper: shows dialog when Session/Accounts queries fail */}
+        <ConnectivityChecker />
+
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -105,11 +109,11 @@ const SessionExpiredSnackbar = ({ open, onClose, onRelogin }: { open: boolean; o
         onClose={onClose}
         action={
           <Button color="inherit" size="small" onClick={onRelogin}>
-            {LL.LOGIN()}
+            {LL.AUTH.LOGIN()}
           </Button>
         }
       >
-        {LL.SESSION_EXPIRED_MESSAGE()}
+        {LL.AUTH.SESSION_EXPIRED()}
       </Alert>
     </Snackbar>
   );
