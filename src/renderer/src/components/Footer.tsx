@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, MouseEvent } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, MouseEvent } from 'react';
 import {
   AppBar,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Menu,
   MenuItem,
@@ -9,9 +13,11 @@ import {
   ListItemText,
   Divider,
   Stack,
+  TextField,
   Toolbar,
   Tooltip,
   Typography,
+  Button,
 } from '@mui/material';
 import {
   Brightness1 as BlackIcon,
@@ -30,6 +36,9 @@ import {
   Crop as FramedIcon,
   VerticalAlignTop as OnTopIcon,
   Palette as StyleIcon,
+  Window as WindowManagerIcon,
+  Edit as EditIcon,
+  Tv as ScreenIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppSelector, useAppDispatch } from '@/store';
@@ -37,6 +46,7 @@ import { toggleBlack, toggleIdentify, toggleFreezeWindow } from '@/store/present
 import { updateSetting } from '@/store/settingsSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { StyleEditor } from '@/components/StyleEditor';
+import { WindowManager } from '@/components/WindowManager';
 import {
   openPresentationWindow,
   closePresentationWindow,
@@ -59,16 +69,17 @@ const Footer = () => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const windowFooterVisible = useAppSelector((state) => state.settings.windowFooterVisible);
+  const restoreWindowsOnStart = useAppSelector((state) => state.settings.restoreWindowsOnStart);
   const savedConfigs = useAppSelector((state) => state.settings.windowConfigs) as SavedWindowConfig[];
   const isBlack = useAppSelector((state) => state.presentation.isBlack);
   const isIdentifying = useAppSelector((state) => state.presentation.isIdentifying);
   const frozenWindows = useAppSelector((state) => state.presentation.frozenWindows);
-  const globalStyleId = useAppSelector((state) => state.settings.globalStyleId);
 
   const { data: styles = [] } = useGetStylesQuery();
 
-  // Style editor state
+  // Style editor + window manager state
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
+  const [windowManagerOpen, setWindowManagerOpen] = useState(false);
 
   // Track open windows from the bridge
   const [openWindowsList, setOpenWindowsList] = useState<Array<{ id: string; config: WindowConfig; closed: boolean }>>([]);
@@ -77,11 +88,33 @@ const Footer = () => {
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [menuWindowId, setMenuWindowId] = useState<string | null>(null);
 
-  // Style sub-menu anchors
+  // Style sub-menu anchor
   const [windowStyleAnchor, setWindowStyleAnchor] = useState<null | HTMLElement>(null);
-  const [itemStyleAnchor, setItemStyleAnchor] = useState<null | HTMLElement>(null);
+  // Screen assignment sub-menu
+  const [screenAnchor, setScreenAnchor] = useState<null | HTMLElement>(null);
+  const [screens, setScreens] = useState<
+    Array<{ id: number; label: string; bounds: { x: number; y: number; width: number; height: number }; isPrimary: boolean }>
+  >([]);
+  // Rename dialog
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState('');
 
-  const menuEntry = useMemo(() => openWindowsList.find((w) => w.id === menuWindowId), [openWindowsList, menuWindowId]);
+  const menuEntryConfig = useMemo(() => {
+    // Read from savedConfigs (which has up-to-date toggle state) rather than
+    // openWindowsList (which only has the initial config from the bridge).
+    if (!menuWindowId) return undefined;
+    const saved = (savedConfigs as SavedWindowConfig[]).find((c) => c._runtimeId === menuWindowId);
+    if (saved) return saved;
+    const fromBridge = openWindowsList.find((w) => w.id === menuWindowId);
+    return fromBridge ? fromBridge.config : undefined;
+  }, [menuWindowId, savedConfigs, openWindowsList]);
+
+  const menuEntry = useMemo(() => {
+    if (!menuWindowId) return undefined;
+    const fromBridge = openWindowsList.find((w) => w.id === menuWindowId);
+    if (fromBridge) return { ...fromBridge, config: menuEntryConfig || fromBridge.config };
+    return undefined;
+  }, [menuWindowId, openWindowsList, menuEntryConfig]);
 
   // ── Persist configs whenever the open windows list changes ──
   const persistConfigs = useCallback(
@@ -92,8 +125,12 @@ const Footer = () => {
   );
 
   // ── Restore saved windows on mount ──
+  // Guard against React Strict Mode double-invocation and other remount scenarios.
+  const hasRestoredRef = useRef(false);
   useEffect(() => {
-    if (!windowFooterVisible || savedConfigs.length === 0) return;
+    if (hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+    if (!(windowFooterVisible || restoreWindowsOnStart) || savedConfigs.length === 0) return;
     let cancelled = false;
 
     const restoreWindows = async () => {
@@ -112,39 +149,66 @@ const Footer = () => {
       }
       if (!cancelled) {
         persistConfigs(updated);
-        getOpenWindows().then(setOpenWindowsList).catch(() => {});
+        getOpenWindows()
+          .then(setOpenWindowsList)
+          .catch(() => {});
       }
     };
 
     restoreWindows();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run only on mount
+
+  // Ref to avoid poll effect depending on savedConfigs (which changes on sync)
+  const savedConfigsRef = useRef(savedConfigs);
+  savedConfigsRef.current = savedConfigs;
 
   // Poll for open windows status
   useEffect(() => {
     if (!windowFooterVisible) return;
     const refreshWindows = () => {
       getOpenWindows()
-        .then(setOpenWindowsList)
+        .then((windows) => {
+          setOpenWindowsList(windows);
+          // Sync fullscreen state from Electron back to savedConfigs
+          if (window.api?.getWindowStates) {
+            window.api.getWindowStates().then((states: Array<{ id: string; fullscreen?: boolean }>) => {
+              let changed = false;
+              const configs = [...(savedConfigsRef.current as SavedWindowConfig[])];
+              for (const state of states) {
+                const idx = configs.findIndex((c) => c._runtimeId === state.id);
+                if (idx >= 0 && state.fullscreen !== undefined && configs[idx].fullscreen !== state.fullscreen) {
+                  configs[idx] = { ...configs[idx], fullscreen: state.fullscreen };
+                  changed = true;
+                }
+              }
+              if (changed) persistConfigs(configs);
+            }).catch(() => {});
+          }
+        })
         .catch(() => setOpenWindowsList(getOpenWindowsSync()));
     };
     const interval = setInterval(refreshWindows, 1000);
     refreshWindows();
     return () => clearInterval(interval);
-  }, [windowFooterVisible]);
+  }, [windowFooterVisible, persistConfigs]);
 
   // ── Compute which saved configs are open/closed ──
   const openIds = useMemo(() => new Set(openWindowsList.filter((w) => !w.closed).map((w) => w.id)), [openWindowsList]);
 
   const windowEntries = useMemo(() => {
-    // Build from saved configs, marking open/closed
-    const entries = (savedConfigs as SavedWindowConfig[]).map((cfg) => ({
-      config: cfg,
-      runtimeId: cfg._runtimeId,
-      isOpen: cfg._runtimeId ? openIds.has(cfg._runtimeId) : false,
-    }));
-    // Also add any open windows not in saved configs (manually opened)
+    // Build from saved configs — only show entries that are currently open OR have a known runtime ID
+    const entries = (savedConfigs as SavedWindowConfig[])
+      .filter((cfg) => cfg._runtimeId) // skip configs with no runtime ID (never opened this session)
+      .map((cfg) => ({
+        config: cfg,
+        runtimeId: cfg._runtimeId!,
+        isOpen: openIds.has(cfg._runtimeId!),
+      }));
+    // Also add any open windows not in saved configs (e.g., opened via IPC directly)
     for (const w of openWindowsList) {
       if (!w.closed && !entries.some((e) => e.runtimeId === w.id)) {
         entries.push({ config: w.config, runtimeId: w.id, isOpen: true });
@@ -154,41 +218,67 @@ const Footer = () => {
   }, [savedConfigs, openWindowsList, openIds]);
 
   const handleOpenWindow = useCallback(async () => {
-    const config: SavedWindowConfig = { name: 'Presentation', displayMode: 'normal' };
+    const config: SavedWindowConfig = {
+      name: 'Presentation',
+      displayMode: 'normal',
+      fullscreen: false,
+      frameless: true,
+      alwaysOnTop: false,
+      hideMouse: false,
+    };
     const id = await openPresentationWindow(config);
     config._runtimeId = id;
-    persistConfigs([...savedConfigs as SavedWindowConfig[], config]);
-    getOpenWindows().then(setOpenWindowsList).catch(() => {});
+    persistConfigs([...(savedConfigs as SavedWindowConfig[]), config]);
+    getOpenWindows()
+      .then(setOpenWindowsList)
+      .catch(() => {});
   }, [savedConfigs, persistConfigs]);
 
-  const handleCloseWindow = useCallback(async (runtimeId: string) => {
-    await closePresentationWindow(runtimeId);
-    getOpenWindows().then(setOpenWindowsList).catch(() => {});
-  }, []);
-
-  const handleReopenWindow = useCallback(async (index: number) => {
-    const configs = [...savedConfigs] as SavedWindowConfig[];
-    const cfg = configs[index];
-    if (!cfg) return;
-    try {
-      const id = await openPresentationWindow(cfg);
-      configs[index] = { ...cfg, _runtimeId: id };
+  const handleCloseWindow = useCallback(
+    async (runtimeId: string) => {
+      await closePresentationWindow(runtimeId);
+      // Remove the config from savedConfigs entirely when a window is closed.
+      // This prevents stale "inactive" entries accumulating across restarts.
+      const configs = (savedConfigs as SavedWindowConfig[]).filter((c) => c._runtimeId !== runtimeId);
       persistConfigs(configs);
-      getOpenWindows().then(setOpenWindowsList).catch(() => {});
-    } catch (e) {
-      console.error('Failed to reopen window:', e);
-    }
-  }, [savedConfigs, persistConfigs]);
+      getOpenWindows()
+        .then(setOpenWindowsList)
+        .catch(() => {});
+    },
+    [savedConfigs, persistConfigs],
+  );
 
-  const handleRemoveConfig = useCallback((index: number) => {
-    const configs = [...savedConfigs] as SavedWindowConfig[];
-    const cfg = configs[index];
-    if (cfg._runtimeId) {
-      closePresentationWindow(cfg._runtimeId).catch(() => {});
-    }
-    configs.splice(index, 1);
-    persistConfigs(configs);
-  }, [savedConfigs, persistConfigs]);
+  const handleReopenWindow = useCallback(
+    async (index: number) => {
+      const configs = [...savedConfigs] as SavedWindowConfig[];
+      const cfg = configs[index];
+      if (!cfg) return;
+      try {
+        const id = await openPresentationWindow(cfg);
+        configs[index] = { ...cfg, _runtimeId: id };
+        persistConfigs(configs);
+        getOpenWindows()
+          .then(setOpenWindowsList)
+          .catch(() => {});
+      } catch (e) {
+        console.error('Failed to reopen window:', e);
+      }
+    },
+    [savedConfigs, persistConfigs],
+  );
+
+  const handleRemoveConfig = useCallback(
+    (index: number) => {
+      const configs = [...savedConfigs] as SavedWindowConfig[];
+      const cfg = configs[index];
+      if (cfg._runtimeId) {
+        closePresentationWindow(cfg._runtimeId).catch(() => {});
+      }
+      configs.splice(index, 1);
+      persistConfigs(configs);
+    },
+    [savedConfigs, persistConfigs],
+  );
 
   const handleCloseAll = useCallback(async () => {
     await closeAllPresentationWindows();
@@ -218,7 +308,7 @@ const Footer = () => {
     setMenuAnchor(null);
     setMenuWindowId(null);
     setWindowStyleAnchor(null);
-    setItemStyleAnchor(null);
+    setScreenAnchor(null);
   }, []);
 
   const handleToggleFreeze = useCallback(async () => {
@@ -231,30 +321,140 @@ const Footer = () => {
       await freezeWindow(name);
     }
     dispatch(toggleFreezeWindow(name));
-    handleMenuClose();
-  }, [menuEntry, frozenWindows, dispatch, handleMenuClose]);
+    // Keep menu open
+  }, [menuEntry, frozenWindows, dispatch]);
 
   // Toggle-style helpers for Electron window properties
   const handleToggleWindowProp = useCallback(
     async (prop: keyof WindowConfig) => {
       if (!menuEntry) return;
+      // Read current value from the saved config (menuEntryConfig), not bridge snapshot
+      const current = menuEntryConfig ? (menuEntryConfig as Record<string, unknown>)[prop] : undefined;
+      const newValue = !current;
       const api = (window as unknown as { api?: Record<string, unknown> }).api;
       if (api?.updateWindowConfig) {
-        const current = menuEntry.config[prop];
-        await (api.updateWindowConfig as (id: string, patch: Partial<WindowConfig>) => Promise<void>)(menuEntry.id, { [prop]: !current });
-        // Optimistically update local config
-        menuEntry.config[prop] = !current as never;
+        try {
+          await (api.updateWindowConfig as (id: string, patch: Partial<WindowConfig>) => Promise<void>)(menuEntry.id, { [prop]: newValue });
+        } catch (e) {
+          console.error('Failed to update window config:', e);
+        }
       }
-      handleMenuClose();
+      // Persist to redux (immutable update)
+      const idx = (savedConfigs as SavedWindowConfig[]).findIndex((c) => c._runtimeId === menuEntry.id);
+      if (idx >= 0) {
+        const next = (savedConfigs as SavedWindowConfig[]).map((c, i) => (i === idx ? { ...c, [prop]: newValue } : c));
+        persistConfigs(next);
+      }
+      // Force a refresh of open windows so the menu reflects the new state
+      getOpenWindows()
+        .then(setOpenWindowsList)
+        .catch(() => {});
     },
-    [menuEntry, handleMenuClose],
+    [menuEntry, menuEntryConfig, savedConfigs, persistConfigs],
   );
+
+  // Assign a preset (style) to this window — keep menu open
+  const handleSetWindowStyle = useCallback(
+    (styleId: number | null) => {
+      if (!menuEntry) return;
+      const idx = (savedConfigs as SavedWindowConfig[]).findIndex((c) => c._runtimeId === menuEntry.id);
+      if (idx >= 0) {
+        const next = (savedConfigs as SavedWindowConfig[]).map((c, i) => (i === idx ? { ...c, styleId: styleId ?? 0 } : c));
+        persistConfigs(next);
+      }
+      setWindowStyleAnchor(null);
+    },
+    [menuEntry, savedConfigs, persistConfigs],
+  );
+
+  // Load screens when menu opens
+  useEffect(() => {
+    if (menuAnchor && window.api?.listScreens) {
+      window.api
+        .listScreens()
+        .then(setScreens)
+        .catch(() => {});
+    }
+  }, [menuAnchor]);
+
+  // Move window to screen
+  const handleMoveToScreen = useCallback(
+    async (screenBounds: { x: number; y: number; width: number; height: number }) => {
+      if (!menuEntry) return;
+      const api = (window as unknown as { api?: Record<string, unknown> }).api;
+      if (api?.updateWindowConfig) {
+        await (api.updateWindowConfig as (id: string, patch: Partial<WindowConfig>) => Promise<void>)(menuEntry.id, {
+          positionX: screenBounds.x,
+          positionY: screenBounds.y,
+          width: screenBounds.width,
+          height: screenBounds.height,
+        });
+      }
+      const idx = (savedConfigs as SavedWindowConfig[]).findIndex((c) => c._runtimeId === menuEntry.id);
+      if (idx >= 0) {
+        const next = (savedConfigs as SavedWindowConfig[]).map((c, i) =>
+          i === idx
+            ? {
+                ...c,
+                left: screenBounds.x,
+                top: screenBounds.y,
+                width: screenBounds.width,
+                height: screenBounds.height,
+                positionX: screenBounds.x,
+                positionY: screenBounds.y,
+              }
+            : c,
+        );
+        persistConfigs(next);
+      }
+      setScreenAnchor(null);
+    },
+    [menuEntry, savedConfigs, persistConfigs],
+  );
+
+  // Rename a window
+  const handleRenameConfirm = useCallback(() => {
+    const newName = renameValue.trim();
+    if (!newName || !menuEntry) return;
+    const idx = (savedConfigs as SavedWindowConfig[]).findIndex((c) => c._runtimeId === menuEntry.id);
+    if (idx >= 0) {
+      const next = (savedConfigs as SavedWindowConfig[]).map((c, i) => (i === idx ? { ...c, name: newName } : c));
+      persistConfigs(next);
+    }
+    setRenameDialogOpen(false);
+    handleMenuClose();
+  }, [renameValue, menuEntry, savedConfigs, persistConfigs, handleMenuClose]);
 
   if (!windowFooterVisible) return null;
 
   return (
     <>
       <StyleEditor open={styleEditorOpen} onClose={() => setStyleEditorOpen(false)} />
+      <WindowManager open={windowManagerOpen} onClose={() => setWindowManagerOpen(false)} />
+
+      {/* Rename window dialog */}
+      <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{LL.WINDOW.RENAME()}</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            size="small"
+            fullWidth
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameConfirm();
+            }}
+            sx={{ mt: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRenameDialogOpen(false)}>{LL.COMMON.CANCEL()}</Button>
+          <Button variant="contained" onClick={handleRenameConfirm}>
+            {LL.COMMON.SAVE()}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <AppBar
         position="static"
         color="default"
@@ -271,16 +471,36 @@ const Footer = () => {
           {windowEntries.length > 0 ? (
             <>
               {windowEntries.map((entry, idx) => {
-                const name = entry.config.name || 'Window';
+                const cfg = entry.config as SavedWindowConfig;
+                const name = cfg.name || 'Window';
                 const isFrozen = frozenWindows.includes(name);
-                const isStream = entry.config.displayMode === 'stream';
+                const isStream = cfg.displayMode === 'stream';
+                const presetName = cfg.styleId ? styles.find((s) => s.id === cfg.styleId)?.name : undefined;
+                const label = presetName ? `${name} (${presetName})` : name;
+
+                // Build a composite icon showing active states
+                const statusIcons: React.ReactNode[] = [];
+                if (isFrozen) statusIcons.push(<FreezeIcon key="f" sx={{ fontSize: 14 }} />);
+                if (cfg.fullscreen) statusIcons.push(<FullscreenIcon key="fs" sx={{ fontSize: 14 }} />);
+                if (cfg.alwaysOnTop) statusIcons.push(<OnTopIcon key="ot" sx={{ fontSize: 14 }} />);
+                if (cfg.styleId) statusIcons.push(<StyleIcon key="st" sx={{ fontSize: 14 }} />);
+                const mainIcon = isStream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />;
+                const chipIcon =
+                  statusIcons.length > 0 ? (
+                    <Stack direction="row" spacing={0.25} alignItems="center" sx={{ pl: 0.5 }}>
+                      {mainIcon}
+                      {statusIcons}
+                    </Stack>
+                  ) : (
+                    mainIcon
+                  );
 
                 if (entry.isOpen && entry.runtimeId) {
                   return (
                     <Chip
                       key={entry.runtimeId}
-                      icon={isStream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />}
-                      label={name}
+                      icon={chipIcon}
+                      label={label}
                       size="small"
                       variant={isFrozen ? 'filled' : 'outlined'}
                       color={isFrozen ? 'info' : isBlack ? 'default' : 'primary'}
@@ -297,7 +517,7 @@ const Footer = () => {
                     <Tooltip key={`closed-${idx}`} title={LL.WINDOW.OPEN()}>
                       <Chip
                         icon={isStream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />}
-                        label={name}
+                        label={label}
                         size="small"
                         variant="outlined"
                         color="default"
@@ -331,23 +551,23 @@ const Footer = () => {
                   <ListItemIcon>
                     <MouseIcon fontSize="small" />
                   </ListItemIcon>
-                  <ListItemText>{menuEntry?.config.hideMouse ? LL.FOOTER.SHOW_MOUSE() : LL.FOOTER.HIDE_MOUSE()}</ListItemText>
+                  <ListItemText>{menuEntryConfig?.hideMouse ? LL.FOOTER.SHOW_MOUSE() : LL.FOOTER.HIDE_MOUSE()}</ListItemText>
                 </MenuItem>
 
                 {/* Fullscreen */}
                 <MenuItem onClick={() => handleToggleWindowProp('fullscreen')}>
                   <ListItemIcon>
-                    {menuEntry?.config.fullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+                    {menuEntryConfig?.fullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
                   </ListItemIcon>
-                  <ListItemText>{menuEntry?.config.fullscreen ? LL.FOOTER.EXIT_FULLSCREEN() : LL.FOOTER.FULLSCREEN()}</ListItemText>
+                  <ListItemText>{menuEntryConfig?.fullscreen ? LL.FOOTER.EXIT_FULLSCREEN() : LL.FOOTER.FULLSCREEN()}</ListItemText>
                 </MenuItem>
 
                 {/* Frameless */}
                 <MenuItem onClick={() => handleToggleWindowProp('frameless')}>
                   <ListItemIcon>
-                    {menuEntry?.config.frameless ? <FramedIcon fontSize="small" /> : <FramelessIcon fontSize="small" />}
+                    {menuEntryConfig?.frameless ? <FramedIcon fontSize="small" /> : <FramelessIcon fontSize="small" />}
                   </ListItemIcon>
-                  <ListItemText>{menuEntry?.config.frameless ? LL.FOOTER.FRAMED() : LL.FOOTER.FRAMELESS()}</ListItemText>
+                  <ListItemText>{menuEntryConfig?.frameless ? LL.FOOTER.FRAMED() : LL.FOOTER.FRAMELESS()}</ListItemText>
                 </MenuItem>
 
                 {/* Always on top */}
@@ -355,28 +575,43 @@ const Footer = () => {
                   <ListItemIcon>
                     <OnTopIcon fontSize="small" />
                   </ListItemIcon>
-                  <ListItemText>{menuEntry?.config.alwaysOnTop ? LL.FOOTER.NOT_ON_TOP() : LL.FOOTER.ALWAYS_ON_TOP()}</ListItemText>
+                  <ListItemText>{menuEntryConfig?.alwaysOnTop ? LL.FOOTER.NOT_ON_TOP() : LL.FOOTER.ALWAYS_ON_TOP()}</ListItemText>
+                </MenuItem>
+
+                <Divider />
+
+                {/* Move to screen */}
+                {screens.length > 1 && (
+                  <MenuItem onClick={(e) => setScreenAnchor(e.currentTarget)}>
+                    <ListItemIcon>
+                      <ScreenIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>{LL.WINDOW.MOVE_TO_SCREEN()}</ListItemText>
+                  </MenuItem>
+                )}
+
+                {/* Rename */}
+                <MenuItem
+                  onClick={() => {
+                    setRenameValue(menuEntry?.config.name || '');
+                    setRenameDialogOpen(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <EditIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{LL.WINDOW.RENAME()}</ListItemText>
                 </MenuItem>
 
                 {styles.length > 0 && <Divider />}
 
-                {/* Window style */}
+                {/* Window style (preset) */}
                 {styles.length > 0 && (
                   <MenuItem onClick={(e) => setWindowStyleAnchor(e.currentTarget)}>
                     <ListItemIcon>
                       <StyleIcon fontSize="small" />
                     </ListItemIcon>
                     <ListItemText>{LL.FOOTER.WINDOW_STYLE()}</ListItemText>
-                  </MenuItem>
-                )}
-
-                {/* Item style */}
-                {styles.length > 0 && (
-                  <MenuItem onClick={(e) => setItemStyleAnchor(e.currentTarget)}>
-                    <ListItemIcon>
-                      <StyleIcon fontSize="small" color="secondary" />
-                    </ListItemIcon>
-                    <ListItemText>{LL.FOOTER.ITEM_STYLE()}</ListItemText>
                   </MenuItem>
                 )}
               </Menu>
@@ -390,10 +625,8 @@ const Footer = () => {
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
               >
                 <MenuItem
-                  onClick={() => {
-                    setWindowStyleAnchor(null);
-                    handleMenuClose();
-                  }}
+                  onClick={() => handleSetWindowStyle(null)}
+                  selected={!(menuEntry?.config as SavedWindowConfig | undefined)?.styleId}
                   sx={{ fontSize: '0.85rem' }}
                 >
                   <em>{LL.STYLE.NONE()}</em>
@@ -401,11 +634,8 @@ const Footer = () => {
                 {styles.map((s) => (
                   <MenuItem
                     key={s.id}
-                    onClick={() => {
-                      setWindowStyleAnchor(null);
-                      handleMenuClose();
-                    }}
-                    selected={s.id === globalStyleId}
+                    onClick={() => handleSetWindowStyle(s.id)}
+                    selected={s.id === (menuEntry?.config as SavedWindowConfig | undefined)?.styleId}
                     sx={{ fontSize: '0.85rem' }}
                   >
                     {s.name}
@@ -413,46 +643,44 @@ const Footer = () => {
                 ))}
               </Menu>
 
-              {/* Item style sub-menu */}
+              {/* Screen assignment sub-menu */}
               <Menu
-                anchorEl={itemStyleAnchor}
-                open={Boolean(itemStyleAnchor)}
-                onClose={() => setItemStyleAnchor(null)}
+                anchorEl={screenAnchor}
+                open={Boolean(screenAnchor)}
+                onClose={() => setScreenAnchor(null)}
                 anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
               >
-                <MenuItem
-                  onClick={() => {
-                    setItemStyleAnchor(null);
-                    handleMenuClose();
-                  }}
-                  sx={{ fontSize: '0.85rem' }}
-                >
-                  <em>{LL.STYLE.NONE()}</em>
-                </MenuItem>
-                {styles.map((s) => (
-                  <MenuItem
-                    key={s.id}
-                    onClick={() => {
-                      setItemStyleAnchor(null);
-                      handleMenuClose();
-                    }}
-                    sx={{ fontSize: '0.85rem' }}
-                  >
-                    {s.name}
+                {screens.map((screen) => (
+                  <MenuItem key={screen.id} onClick={() => handleMoveToScreen(screen.bounds)} sx={{ fontSize: '0.85rem' }}>
+                    <ListItemIcon>
+                      <ScreenIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>
+                      {screen.label}
+                      {screen.isPrimary ? ` (${LL.WINDOW.PRIMARY_SCREEN()})` : ''}{' '}
+                      <Typography component="span" variant="caption" color="text.secondary">
+                        {screen.bounds.width}×{screen.bounds.height}
+                      </Typography>
+                    </ListItemText>
                   </MenuItem>
                 ))}
               </Menu>
+              <Tooltip title={LL.WINDOW.ADD()}>
+                <IconButton size="small" onClick={handleOpenWindow}>
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
 
               <Stack direction="row" sx={{ ml: 'auto' }} gap={0.5}>
+                <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
+                  <IconButton size="small" onClick={() => setWindowManagerOpen(true)}>
+                    <WindowManagerIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title={LL.STYLE.EDITOR()}>
                   <IconButton size="small" onClick={() => setStyleEditorOpen(true)}>
                     <StyleIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={LL.WINDOW.ADD()}>
-                  <IconButton size="small" onClick={handleOpenWindow}>
-                    <AddIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title={isBlack ? LL.FOOTER.SHOW() : LL.FOOTER.BLACK()}>
@@ -483,6 +711,11 @@ const Footer = () => {
                 <Tooltip title={LL.STYLE.EDITOR()}>
                   <IconButton size="small" onClick={() => setStyleEditorOpen(true)}>
                     <StyleIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
+                  <IconButton size="small" onClick={() => setWindowManagerOpen(true)}>
+                    <WindowManagerIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
                 <Tooltip title={LL.WINDOW.OPEN()}>

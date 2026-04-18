@@ -8,6 +8,7 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -30,9 +31,24 @@ export const DEFAULT_KEYBOARD_MAPPING: Record<string, string> = {
   next_block: 'ArrowRight',
   prev_line: 'ArrowUp',
   next_line: 'ArrowDown',
+  jump_to_start: 'Home',
   toggle_black: 'KeyB',
-  toggle_fullscreen: 'KeyF',
   close_drawer: 'Escape',
+  toggle_video_playback: 'Space',
+};
+
+/** Default enabled state per action (all enabled by default) */
+export const DEFAULT_KEYBOARD_ENABLED: Record<string, boolean> = {
+  prev_item: true,
+  next_item: true,
+  prev_block: true,
+  next_block: true,
+  prev_line: true,
+  next_line: true,
+  jump_to_start: true,
+  toggle_black: true,
+  close_drawer: true,
+  toggle_video_playback: true,
 };
 
 /** All configurable actions */
@@ -43,9 +59,10 @@ const ACTIONS = [
   'next_block',
   'prev_line',
   'next_line',
+  'jump_to_start',
   'toggle_black',
-  'toggle_fullscreen',
   'close_drawer',
+  'toggle_video_playback',
 ] as const;
 
 type ActionId = (typeof ACTIONS)[number];
@@ -84,10 +101,10 @@ const useActionLabel = (): ((action: ActionId) => string) => {
           return LL.KEYBOARD.ACTION_NEXT_LINE();
         case 'toggle_black':
           return LL.KEYBOARD.ACTION_TOGGLE_BLACK();
-        case 'toggle_fullscreen':
-          return LL.KEYBOARD.ACTION_TOGGLE_FULLSCREEN();
         case 'close_drawer':
           return LL.KEYBOARD.ACTION_CLOSE_DRAWER();
+        case 'toggle_video_playback':
+          return LL.KEYBOARD.ACTION_TOGGLE_VIDEO();
         default:
           return action;
       }
@@ -100,6 +117,7 @@ export const KeyboardMappingEditor = () => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const keyboardMapping = useAppSelector((state) => state.settings.keyboardMapping);
+  const keyboardEnabled = useAppSelector((state) => state.settings.keyboardEnabled) as Record<string, boolean> | undefined;
   const getActionLabel = useActionLabel();
 
   const [captureAction, setCaptureAction] = useState<ActionId | null>(null);
@@ -107,6 +125,19 @@ export const KeyboardMappingEditor = () => {
   // Merge user mapping with defaults
   const getMappedKey = (action: ActionId): string => {
     return keyboardMapping[action] || DEFAULT_KEYBOARD_MAPPING[action] || '';
+  };
+
+  // Check if action is enabled
+  const isActionEnabled = (action: ActionId): boolean => {
+    if (keyboardEnabled && action in keyboardEnabled) return keyboardEnabled[action];
+    return DEFAULT_KEYBOARD_ENABLED[action] ?? true;
+  };
+
+  // Toggle enabled state for an action
+  const handleToggleEnabled = (action: ActionId) => {
+    const current = isActionEnabled(action);
+    const newEnabled = { ...(keyboardEnabled || DEFAULT_KEYBOARD_ENABLED), [action]: !current };
+    dispatch(updateSetting({ key: 'keyboardEnabled', value: newEnabled }));
   };
 
   // Key capture dialog handler
@@ -130,6 +161,7 @@ export const KeyboardMappingEditor = () => {
 
   const handleReset = () => {
     dispatch(updateSetting({ key: 'keyboardMapping', value: {} }));
+    dispatch(updateSetting({ key: 'keyboardEnabled', value: { ...DEFAULT_KEYBOARD_ENABLED } }));
   };
 
   return (
@@ -143,6 +175,9 @@ export const KeyboardMappingEditor = () => {
             <TableCell>
               <strong>{LL.KEYBOARD.MAPPING_KEY()}</strong>
             </TableCell>
+            <TableCell width={50}>
+              <strong>{LL.KEYBOARD.MAPPING_ENABLED()}</strong>
+            </TableCell>
             <TableCell width={50} />
           </TableRow>
         </TableHead>
@@ -150,9 +185,10 @@ export const KeyboardMappingEditor = () => {
           {ACTIONS.map((action) => {
             const combo = getMappedKey(action);
             const isCustom = !!keyboardMapping[action];
+            const enabled = isActionEnabled(action);
 
             return (
-              <TableRow key={action} hover>
+              <TableRow key={action} hover sx={{ opacity: enabled ? 1 : 0.5 }}>
                 <TableCell>
                   <Typography variant="body2">{getActionLabel(action)}</Typography>
                 </TableCell>
@@ -164,6 +200,9 @@ export const KeyboardMappingEditor = () => {
                     color={isCustom ? 'primary' : 'default'}
                     sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}
                   />
+                </TableCell>
+                <TableCell>
+                  <Switch size="small" checked={enabled} onChange={() => handleToggleEnabled(action)} />
                 </TableCell>
                 <TableCell>
                   <IconButton size="small" onClick={() => setCaptureAction(action)} title={LL.KEYBOARD.MAPPING_EDIT()}>

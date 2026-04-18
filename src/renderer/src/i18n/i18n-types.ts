@@ -900,6 +900,14 @@ type RootTranslation = {
 		 * A​d​d​ ​b​y​ ​U​R​L
 		 */
 		ADD_BY_URL: string
+		/**
+		 * R​o​o​t
+		 */
+		ROOT_FOLDER: string
+		/**
+		 * L​o​a​d​ ​m​o​r​e
+		 */
+		LOAD_MORE: string
 	}
 	CONTROL: {
 		/**
@@ -1050,6 +1058,18 @@ type RootTranslation = {
 		 */
 		BACKGROUND_VIDEO: string
 		/**
+		 * B​a​c​k​g​r​o​u​n​d​ ​F​i​t
+		 */
+		BG_FIT: string
+		/**
+		 * P​o​s​i​t​i​o​n
+		 */
+		BG_POSITION: string
+		/**
+		 * V​e​r​t​i​c​a​l​ ​A​l​i​g​n
+		 */
+		VERTICAL_ALIGN: string
+		/**
 		 * F​o​n​t
 		 */
 		FONT: string
@@ -1141,6 +1161,102 @@ type RootTranslation = {
 		 * S​e​l​e​c​t​ ​a​ ​s​t​y​l​e
 		 */
 		SELECT: string
+		/**
+		 * G​e​n​e​r​a​l
+		 */
+		SECTION_GENERAL: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d
+		 */
+		SECTION_BACKGROUND: string
+		/**
+		 * T​y​p​o​g​r​a​p​h​y
+		 */
+		SECTION_TYPOGRAPHY: string
+		/**
+		 * L​a​y​o​u​t​ ​&​ ​S​p​a​c​i​n​g
+		 */
+		SECTION_LAYOUT: string
+		/**
+		 * E​f​f​e​c​t​s
+		 */
+		SECTION_EFFECTS: string
+		/**
+		 * V​i​s​i​b​i​l​i​t​y
+		 */
+		SECTION_VISIBILITY: string
+		/**
+		 * P​e​r​-​W​i​n​d​o​w​ ​O​v​e​r​r​i​d​e​s
+		 */
+		SECTION_WINDOW_OVERRIDES: string
+		/**
+		 * C​u​s​t​o​m​ ​C​S​S
+		 */
+		SECTION_CUSTOM_CSS: string
+		/**
+		 * L​i​v​e​ ​P​r​e​v​i​e​w
+		 */
+		SECTION_PREVIEW: string
+		/**
+		 * B​r​o​w​s​e​…
+		 */
+		BROWSE: string
+		/**
+		 * P​i​c​k​ ​a​ ​f​i​l​e
+		 */
+		PICK_FILE: string
+		/**
+		 * P​i​c​k​ ​a​ ​f​o​l​d​e​r
+		 */
+		PICK_FOLDER: string
+		/**
+		 * A​p​p​l​y​ ​n​o​w
+		 */
+		APPLY_NOW: string
+		/**
+		 * S​a​v​e​ ​&​ ​A​p​p​l​y
+		 */
+		SAVE_AND_APPLY: string
+		/**
+		 * D​u​p​l​i​c​a​t​e
+		 */
+		DUPLICATE: string
+		/**
+		 * R​e​n​a​m​e
+		 */
+		RENAME: string
+		/**
+		 * R​e​s​e​t
+		 */
+		RESET: string
+		/**
+		 * Y​o​u​ ​h​a​v​e​ ​u​n​s​a​v​e​d​ ​c​h​a​n​g​e​s​.​ ​D​i​s​c​a​r​d​ ​t​h​e​m​?
+		 */
+		UNSAVED_PROMPT: string
+		/**
+		 * S​o​m​e​ ​c​h​a​n​g​e​s​ ​r​e​q​u​i​r​e​ ​t​h​e​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​ ​t​o​ ​b​e​ ​r​e​o​p​e​n​e​d​.
+		 */
+		WINDOW_RELOAD_REQUIRED: string
+		/**
+		 * A​p​p​l​i​e​d
+		 */
+		APPLIED: string
+		/**
+		 * W​i​n​d​o​w​ ​N​a​m​e
+		 */
+		WINDOW_OVERRIDE_NAME: string
+		/**
+		 * O​v​e​r​r​i​d​e​ ​S​t​y​l​e
+		 */
+		WINDOW_OVERRIDE_STYLE: string
+		/**
+		 * A​d​d​ ​O​v​e​r​r​i​d​e
+		 */
+		WINDOW_OVERRIDE_ADD: string
+		/**
+		 * A​p​p​l​y​ ​a​d​d​i​t​i​o​n​a​l​ ​s​t​y​l​e​ ​o​v​e​r​r​i​d​e​s​ ​f​o​r​ ​w​i​n​d​o​w​s​ ​m​a​t​c​h​i​n​g​ ​t​h​e​ ​g​i​v​e​n​ ​n​a​m​e​.
+		 */
+		WINDOW_OVERRIDE_HINT: string
 	}
 	FONT: {
 		/**
@@ -1298,6 +1414,18 @@ type RootTranslation = {
 		 * S​t​r​e​a​m​ ​L​i​n​e​s
 		 */
 		STREAM_LINES: string
+		/**
+		 * R​e​n​a​m​e​ ​W​i​n​d​o​w
+		 */
+		RENAME: string
+		/**
+		 * M​o​v​e​ ​t​o​ ​S​c​r​e​e​n
+		 */
+		MOVE_TO_SCREEN: string
+		/**
+		 * P​r​i​m​a​r​y
+		 */
+		PRIMARY_SCREEN: string
 	}
 	HEADER: {
 		/**
@@ -1463,6 +1591,10 @@ type RootTranslation = {
 		 */
 		MAPPING_RESET: string
 		/**
+		 * E​n​a​b​l​e​d
+		 */
+		MAPPING_ENABLED: string
+		/**
 		 * P​r​e​v​i​o​u​s​ ​I​t​e​m
 		 */
 		ACTION_PREV_ITEM: string
@@ -1491,13 +1623,13 @@ type RootTranslation = {
 		 */
 		ACTION_TOGGLE_BLACK: string
 		/**
-		 * T​o​g​g​l​e​ ​F​u​l​l​s​c​r​e​e​n
-		 */
-		ACTION_TOGGLE_FULLSCREEN: string
-		/**
 		 * C​l​o​s​e​ ​D​r​a​w​e​r
 		 */
 		ACTION_CLOSE_DRAWER: string
+		/**
+		 * T​o​g​g​l​e​ ​V​i​d​e​o​ ​P​l​a​y​/​P​a​u​s​e
+		 */
+		ACTION_TOGGLE_VIDEO: string
 	}
 	SETTINGS: {
 		/**
@@ -2014,6 +2146,36 @@ type RootTranslation = {
 				 */
 				DESCRIPTION: string
 			}
+			RESTORE_WINDOWS_ON_START: {
+				/**
+				 * R​e​s​t​o​r​e​ ​w​i​n​d​o​w​s​ ​o​n​ ​s​t​a​r​t
+				 */
+				TITLE: string
+				/**
+				 * A​u​t​o​m​a​t​i​c​a​l​l​y​ ​r​e​o​p​e​n​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s​ ​t​h​a​t​ ​w​e​r​e​ ​o​p​e​n​ ​w​h​e​n​ ​t​h​e​ ​a​p​p​ ​w​a​s​ ​l​a​s​t​ ​c​l​o​s​e​d​ ​(​E​l​e​c​t​r​o​n​ ​o​n​l​y​)
+				 */
+				DESCRIPTION: string
+			}
+			TRANSITION_MODE: {
+				/**
+				 * T​r​a​n​s​i​t​i​o​n​ ​m​o​d​e
+				 */
+				TITLE: string
+				/**
+				 * H​o​w​ ​t​o​ ​t​r​a​n​s​i​t​i​o​n​ ​b​e​t​w​e​e​n​ ​i​t​e​m​s​:​ ​c​u​t​ ​(​i​n​s​t​a​n​t​)​ ​o​r​ ​f​a​d​e​ ​(​c​r​o​s​s​-​f​a​d​e​)
+				 */
+				DESCRIPTION: string
+			}
+			TRANSITION_DURATION: {
+				/**
+				 * T​r​a​n​s​i​t​i​o​n​ ​d​u​r​a​t​i​o​n​ ​(​m​s​)
+				 */
+				TITLE: string
+				/**
+				 * D​u​r​a​t​i​o​n​ ​o​f​ ​t​h​e​ ​f​a​d​e​ ​t​r​a​n​s​i​t​i​o​n​ ​i​n​ ​m​i​l​l​i​s​e​c​o​n​d​s
+				 */
+				DESCRIPTION: string
+			}
 		}
 	}
 	VIDEO: {
@@ -2029,6 +2191,18 @@ type RootTranslation = {
 		 * S​t​o​p
 		 */
 		STOP: string
+		/**
+		 * L​o​o​p
+		 */
+		LOOP: string
+		/**
+		 * L​o​o​p​:​ ​O​N
+		 */
+		LOOP_ON: string
+		/**
+		 * L​o​o​p​:​ ​O​F​F
+		 */
+		LOOP_OFF: string
 		/**
 		 * M​u​t​e
 		 */
@@ -2097,6 +2271,10 @@ type RootTranslation = {
 		 * A​p​p​l​y​ ​M​a​s​k
 		 */
 		MASK_APPLY: string
+		/**
+		 * A​u​t​o​p​l​a​y
+		 */
+		AUTOPLAY: string
 	}
 	METRICS: {
 		/**
@@ -2234,6 +2412,10 @@ type RootTranslation = {
 		 * W​e​b​S​o​c​k​e​t​ ​/​ ​C​o​m​p​a​n​i​o​n​ ​C​o​m​m​a​n​d​s
 		 */
 		HELPER_TITLE: string
+		/**
+		 * C​o​n​n​e​c​t​ ​e​x​t​e​r​n​a​l​ ​t​o​o​l​s​ ​(​C​o​m​p​a​n​i​o​n​,​ ​S​t​r​e​a​m​D​e​c​k​,​ ​c​u​s​t​o​m​ ​s​c​r​i​p​t​s​)​ ​v​i​a​ ​t​h​e​ ​W​e​b​S​o​c​k​e​t​ ​A​P​I​.
+		 */
+		HELPER_DESC: string
 		/**
 		 * W​e​b​S​o​c​k​e​t​ ​U​R​L
 		 */
@@ -3824,6 +4006,14 @@ export type TranslationFunctions = {
 		 * Add by URL
 		 */
 		ADD_BY_URL: () => LocalizedString
+		/**
+		 * Root
+		 */
+		ROOT_FOLDER: () => LocalizedString
+		/**
+		 * Load more
+		 */
+		LOAD_MORE: () => LocalizedString
 	}
 	CONTROL: {
 		/**
@@ -3973,6 +4163,18 @@ export type TranslationFunctions = {
 		 */
 		BACKGROUND_VIDEO: () => LocalizedString
 		/**
+		 * Background Fit
+		 */
+		BG_FIT: () => LocalizedString
+		/**
+		 * Position
+		 */
+		BG_POSITION: () => LocalizedString
+		/**
+		 * Vertical Align
+		 */
+		VERTICAL_ALIGN: () => LocalizedString
+		/**
 		 * Font
 		 */
 		FONT: () => LocalizedString
@@ -4064,6 +4266,102 @@ export type TranslationFunctions = {
 		 * Select a style
 		 */
 		SELECT: () => LocalizedString
+		/**
+		 * General
+		 */
+		SECTION_GENERAL: () => LocalizedString
+		/**
+		 * Background
+		 */
+		SECTION_BACKGROUND: () => LocalizedString
+		/**
+		 * Typography
+		 */
+		SECTION_TYPOGRAPHY: () => LocalizedString
+		/**
+		 * Layout & Spacing
+		 */
+		SECTION_LAYOUT: () => LocalizedString
+		/**
+		 * Effects
+		 */
+		SECTION_EFFECTS: () => LocalizedString
+		/**
+		 * Visibility
+		 */
+		SECTION_VISIBILITY: () => LocalizedString
+		/**
+		 * Per-Window Overrides
+		 */
+		SECTION_WINDOW_OVERRIDES: () => LocalizedString
+		/**
+		 * Custom CSS
+		 */
+		SECTION_CUSTOM_CSS: () => LocalizedString
+		/**
+		 * Live Preview
+		 */
+		SECTION_PREVIEW: () => LocalizedString
+		/**
+		 * Browse…
+		 */
+		BROWSE: () => LocalizedString
+		/**
+		 * Pick a file
+		 */
+		PICK_FILE: () => LocalizedString
+		/**
+		 * Pick a folder
+		 */
+		PICK_FOLDER: () => LocalizedString
+		/**
+		 * Apply now
+		 */
+		APPLY_NOW: () => LocalizedString
+		/**
+		 * Save & Apply
+		 */
+		SAVE_AND_APPLY: () => LocalizedString
+		/**
+		 * Duplicate
+		 */
+		DUPLICATE: () => LocalizedString
+		/**
+		 * Rename
+		 */
+		RENAME: () => LocalizedString
+		/**
+		 * Reset
+		 */
+		RESET: () => LocalizedString
+		/**
+		 * You have unsaved changes. Discard them?
+		 */
+		UNSAVED_PROMPT: () => LocalizedString
+		/**
+		 * Some changes require the presentation window to be reopened.
+		 */
+		WINDOW_RELOAD_REQUIRED: () => LocalizedString
+		/**
+		 * Applied
+		 */
+		APPLIED: () => LocalizedString
+		/**
+		 * Window Name
+		 */
+		WINDOW_OVERRIDE_NAME: () => LocalizedString
+		/**
+		 * Override Style
+		 */
+		WINDOW_OVERRIDE_STYLE: () => LocalizedString
+		/**
+		 * Add Override
+		 */
+		WINDOW_OVERRIDE_ADD: () => LocalizedString
+		/**
+		 * Apply additional style overrides for windows matching the given name.
+		 */
+		WINDOW_OVERRIDE_HINT: () => LocalizedString
 	}
 	FONT: {
 		/**
@@ -4220,6 +4518,18 @@ export type TranslationFunctions = {
 		 * Stream Lines
 		 */
 		STREAM_LINES: () => LocalizedString
+		/**
+		 * Rename Window
+		 */
+		RENAME: () => LocalizedString
+		/**
+		 * Move to Screen
+		 */
+		MOVE_TO_SCREEN: () => LocalizedString
+		/**
+		 * Primary
+		 */
+		PRIMARY_SCREEN: () => LocalizedString
 	}
 	HEADER: {
 		/**
@@ -4385,6 +4695,10 @@ export type TranslationFunctions = {
 		 */
 		MAPPING_RESET: () => LocalizedString
 		/**
+		 * Enabled
+		 */
+		MAPPING_ENABLED: () => LocalizedString
+		/**
 		 * Previous Item
 		 */
 		ACTION_PREV_ITEM: () => LocalizedString
@@ -4413,13 +4727,13 @@ export type TranslationFunctions = {
 		 */
 		ACTION_TOGGLE_BLACK: () => LocalizedString
 		/**
-		 * Toggle Fullscreen
-		 */
-		ACTION_TOGGLE_FULLSCREEN: () => LocalizedString
-		/**
 		 * Close Drawer
 		 */
 		ACTION_CLOSE_DRAWER: () => LocalizedString
+		/**
+		 * Toggle Video Play/Pause
+		 */
+		ACTION_TOGGLE_VIDEO: () => LocalizedString
 	}
 	SETTINGS: {
 		/**
@@ -4923,6 +5237,36 @@ export type TranslationFunctions = {
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
+			RESTORE_WINDOWS_ON_START: {
+				/**
+				 * Restore windows on start
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Automatically reopen presentation windows that were open when the app was last closed (Electron only)
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			TRANSITION_MODE: {
+				/**
+				 * Transition mode
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * How to transition between items: cut (instant) or fade (cross-fade)
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			TRANSITION_DURATION: {
+				/**
+				 * Transition duration (ms)
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Duration of the fade transition in milliseconds
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
 		}
 	}
 	VIDEO: {
@@ -4938,6 +5282,18 @@ export type TranslationFunctions = {
 		 * Stop
 		 */
 		STOP: () => LocalizedString
+		/**
+		 * Loop
+		 */
+		LOOP: () => LocalizedString
+		/**
+		 * Loop: ON
+		 */
+		LOOP_ON: () => LocalizedString
+		/**
+		 * Loop: OFF
+		 */
+		LOOP_OFF: () => LocalizedString
 		/**
 		 * Mute
 		 */
@@ -5006,6 +5362,10 @@ export type TranslationFunctions = {
 		 * Apply Mask
 		 */
 		MASK_APPLY: () => LocalizedString
+		/**
+		 * Autoplay
+		 */
+		AUTOPLAY: () => LocalizedString
 	}
 	METRICS: {
 		/**
@@ -5142,6 +5502,10 @@ export type TranslationFunctions = {
 		 * WebSocket / Companion Commands
 		 */
 		HELPER_TITLE: () => LocalizedString
+		/**
+		 * Connect external tools (Companion, StreamDeck, custom scripts) via the WebSocket API.
+		 */
+		HELPER_DESC: () => LocalizedString
 		/**
 		 * WebSocket URL
 		 */

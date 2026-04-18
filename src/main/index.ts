@@ -15,7 +15,15 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 
 const boundsFile = join(app.getPath('userData'), 'window-bounds.json');
 
-function loadWindowBounds(): { x?: number; y?: number; width: number; height: number } {
+interface WindowBoundsData {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  isMaximized?: boolean;
+}
+
+function loadWindowBounds(): WindowBoundsData {
   try {
     if (existsSync(boundsFile)) {
       return JSON.parse(readFileSync(boundsFile, 'utf-8'));
@@ -26,7 +34,7 @@ function loadWindowBounds(): { x?: number; y?: number; width: number; height: nu
   return { width: 450, height: 750 };
 }
 
-function saveWindowBounds(bounds: { x: number; y: number; width: number; height: number }): void {
+function saveWindowBounds(bounds: WindowBoundsData): void {
   try {
     const dir = app.getPath('userData');
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -76,22 +84,52 @@ function createWindow(): void {
       contextIsolation: true,
       devTools: true,
     },
-    ...bounds,
+    ...(bounds.isMaximized ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } : bounds),
     minWidth: 600,
     minHeight: 400,
   });
 
+  let persistEnabled = false;
   const persistBounds = (): void => {
-    if (!mainWindow) return;
-    const b = mainWindow.getBounds();
-    saveWindowBounds({ x: b.x, y: b.y, width: b.width, height: b.height });
+    if (!mainWindow || !persistEnabled) return;
+    const isMaximized = mainWindow.isMaximized();
+    if (isMaximized) {
+      // Only update the maximized flag, keep the last normal bounds
+      const prev = loadWindowBounds();
+      saveWindowBounds({ ...prev, isMaximized: true });
+    } else {
+      const b = mainWindow.getBounds();
+      saveWindowBounds({ x: b.x, y: b.y, width: b.width, height: b.height, isMaximized: false });
+    }
   };
   mainWindow.on('move', persistBounds);
   mainWindow.on('resize', persistBounds);
-  mainWindow.on('close', persistBounds);
+  mainWindow.on('close', () => {
+    persistBounds();
+    // Destroy any presentation/musician windows so the app can fully quit.
+    // Without this, secondary windows remain open and 'window-all-closed' never fires.
+    try {
+      windowManager.destroyAll();
+    } catch (err) {
+      console.error('[Main] Failed to destroy presentation windows on main close:', err);
+    }
+  });
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+    // Ensure the app actually quits on platforms other than macOS.
+    if (process.platform !== 'darwin') {
+      app.quit();
+    }
+  });
 
   mainWindow.on('ready-to-show', () => {
+    if (bounds.isMaximized) {
+      mainWindow!.maximize();
+    }
     mainWindow!.show();
+    // Enable bounds persistence after initial layout is complete
+    setTimeout(() => { persistEnabled = true; }, 500);
     if (is.dev) {
       mainWindow!.webContents.openDevTools();
     }
@@ -106,6 +144,11 @@ function createWindow(): void {
   if (wsServer) {
     wsServer.setMainWindow(mainWindow);
   }
+
+  // Auto-start media server after renderer finishes loading
+  mainWindow.webContents.on('did-finish-load', () => {
+    autoStartMediaServer();
+  });
 
   // HMR for renderer based on electron-vite cli.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
@@ -122,6 +165,28 @@ registerIpcHandlers(windowManager);
 ipcMain.handle('get-media-server-url', () => {
   return mediaServer?.getBaseUrl() || '';
 });
+
+// Auto-start media server when main window finishes loading and a media path is configured
+function autoStartMediaServer(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  mainWindow.webContents.executeJavaScript(`localStorage.getItem('presenter_media_path') || ''`)
+    .then(async (mediaPath: string) => {
+      if (mediaPath) {
+        try {
+          if (mediaServer) {
+            await mediaServer.updatePath(mediaPath);
+          } else {
+            mediaServer = new LocalMediaServer(mediaPath);
+            await mediaServer.start(9100);
+          }
+          console.log('[Media Server] Auto-started for path:', mediaPath);
+        } catch (err) {
+          console.error('[Media Server] Auto-start failed:', err);
+        }
+      }
+    })
+    .catch(() => {});
+}
 
 // IPC handler for WebSocket broadcast (from renderer to WS clients)
 ipcMain.on('ws-broadcast', (_event, action: string, data?: Record<string, unknown>) => {
@@ -209,7 +274,7 @@ app.whenReady().then(async () => {
           await mediaServer.updatePath(mediaPath);
         } else {
           mediaServer = new LocalMediaServer(mediaPath);
-          await mediaServer.start();
+          await mediaServer.start(9100);
         }
         return mediaServer.getBaseUrl();
       } catch (err) {
@@ -243,3 +308,9 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+// Ensure all child windows are destroyed before quit
+app.on('before-quit', () => {
+  windowManager.destroyAll();
+});
+

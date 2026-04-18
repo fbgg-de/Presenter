@@ -5,6 +5,7 @@
 import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { existsSync } from 'fs';
+import { pathToFileURL } from 'url';
 import { PresentationWindowManager } from './windows';
 import type { WindowConfig, MusicianViewConfig, PresentationContentIPC, SettingsDiff } from '../shared/types';
 
@@ -73,6 +74,49 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
     }
   });
 
+  // Native file picker — returns { path, url } or null if cancelled.
+  ipcMain.handle(
+    'pick-file',
+    async (
+      event,
+      options: { title?: string; filters?: Electron.FileFilter[]; defaultPath?: string } = {},
+    ) => {
+      const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+      const result = await dialog.showOpenDialog(win as BrowserWindow, {
+        title: options.title ?? 'Select File',
+        properties: ['openFile'],
+        filters: options.filters,
+        defaultPath: options.defaultPath,
+      });
+      if (result.canceled || result.filePaths.length === 0) return null;
+      const path = result.filePaths[0];
+      return { path, url: pathToFileURL(path).toString() };
+    },
+  );
+
+  // Native folder picker — returns the absolute path or null if cancelled.
+  ipcMain.handle(
+    'pick-directory',
+    async (event, options: { title?: string; defaultPath?: string } = {}) => {
+      const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+      const result = await dialog.showOpenDialog(win as BrowserWindow, {
+        title: options.title ?? 'Select Folder',
+        properties: ['openDirectory'],
+        defaultPath: options.defaultPath,
+      });
+      if (result.canceled || result.filePaths.length === 0) return null;
+      return result.filePaths[0];
+    },
+  );
+
+  // Apply runtime updates to an existing presentation window.
+  ipcMain.handle(
+    'update-window-config',
+    (_event, id: string, partial: Partial<WindowConfig>) => {
+      return windowManager.updateWindowConfig(id, partial);
+    },
+  );
+
   // ── Presentation window management ──
 
   ipcMain.handle('create-presentation-window', (_event, windowConfig: WindowConfig) => {
@@ -83,11 +127,11 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
     windowManager.closePresentationWindow(id);
   });
 
-  ipcMain.handle('update-presentation-content', (_event, id: string, content: PresentationContentIPC) => {
+  ipcMain.on('update-presentation-content', (_event, id: string, content: PresentationContentIPC) => {
     windowManager.updatePresentationContent(id, content);
   });
 
-  ipcMain.handle('broadcast-presentation-content', (_event, content: PresentationContentIPC) => {
+  ipcMain.on('broadcast-presentation-content', (_event, content: PresentationContentIPC) => {
     windowManager.broadcastContent(content);
   });
 
@@ -123,6 +167,23 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
 
   ipcMain.handle('hide-identify-windows', () => {
     windowManager.hideIdentifyWindows();
+  });
+
+  // ── Video commands (forwarded to presentation windows) ──
+
+  ipcMain.handle('video-command', (_event, command: { action: string; windowName?: string; value?: number }) => {
+    windowManager.sendVideoCommand(command.action, command.windowName, command.value);
+  });
+
+  // Forward video status from presentation windows to the main renderer
+  ipcMain.on('video-status', (_event, status) => {
+    const allWindows = BrowserWindow.getAllWindows();
+    // The main window is the one that is NOT a presentation window — typically the first one
+    for (const win of allWindows) {
+      if (!win.isDestroyed() && win.webContents.id !== _event.sender.id) {
+        win.webContents.send('video-status-update', status);
+      }
+    }
   });
 
   // ── Media file checks ──

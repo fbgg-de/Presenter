@@ -4,11 +4,9 @@ import {
   AccordionDetails,
   AccordionSummary,
   Box,
-  Button,
   Drawer,
-  FormControl,
   IconButton,
-  InputLabel,
+  Menu,
   MenuItem,
   OutlinedInput,
   Select,
@@ -23,13 +21,22 @@ import {
   ExpandMore as ExpandMoreIcon,
   FileDownload as ExportIcon,
   FileUpload as ImportIcon,
+  FolderOpen as FolderOpenIcon,
+  Cable as CableIcon,
+  Language as LanguageIcon,
+  LightMode,
+  DarkMode,
+  SettingsBrightness,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { updateSetting, type SettingsState } from '@/store/settingsSlice';
+import { toggleTheme } from '@/store/themeSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { KeyboardMappingEditor } from '@/components/KeyboardMappingEditor';
+import { ColorSwatchButton } from '@/components/ColorPicker';
 import { exportSettings, importSettings, applyImportedSettings } from '@/utils/settingsExport';
+import { CompanionHelper } from '@/components/CompanionHelper';
 
 type SettingConfig = {
   key: keyof SettingsState;
@@ -42,25 +49,18 @@ type SettingConfig = {
 
 const SETTINGS_CONFIG: SettingConfig[] = [
   // General
-  { key: 'uiLanguage', type: 'select', values: ['en', 'de'], group: 'General', label: 'Language / Sprache' },
   { key: 'backendUrl', type: 'string', group: 'General', label: 'Backend URL' },
-  { key: 'showLimit', type: 'number', group: 'General', label: 'Shows per page' },
   { key: 'showSaveFormat', type: 'string', group: 'General', label: 'Show title template' },
   // Behavior
   { key: 'songClick', type: 'select', values: ['click', 'double-click'], group: 'Behavior', label: 'Song click' },
   { key: 'verseClick', type: 'select', values: ['click', 'double-click'], group: 'Behavior', label: 'Block click' },
-  { key: 'songOrder', type: 'select', values: ['lexicographic', 'numeric'], group: 'Behavior', label: 'Song sort order' },
   { key: 'defaultNewVerseName', type: 'string', group: 'Behavior', label: 'Default new block name' },
   { key: 'defaultVerseName', type: 'string', group: 'Behavior', label: 'Default first block name' },
   { key: 'overrideSongImport', type: 'boolean', group: 'Behavior', label: 'Override on import' },
-  { key: 'reloadSongAfterEdit', type: 'boolean', group: 'Behavior', label: 'Reload song after edit' },
-  { key: 'resetBlackOnSwitch', type: 'boolean', group: 'Behavior', label: 'Reset black on song switch' },
   { key: 'showDeleteFromDb', type: 'boolean', group: 'Behavior', label: 'Show delete from DB' },
   { key: 'touchDuration', type: 'number', group: 'Behavior', label: 'Long-press duration (ms)' },
-  // Keyboard
-  { key: 'keyboardNavigationSongs', type: 'boolean', group: 'Keyboard', label: 'Keyboard: navigate songs' },
-  { key: 'keyboardNavigationBlocks', type: 'boolean', group: 'Keyboard', label: 'Keyboard: navigate blocks' },
-  { key: 'keyboardNavigationLines', type: 'boolean', group: 'Keyboard', label: 'Keyboard: navigate lines' },
+  // Keyboard — removed: keyboardNavigationSongs, keyboardNavigationBlocks, keyboardNavigationLines
+  // These are now controlled via the enabled toggle per keyboard action in KeyboardMappingEditor
   // Confirmations
   { key: 'confirmPageLeave', type: 'boolean', group: 'Confirmations', label: 'Confirm page leave' },
   { key: 'confirmShowDeletion', type: 'boolean', group: 'Confirmations', label: 'Confirm show deletion' },
@@ -71,25 +71,21 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'notificationTime', type: 'number', group: 'Notifications', label: 'Auto-dismiss (ms)' },
   { key: 'uploadNotifications', type: 'boolean', group: 'Notifications', label: 'Song upload notifications' },
   // Presentation
-  { key: 'controlLayout', type: 'select', values: ['boxed', 'list'], group: 'Presentation', label: 'Control layout' },
   { key: 'nextLinePreview', type: 'boolean', group: 'Presentation', label: 'Next-line preview' },
   { key: 'nextLinePreviewColor', type: 'color', group: 'Presentation', label: 'Preview line color' },
   { key: 'nextLineTranslation', type: 'boolean', group: 'Presentation', label: 'Preview translations' },
   { key: 'bibleTranslation', type: 'string', group: 'Presentation', label: 'Default Bible translation' },
   { key: 'windowFooterVisible', type: 'boolean', group: 'Presentation', label: 'Show window footer bar' },
-  // Musician
-  { key: 'musicianName', type: 'string', group: 'Musician', label: 'Musician name' },
-  { key: 'musicianBand', type: 'string', group: 'Musician', label: 'Band / order' },
-  { key: 'musicianPageView', type: 'select', values: ['one-page', 'two-page'], group: 'Musician', label: 'Default page view' },
-  { key: 'musicianBlockIndicator', type: 'boolean', group: 'Musician', label: 'Show block indicator' },
-  { key: 'midiTrackingMaster', type: 'select', values: ['operator', 'midi'], group: 'Musician', label: 'Tracking master' },
+  { key: 'transitionMode', type: 'select', values: ['cut', 'fade'], group: 'Presentation', label: 'Transition mode' },
+  { key: 'transitionDuration', type: 'number', group: 'Presentation', label: 'Transition duration (ms)' },
   // Electron
   { key: 'mediaPath', type: 'string', group: 'Electron', label: 'Media directory path' },
   { key: 'wsPort', type: 'number', group: 'Electron', label: 'WebSocket port' },
   { key: 'autoCheckUpdates', type: 'boolean', group: 'Electron', label: 'Auto-check updates' },
+  { key: 'restoreWindowsOnStart', type: 'boolean', group: 'Electron', label: 'Restore windows on start' },
 ];
 
-const GROUP_ORDER = ['General', 'Behavior', 'Keyboard', 'Confirmations', 'Notifications', 'Presentation', 'Musician', 'Electron'];
+const GROUP_ORDER = ['General', 'Behavior', 'Confirmations', 'Notifications', 'Presentation', 'Electron'];
 
 export const Settings = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
   const { LL } = useI18nContext();
@@ -97,6 +93,17 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
   const settings = useAppSelector((state) => state.settings);
   const { data: styles = [] } = useGetStylesQuery();
   const [filter, setFilter] = useState('');
+  const [companionOpen, setCompanionOpen] = useState(false);
+  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
+  const themeMode = useAppSelector((state) => state.theme.mode);
+  const themeIcon =
+    themeMode === 'dark' ? (
+      <DarkMode fontSize="small" />
+    ) : themeMode === 'light' ? (
+      <LightMode fontSize="small" />
+    ) : (
+      <SettingsBrightness fontSize="small" />
+    );
 
   const getGroupLabel = (group: string): string => {
     switch (group) {
@@ -136,12 +143,84 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
 
   return (
     <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right">
+      <CompanionHelper open={companionOpen} onClose={() => setCompanionOpen(false)} />
       <Stack sx={{ width: 'min(90vw, 600px)', height: '100%' }}>
         {/* Header */}
         <Stack direction="row" alignItems="center" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, mr: 2 }}>
             {LL.SETTINGS.SETTINGS()}
           </Typography>
+
+          {/* Quick actions toolbar */}
+          <Tooltip title={LL.SETTINGS.EXPORT_BUTTON()}>
+            <IconButton size="small" onClick={() => exportSettings()}>
+              <ExportIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={LL.SETTINGS.IMPORT_BUTTON()}>
+            <IconButton
+              size="small"
+              onClick={async () => {
+                const diff = await importSettings();
+                if (diff) {
+                  const changeCount = Object.keys(diff.added).length + Object.keys(diff.changed).length;
+                  if (changeCount > 0) {
+                    if (
+                      window.confirm(
+                        LL.SETTINGS.IMPORT_CONFIRM({
+                          count: changeCount,
+                          added: Object.keys(diff.added).length,
+                          changed: Object.keys(diff.changed).length,
+                        }),
+                      )
+                    ) {
+                      await applyImportedSettings(diff);
+                    }
+                  } else {
+                    window.alert(LL.SETTINGS.NO_CHANGES());
+                  }
+                }
+              }}
+            >
+              <ImportIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={LL.COMPANION.HELPER_TITLE()}>
+            <IconButton size="small" onClick={() => setCompanionOpen(true)}>
+              <CableIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Theme">
+            <IconButton size="small" onClick={() => dispatch(toggleTheme())}>
+              {themeIcon}
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={LL.COMMON.LANGUAGE()}>
+            <IconButton size="small" onClick={(e) => setLangAnchor(e.currentTarget)}>
+              <LanguageIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Menu anchorEl={langAnchor} open={Boolean(langAnchor)} onClose={() => setLangAnchor(null)}>
+            <MenuItem
+              onClick={() => {
+                dispatch(updateSetting({ key: 'uiLanguage', value: 'en' }));
+                setLangAnchor(null);
+              }}
+              selected={settings.uiLanguage === 'en' || !settings.uiLanguage}
+            >
+              🇬🇧 English
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                dispatch(updateSetting({ key: 'uiLanguage', value: 'de' }));
+                setLangAnchor(null);
+              }}
+              selected={settings.uiLanguage === 'de'}
+            >
+              🇩🇪 Deutsch
+            </MenuItem>
+          </Menu>
+
           <Box flexGrow={1} />
           <IconButton onClick={() => props.setOpen(false)}>
             <CloseIcon />
@@ -154,32 +233,6 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
         </Box>
 
         <Stack sx={{ flex: 1, overflow: 'auto', px: 1 }}>
-          {/* Global Style selector */}
-          {(!filterLower || 'global style'.includes(filterLower)) && (
-            <Accordion defaultExpanded={false}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight={600}>{LL.SETTINGS.GLOBAL_STYLE()}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <FormControl size="small" fullWidth>
-                  <InputLabel>{LL.STYLE.SELECT()}</InputLabel>
-                  <Select
-                    value={settings.globalStyleId || 0}
-                    label={LL.STYLE.SELECT()}
-                    onChange={(e) => dispatch(updateSetting({ key: 'globalStyleId', value: Number(e.target.value) }))}
-                  >
-                    <MenuItem value={0}>{LL.STYLE.NONE()}</MenuItem>
-                    {styles.map((s) => (
-                      <MenuItem key={s.id} value={s.id}>
-                        {s.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </AccordionDetails>
-            </Accordion>
-          )}
-
           {/* Setting groups */}
           {GROUP_ORDER.filter((g) => groups[g] && groups[g].length > 0).map((groupName) => (
             <Accordion key={groupName} defaultExpanded={false}>
@@ -188,6 +241,29 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
               </AccordionSummary>
               <AccordionDetails>
                 <Stack spacing={1}>
+                  {/* Global Style selector — inside General group */}
+                  {groupName === 'General' && (
+                    <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 0.5 }}>
+                      <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+                        {LL.SETTINGS.GLOBAL_STYLE()}
+                      </Typography>
+                      <Box sx={{ flex: 1 }}>
+                        <Select
+                          size="small"
+                          fullWidth
+                          value={settings.globalStyleId || 0}
+                          onChange={(e) => dispatch(updateSetting({ key: 'globalStyleId', value: Number(e.target.value) }))}
+                        >
+                          <MenuItem value={0}>{LL.STYLE.NONE()}</MenuItem>
+                          {styles.map((s) => (
+                            <MenuItem key={s.id} value={s.id}>
+                              {s.name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </Box>
+                    </Stack>
+                  )}
                   {groups[groupName].map((config) => (
                     <SettingRow key={config.key} config={config} value={settings[config.key]} dispatch={dispatch} />
                   ))}
@@ -204,54 +280,6 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
               </AccordionSummary>
               <AccordionDetails>
                 <KeyboardMappingEditor />
-              </AccordionDetails>
-            </Accordion>
-          )}
-
-          {/* Settings Export/Import */}
-          {(!filterLower || 'export import backup'.includes(filterLower)) && (
-            <Accordion defaultExpanded={false}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight={600}>{LL.SETTINGS.EXPORT_IMPORT()}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Stack spacing={2}>
-                  <Typography variant="body2" color="text.secondary">
-                    {LL.SETTINGS.EXPORT_IMPORT_DESC()}
-                  </Typography>
-                  <Stack direction="row" spacing={2}>
-                    <Button variant="outlined" startIcon={<ExportIcon />} onClick={() => exportSettings()}>
-                      {LL.SETTINGS.EXPORT_BUTTON()}
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<ImportIcon />}
-                      onClick={async () => {
-                        const diff = await importSettings();
-                        if (diff) {
-                          const changeCount = Object.keys(diff.added).length + Object.keys(diff.changed).length;
-                          if (changeCount > 0) {
-                            if (
-                              window.confirm(
-                                LL.SETTINGS.IMPORT_CONFIRM({
-                                  count: changeCount,
-                                  added: Object.keys(diff.added).length,
-                                  changed: Object.keys(diff.changed).length,
-                                }),
-                              )
-                            ) {
-                              await applyImportedSettings(diff);
-                            }
-                          } else {
-                            window.alert(LL.SETTINGS.NO_CHANGES());
-                          }
-                        }
-                      }}
-                    >
-                      {LL.SETTINGS.IMPORT_BUTTON()}
-                    </Button>
-                  </Stack>
-                </Stack>
               </AccordionDetails>
             </Accordion>
           )}
@@ -275,40 +303,24 @@ const SettingRow = ({
 
   const getLabel = (cfg: SettingConfig) => {
     switch (cfg.key) {
-      case 'uiLanguage':
-        return LL.COMMON.LANGUAGE();
       case 'backendUrl':
         return LL.SETTINGS.OPTIONS.BACKEND_URL.TITLE();
-      case 'showLimit':
-        return LL.SETTINGS.OPTIONS.SHOW_LIMIT.TITLE();
       case 'showSaveFormat':
         return LL.SETTINGS.OPTIONS.SHOW_TITLE_TEMPLATE.TITLE();
       case 'songClick':
         return LL.SETTINGS.OPTIONS.SONG_CLICK_BEHAVIOUR.TITLE();
       case 'verseClick':
         return LL.SETTINGS.OPTIONS.VERSE_CLICK_BEHAVIOUR.TITLE();
-      case 'songOrder':
-        return LL.SETTINGS.OPTIONS.SONG_OVERVIEW_ORDER.TITLE();
       case 'defaultNewVerseName':
         return LL.SETTINGS.OPTIONS.DEFAULT_NEW_VERSE_NAME.TITLE();
       case 'defaultVerseName':
         return LL.SETTINGS.OPTIONS.DEFAULT_VERSE_NAME.TITLE();
       case 'overrideSongImport':
         return LL.SETTINGS.OPTIONS.OVERRIDE_SONG_BY_IMPORT.TITLE();
-      case 'reloadSongAfterEdit':
-        return LL.SETTINGS.OPTIONS.RELOAD_SONG_AFTER_EDIT.TITLE();
-      case 'resetBlackOnSwitch':
-        return LL.SETTINGS.OPTIONS.RESET_BLACK_ON_SONG_SWITCH.TITLE();
       case 'showDeleteFromDb':
         return LL.SETTINGS.OPTIONS.SHOW_REMOVE_SONG_FROM_DATABASE.TITLE();
       case 'touchDuration':
         return LL.SETTINGS.OPTIONS.TOUCH_DURATION.TITLE();
-      case 'keyboardNavigationSongs':
-        return LL.SETTINGS.OPTIONS.KEYBOARD_NAV_SONGS.TITLE();
-      case 'keyboardNavigationBlocks':
-        return LL.SETTINGS.OPTIONS.KEYBOARD_NAV_BLOCKS.TITLE();
-      case 'keyboardNavigationLines':
-        return LL.SETTINGS.OPTIONS.KEYBOARD_NAV_LINES.TITLE();
       case 'confirmPageLeave':
         return LL.SETTINGS.OPTIONS.CONFIRM_PAGE_LEAVE.TITLE();
       case 'confirmShowDeletion':
@@ -323,8 +335,6 @@ const SettingRow = ({
         return LL.SETTINGS.OPTIONS.NOTIFICATION_DISAPPEAR_TIME.TITLE();
       case 'uploadNotifications':
         return LL.SETTINGS.OPTIONS.SHOW_SONG_UPLOAD_NOTIFICATIONS.TITLE();
-      case 'controlLayout':
-        return LL.SETTINGS.OPTIONS.CONTROL_LAYOUT.TITLE();
       case 'nextLinePreview':
         return LL.SETTINGS.OPTIONS.NEXT_LINE_PREVIEW.TITLE();
       case 'nextLinePreviewColor':
@@ -335,22 +345,18 @@ const SettingRow = ({
         return LL.SETTINGS.OPTIONS.BIBLE_TRANSLATION.TITLE();
       case 'windowFooterVisible':
         return LL.SETTINGS.OPTIONS.WINDOW_FOOTER_VISIBLE.TITLE();
-      case 'musicianName':
-        return LL.SETTINGS.OPTIONS.MUSICIAN_NAME.TITLE();
-      case 'musicianBand':
-        return LL.SETTINGS.OPTIONS.MUSICIAN_BAND.TITLE();
-      case 'musicianPageView':
-        return LL.SETTINGS.OPTIONS.MUSICIAN_PAGE_VIEW.TITLE();
-      case 'musicianBlockIndicator':
-        return LL.SETTINGS.OPTIONS.MUSICIAN_BLOCK_INDICATOR.TITLE();
-      case 'midiTrackingMaster':
-        return LL.SETTINGS.OPTIONS.MIDI_TRACKING_MASTER.TITLE();
+      case 'transitionMode':
+        return LL.SETTINGS.OPTIONS.TRANSITION_MODE.TITLE();
+      case 'transitionDuration':
+        return LL.SETTINGS.OPTIONS.TRANSITION_DURATION.TITLE();
       case 'mediaPath':
         return LL.SETTINGS.OPTIONS.MEDIA_PATH.TITLE();
       case 'wsPort':
         return LL.SETTINGS.OPTIONS.WS_PORT.TITLE();
       case 'autoCheckUpdates':
         return LL.SETTINGS.OPTIONS.AUTO_CHECK_UPDATES.TITLE();
+      case 'restoreWindowsOnStart':
+        return LL.SETTINGS.OPTIONS.RESTORE_WINDOWS_ON_START.TITLE();
       default:
         return cfg.label || String(cfg.key);
     }
@@ -386,16 +392,23 @@ const SettingRow = ({
             ))}
           </Select>
         ) : config.type === 'color' ? (
+          <ColorSwatchButton value={String(value) || '#000000'} onChange={(c) => dispatch(updateSetting({ key: config.key, value: c }))} />
+        ) : config.key === 'mediaPath' ? (
           <Stack direction="row" spacing={1} alignItems="center">
-            <input
-              type="color"
-              value={String(value) || '#000000'}
-              onChange={(e) => dispatch(updateSetting({ key: config.key, value: e.target.value }))}
-              style={{ width: 36, height: 28, border: 'none', cursor: 'pointer' }}
-            />
-            <Typography variant="caption" fontFamily="monospace">
-              {String(value)}
-            </Typography>
+            <SettingInput value={value} type="string" onChange={(v) => dispatch(updateSetting({ key: config.key, value: v }))} />
+            {window.api?.pickDirectory && (
+              <Tooltip title="Browse…">
+                <IconButton
+                  size="small"
+                  onClick={async () => {
+                    const dir = await window.api.pickDirectory({ title: 'Select media folder' });
+                    if (dir) dispatch(updateSetting({ key: 'mediaPath', value: dir }));
+                  }}
+                >
+                  <FolderOpenIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
           </Stack>
         ) : (
           <SettingInput

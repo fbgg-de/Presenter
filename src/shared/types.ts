@@ -46,6 +46,7 @@ export interface WindowState {
   displayMode: DisplayMode;
   frozen: boolean;
   isBlack: boolean;
+  fullscreen: boolean;
   bounds: { x: number; y: number; width: number; height: number };
   screenId?: number;
 }
@@ -153,4 +154,6 @@ export interface PresentationContentIPC {
   hideBackground?: boolean;
   windowName?: string;
   showIdentify?: boolean;
+  transitionMode?: 'cut' | 'fade';
+  transitionDuration?: number;
 }

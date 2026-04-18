@@ -7,6 +7,8 @@ export interface WindowConfig {
   name?: string;
   top?: number;
   left?: number;
+  positionX?: number;
+  positionY?: number;
   width?: number;
   height?: number;
   displayMode?: 'normal' | 'stream';
@@ -19,6 +21,8 @@ export interface WindowConfig {
   hideMouse?: boolean;
   hideText?: boolean;
   hideBackground?: boolean;
+  /** Optional preset (style entity id) applied to this window only. */
+  styleId?: number;
 }
 
 interface PresentationWindowEntry {
@@ -35,6 +39,18 @@ let windowCounter = 0;
 
 /** Last broadcast content — sent to newly opened windows for initial display */
 let lastBroadcastContent: PresentationContent | null = null;
+
+/**
+ * Optional resolver supplied by usePresentationSync that, given a window id and
+ * its config, returns the per-window resolved style to merge into the content
+ * before broadcasting. When undefined, no per-window style override is applied.
+ */
+type WindowStyleResolver = (id: string, config: WindowConfig) => unknown | undefined;
+let windowStyleResolver: WindowStyleResolver | undefined;
+
+export function setWindowStyleResolver(fn: WindowStyleResolver | undefined): void {
+  windowStyleResolver = fn;
+}
 
 /**
  * Check if Electron API is available.
@@ -63,8 +79,8 @@ async function openPresentationWindowElectron(config: WindowConfig): Promise<str
     name: config.name || 'Presentation',
     displayMode: config.displayMode || 'normal',
     languages: config.languages?.join(',') || 'all',
-    positionX: config.left,
-    positionY: config.top,
+    positionX: config.positionX ?? config.left,
+    positionY: config.positionY ?? config.top,
     width: config.width || 1920,
     height: config.height || 1080,
     fullscreen: config.fullscreen || false,
@@ -202,11 +218,11 @@ export async function sendContent(id: string, content: PresentationContent): Pro
 
   if (entry.isElectron) {
     // Apply per-window config overrides
-    const windowContent = applyWindowOverrides(content, entry.config);
-    await window.api.updatePresentationContent(id, windowContent as never);
+    const windowContent = applyWindowOverrides(content, entry.config, id);
+    window.api.updatePresentationContent(id, windowContent as never);
   } else if (entry.window && !entry.window.closed) {
     // Apply per-window config overrides
-    const windowContent = applyWindowOverrides(content, entry.config);
+    const windowContent = applyWindowOverrides(content, entry.config, id);
 
     entry.window.postMessage(
       {
@@ -223,17 +239,9 @@ export async function sendContent(id: string, content: PresentationContent): Pro
  */
 export async function broadcastContent(content: PresentationContent): Promise<void> {
   lastBroadcastContent = content;
-  // In Electron mode, we can use a single broadcast IPC call for Electron windows
-  const hasElectronWindows = [...openWindows.values()].some((e) => e.isElectron && !e.closed);
-  if (hasElectronWindows && isElectron()) {
-    await window.api.broadcastPresentationContent(content as never);
-  }
-
-  // For browser windows, send individually
-  for (const [id, entry] of openWindows) {
-    if (!entry.closed && !entry.isElectron) {
-      await sendContent(id, content);
-    }
+  // Always send per-window so each window gets its own resolved style override.
+  for (const [id] of openWindows) {
+    await sendContent(id, content);
   }
 }
 
@@ -409,8 +417,8 @@ export async function listScreens(): Promise<
 /**
  * Apply per-window config overrides to presentation content.
  */
-function applyWindowOverrides(content: PresentationContent, config: WindowConfig): PresentationContent {
-  return {
+function applyWindowOverrides(content: PresentationContent, config: WindowConfig, id?: string): PresentationContent {
+  const merged: PresentationContent = {
     ...content,
     displayMode: config.displayMode || content.displayMode,
     languages: config.languages || content.languages,
@@ -419,4 +427,19 @@ function applyWindowOverrides(content: PresentationContent, config: WindowConfig
     hideText: config.hideText || content.hideText,
     hideBackground: config.hideBackground || content.hideBackground,
   };
+
+  // If a per-window style preset is configured, layer it on top of the cascade.
+  if (id && windowStyleResolver) {
+    const windowStyle = windowStyleResolver(id, config);
+    if (windowStyle && typeof windowStyle === 'object') {
+      // Filter out null and undefined values — they must NOT override the base cascade.
+      // Null in the window-style means "disabled in that style preset"; it should not clear
+      // a property that was already resolved by the global→show→item cascade.
+      const cleanStyle = Object.fromEntries(
+        Object.entries(windowStyle as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined),
+      );
+      merged.style = { ...(merged.style || {}), ...cleanStyle } as typeof merged.style;
+    }
+  }
+  return merged;
 }

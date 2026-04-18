@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import type { PresentationContent, PresentationLine } from './types';
 import { styleToContainerCss, styleToTextCss, mergeStyles, DEFAULT_STYLE, type ResolvedStyle } from '@/utils/styleUtils';
 
@@ -10,6 +10,11 @@ export interface PresentationProps {
   block?: string[];
   title?: string;
   content?: PresentationContent;
+}
+
+/** Generate a content identity key for detecting meaningful changes (item level only, not block switches). */
+function contentIdentityKey(c: PresentationContent): string {
+  return `${c.contentType}|${c.mediaPath ?? ''}|${c.bibleRef ?? ''}|${c.mediaColor ?? ''}|${c.style?.backgroundImage ?? ''}|${c.style?.backgroundVideo ?? ''}|${c.style?.backgroundColor ?? ''}`;
 }
 
 /**
@@ -129,14 +134,14 @@ const MediaContent = ({ content }: { content: PresentationContent }) => {
           src={content.mediaPath}
           autoPlay
           loop
-          muted
+          controls
           playsInline
           style={{
             position: 'absolute',
             inset: 0,
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: 'contain',
           }}
         />
       ) : null;
@@ -299,6 +304,145 @@ const BibleVerseContent = ({ content, textStyle }: { content: PresentationConten
 };
 
 /**
+ * Copyright overlay — shown at the bottom when copyright block is selected.
+ * Auto-hides after a configurable duration.
+ */
+const CopyrightOverlay = ({ content }: { content: PresentationContent }) => {
+  const [visible, setVisible] = useState(false);
+  const [lastShown, setLastShown] = useState(false);
+
+  useEffect(() => {
+    if (content.showCopyright && !lastShown) {
+      setVisible(true);
+      setLastShown(true);
+      const duration = content.copyrightDisplayDuration ?? 3000;
+      if (duration > 0) {
+        const timer = setTimeout(() => setVisible(false), duration);
+        return () => clearTimeout(timer);
+      }
+    } else if (!content.showCopyright) {
+      setLastShown(false);
+      setVisible(false);
+    }
+    return undefined;
+  }, [content.showCopyright]);
+
+  if (!visible) return null;
+
+  const lines: string[] = [];
+  if (content.title) lines.push(content.title);
+  if (content.authors) lines.push(content.authors);
+  if (content.copyright) lines.push(`© ${content.copyright}`);
+  if (lines.length === 0) return null;
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        padding: '2vh 4vw',
+        background: 'linear-gradient(transparent, rgba(0,0,0,0.8))',
+        color: '#FFFFFF',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '2vh',
+        textAlign: 'center',
+        zIndex: 100,
+        transition: 'opacity 0.5s ease-in-out',
+        opacity: visible ? 1 : 0,
+      }}
+    >
+      {lines.map((line, i) => (
+        <div key={i}>{line}</div>
+      ))}
+    </div>
+  );
+};
+
+/**
+ * Cross-fade layer: renders previous content and fades it out.
+ * Uses a two-phase approach: mounts with opacity 1, then transitions to 0.
+ */
+const FadeOutLayer = ({
+  prevContent,
+  transitionDuration,
+  videoObjectFit,
+}: {
+  prevContent: PresentationContent;
+  transitionDuration: number;
+  videoObjectFit: (size?: string) => CSSProperties['objectFit'];
+}) => {
+  const [opacity, setOpacity] = useState(1);
+  useEffect(() => {
+    // Start fade after mount (next frame)
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setOpacity(0));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  const prevResolved: ResolvedStyle = mergeStyles(DEFAULT_STYLE, prevContent.style || {});
+  const prevContainerCss = styleToContainerCss(prevResolved);
+  const prevTextCss = styleToTextCss(prevResolved);
+  const { padding: prevPadding } = prevContainerCss as CSSProperties & { padding?: string };
+  const prevHasBgVideo = prevResolved.backgroundVideo && !prevResolved.hideBackground;
+  const prevHasBgImage = prevResolved.backgroundImage && !prevResolved.hideBackground;
+  const prevIsTextHidden = prevResolved.hideText || prevContent.hideText;
+  const prevBgZoom = prevResolved.backgroundZoom && prevResolved.backgroundZoom !== 100
+    ? `scale(${prevResolved.backgroundZoom / 100})` : undefined;
+
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 10,
+      opacity,
+      transition: `opacity ${transitionDuration}ms ease-in-out`,
+      backgroundColor: prevContainerCss.backgroundColor || '#000',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column',
+      pointerEvents: 'none',
+    }}>
+      {prevHasBgImage && (
+        <img src={prevResolved.backgroundImage} alt="" style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: videoObjectFit(prevResolved.backgroundSize),
+          objectPosition: prevResolved.backgroundPosition || 'center', zIndex: 0,
+          ...(prevBgZoom ? { transform: prevBgZoom, transformOrigin: prevResolved.backgroundPosition || 'center' } : {}),
+        }} />
+      )}
+      {prevHasBgVideo && (
+        <video src={prevResolved.backgroundVideo} autoPlay loop muted playsInline style={{
+          position: 'absolute', inset: 0, width: '100%', height: '100%',
+          objectFit: videoObjectFit(prevResolved.backgroundSize),
+          objectPosition: prevResolved.backgroundPosition || 'center', zIndex: 0,
+          ...(prevBgZoom ? { transform: prevBgZoom, transformOrigin: prevResolved.backgroundPosition || 'center' } : {}),
+        }} />
+      )}
+      {!prevIsTextHidden && (
+        <div style={{ position: 'relative', zIndex: 1, width: '100%', padding: prevPadding || 0, boxSizing: 'border-box',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', height: '100%' }}>
+          {prevContent.contentType === 'media' ? <MediaContent content={prevContent} /> :
+            prevContent.contentType === 'bible_verse' ? <BibleVerseContent content={prevContent} textStyle={prevTextCss} /> :
+            (() => {
+              const prevBlock = prevContent.blocks[prevContent.activeBlockIndex];
+              if (!prevBlock) return null;
+              return <NormalMode block={prevBlock.lines} textStyle={prevTextCss} languages={prevContent.languages} />;
+            })()}
+          {/* Include next-block preview in fade-out layer */}
+          {prevContent.nextBlockPreviewLines && prevContent.nextBlockPreviewLines.length > 0 && (
+            <NextBlockPreview
+              lines={prevContent.nextBlockPreviewLines}
+              color={prevContent.nextLinePreviewColor || prevResolved.nextLinePreviewColor}
+              textStyle={prevTextCss}
+              languages={prevContent.languages}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Main Presentation component.
  * Handles normal mode, stream mode, media, bible verses, and black screen.
  */
@@ -311,11 +455,47 @@ export const Presentation = (props: PresentationProps) => {
   // Black screen fade state
   const [visible, setVisible] = useState(true);
 
+  // Cross-fade state: previous content is held during transitions
+  const transitionMode = content?.transitionMode ?? 'cut';
+  const transitionDuration = content?.transitionDuration ?? 500;
+  const [prevContent, setPrevContent] = useState<PresentationContent | null>(null);
+  const [fadePhase, setFadePhase] = useState<'idle' | 'fading'>('idle');
+  const [fadeKey, setFadeKey] = useState(0);
+  const prevKeyRef = useRef('');
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
   useEffect(() => {
     if (content) {
       setVisible(!content.isBlack);
     }
   }, [content?.isBlack]);
+
+  // Detect content changes for cross-fade
+  const lastContentRef = useRef<PresentationContent | null>(null);
+  useEffect(() => {
+    if (!content || transitionMode !== 'fade') {
+      lastContentRef.current = content || null;
+      prevKeyRef.current = content ? contentIdentityKey(content) : '';
+      return;
+    }
+    const newKey = contentIdentityKey(content);
+    if (lastContentRef.current) {
+      const oldKey = contentIdentityKey(lastContentRef.current);
+      if (oldKey !== newKey) {
+        setPrevContent(lastContentRef.current);
+        setFadePhase('fading');
+        setFadeKey((k) => k + 1);
+        clearTimeout(fadeTimerRef.current);
+        fadeTimerRef.current = setTimeout(() => {
+          setFadePhase('idle');
+          setPrevContent(null);
+        }, transitionDuration);
+      }
+    }
+    lastContentRef.current = content;
+    prevKeyRef.current = newKey;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content && contentIdentityKey(content), transitionMode, transitionDuration]);
 
   // Legacy mode — simple block rendering
   if (!content && legacyBlock) {
@@ -381,14 +561,32 @@ export const Presentation = (props: PresentationProps) => {
   const containerCss = styleToContainerCss(resolvedStyle);
   const textCss = styleToTextCss(resolvedStyle);
 
+  // Extract padding from containerCss — it will be applied on the inner content div
+  // so that vertical alignment (justifyContent) isn't offset by outer padding.
+  const { padding: contentPadding, ...containerCssWithoutPadding } = containerCss as CSSProperties & { padding?: string };
+
   // Override background to transparent for OBS mode
   if (isTransparent) {
-    containerCss.backgroundColor = 'transparent';
-    delete containerCss.backgroundImage;
+    containerCssWithoutPadding.backgroundColor = 'transparent';
+    delete containerCssWithoutPadding.backgroundImage;
   }
 
   // Background video from style
   const hasBackgroundVideo = resolvedStyle.backgroundVideo && !resolvedStyle.hideBackground;
+  const hasBackgroundImage = resolvedStyle.backgroundImage && !resolvedStyle.hideBackground;
+
+  // Map backgroundSize to objectFit for image/video elements
+  const videoObjectFit = (size?: string): CSSProperties['objectFit'] => {
+    if (size === 'contain' || size === '100% auto' || size === 'auto 100%' || size === 'auto') return 'contain';
+    return 'cover';
+  };
+
+  // Build zoom transform (100 = 1x, 150 = 1.5x)
+  const bgZoomTransform = resolvedStyle.backgroundZoom && resolvedStyle.backgroundZoom !== 100
+    ? `scale(${resolvedStyle.backgroundZoom / 100})`
+    : undefined;
+
+  const transitionCss = transitionMode === 'fade' ? `${transitionDuration}ms ease-in-out` : '0.3s ease-in-out';
 
   const containerStyle: CSSProperties = {
     width: '100vw',
@@ -397,16 +595,21 @@ export const Presentation = (props: PresentationProps) => {
     overflow: 'hidden',
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: resolvedStyle.verticalAlign === 'top' ? 'flex-start' : resolvedStyle.verticalAlign === 'bottom' ? 'flex-end' : 'center',
     flexDirection: 'column',
-    transition: 'opacity 0.3s ease-in-out',
-    ...containerCss,
+    transition: `opacity ${transitionCss}`,
+    userSelect: 'none',
+    WebkitUserSelect: 'none',
+    ...containerCssWithoutPadding,
     // Apply black-screen opacity AFTER containerCss so it cannot be overridden by style opacity
-    opacity: visible ? (containerCss.opacity ?? 1) : 0,
+    opacity: visible ? (containerCssWithoutPadding.opacity ?? 1) : 0,
   };
 
+  // Hide text if requested by the style OR by the content flag
+  const isTextHidden = resolvedStyle.hideText || content.hideText;
+
   const renderContent = () => {
-    if (content.hideText) return null;
+    if (isTextHidden) return null;
 
     switch (content.contentType) {
       case 'media':
@@ -442,11 +645,38 @@ export const Presentation = (props: PresentationProps) => {
 
   return (
     <div className="presentation" style={containerStyle}>
+      {/* Cross-fade: previous content fading out */}
+      {fadePhase === 'fading' && prevContent && <FadeOutLayer
+        key={fadeKey}
+        prevContent={prevContent}
+        transitionDuration={transitionDuration}
+        videoObjectFit={videoObjectFit}
+      />}
+
+      {/* Background image layer */}
+      {hasBackgroundImage && (
+        <img
+          src={resolvedStyle.backgroundImage}
+          alt=""
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: videoObjectFit(resolvedStyle.backgroundSize),
+            objectPosition: resolvedStyle.backgroundPosition || 'center',
+            zIndex: 0,
+            ...(bgZoomTransform ? { transform: bgZoomTransform, transformOrigin: resolvedStyle.backgroundPosition || 'center' } : {}),
+          }}
+        />
+      )}
+
       {/* Background video layer */}
       {hasBackgroundVideo && (
         <video
+          key={contentIdentityKey(content)}
           src={resolvedStyle.backgroundVideo}
-          autoPlay
+          autoPlay={resolvedStyle.backgroundVideoAutoplay !== false}
           loop
           muted
           playsInline
@@ -455,8 +685,10 @@ export const Presentation = (props: PresentationProps) => {
             inset: 0,
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit: videoObjectFit(resolvedStyle.backgroundSize),
+            objectPosition: resolvedStyle.backgroundPosition || 'center',
             zIndex: 0,
+            ...(bgZoomTransform ? { transform: bgZoomTransform, transformOrigin: resolvedStyle.backgroundPosition || 'center' } : {}),
           }}
         />
       )}
@@ -469,14 +701,16 @@ export const Presentation = (props: PresentationProps) => {
           width: '100%',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: resolvedStyle.verticalAlign === 'top' ? 'flex-start' : resolvedStyle.verticalAlign === 'bottom' ? 'flex-end' : 'center',
           flexDirection: 'column',
           height: '100%',
+          padding: contentPadding || 0,
+          boxSizing: 'border-box',
         }}
       >
         {renderContent()}
-        {/* Next-block preview — rendered inline below content */}
-        {content.nextBlockPreviewLines && content.nextBlockPreviewLines.length > 0 && (
+        {/* Next-block preview — hidden when text is hidden */}
+        {!isTextHidden && content.nextBlockPreviewLines && content.nextBlockPreviewLines.length > 0 && (
           <NextBlockPreview
             lines={content.nextBlockPreviewLines}
             color={content.nextLinePreviewColor || resolvedStyle.nextLinePreviewColor}
@@ -485,6 +719,9 @@ export const Presentation = (props: PresentationProps) => {
           />
         )}
       </div>
+
+      {/* Copyright overlay */}
+      {content.showCopyright && <CopyrightOverlay content={content} />}
 
       {/* Custom CSS injection */}
       {resolvedStyle.css && <style>{resolvedStyle.css}</style>}

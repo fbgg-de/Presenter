@@ -1,8 +1,8 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setActiveItemIndex, setActiveBlockIndex, setActiveLineIndex, setBlack, toggleBlack } from '@/store/presentationSlice';
 import { selectCurrentSongOrder } from '@/store/songsSlice';
-import { DEFAULT_KEYBOARD_MAPPING } from '@/components/KeyboardMappingEditor';
+import { DEFAULT_KEYBOARD_MAPPING, DEFAULT_KEYBOARD_ENABLED } from '@/components/KeyboardMappingEditor';
 
 /** Build a combo string from a keyboard event (matches KeyboardMappingEditor.eventToCombo) */
 const eventToCombo = (e: KeyboardEvent): string => {
@@ -26,22 +26,18 @@ export const useKeyboardNavigation = () => {
   const dispatch = useAppDispatch();
 
   const keyboardDisabled = useAppSelector((state) => state.presentation.keyboardDisabled);
-  const keyboardNavigationSongs = useAppSelector((state) => state.settings.keyboardNavigationSongs);
-  const keyboardNavigationBlocks = useAppSelector((state) => state.settings.keyboardNavigationBlocks);
-  const keyboardNavigationLines = useAppSelector((state) => state.settings.keyboardNavigationLines);
   const resetBlackOnSwitch = useAppSelector((state) => state.settings.resetBlackOnSwitch);
   const keyboardMapping = useAppSelector((state) => state.settings.keyboardMapping);
+  const keyboardEnabled = useAppSelector((state) => state.settings.keyboardEnabled) as Record<string, boolean> | undefined;
 
   const activeItemIndex = useAppSelector((state) => state.presentation.activeItemIndex);
   const activeBlockIndex = useAppSelector((state) => state.presentation.activeBlockIndex);
   const activeLineIndex = useAppSelector((state) => state.presentation.activeLineIndex);
 
-  const songs = useAppSelector((state) => state.songs.songs);
-  const songsOrder = useAppSelector((state) => state.songs.songsOrder);
-
-  const currentSongNumber = songsOrder[activeItemIndex];
-  const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
+  const currentSongNumber = useAppSelector((state) => state.songs.songsOrder[state.presentation.activeItemIndex]);
+  const currentSong = useAppSelector((state) => currentSongNumber != null ? state.songs.songs[currentSongNumber] : undefined);
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
+  const songsOrderLength = useAppSelector((state) => state.songs.songsOrder.length);
 
   // Build reverse mapping: combo string → action id
   const comboToAction = useMemo(() => {
@@ -53,9 +49,45 @@ export const useKeyboardNavigation = () => {
     return reverse;
   }, [keyboardMapping]);
 
+  // Helper to check if an action is enabled
+  const isEnabled = useMemo(() => {
+    return (action: string): boolean => {
+      if (keyboardEnabled && action in keyboardEnabled) return keyboardEnabled[action];
+      return DEFAULT_KEYBOARD_ENABLED[action] ?? true;
+    };
+  }, [keyboardEnabled]);
+
+  // Keep a ref of all values the handler needs
+  const stateRef = useRef({
+    keyboardDisabled,
+    resetBlackOnSwitch,
+    comboToAction,
+    isEnabled,
+    activeItemIndex,
+    activeBlockIndex,
+    activeLineIndex,
+    currentSong,
+    orderName,
+    songsOrderLength,
+  });
+  stateRef.current = {
+    keyboardDisabled,
+    resetBlackOnSwitch,
+    comboToAction,
+    isEnabled,
+    activeItemIndex,
+    activeBlockIndex,
+    activeLineIndex,
+    currentSong,
+    orderName,
+    songsOrderLength,
+  };
+
+  // Register the listener only ONCE
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (keyboardDisabled) return;
+      const s = stateRef.current;
+      if (s.keyboardDisabled) return;
 
       // Don't intercept keyboard events when focus is inside form elements
       const tag = (e.target as HTMLElement)?.tagName;
@@ -64,60 +96,62 @@ export const useKeyboardNavigation = () => {
       }
 
       const combo = eventToCombo(e);
-      const action = comboToAction[combo];
+      const action = s.comboToAction[combo];
       if (!action) return;
 
+      // Check if this action is enabled
+      if (!s.isEnabled(action)) return;
+
       const prevSong = () => {
-        if (activeItemIndex > 0) {
-          dispatch(setActiveItemIndex(activeItemIndex - 1));
-          if (resetBlackOnSwitch) dispatch(setBlack(false));
+        if (s.activeItemIndex > 0) {
+          dispatch(setActiveItemIndex(s.activeItemIndex - 1));
+          if (s.resetBlackOnSwitch) dispatch(setBlack(false));
         }
       };
 
       const nextSong = () => {
-        if (activeItemIndex < songsOrder.length - 1) {
-          dispatch(setActiveItemIndex(activeItemIndex + 1));
-          if (resetBlackOnSwitch) dispatch(setBlack(false));
+        if (s.activeItemIndex < s.songsOrderLength - 1) {
+          dispatch(setActiveItemIndex(s.activeItemIndex + 1));
+          if (s.resetBlackOnSwitch) dispatch(setBlack(false));
         }
       };
 
       const prevBlock = () => {
-        if (activeBlockIndex > 0) {
-          dispatch(setActiveBlockIndex(activeBlockIndex - 1));
+        if (s.activeBlockIndex > 0) {
+          dispatch(setActiveBlockIndex(s.activeBlockIndex - 1));
         }
       };
 
       const nextBlock = () => {
-        if (currentSong) {
-          const allBlocks = currentSong.getBlocks(orderName);
-          if (activeBlockIndex < allBlocks.length - 1) {
-            dispatch(setActiveBlockIndex(activeBlockIndex + 1));
+        if (s.currentSong) {
+          const allBlocks = s.currentSong.getBlocks(s.orderName);
+          if (s.activeBlockIndex < allBlocks.length - 1) {
+            dispatch(setActiveBlockIndex(s.activeBlockIndex + 1));
           }
         }
       };
 
       const prevLine = () => {
-        if (currentSong) {
-          if (activeLineIndex > 0) {
-            dispatch(setActiveLineIndex(activeLineIndex - 1));
-          } else if (activeBlockIndex > 0) {
-            const prevBlockLines = currentSong.getBlock(orderName, activeBlockIndex - 1);
-            dispatch(setActiveBlockIndex(activeBlockIndex - 1));
+        if (s.currentSong) {
+          if (s.activeLineIndex > 0) {
+            dispatch(setActiveLineIndex(s.activeLineIndex - 1));
+          } else if (s.activeBlockIndex > 0) {
+            const prevBlockLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex - 1);
+            dispatch(setActiveBlockIndex(s.activeBlockIndex - 1));
             dispatch(setActiveLineIndex(Math.max(0, prevBlockLines.length - 1)));
           }
         }
       };
 
       const nextLine = () => {
-        if (currentSong) {
-          const currentLines = currentSong.getBlock(orderName, activeBlockIndex);
-          if (activeLineIndex < currentLines.length - 1) {
-            dispatch(setActiveLineIndex(activeLineIndex + 1));
+        if (s.currentSong) {
+          const currentLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex);
+          if (s.activeLineIndex < currentLines.length - 1) {
+            dispatch(setActiveLineIndex(s.activeLineIndex + 1));
           } else {
-            // Auto-advance to next block, but stop before the copyright pseudo-block
-            const nonCopyrightCount = currentSong.getBlocks(orderName).filter((b) => !b.copyright).length;
-            if (activeBlockIndex < nonCopyrightCount - 1) {
-              dispatch(setActiveBlockIndex(activeBlockIndex + 1));
+            const nonCopyrightCount = s.currentSong.getBlocks(s.orderName).filter((b) => !b.copyright).length;
+            if (s.activeBlockIndex < nonCopyrightCount - 1) {
+              dispatch(setActiveBlockIndex(s.activeBlockIndex + 1));
             }
           }
         }
@@ -126,67 +160,42 @@ export const useKeyboardNavigation = () => {
       switch (action) {
         case 'prev_item':
         case 'Ctrl+prev_item':
-          if (keyboardNavigationSongs) {
-            e.preventDefault();
-            prevSong();
-          }
+          e.preventDefault(); prevSong();
           break;
         case 'next_item':
         case 'Ctrl+next_item':
-          if (keyboardNavigationSongs) {
-            e.preventDefault();
-            nextSong();
-          }
+          e.preventDefault(); nextSong();
           break;
         case 'prev_block':
-          if (keyboardNavigationBlocks) {
-            e.preventDefault();
-            prevBlock();
-          }
+          e.preventDefault(); prevBlock();
           break;
         case 'next_block':
-          if (keyboardNavigationBlocks) {
-            e.preventDefault();
-            nextBlock();
-          }
+          e.preventDefault(); nextBlock();
           break;
         case 'prev_line':
-          if (keyboardNavigationLines) {
-            e.preventDefault();
-            prevLine();
-          }
+          e.preventDefault(); prevLine();
           break;
         case 'next_line':
-          if (keyboardNavigationLines) {
-            e.preventDefault();
-            nextLine();
-          }
+          e.preventDefault(); nextLine();
           break;
         case 'toggle_black':
           e.preventDefault();
           dispatch(toggleBlack());
+          break;
+        case 'jump_to_start':
+          e.preventDefault();
+          dispatch(setActiveBlockIndex(0));
+          break;
+        case 'toggle_video_playback':
+          e.preventDefault();
+          if (window.api?.videoCommand) {
+            window.api.videoCommand({ action: 'toggle' });
+          }
           break;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [
-    dispatch,
-    keyboardDisabled,
-    keyboardNavigationSongs,
-    keyboardNavigationBlocks,
-    keyboardNavigationLines,
-    resetBlackOnSwitch,
-    keyboardMapping,
-    comboToAction,
-    activeItemIndex,
-    activeBlockIndex,
-    activeLineIndex,
-    songs,
-    songsOrder,
-    currentSong,
-    currentSongNumber,
-    orderName,
-  ]);
+  }, [dispatch]);
 };

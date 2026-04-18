@@ -4,7 +4,11 @@ import type { ApiSuccess } from './base.api';
 export type StyleData = {
   backgroundImage?: { enabled: boolean; value: string };
   backgroundVideo?: { enabled: boolean; value: string };
+  backgroundVideoAutoplay?: { enabled: boolean; value: boolean };
   backgroundColor?: { enabled: boolean; value: string };
+  backgroundSize?: { enabled: boolean; value: 'cover' | 'contain' | '100% auto' | 'auto 100%' | 'auto' };
+  backgroundPosition?: { enabled: boolean; value: string };
+  backgroundZoom?: { enabled: boolean; value: number };
   fontFamily?: { enabled: boolean; value: string };
   fontFallback?: { enabled: boolean; value: string[] };
   fontColor?: { enabled: boolean; value: string };
@@ -17,6 +21,7 @@ export type StyleData = {
   padding?: { enabled: boolean; value: string };
   textTransform?: { enabled: boolean; value: 'none' | 'uppercase' | 'lowercase' | 'capitalize' };
   textAlign?: { enabled: boolean; value: 'left' | 'center' | 'right' | 'justify' };
+  verticalAlign?: { enabled: boolean; value: 'top' | 'center' | 'bottom' };
   textStroke?: { enabled: boolean; value: string };
   textShadow?: { enabled: boolean; value: string };
   textShadowColor?: { enabled: boolean; value: string };

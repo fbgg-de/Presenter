@@ -6308,6 +6308,7 @@ __metadata:
     prettier: "npm:^3.8.3"
     qrcode.react: "npm:^4.2.0"
     react: "npm:^19.2.5"
+    react-colorful: "npm:^5.6.1"
     react-dom: "npm:^19.2.5"
     react-pdf: "npm:^10.4.1"
     react-redux: "npm:^9.2.0"
@@ -6423,6 +6424,16 @@ __metadata:
   version: 5.1.1
   resolution: "quick-lru@npm:5.1.1"
   checksum: 10c0/a24cba5da8cec30d70d2484be37622580f64765fb6390a928b17f60cd69e8dbd32a954b3ff9176fa1b86d86ff2ba05252fae55dc4d40d0291c60412b0ad096da
+  languageName: node
+  linkType: hard
+
+"react-colorful@npm:^5.6.1":
+  version: 5.6.1
+  resolution: "react-colorful@npm:5.6.1"
+  peerDependencies:
+    react: ">=16.8.0"
+    react-dom: ">=16.8.0"
+  checksum: 10c0/48eb73cf71e10841c2a61b6b06ab81da9fffa9876134c239bfdebcf348ce2a47e56b146338e35dfb03512c85966bfc9a53844fc56bc50154e71f8daee59ff6f0
   languageName: node
   linkType: hard
 

@@ -7,8 +7,6 @@ import {
   AccountCircle as AccountCircleIcon,
   AdminPanelSettings as AdminIcon,
   Logout as LogoutIcon,
-  Window as WindowIcon,
-  Palette as PaletteIcon,
   Info as InfoIcon,
   Cable as CableIcon,
   PictureAsPdf as PdfIcon,
@@ -21,7 +19,6 @@ import { updateSetting } from '@/store/settingsSlice';
 import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
 import { StyleEditor } from '@/components/StyleEditor';
 import { StyleInspector } from '@/components/StyleInspector';
-import { WindowManager } from '@/components/WindowManager';
 import { CompanionHelper } from '@/components/CompanionHelper';
 
 const Header = () => {
@@ -30,7 +27,6 @@ const Header = () => {
   const navigate = useNavigate();
   const themeMode = useAppSelector((state) => state.theme.mode);
   const uiLanguage = useAppSelector((state) => state.settings.uiLanguage);
-  const windowFooterVisible = useAppSelector((state) => state.settings.windowFooterVisible);
 
   const { data: session } = useGetSessionQuery();
   const [logout] = useLogoutMutation();
@@ -43,11 +39,10 @@ const Header = () => {
   const [accountAnchorEl, setAccountAnchorEl] = useState<null | HTMLElement>(null);
   const accountMenuOpen = Boolean(accountAnchorEl);
 
-  // Style editor and inspector
+  // Style editor (kept for inspector → editor wiring) and inspector
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
   const [styleInspectorOpen, setStyleInspectorOpen] = useState(false);
   const [editStyleId, setEditStyleId] = useState<number | undefined>(undefined);
-  const [windowManagerOpen, setWindowManagerOpen] = useState(false);
   const [companionHelperOpen, setCompanionHelperOpen] = useState(false);
 
   const themeIcon = themeMode === 'dark' ? <DarkMode /> : themeMode === 'light' ? <LightMode /> : <SettingsBrightness />;
@@ -122,20 +117,6 @@ const Header = () => {
             </IconButton>
           </Tooltip>
 
-          {/* Style Editor */}
-          <Tooltip title={LL.STYLE.EDITOR()}>
-            <IconButton
-              size="small"
-              onClick={() => {
-                setEditStyleId(undefined);
-                setStyleEditorOpen(true);
-              }}
-              sx={{ mr: 0.5 }}
-            >
-              <PaletteIcon />
-            </IconButton>
-          </Tooltip>
-
           {/* Musician View */}
           <Tooltip title={LL.MUSICIAN.OPEN()}>
             <IconButton size="small" onClick={() => window.open('/notes', '_blank')} sx={{ mr: 0.5 }}>
@@ -147,20 +128,6 @@ const Header = () => {
           <Tooltip title={LL.COMPANION.HELPER_TITLE()}>
             <IconButton size="small" onClick={() => setCompanionHelperOpen(true)} sx={{ mr: 0.5 }}>
               <CableIcon />
-            </IconButton>
-          </Tooltip>
-
-          {/* Window Manager Toggle */}
-          <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
-            <IconButton
-              size="small"
-              onClick={() => setWindowManagerOpen(true)}
-              sx={{
-                mr: 0.5,
-                color: windowFooterVisible ? 'primary.main' : 'inherit',
-              }}
-            >
-              <WindowIcon />
             </IconButton>
           </Tooltip>
 
@@ -213,7 +180,7 @@ const Header = () => {
         </Toolbar>
       </AppBar>
 
-      {/* Style Editor Drawer */}
+      {/* Style Editor Drawer (opened by the Inspector's "edit" action) */}
       <StyleEditor open={styleEditorOpen} onClose={() => setStyleEditorOpen(false)} editStyleId={editStyleId} />
 
       {/* Style Inspector Dialog */}
@@ -227,8 +194,6 @@ const Header = () => {
         }}
       />
 
-      {/* Window Manager Panel */}
-      <WindowManager open={windowManagerOpen} onClose={() => setWindowManagerOpen(false)} />
 
       {/* Companion Helper */}
       <CompanionHelper open={companionHelperOpen} onClose={() => setCompanionHelperOpen(false)} />

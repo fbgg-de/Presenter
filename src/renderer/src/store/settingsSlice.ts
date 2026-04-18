@@ -31,6 +31,7 @@ interface SettingsState {
   verseClick: 'click' | 'double-click';
   bibleTranslation: string;
   keyboardMapping: Record<string, string>;
+  keyboardEnabled: Record<string, boolean>;
   windowConfigs: object[];
   windowPresets: Record<string, object>;
   windowFooterVisible: boolean;
@@ -55,6 +56,9 @@ interface SettingsState {
   keyboardNavigationSongs: boolean;
   keyboardNavigationBlocks: boolean;
   keyboardNavigationLines: boolean;
+  restoreWindowsOnStart: boolean;
+  transitionMode: 'cut' | 'fade';
+  transitionDuration: number;
 }
 
 const loadString = (key: string, fallback: string): string => {
@@ -171,7 +175,14 @@ const initialState: SettingsState = {
   verseClick: loadString('presenter_verse_click', 'double-click') as 'click' | 'double-click',
   bibleTranslation: loadString('presenter_bible_translation', 'ESV'),
   keyboardMapping: loadJson('presenter_keyboard_mapping', {}),
-  windowConfigs: loadJson('presenter_window_configs', []),
+  keyboardEnabled: loadJson('presenter_keyboard_enabled', {}),
+  windowConfigs: (loadJson<object[]>('presenter_window_configs', [])).map((c) => {
+    // Strip transient runtime ID — it's only valid within a single app session.
+    // On next start the restore logic will reopen all configs that lack _runtimeId.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { _runtimeId: _, ...rest } = c as any;
+    return rest;
+  }),
   windowPresets: loadJson('presenter_window_presets', {}),
   windowFooterVisible: loadBool('presenter_window_footer_visible', true),
   mediaPath: loadString('presenter_media_path', ''),
@@ -195,6 +206,9 @@ const initialState: SettingsState = {
   keyboardNavigationSongs: loadBool('presenter_keyboard_navigation_songs', true),
   keyboardNavigationBlocks: loadBool('presenter_keyboard_navigation_blocks', true),
   keyboardNavigationLines: loadBool('presenter_keyboard_navigation_lines', true),
+  restoreWindowsOnStart: loadBool('presenter_restore_windows_on_start', false),
+  transitionMode: loadString('presenter_transition_mode', 'cut') as 'cut' | 'fade',
+  transitionDuration: loadNumber('presenter_transition_duration', 500),
 };
 
 // Musician setting keys that are stored in the grouped object

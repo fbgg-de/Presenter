@@ -18,6 +18,8 @@ export type ShowItem = {
   bibleFormattedSegments?: { start: number; end: number; bold: boolean }[];
   label?: string;
   styleId?: number;
+  /** Per-window style override: keys are window names, values are style IDs (or null = no style). */
+  itemStyleByWindow?: Record<string, number | null>;
 };
 
 export type Show = {

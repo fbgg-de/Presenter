@@ -30,6 +30,21 @@ const presentationApi = {
     ipcRenderer.removeAllListeners('presentation-update');
     ipcRenderer.removeAllListeners('presentation-command');
   },
+
+  /**
+   * Report video playback status back to the main window.
+   */
+  reportVideoStatus: (status: {
+    hasVideo: boolean;
+    paused?: boolean;
+    muted?: boolean;
+    loop?: boolean;
+    volume?: number;
+    currentTime?: number;
+    duration?: number;
+  }) => {
+    ipcRenderer.send('video-status', status);
+  },
 };
 
 if (process.contextIsolated) {

@@ -17,12 +17,17 @@ const api = {
 
   // ── File system ──
   openDirectory: (path: string) => electronAPI.ipcRenderer.invoke('open-directory', path),
+  pickFile: (options?: { title?: string; filters?: { name: string; extensions: string[] }[]; defaultPath?: string }) =>
+    electronAPI.ipcRenderer.invoke('pick-file', options ?? {}),
+  pickDirectory: (options?: { title?: string; defaultPath?: string }) =>
+    electronAPI.ipcRenderer.invoke('pick-directory', options ?? {}),
 
   // ── Presentation window management ──
   createPresentationWindow: (config: unknown) => electronAPI.ipcRenderer.invoke('create-presentation-window', config),
   closePresentationWindow: (id: string) => electronAPI.ipcRenderer.invoke('close-presentation-window', id),
-  updatePresentationContent: (id: string, content: unknown) => electronAPI.ipcRenderer.invoke('update-presentation-content', id, content),
-  broadcastPresentationContent: (content: unknown) => electronAPI.ipcRenderer.invoke('broadcast-presentation-content', content),
+  updateWindowConfig: (id: string, partial: unknown) => electronAPI.ipcRenderer.invoke('update-window-config', id, partial),
+  updatePresentationContent: (id: string, content: unknown) => { ipcRenderer.send('update-presentation-content', id, content); },
+  broadcastPresentationContent: (content: unknown) => { ipcRenderer.send('broadcast-presentation-content', content); },
   listScreens: () => electronAPI.ipcRenderer.invoke('list-screens'),
   getWindowStates: () => electronAPI.ipcRenderer.invoke('get-window-states'),
 
@@ -33,6 +38,9 @@ const api = {
   unfreezeWindow: (windowName: string) => electronAPI.ipcRenderer.invoke('unfreeze-window', windowName),
   identifyWindows: () => electronAPI.ipcRenderer.invoke('identify-windows'),
   hideIdentifyWindows: () => electronAPI.ipcRenderer.invoke('hide-identify-windows'),
+
+  // ── Video commands ──
+  videoCommand: (command: { action: string; windowName?: string; value?: number }) => electronAPI.ipcRenderer.invoke('video-command', command),
 
   // ── Media ──
   checkMediaFiles: (files: string[]) => electronAPI.ipcRenderer.invoke('check-media-files', files),
@@ -50,15 +58,28 @@ const api = {
   // ── WebSocket broadcast (renderer -> main -> WS clients) ──
   wsBroadcast: (action: string, data?: Record<string, unknown>) => ipcRenderer.send('ws-broadcast', action, data),
 
+  // ── Video status from presentation windows ──
+  onVideoStatus: (callback: (status: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('video-status-update', handler);
+    return () => { ipcRenderer.removeListener('video-status-update', handler); };
+  },
+
   // ── IPC event listeners (main -> renderer) ──
   onWsNavigationAction: (callback: (data: unknown) => void) => {
-    ipcRenderer.on('ws-navigation-action', (_event, data) => callback(data));
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('ws-navigation-action', handler);
+    return () => { ipcRenderer.removeListener('ws-navigation-action', handler); };
   },
   onWsVideoAction: (callback: (data: unknown) => void) => {
-    ipcRenderer.on('ws-video-action', (_event, data) => callback(data));
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('ws-video-action', handler);
+    return () => { ipcRenderer.removeListener('ws-video-action', handler); };
   },
   onWsGetState: (callback: (data: unknown) => void) => {
-    ipcRenderer.on('ws-get-state', (_event, data) => callback(data));
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('ws-get-state', handler);
+    return () => { ipcRenderer.removeListener('ws-get-state', handler); };
   },
   sendWsStateResponse: (data: unknown) => {
     ipcRenderer.send('ws-state-response', data);

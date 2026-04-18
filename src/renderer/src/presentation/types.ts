@@ -113,11 +113,23 @@ export interface PresentationContent {
   /** Whether to show identification overlay */
   showIdentify?: boolean;
 
+  /** Whether to show copyright overlay at the bottom */
+  showCopyright?: boolean;
+
+  /** Duration in ms before copyright auto-hides (default 3000) */
+  copyrightDisplayDuration?: number;
+
   /** Style name to display during identification */
   identifyStyleName?: string;
 
   /** Window number (for identification overlay) */
   windowNumber?: number;
+
+  /** Transition mode: 'cut' (instant) or 'fade' (cross-fade) */
+  transitionMode?: 'cut' | 'fade';
+
+  /** Transition duration in milliseconds */
+  transitionDuration?: number;
 }
 
 /**

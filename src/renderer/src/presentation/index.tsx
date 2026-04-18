@@ -120,9 +120,55 @@ if (window.presentationApi) {
         updatePresentation(restored);
         break;
       }
+      case 'VIDEO_COMMAND': {
+        const videos = document.querySelectorAll('video');
+        const action = (cmd as { action?: string }).action;
+        videos.forEach((v) => {
+          switch (action) {
+            case 'play': v.play().catch(() => {}); break;
+            case 'pause': v.pause(); break;
+            case 'toggle': if (v.paused) v.play().catch(() => {}); else v.pause(); break;
+            case 'stop': v.pause(); v.currentTime = 0; break;
+            case 'mute': v.muted = true; break;
+            case 'unmute': v.muted = false; break;
+            case 'toggle_mute': v.muted = !v.muted; break;
+            case 'set_volume': v.volume = Math.max(0, Math.min(1, (cmd as { value?: number }).value ?? 1)); break;
+            case 'loop': v.loop = true; break;
+            case 'unloop': v.loop = false; break;
+            case 'toggle_loop': v.loop = !v.loop; break;
+            case 'seek': v.currentTime = (cmd as { value?: number }).value ?? 0; break;
+            case 'seek_relative': v.currentTime = Math.max(0, v.currentTime + ((cmd as { value?: number }).value ?? 0)); break;
+          }
+        });
+        break;
+      }
     }
   });
 }
 
 // Initial render (blank)
 updatePresentation({ content: EMPTY_CONTENT });
+
+// ── Video status reporting ──
+// Periodically report video state to the main window for the control bar
+if (window.presentationApi?.reportVideoStatus) {
+  setInterval(() => {
+    const videos = document.querySelectorAll('video');
+    if (videos.length === 0) {
+      window.presentationApi!.reportVideoStatus!({ hasVideo: false });
+      return;
+    }
+    // Report state of the first video (primary)
+    const v = videos[0];
+    window.presentationApi!.reportVideoStatus!({
+      hasVideo: true,
+      paused: v.paused,
+      muted: v.muted,
+      loop: v.loop,
+      volume: v.volume,
+      currentTime: v.currentTime,
+      duration: v.duration || 0,
+    });
+  }, 250);
+}
+

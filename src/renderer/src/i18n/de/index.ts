@@ -254,6 +254,8 @@ const de: Translation = {
     SEARCH_VIDEOS: 'Videos suchen...',
     CONFIGURE_PATH: 'Konfiguriere ein Medienverzeichnis unter Einstellungen → Electron → Medienpfad',
     ADD_BY_URL: 'Per URL hinzufügen',
+    ROOT_FOLDER: 'Stammordner',
+    LOAD_MORE: 'Mehr laden',
   },
 
   CONTROL: {
@@ -296,6 +298,9 @@ const de: Translation = {
     BACKGROUND_COLOR: 'Farbe',
     BACKGROUND_IMAGE: 'Bild-URL',
     BACKGROUND_VIDEO: 'Video-URL',
+    BG_FIT: 'Hintergrund-Anpassung',
+    BG_POSITION: 'Position',
+    VERTICAL_ALIGN: 'Vertikale Ausrichtung',
     FONT: 'Schrift',
     FONT_FAMILY: 'Schriftart',
     FONT_COLOR: 'Farbe',
@@ -319,6 +324,30 @@ const de: Translation = {
     NEXT_LINE_PREVIEW: 'Nächste-Zeile-Vorschau',
     NEXT_LINE_COLOR: 'Farbe',
     SELECT: 'Stil auswählen',
+    SECTION_GENERAL: 'Allgemein',
+    SECTION_BACKGROUND: 'Hintergrund',
+    SECTION_TYPOGRAPHY: 'Typografie',
+    SECTION_LAYOUT: 'Layout & Abstände',
+    SECTION_EFFECTS: 'Effekte',
+    SECTION_VISIBILITY: 'Sichtbarkeit',
+    SECTION_WINDOW_OVERRIDES: 'Fenster-Überschreibungen',
+    SECTION_CUSTOM_CSS: 'Benutzerdefiniertes CSS',
+    SECTION_PREVIEW: 'Live-Vorschau',
+    BROWSE: 'Durchsuchen…',
+    PICK_FILE: 'Datei auswählen',
+    PICK_FOLDER: 'Ordner auswählen',
+    APPLY_NOW: 'Jetzt anwenden',
+    SAVE_AND_APPLY: 'Speichern & Anwenden',
+    DUPLICATE: 'Duplizieren',
+    RENAME: 'Umbenennen',
+    RESET: 'Zurücksetzen',
+    UNSAVED_PROMPT: 'Es gibt ungespeicherte Änderungen. Verwerfen?',
+    WINDOW_RELOAD_REQUIRED: 'Einige Änderungen erfordern, dass das Präsentationsfenster neu geöffnet wird.',
+    APPLIED: 'Angewendet',
+    WINDOW_OVERRIDE_NAME: 'Fenstername',
+    WINDOW_OVERRIDE_STYLE: 'Überschreibungs-Stil',
+    WINDOW_OVERRIDE_ADD: 'Überschreibung hinzufügen',
+    WINDOW_OVERRIDE_HINT: 'Zusätzliche Stil-Überschreibungen für Fenster mit dem angegebenen Namen anwenden.',
   },
 
   FONT: {
@@ -363,6 +392,9 @@ const de: Translation = {
     HIDE_TEXT: 'Text ausblenden',
     HIDE_BACKGROUND: 'Hintergrund ausblenden',
     STREAM_LINES: 'Stream-Zeilen',
+    RENAME: 'Fenster umbenennen',
+    MOVE_TO_SCREEN: 'Auf Bildschirm verschieben',
+    PRIMARY_SCREEN: 'Primär',
   },
 
   HEADER: {
@@ -414,6 +446,7 @@ const de: Translation = {
     MAPPING_EDIT: 'Klicke zum Ändern',
     MAPPING_PRESS: 'Drücke eine Tastenkombination...',
     MAPPING_RESET: 'Auf Standard zurücksetzen',
+    MAPPING_ENABLED: 'Aktiv',
     ACTION_PREV_ITEM: 'Vorheriges Element',
     ACTION_NEXT_ITEM: 'Nächstes Element',
     ACTION_PREV_BLOCK: 'Vorheriger Block',
@@ -421,8 +454,8 @@ const de: Translation = {
     ACTION_PREV_LINE: 'Vorherige Zeile',
     ACTION_NEXT_LINE: 'Nächste Zeile',
     ACTION_TOGGLE_BLACK: 'Schwarz umschalten',
-    ACTION_TOGGLE_FULLSCREEN: 'Vollbild umschalten',
     ACTION_CLOSE_DRAWER: 'Drawer schließen',
+    ACTION_TOGGLE_VIDEO: 'Video abspielen/pausieren',
   },
 
   SETTINGS: {
@@ -552,6 +585,18 @@ const de: Translation = {
         TITLE: 'Automatische Update-Prüfung',
         DESCRIPTION: 'Beim Start automatisch nach Updates suchen (nur Electron)',
       },
+      RESTORE_WINDOWS_ON_START: {
+        TITLE: 'Fenster beim Start wiederherstellen',
+        DESCRIPTION: 'Präsentationsfenster, die beim letzten Schließen offen waren, automatisch wieder öffnen (nur Electron)',
+      },
+      TRANSITION_MODE: {
+        TITLE: 'Übergangsart',
+        DESCRIPTION: 'Wie zwischen Elementen gewechselt wird: Schnitt (sofort) oder Überblendung (weich)',
+      },
+      TRANSITION_DURATION: {
+        TITLE: 'Übergangsdauer (ms)',
+        DESCRIPTION: 'Dauer des Überblendeffekts in Millisekunden',
+      },
     },
   },
 
@@ -559,6 +604,9 @@ const de: Translation = {
     PLAY: 'Abspielen',
     PAUSE: 'Pause',
     STOP: 'Stopp',
+    LOOP: 'Wiederholen',
+    LOOP_ON: 'Wiederholen: AN',
+    LOOP_OFF: 'Wiederholen: AUS',
     MUTE: 'Stumm',
     UNMUTE: 'Ton an',
     MASK_TITLE: 'Video Mask Editor',
@@ -576,6 +624,7 @@ const de: Translation = {
     MASK_LABEL_HEIGHT: 'Höhe (%)',
     CLIP_PATH_PREFIX: 'clip-path:',
     MASK_APPLY: 'Maske anwenden',
+    AUTOPLAY: 'Automatisch abspielen',
   },
 
   METRICS: {
@@ -615,6 +664,7 @@ const de: Translation = {
 
   COMPANION: {
     HELPER_TITLE: 'WebSocket / Companion-Befehle',
+    HELPER_DESC: 'Externe Tools (Companion, StreamDeck, eigene Skripte) über die WebSocket-API verbinden.',
     WS_URL: 'WebSocket-URL',
     COPY: 'In Zwischenablage kopieren',
     COPIED: 'Kopiert!',

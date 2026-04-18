@@ -21,6 +21,10 @@ let windowCounter = 0;
 export class PresentationWindowManager {
   private windows: Map<string, ManagedWindow> = new Map();
   private musicianWindows: Map<string, BrowserWindow> = new Map();
+  /** IDs of windows currently being recreated — prevents closed-handler deletion */
+  private recreating = new Set<string>();
+  /** Last broadcast content — re-sent after window recreation */
+  private lastBroadcastContent: PresentationContentIPC | null = null;
 
   /**
    * Create a new presentation window.
@@ -47,6 +51,7 @@ export class PresentationWindowManager {
         contextIsolation: true,
         nodeIntegration: false,
         devTools: is.dev,
+        webSecurity: false, // allow loading media from http://localhost:9100
       },
     });
 
@@ -88,7 +93,9 @@ export class PresentationWindowManager {
     });
 
     win.on('closed', () => {
-      this.windows.delete(id);
+      if (!this.recreating.has(id)) {
+        this.windows.delete(id);
+      }
     });
 
     const managed: ManagedWindow = {
@@ -128,6 +135,24 @@ export class PresentationWindowManager {
   }
 
   /**
+   * Force-destroy all presentation and musician windows (used on app quit).
+   */
+  destroyAll(): void {
+    for (const [, managed] of this.windows) {
+      if (!managed.browserWindow.isDestroyed()) {
+        managed.browserWindow.destroy();
+      }
+    }
+    this.windows.clear();
+    for (const [, win] of this.musicianWindows) {
+      if (!win.isDestroyed()) {
+        win.destroy();
+      }
+    }
+    this.musicianWindows.clear();
+  }
+
+  /**
    * Send content to a specific presentation window.
    * Respects freeze state — queues content if frozen.
    */
@@ -148,6 +173,7 @@ export class PresentationWindowManager {
    * Per-window config overrides (displayMode, languages, etc.) are applied.
    */
   broadcastContent(content: PresentationContentIPC): void {
+    this.lastBroadcastContent = content;
     for (const [, managed] of this.windows) {
       if (managed.browserWindow.isDestroyed()) continue;
 
@@ -204,11 +230,18 @@ export class PresentationWindowManager {
   freezeWindow(windowName: string): void {
     this._forEachByName(windowName, (managed) => {
       managed.frozen = true;
+      // Pause any playing videos
+      if (!managed.browserWindow.isDestroyed()) {
+        managed.browserWindow.webContents.send('presentation-command', {
+          type: 'VIDEO_COMMAND',
+          action: 'pause',
+        });
+      }
     });
   }
 
   /**
-   * Unfreeze a window by name — applies latest queued content.
+   * Unfreeze a window by name — applies latest queued content and resumes video.
    */
   unfreezeWindow(windowName: string): void {
     this._forEachByName(windowName, (managed) => {
@@ -216,6 +249,13 @@ export class PresentationWindowManager {
       if (managed.queuedContent) {
         this._sendContent(managed, managed.queuedContent);
         managed.queuedContent = null;
+      }
+      // Resume video playback
+      if (!managed.browserWindow.isDestroyed()) {
+        managed.browserWindow.webContents.send('presentation-command', {
+          type: 'VIDEO_COMMAND',
+          action: 'play',
+        });
       }
     });
   }
@@ -261,6 +301,7 @@ export class PresentationWindowManager {
         displayMode: managed.config.displayMode,
         frozen: managed.frozen,
         isBlack: managed.isBlack,
+        fullscreen: managed.browserWindow.isFullScreen(),
         bounds,
       });
     }
@@ -334,7 +375,213 @@ export class PresentationWindowManager {
     return this.windows;
   }
 
+  /**
+   * Apply runtime updates to a presentation window.
+   * Returns { applied, requiresReload } — `requiresReload` is true if some props
+   * (frame/transparency/webPreferences) need a window recreation to take effect.
+   */
+  updateWindowConfig(
+    id: string,
+    partial: Partial<WindowConfig>,
+  ): { applied: string[]; requiresReload: string[] } {
+    const managed = this.windows.get(id);
+    const applied: string[] = [];
+    const requiresReload: string[] = [];
+    if (!managed || managed.browserWindow.isDestroyed()) {
+      return { applied, requiresReload };
+    }
+    const win = managed.browserWindow;
+    const cfg = managed.config;
+
+    if (partial.name !== undefined && partial.name !== cfg.name) {
+      cfg.name = partial.name;
+      applied.push('name');
+    }
+    if (partial.fullscreen !== undefined && partial.fullscreen !== cfg.fullscreen) {
+      cfg.fullscreen = partial.fullscreen;
+      try { win.setFullScreen(partial.fullscreen); applied.push('fullscreen'); } catch { /* noop */ }
+    }
+    if (partial.alwaysOnTop !== undefined && partial.alwaysOnTop !== cfg.alwaysOnTop) {
+      cfg.alwaysOnTop = partial.alwaysOnTop;
+      try { win.setAlwaysOnTop(partial.alwaysOnTop); applied.push('alwaysOnTop'); } catch { /* noop */ }
+    }
+    if (
+      partial.width !== undefined ||
+      partial.height !== undefined ||
+      partial.positionX !== undefined ||
+      partial.positionY !== undefined
+    ) {
+      const cur = win.getBounds();
+      const next = {
+        x: partial.positionX ?? cur.x,
+        y: partial.positionY ?? cur.y,
+        width: partial.width ?? cur.width,
+        height: partial.height ?? cur.height,
+      };
+      cfg.positionX = next.x;
+      cfg.positionY = next.y;
+      cfg.width = next.width;
+      cfg.height = next.height;
+      try { win.setBounds(next); applied.push('bounds'); } catch { /* noop */ }
+    }
+    if (partial.hideMouse !== undefined && partial.hideMouse !== cfg.hideMouse) {
+      cfg.hideMouse = partial.hideMouse;
+      try {
+        win.webContents.insertCSS(
+          partial.hideMouse ? '* { cursor: none !important; }' : '* { cursor: auto !important; }',
+        );
+        applied.push('hideMouse');
+      } catch { /* noop */ }
+    }
+    if (partial.displayMode !== undefined && partial.displayMode !== cfg.displayMode) {
+      cfg.displayMode = partial.displayMode;
+      applied.push('displayMode');
+    }
+    if (partial.languages !== undefined && partial.languages !== cfg.languages) {
+      cfg.languages = partial.languages;
+      applied.push('languages');
+    }
+    if (partial.streamLines !== undefined && partial.streamLines !== cfg.streamLines) {
+      cfg.streamLines = partial.streamLines;
+      applied.push('streamLines');
+    }
+    if (partial.hideText !== undefined && partial.hideText !== cfg.hideText) {
+      cfg.hideText = partial.hideText;
+      applied.push('hideText');
+    }
+    if (partial.hideBackground !== undefined && partial.hideBackground !== cfg.hideBackground) {
+      cfg.hideBackground = partial.hideBackground;
+      applied.push('hideBackground');
+    }
+
+    // Frame / transparency cannot be toggled on a live BrowserWindow — recreate it.
+    if (partial.frameless !== undefined && partial.frameless !== cfg.frameless) {
+      cfg.frameless = partial.frameless;
+      this._recreateWindow(managed);
+      applied.push('frameless');
+    }
+    if (partial.streamTransparentBg !== undefined && partial.streamTransparentBg !== cfg.streamTransparentBg) {
+      cfg.streamTransparentBg = partial.streamTransparentBg;
+      requiresReload.push('streamTransparentBg');
+    }
+
+    return { applied, requiresReload };
+  }
+
+  /**
+   * Send a video command (play/pause/stop/mute/unmute/seek/volume) to presentation windows.
+   */
+  sendVideoCommand(action: string, windowName?: string, value?: number): void {
+    this._forEachByName(windowName, (managed) => {
+      if (!managed.browserWindow.isDestroyed()) {
+        managed.browserWindow.webContents.send('presentation-command', {
+          type: 'VIDEO_COMMAND',
+          action,
+          value,
+        });
+      }
+    });
+  }
+
   // ── Private helpers ──
+
+  /**
+   * Recreate a presentation window in-place (same map id) with the current config.
+   * Used when frameless is toggled since Electron requires window recreation.
+   */
+  private _recreateWindow(managed: ManagedWindow): void {
+    const id = managed.id;
+    const config = { ...managed.config };
+
+    // Capture current bounds / fullscreen state
+    if (!managed.browserWindow.isDestroyed()) {
+      const bounds = managed.browserWindow.getBounds();
+      config.positionX = bounds.x;
+      config.positionY = bounds.y;
+      config.width = bounds.width;
+      config.height = bounds.height;
+      config.fullscreen = managed.browserWindow.isFullScreen();
+    }
+
+    // Destroy old window without removing from map
+    this.recreating.add(id);
+    if (!managed.browserWindow.isDestroyed()) {
+      managed.browserWindow.destroy();
+    }
+    // Note: do NOT delete from recreating here — the old window's 'closed' event fires
+    // asynchronously and would remove the managed entry. We clear the flag in ready-to-show.
+
+    // Build new BrowserWindow
+    const win = new BrowserWindow({
+      x: config.positionX,
+      y: config.positionY,
+      width: config.width || 1920,
+      height: config.height || 1080,
+      fullscreen: config.fullscreen,
+      frame: !config.frameless,
+      alwaysOnTop: config.alwaysOnTop,
+      transparent: config.streamTransparentBg || false,
+      hasShadow: !config.streamTransparentBg,
+      skipTaskbar: true,
+      autoHideMenuBar: true,
+      show: false,
+      webPreferences: {
+        preload: join(__dirname, '../preload/presentation.mjs'),
+        sandbox: false,
+        contextIsolation: true,
+        nodeIntegration: false,
+        devTools: is.dev,
+        webSecurity: false, // allow loading media from http://localhost:9100
+      },
+    });
+
+    if (config.hideMouse) {
+      win.webContents.on('did-finish-load', () => {
+        win.webContents.insertCSS('* { cursor: none !important; }');
+      });
+    }
+
+    const queryParams = new URLSearchParams();
+    queryParams.set('mode', config.displayMode || 'normal');
+    if (config.name) queryParams.set('name', config.name);
+    if (config.streamLines) queryParams.set('lines', String(config.streamLines));
+    if (config.languages && config.languages !== 'all') queryParams.set('languages', config.languages);
+    if (config.streamTransparentBg) queryParams.set('transparent', '1');
+    const queryString = queryParams.toString();
+
+    if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+      win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/presentation.html?${queryString}`);
+    } else {
+      win.loadFile(join(__dirname, '../renderer/presentation.html'), { search: queryString });
+    }
+
+    win.once('ready-to-show', () => {
+      this.recreating.delete(id);
+      win.show();
+      if (config.fullscreen) win.setFullScreen(true);
+      // Re-send the last broadcast content to the new window
+      if (this.lastBroadcastContent) {
+        const windowContent: PresentationContentIPC = {
+          ...this.lastBroadcastContent,
+          displayMode: managed.config.displayMode || this.lastBroadcastContent.displayMode,
+          windowName: managed.config.name || this.lastBroadcastContent.windowName,
+        };
+        this._sendContent(managed, windowContent);
+      }
+    });
+
+    win.on('closed', () => {
+      if (!this.recreating.has(id)) {
+        this.windows.delete(id);
+      }
+    });
+
+    // Replace window in-place
+    managed.browserWindow = win;
+    managed.frozen = false;
+    managed.isBlack = false;
+    managed.queuedContent = null;
+  }
 
   private _sendContent(managed: ManagedWindow, content: PresentationContentIPC): void {
     if (!managed.browserWindow.isDestroyed()) {

@@ -3,7 +3,7 @@ import { ThemeProvider, CssBaseline, Snackbar, Alert, Button } from '@mui/materi
 import { getTheme, resolveThemeMode } from './theme';
 import { detectLocale } from '@/i18n/i18n-util';
 import { navigatorDetector } from 'typesafe-i18n/detectors';
-import { loadLocale } from '@/i18n/i18n-util.sync';
+import { loadAllLocales } from '@/i18n/i18n-util.sync';
 import TypesafeI18n from '@/i18n/i18n-react';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
@@ -15,6 +15,9 @@ import { MusicianPage } from '@/musician/MusicianPage';
 import ConnectivityChecker from '@/components/ConnectivityChecker';
 import { useAppSelector } from '@/store';
 import { SESSION_EXPIRED_EVENT } from '@/api/base.api';
+
+// Load all locales upfront so switching is instant
+loadAllLocales();
 
 /** Wrapper providing the musician-specific theme */
 const MusicianThemeWrapper = () => {
@@ -64,22 +67,12 @@ const App = () => {
 
   // Determine locale: prefer user setting, then browser detection
   const detectedLocale = detectLocale(navigatorDetector);
-  const locale = (uiLanguage || detectedLocale) as 'en' | 'de';
-
-  const [activeLocale, setActiveLocale] = useState<'en' | 'de'>(() => {
-    loadLocale(locale);
-    return locale;
-  });
-
-  useEffect(() => {
-    loadLocale(locale);
-    setActiveLocale(locale);
-  }, [locale]);
+  const locale = (uiLanguage === 'de' ? 'de' : uiLanguage === 'en' ? 'en' : (detectedLocale === 'de' ? 'de' : 'en')) as 'en' | 'de';
 
   return (
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
-      <TypesafeI18n locale={activeLocale}>
+      <TypesafeI18n locale={locale}>
         {/* Connectivity helper: shows dialog when Session/Accounts queries fail */}
         <ConnectivityChecker />
 

@@ -80,7 +80,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
   const [showToRename, setShowToRename] = useState<Show | null>(null);
   const [renameTitle, setRenameTitle] = useState('');
 
-  const { data: showsData, isLoading, refetch } = useGetShowsQuery({ limit: 100, page: 0 });
+  const { data: showsData, isLoading, refetch } = useGetShowsQuery({ limit: 9999, page: 0 });
   const [deleteShowMutation] = useDeleteShowMutation();
   const [saveShowMutation] = useSaveShowMutation();
 

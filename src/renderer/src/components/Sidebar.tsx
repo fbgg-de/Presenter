@@ -34,8 +34,6 @@ import {
   AccountCircle as AccountCircleIcon,
   Logout as LogoutIcon,
   PictureAsPdf as PdfIcon,
-  Window as WindowIcon,
-  Cable as CableIcon,
   AdminPanelSettings as AdminIcon,
   MoreVert as MoreVertIcon,
   ChevronRight as ChevronRightIcon,
@@ -75,7 +73,6 @@ import { loadShowSongs } from '@/store/songsSlice';
 import { toggleTheme } from '@/store/themeSlice';
 import { StyleEditor } from '@/components/StyleEditor';
 import { WindowManager } from '@/components/WindowManager';
-import { CompanionHelper } from '@/components/CompanionHelper';
 import { MUSICAL_KEYS, parseOrderKey } from '@/utils/orderKeyUtils';
 
 const Sidebar = () => {
@@ -104,10 +101,7 @@ const Sidebar = () => {
   const [songToEdit, _setSongToEdit] = useState<ISong>();
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
   const [windowManagerOpen, setWindowManagerOpen] = useState(false);
-  const [companionHelperOpen, setCompanionHelperOpen] = useState(false);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<null | HTMLElement>(null);
-
-  const windowFooterVisible = useAppSelector((state) => state.settings.windowFooterVisible);
 
   const { data: session } = useGetSessionQuery();
   const [logout] = useLogoutMutation();
@@ -124,6 +118,14 @@ const Sidebar = () => {
   const [itemMenuIndex, setItemMenuIndex] = useState<number>(-1);
   const [keySubmenuAnchor, setKeySubmenuAnchor] = useState<null | HTMLElement>(null);
   const [orderSubmenuAnchor, setOrderSubmenuAnchor] = useState<null | HTMLElement>(null);
+  // Item-style nested submenus: window list -> style list (per chosen window)
+  const [itemStyleWinAnchor, setItemStyleWinAnchor] = useState<null | HTMLElement>(null);
+  const [itemStyleStyleAnchor, setItemStyleStyleAnchor] = useState<null | HTMLElement>(null);
+  const [itemStyleWindowName, setItemStyleWindowName] = useState<string>('');
+
+  // Window names available for per-item style overrides (from the footer's saved configs)
+  const savedWindowConfigs = useAppSelector((state) => state.settings.windowConfigs) as Array<{ name?: string }>;
+  const windowNames = (savedWindowConfigs || []).map((c) => (c?.name || '').trim()).filter((n) => n.length > 0);
 
   const themeIcon = themeMode === 'dark' ? <DarkMode /> : themeMode === 'light' ? <LightMode /> : <SettingsBrightness />;
 
@@ -363,6 +365,19 @@ const Sidebar = () => {
     setItemMenuIndex(-1);
     setKeySubmenuAnchor(null);
     setOrderSubmenuAnchor(null);
+    setItemStyleWinAnchor(null);
+    setItemStyleStyleAnchor(null);
+    setItemStyleWindowName('');
+  };
+
+  const handleItemSetStyleForWindow = (styleId: number | null) => {
+    if (itemMenuIndex >= 0 && itemStyleWindowName) {
+      const item = showItems[itemMenuIndex];
+      const next: Record<string, number | null> = { ...(item.itemStyleByWindow || {}) };
+      next[itemStyleWindowName] = styleId;
+      dispatch(updateShowItem({ index: itemMenuIndex, item: { itemStyleByWindow: next } }));
+    }
+    handleItemMenuClose();
   };
 
   const handleItemRemove = () => {
@@ -434,8 +449,6 @@ const Sidebar = () => {
       <StyleEditor open={styleEditorOpen} onClose={() => setStyleEditorOpen(false)} />
 
       <WindowManager open={windowManagerOpen} onClose={() => setWindowManagerOpen(false)} />
-
-      <CompanionHelper open={companionHelperOpen} onClose={() => setCompanionHelperOpen(false)} />
 
       <Stack
         direction="row"
@@ -532,13 +545,6 @@ const Sidebar = () => {
 
             <Box flexGrow={1} />
 
-            {/* Style Editor */}
-            <Tooltip title={LL.STYLE.EDITOR()}>
-              <IconButton size="small" onClick={() => setStyleEditorOpen(true)}>
-                <PaletteIcon />
-              </IconButton>
-            </Tooltip>
-
             {/* Musician View */}
             <Tooltip title={LL.MUSICIAN.OPEN()}>
               <IconButton size="small" onClick={() => window.open('/notes', '_blank')}>
@@ -546,30 +552,6 @@ const Sidebar = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Companion Helper */}
-            <Tooltip title={LL.COMPANION.HELPER_TITLE()}>
-              <IconButton size="small" onClick={() => setCompanionHelperOpen(true)}>
-                <CableIcon />
-              </IconButton>
-            </Tooltip>
-
-            {/* Window Manager */}
-            <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
-              <IconButton
-                size="small"
-                onClick={() => setWindowManagerOpen(true)}
-                sx={{ color: windowFooterVisible ? 'primary.main' : 'inherit' }}
-              >
-                <WindowIcon />
-              </IconButton>
-            </Tooltip>
-
-            {/* Theme Toggle */}
-            <Tooltip title="Theme">
-              <IconButton size="small" onClick={() => dispatch(toggleTheme())}>
-                {themeIcon}
-              </IconButton>
-            </Tooltip>
 
             {/* Account Menu */}
             <Tooltip title={LL.HEADER.ACCOUNT_MENU()}>
@@ -666,6 +648,16 @@ const Sidebar = () => {
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
+        {/* Item style submenu (window list) */}
+        {windowNames.length > 0 && availableStyles.length > 0 && (
+          <MenuItem onClick={(e) => setItemStyleWinAnchor(e.currentTarget)}>
+            <ListItemIcon>
+              <PaletteIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{LL.FOOTER.ITEM_STYLE()}</ListItemText>
+            <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
+          </MenuItem>
+        )}
         {menuItem?.type === 'song' && <Divider />}
         {/* Delete */}
         <MenuItem onClick={handleItemRemove}>
@@ -710,6 +702,56 @@ const Sidebar = () => {
             sx={{ fontSize: '0.85rem' }}
           >
             {order}
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* Item-style: window list submenu */}
+      <Menu
+        anchorEl={itemStyleWinAnchor}
+        open={Boolean(itemStyleWinAnchor)}
+        onClose={() => setItemStyleWinAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        {windowNames.map((wname) => (
+          <MenuItem
+            key={wname}
+            onClick={(e) => {
+              setItemStyleWindowName(wname);
+              setItemStyleStyleAnchor(e.currentTarget);
+            }}
+            sx={{ fontSize: '0.85rem' }}
+          >
+            <ListItemText>{wname}</ListItemText>
+            <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* Item-style: style list submenu (for the chosen window) */}
+      <Menu
+        anchorEl={itemStyleStyleAnchor}
+        open={Boolean(itemStyleStyleAnchor)}
+        onClose={() => setItemStyleStyleAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        <MenuItem
+          onClick={() => handleItemSetStyleForWindow(null)}
+          selected={!menuItem?.itemStyleByWindow?.[itemStyleWindowName]}
+          sx={{ fontSize: '0.85rem' }}
+        >
+          <em>{LL.STYLE.NONE()}</em>
+        </MenuItem>
+        {availableStyles.map((s) => (
+          <MenuItem
+            key={s.id}
+            onClick={() => handleItemSetStyleForWindow(s.id)}
+            selected={s.id === menuItem?.itemStyleByWindow?.[itemStyleWindowName]}
+            sx={{ fontSize: '0.85rem' }}
+          >
+            {s.name}
           </MenuItem>
         ))}
       </Menu>
@@ -782,6 +824,12 @@ const Sidebar = () => {
                   {item.styleId && (
                     <Tooltip title={availableStyles.find((s) => s.id === item.styleId)?.name || LL.STYLE.STYLE()}>
                       <PaletteIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : 'text.secondary', opacity: 0.7 }} />
+                    </Tooltip>
+                  )}
+                  {/* Per-window style badge */}
+                  {item.itemStyleByWindow && Object.values(item.itemStyleByWindow).some((v) => v != null) && (
+                    <Tooltip title={LL.FOOTER.ITEM_STYLE()}>
+                      <PaletteIcon fontSize="small" sx={{ color: i === activeItemIndex ? 'rgba(255,255,255,0.8)' : 'text.secondary', opacity: 0.8 }} />
                     </Tooltip>
                   )}
                   {/* Context menu button */}

@@ -14,7 +14,6 @@ class AdminAccounts extends RestController
 					a.license,
 					a.mail,
 					a.name,
-					a.oidc_sub,
 					a.active,
 					a.created_at,
 					a.lastactivity,

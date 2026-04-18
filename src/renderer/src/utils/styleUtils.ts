@@ -8,7 +8,11 @@ import type { CSSProperties } from 'react';
 export type ResolvedStyle = {
   backgroundImage?: string;
   backgroundVideo?: string;
+  backgroundVideoAutoplay?: boolean;
   backgroundColor?: string;
+  backgroundSize?: string;
+  backgroundPosition?: string;
+  backgroundZoom?: number;
   fontFamily?: string;
   fontFallback?: string[];
   fontColor?: string;
@@ -21,6 +25,7 @@ export type ResolvedStyle = {
   padding?: string;
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  verticalAlign?: 'top' | 'center' | 'bottom';
   textStroke?: string;
   textShadow?: string;
   textShadowColor?: string;
@@ -34,41 +39,58 @@ export type ResolvedStyle = {
 /**
  * Extract the value of a style property if it is enabled.
  * Returns undefined if the property is missing or disabled.
+ * Disabled properties are treated as "no opinion" — they do NOT
+ * clear inherited values from parent levels.
  */
 function extractEnabled<T>(prop: { enabled: boolean; value: T } | undefined): T | undefined {
-  if (!prop || !prop.enabled) return undefined;
+  if (!prop) return undefined;
+  if (!prop.enabled) return undefined; // disabled = no opinion, don't override parent
   return prop.value;
 }
 
 /**
  * Resolve a single StyleData into a flat ResolvedStyle,
  * only including properties that are enabled.
+ * Disabled properties are omitted (undefined) so they don't
+ * override inherited values in mergeStyles.
  */
 export function resolveStyleData(data: StyleData | undefined): ResolvedStyle {
   if (!data) return {};
 
   const result: ResolvedStyle = {};
 
-  if (extractEnabled(data.backgroundImage) !== undefined) result.backgroundImage = extractEnabled(data.backgroundImage);
-  if (extractEnabled(data.backgroundVideo) !== undefined) result.backgroundVideo = extractEnabled(data.backgroundVideo);
-  if (extractEnabled(data.backgroundColor) !== undefined) result.backgroundColor = extractEnabled(data.backgroundColor);
-  if (extractEnabled(data.fontFamily) !== undefined) result.fontFamily = extractEnabled(data.fontFamily);
-  if (extractEnabled(data.fontFallback) !== undefined) result.fontFallback = extractEnabled(data.fontFallback);
-  if (extractEnabled(data.fontColor) !== undefined) result.fontColor = extractEnabled(data.fontColor);
-  if (extractEnabled(data.fontSize) !== undefined) result.fontSize = extractEnabled(data.fontSize);
-  if (extractEnabled(data.fontBold) !== undefined) result.fontBold = extractEnabled(data.fontBold);
-  if (extractEnabled(data.fontItalic) !== undefined) result.fontItalic = extractEnabled(data.fontItalic);
-  if (extractEnabled(data.fontUnderline) !== undefined) result.fontUnderline = extractEnabled(data.fontUnderline);
-  if (extractEnabled(data.lineHeight) !== undefined) result.lineHeight = extractEnabled(data.lineHeight);
-  if (extractEnabled(data.letterSpacing) !== undefined) result.letterSpacing = extractEnabled(data.letterSpacing);
-  if (extractEnabled(data.padding) !== undefined) result.padding = extractEnabled(data.padding);
-  if (extractEnabled(data.textTransform) !== undefined) result.textTransform = extractEnabled(data.textTransform);
-  if (extractEnabled(data.textAlign) !== undefined) result.textAlign = extractEnabled(data.textAlign);
-  if (extractEnabled(data.textStroke) !== undefined) result.textStroke = extractEnabled(data.textStroke);
-  if (extractEnabled(data.textShadow) !== undefined) result.textShadow = extractEnabled(data.textShadow);
-  if (extractEnabled(data.textShadowColor) !== undefined) result.textShadowColor = extractEnabled(data.textShadowColor);
-  if (extractEnabled(data.opacity) !== undefined) result.opacity = extractEnabled(data.opacity);
-  if (extractEnabled(data.nextLinePreviewColor) !== undefined) result.nextLinePreviewColor = extractEnabled(data.nextLinePreviewColor);
+  const set = <K extends keyof ResolvedStyle>(key: K, val: ResolvedStyle[K] | undefined) => {
+    if (val === undefined) return; // not present or disabled — leave unset
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (result as any)[key] = val;
+  };
+
+  set('backgroundImage',    extractEnabled(data.backgroundImage));
+  set('backgroundVideo',    extractEnabled(data.backgroundVideo));
+  set('backgroundVideoAutoplay', extractEnabled(data.backgroundVideoAutoplay));
+  set('backgroundColor',    extractEnabled(data.backgroundColor));
+  set('backgroundSize',     extractEnabled(data.backgroundSize));
+  set('backgroundPosition', extractEnabled(data.backgroundPosition));
+  set('backgroundZoom',     extractEnabled(data.backgroundZoom));
+  set('fontFamily',         extractEnabled(data.fontFamily));
+  set('fontFallback',       extractEnabled(data.fontFallback));
+  set('fontColor',          extractEnabled(data.fontColor));
+  set('fontSize',           extractEnabled(data.fontSize));
+  set('fontBold',           extractEnabled(data.fontBold));
+  set('fontItalic',         extractEnabled(data.fontItalic));
+  set('fontUnderline',      extractEnabled(data.fontUnderline));
+  set('lineHeight',         extractEnabled(data.lineHeight));
+  set('letterSpacing',      extractEnabled(data.letterSpacing));
+  set('padding',            extractEnabled(data.padding));
+  set('textTransform',      extractEnabled(data.textTransform));
+  set('textAlign',          extractEnabled(data.textAlign));
+  set('verticalAlign',      extractEnabled(data.verticalAlign));
+  set('textStroke',         extractEnabled(data.textStroke));
+  set('textShadow',         extractEnabled(data.textShadow));
+  set('textShadowColor',    extractEnabled(data.textShadowColor));
+  set('opacity',            extractEnabled(data.opacity));
+  set('nextLinePreviewColor', extractEnabled(data.nextLinePreviewColor));
+
   if (data.hideText !== undefined) result.hideText = data.hideText;
   if (data.hideBackground !== undefined) result.hideBackground = data.hideBackground;
   if (data.css) result.css = data.css;
@@ -84,9 +106,10 @@ export function mergeStyles(base: ResolvedStyle, override: ResolvedStyle): Resol
   const result = { ...base };
 
   for (const key of Object.keys(override) as (keyof ResolvedStyle)[]) {
-    if (override[key] !== undefined) {
+    const val = override[key];
+    if (val !== undefined) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (result as any)[key] = override[key];
+      (result as any)[key] = val;
     }
   }
 
@@ -207,12 +230,9 @@ export function styleToContainerCss(style: ResolvedStyle): CSSProperties {
     css.backgroundColor = style.backgroundColor;
   }
 
-  if (style.backgroundImage && !style.hideBackground) {
-    css.backgroundImage = `url("${style.backgroundImage}")`;
-    css.backgroundSize = 'cover';
-    css.backgroundPosition = 'center';
-    css.backgroundRepeat = 'no-repeat';
-  }
+  // NOTE: backgroundImage is intentionally NOT applied here as CSS background-image.
+  // It is rendered as an <img> element in Presentation.tsx so that zoom (transform: scale)
+  // and objectFit can be applied consistently with background videos.
 
   if (style.padding) {
     css.padding = style.padding;

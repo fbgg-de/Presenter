@@ -103,6 +103,8 @@ export const AdminPage = () => {
     name?: string;
   }>({ open: false });
 
+  const closeDeleteDialog = () => setDeleteDialog({ open: false });
+
   // Logout handler
   const handleLogout = async () => {
     try {
@@ -142,14 +144,14 @@ export const AdminPage = () => {
   };
 
   // Delete handlers
-  const handleDelete = async () => {
+  const handleDelete = async (type: 'account' | 'provider', id: number) => {
     try {
-      if (deleteDialog.type === 'account' && deleteDialog.id) {
-        await deleteAccount({ license: deleteDialog.id }).unwrap();
-      } else if (deleteDialog.type === 'provider' && deleteDialog.id) {
-        await deleteProvider({ id: deleteDialog.id }).unwrap();
+      if (type === 'account') {
+        await deleteAccount({ license: id }).unwrap();
+      } else if (type === 'provider') {
+        await deleteProvider({ id }).unwrap();
       }
-      setDeleteDialog({ open: false });
+      closeDeleteDialog();
     } catch (error) {
       console.error('Failed to delete:', error);
     }
@@ -409,8 +411,12 @@ export const AdminPage = () => {
         open={deleteDialog.open}
         type={deleteDialog.type}
         name={deleteDialog.name}
-        onClose={() => setDeleteDialog({ open: false })}
-        onConfirm={handleDelete}
+        onClose={closeDeleteDialog}
+        onConfirm={() => {
+          if (deleteDialog.type && deleteDialog.id) {
+            void handleDelete(deleteDialog.type, deleteDialog.id);
+          }
+        }}
       />
     </Box>
   );

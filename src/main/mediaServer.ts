@@ -4,7 +4,7 @@
  */
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'http';
 import { join, extname, resolve, normalize } from 'path';
-import { createReadStream, existsSync, statSync } from 'fs';
+import { createReadStream, existsSync, statSync, readdirSync } from 'fs';
 
 const MIME_TYPES: Record<string, string> = {
   '.jpg': 'image/jpeg',
@@ -25,6 +25,13 @@ const MIME_TYPES: Record<string, string> = {
   '.ogg': 'audio/ogg',
   '.pdf': 'application/pdf',
 };
+
+// Extensions included in folder listings (no PDFs in media browser)
+const LISTABLE_EXTS = new Set([
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico',
+  '.mp4', '.webm', '.mov', '.avi', '.mkv',
+  '.mp3', '.wav', '.ogg',
+]);
 
 export class LocalMediaServer {
   private server: Server | null = null;
@@ -119,8 +126,52 @@ export class LocalMediaServer {
     res.setHeader('Access-Control-Allow-Methods', 'GET');
 
     // Parse the URL and decode
-    const url = new URL(req.url || '/', `http://127.0.0.1:${this.port}`);
+    const url = new URL(req.url || '/', `http://localhost:${this.port}`);
     const requestedPath = decodeURIComponent(url.pathname);
+
+    // ── /list — non-recursive directory listing with pagination ──
+    if (requestedPath === '/list') {
+      try {
+        const subPath = url.searchParams.get('path') || '';
+        const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
+        const limit = Math.max(1, Math.min(200, parseInt(url.searchParams.get('limit') || '50', 10) || 50));
+
+        // Resolve and validate target directory
+        const targetDir = subPath
+          ? normalize(join(this.mediaPath, subPath))
+          : this.mediaPath;
+
+        if (!targetDir.startsWith(this.mediaPath)) {
+          res.writeHead(403);
+          res.end('Forbidden');
+          return;
+        }
+
+        if (!existsSync(targetDir)) {
+          res.writeHead(404);
+          res.end('Not Found');
+          return;
+        }
+
+        const listing = this.listDir(targetDir);
+        const paginatedFiles = listing.files.slice(offset, offset + limit);
+
+        const result = {
+          dirs: listing.dirs,
+          files: paginatedFiles,
+          totalFiles: listing.files.length,
+          offset,
+          limit,
+        };
+
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(result));
+      } catch {
+        res.writeHead(500);
+        res.end('Error listing files');
+      }
+      return;
+    }
 
     // Resolve and validate the path — prevent directory traversal
     const fullPath = normalize(join(this.mediaPath, requestedPath));
@@ -170,9 +221,34 @@ export class LocalMediaServer {
         'Content-Length': stat.size,
         'Content-Type': mimeType,
         'Cache-Control': 'public, max-age=3600',
+        'Accept-Ranges': 'bytes',
       });
 
       createReadStream(fullPath).pipe(res);
     }
+  }
+
+  /**
+   * List immediate contents of a directory (non-recursive).
+   * Returns subdirectory names and media file names (no PDFs).
+   */
+  private listDir(dir: string): { dirs: string[]; files: string[] } {
+    const dirs: string[] = [];
+    const files: string[] = [];
+    try {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        if (entry.isDirectory()) {
+          dirs.push(entry.name);
+        } else if (entry.isFile()) {
+          const ext = extname(entry.name).toLowerCase();
+          if (LISTABLE_EXTS.has(ext)) {
+            files.push(entry.name);
+          }
+        }
+      }
+    } catch { /* skip unreadable dirs */ }
+    dirs.sort((a, b) => a.localeCompare(b));
+    files.sort((a, b) => a.localeCompare(b));
+    return { dirs, files };
   }
 }

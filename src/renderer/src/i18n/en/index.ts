@@ -248,6 +248,8 @@ const en = {
     SEARCH_VIDEOS: 'Search videos...',
     CONFIGURE_PATH: 'Configure a media directory in Settings → Electron → Media Path',
     ADD_BY_URL: 'Add by URL',
+    ROOT_FOLDER: 'Root',
+    LOAD_MORE: 'Load more',
   },
 
   CONTROL: {
@@ -290,6 +292,9 @@ const en = {
     BACKGROUND_COLOR: 'Color',
     BACKGROUND_IMAGE: 'Image URL',
     BACKGROUND_VIDEO: 'Video URL',
+    BG_FIT: 'Background Fit',
+    BG_POSITION: 'Position',
+    VERTICAL_ALIGN: 'Vertical Align',
     FONT: 'Font',
     FONT_FAMILY: 'Family',
     FONT_COLOR: 'Color',
@@ -313,6 +318,33 @@ const en = {
     NEXT_LINE_PREVIEW: 'Next-Line Preview',
     NEXT_LINE_COLOR: 'Color',
     SELECT: 'Select a style',
+    // Section labels (rework)
+    SECTION_GENERAL: 'General',
+    SECTION_BACKGROUND: 'Background',
+    SECTION_TYPOGRAPHY: 'Typography',
+    SECTION_LAYOUT: 'Layout & Spacing',
+    SECTION_EFFECTS: 'Effects',
+    SECTION_VISIBILITY: 'Visibility',
+    SECTION_WINDOW_OVERRIDES: 'Per-Window Overrides',
+    SECTION_CUSTOM_CSS: 'Custom CSS',
+    SECTION_PREVIEW: 'Live Preview',
+    // Actions
+    BROWSE: 'Browse…',
+    PICK_FILE: 'Pick a file',
+    PICK_FOLDER: 'Pick a folder',
+    APPLY_NOW: 'Apply now',
+    SAVE_AND_APPLY: 'Save & Apply',
+    DUPLICATE: 'Duplicate',
+    RENAME: 'Rename',
+    RESET: 'Reset',
+    UNSAVED_PROMPT: 'You have unsaved changes. Discard them?',
+    WINDOW_RELOAD_REQUIRED: 'Some changes require the presentation window to be reopened.',
+    APPLIED: 'Applied',
+    // Window overrides UI
+    WINDOW_OVERRIDE_NAME: 'Window Name',
+    WINDOW_OVERRIDE_STYLE: 'Override Style',
+    WINDOW_OVERRIDE_ADD: 'Add Override',
+    WINDOW_OVERRIDE_HINT: 'Apply additional style overrides for windows matching the given name.',
   },
 
   FONT: {
@@ -357,6 +389,9 @@ const en = {
     HIDE_TEXT: 'Hide Text',
     HIDE_BACKGROUND: 'Hide Background',
     STREAM_LINES: 'Stream Lines',
+    RENAME: 'Rename Window',
+    MOVE_TO_SCREEN: 'Move to Screen',
+    PRIMARY_SCREEN: 'Primary',
   },
 
   HEADER: {
@@ -408,6 +443,7 @@ const en = {
     MAPPING_EDIT: 'Click to change',
     MAPPING_PRESS: 'Press a key combination...',
     MAPPING_RESET: 'Reset to Defaults',
+    MAPPING_ENABLED: 'Enabled',
     ACTION_PREV_ITEM: 'Previous Item',
     ACTION_NEXT_ITEM: 'Next Item',
     ACTION_PREV_BLOCK: 'Previous Block',
@@ -415,8 +451,8 @@ const en = {
     ACTION_PREV_LINE: 'Previous Line',
     ACTION_NEXT_LINE: 'Next Line',
     ACTION_TOGGLE_BLACK: 'Toggle Black',
-    ACTION_TOGGLE_FULLSCREEN: 'Toggle Fullscreen',
     ACTION_CLOSE_DRAWER: 'Close Drawer',
+    ACTION_TOGGLE_VIDEO: 'Toggle Video Play/Pause',
   },
 
   SETTINGS: {
@@ -540,6 +576,18 @@ const en = {
         TITLE: 'Auto-check updates',
         DESCRIPTION: 'Automatically check for application updates on startup (Electron only)',
       },
+      RESTORE_WINDOWS_ON_START: {
+        TITLE: 'Restore windows on start',
+        DESCRIPTION: 'Automatically reopen presentation windows that were open when the app was last closed (Electron only)',
+      },
+      TRANSITION_MODE: {
+        TITLE: 'Transition mode',
+        DESCRIPTION: 'How to transition between items: cut (instant) or fade (cross-fade)',
+      },
+      TRANSITION_DURATION: {
+        TITLE: 'Transition duration (ms)',
+        DESCRIPTION: 'Duration of the fade transition in milliseconds',
+      },
     },
   },
 
@@ -547,6 +595,9 @@ const en = {
     PLAY: 'Play',
     PAUSE: 'Pause',
     STOP: 'Stop',
+    LOOP: 'Loop',
+    LOOP_ON: 'Loop: ON',
+    LOOP_OFF: 'Loop: OFF',
     MUTE: 'Mute',
     UNMUTE: 'Unmute',
     MASK_TITLE: 'Video Mask Editor',
@@ -564,6 +615,7 @@ const en = {
     MASK_LABEL_HEIGHT: 'Height (%)',
     CLIP_PATH_PREFIX: 'clip-path:',
     MASK_APPLY: 'Apply Mask',
+    AUTOPLAY: 'Autoplay',
   },
 
   METRICS: {
@@ -603,6 +655,7 @@ const en = {
 
   COMPANION: {
     HELPER_TITLE: 'WebSocket / Companion Commands',
+    HELPER_DESC: 'Connect external tools (Companion, StreamDeck, custom scripts) via the WebSocket API.',
     WS_URL: 'WebSocket URL',
     COPY: 'Copy to clipboard',
     COPIED: 'Copied!',

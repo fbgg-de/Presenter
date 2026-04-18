@@ -25,12 +25,22 @@ export interface FrontendAPI {
 
   // ── File system ──
   openDirectory: (path: string) => Promise<boolean>;
+  pickFile: (options?: {
+    title?: string;
+    filters?: { name: string; extensions: string[] }[];
+    defaultPath?: string;
+  }) => Promise<{ path: string; url: string } | null>;
+  pickDirectory: (options?: { title?: string; defaultPath?: string }) => Promise<string | null>;
 
   // ── Presentation window management ──
   createPresentationWindow: (config: WindowConfig) => Promise<string>;
   closePresentationWindow: (id: string) => Promise<void>;
-  updatePresentationContent: (id: string, content: PresentationContentIPC) => Promise<void>;
-  broadcastPresentationContent: (content: PresentationContentIPC) => Promise<void>;
+  updateWindowConfig: (
+    id: string,
+    partial: Partial<WindowConfig>,
+  ) => Promise<{ applied: string[]; requiresReload: string[] }>;
+  updatePresentationContent: (id: string, content: PresentationContentIPC) => void;
+  broadcastPresentationContent: (content: PresentationContentIPC) => void;
   listScreens: () => Promise<ScreenInfo[]>;
   getWindowStates: () => Promise<WindowState[]>;
 
@@ -41,6 +51,9 @@ export interface FrontendAPI {
   unfreezeWindow: (windowName: string) => Promise<void>;
   identifyWindows: () => Promise<void>;
   hideIdentifyWindows: () => Promise<void>;
+
+  // ── Video commands ──
+  videoCommand: (command: { action: string; windowName?: string; value?: number }) => Promise<void>;
 
   // ── Media ──
   checkMediaFiles: (files: string[]) => Promise<MediaCheckResult>;
@@ -58,12 +71,25 @@ export interface FrontendAPI {
   // ── WebSocket broadcast ──
   wsBroadcast: (action: string, data?: Record<string, unknown>) => void;
 
+  // ── Video status from presentation windows ──
+  onVideoStatus: (callback: (status: VideoStatus) => void) => (() => void) | void;
+
   // ── IPC event listeners (main -> renderer) ──
-  onWsNavigationAction: (callback: (data: unknown) => void) => void;
-  onWsVideoAction: (callback: (data: unknown) => void) => void;
-  onWsGetState: (callback: (data: unknown) => void) => void;
+  onWsNavigationAction: (callback: (data: unknown) => void) => (() => void) | void;
+  onWsVideoAction: (callback: (data: unknown) => void) => (() => void) | void;
+  onWsGetState: (callback: (data: unknown) => void) => (() => void) | void;
   sendWsStateResponse: (data: unknown) => void;
   removeAllWsListeners: () => void;
+}
+
+export interface VideoStatus {
+  hasVideo: boolean;
+  paused?: boolean;
+  muted?: boolean;
+  loop?: boolean;
+  volume?: number;
+  currentTime?: number;
+  duration?: number;
 }
 
 /** Presentation window preload API (separate preload script). */
@@ -71,6 +97,7 @@ export interface PresentationAPI {
   onContentUpdate: (callback: (data: unknown) => void) => void;
   onCommand: (callback: (data: unknown) => void) => void;
   removeAllListeners: () => void;
+  reportVideoStatus?: (status: VideoStatus) => void;
 }
 
 declare global {

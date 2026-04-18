@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Box, TextField, Stack, Typography, Slider, Paper } from '@mui/material';
+import { Box, TextField, Stack, Typography, Paper, Popover, IconButton } from '@mui/material';
+import { HexColorPicker } from 'react-colorful';
 import { useI18nContext } from '@/i18n/i18n-react';
 
 const COLOR_PRESETS = [
@@ -17,22 +18,12 @@ const COLOR_PRESETS = [
   { name: 'Teal', value: '#39CCCC' },
 ];
 
-const hexToRgb = (hex: string): [number, number, number] => {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (result) {
-    return [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)];
-  }
-  return [0, 0, 0];
-};
-
-const rgbToHex = (r: number, g: number, b: number): string => {
-  return (
-    '#' +
-    [r, g, b]
-      .map((x) => x.toString(16).padStart(2, '0'))
-      .join('')
-      .toUpperCase()
-  );
+const normalizeHex = (s: string): string => {
+  if (!s) return '#000000';
+  const v = s.trim().toUpperCase();
+  if (/^#[0-9A-F]{6}$/.test(v)) return v;
+  if (/^[0-9A-F]{6}$/.test(v)) return `#${v}`;
+  return s;
 };
 
 interface ColorPickerProps {
@@ -40,29 +31,21 @@ interface ColorPickerProps {
   onChange: (color: string) => void;
 }
 
+/**
+ * Full color picker using `react-colorful` (HSV picker) plus hex input and presets.
+ * Suitable for embedding in panels and dialogs.
+ */
 export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
   const { LL } = useI18nContext();
-  const [rgb, setRgb] = useState<[number, number, number]>(hexToRgb(value));
   const [hexInput, setHexInput] = useState(value);
 
   useEffect(() => {
-    setRgb(hexToRgb(value));
     setHexInput(value);
   }, [value]);
-
-  const handleRgbChange = (index: number, val: number) => {
-    const newRgb: [number, number, number] = [...rgb];
-    newRgb[index] = Math.max(0, Math.min(255, val));
-    setRgb(newRgb);
-    const hex = rgbToHex(newRgb[0], newRgb[1], newRgb[2]);
-    setHexInput(hex);
-    onChange(hex);
-  };
 
   const handleHexChange = (hex: string) => {
     setHexInput(hex);
     if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
-      setRgb(hexToRgb(hex));
       onChange(hex.toUpperCase());
     }
   };
@@ -73,13 +56,18 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
       <Box
         sx={{
           width: '100%',
-          height: 80,
+          height: 60,
           borderRadius: 1,
           border: 1,
           borderColor: 'divider',
           backgroundColor: value,
         }}
       />
+
+      {/* react-colorful HSV picker */}
+      <Box sx={{ '& .react-colorful': { width: '100%', height: 180 } }}>
+        <HexColorPicker color={normalizeHex(value)} onChange={(c) => onChange(c.toUpperCase())} />
+      </Box>
 
       {/* Hex input */}
       <TextField
@@ -91,31 +79,6 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
         placeholder="#000000"
       />
 
-      {/* RGB sliders */}
-      <Stack spacing={1}>
-        {(['R', 'G', 'B'] as const).map((channel, index) => (
-          <Stack key={channel} direction="row" alignItems="center" spacing={2}>
-            <Typography
-              variant="body2"
-              sx={{ width: 16, fontWeight: 600, color: channel === 'R' ? 'error.main' : channel === 'G' ? 'success.main' : 'info.main' }}
-            >
-              {channel}
-            </Typography>
-            <Slider
-              value={rgb[index]}
-              onChange={(_e, val) => handleRgbChange(index, val as number)}
-              min={0}
-              max={255}
-              sx={{ flex: 1 }}
-              size="small"
-            />
-            <Typography variant="body2" sx={{ width: 32, textAlign: 'right' }}>
-              {rgb[index]}
-            </Typography>
-          </Stack>
-        ))}
-      </Stack>
-
       {/* Preset swatches */}
       <Typography variant="caption" color="text.secondary">
         {LL.MEDIA.COLOR_PRESETS()}
@@ -124,9 +87,7 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
         {COLOR_PRESETS.map((preset) => (
           <Paper
             key={preset.value}
-            onClick={() => {
-              onChange(preset.value);
-            }}
+            onClick={() => onChange(preset.value)}
             sx={{
               width: 32,
               height: 32,
@@ -134,13 +95,74 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
               backgroundColor: preset.value,
               cursor: 'pointer',
               border: 2,
-              borderColor: value === preset.value ? 'primary.main' : 'divider',
+              borderColor: value.toUpperCase() === preset.value ? 'primary.main' : 'divider',
               '&:hover': { borderColor: 'primary.light' },
             }}
             title={preset.name}
           />
         ))}
       </Box>
+    </Stack>
+  );
+};
+
+interface ColorSwatchButtonProps {
+  value: string;
+  onChange: (color: string) => void;
+  /** Optional clear handler — when provided, shows a small × button. */
+  onClear?: () => void;
+  ariaLabel?: string;
+  size?: number;
+}
+
+/**
+ * Compact swatch button that opens a popover with the full ColorPicker.
+ * Use this inside dense forms (like the Style Editor).
+ */
+export const ColorSwatchButton = ({ value, onChange, onClear, ariaLabel, size = 32 }: ColorSwatchButtonProps) => {
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  return (
+    <Stack direction="row" spacing={1} alignItems="center">
+      <Box
+        component="button"
+        type="button"
+        aria-label={ariaLabel}
+        onClick={(e) => setAnchor(e.currentTarget)}
+        sx={{
+          width: size,
+          height: size,
+          minWidth: size,
+          borderRadius: 1,
+          border: '2px solid',
+          borderColor: 'divider',
+          backgroundColor: value || '#000000',
+          cursor: 'pointer',
+          padding: 0,
+          '&:hover': { borderColor: 'primary.main' },
+        }}
+      />
+      <TextField
+        size="small"
+        value={value || ''}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="#000000"
+        sx={{ width: 110, '& input': { fontFamily: 'monospace', fontSize: '0.85rem' } }}
+      />
+      {onClear && (
+        <IconButton size="small" onClick={onClear} title="Clear">
+          ×
+        </IconButton>
+      )}
+      <Popover
+        open={!!anchor}
+        anchorEl={anchor}
+        onClose={() => setAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      >
+        <Box sx={{ p: 2, width: 260 }}>
+          <ColorPicker value={value} onChange={onChange} />
+        </Box>
+      </Popover>
     </Stack>
   );
 };
