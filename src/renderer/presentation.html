@@ -5,7 +5,7 @@
     <title>Presenter - Presentation</title>
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; connect-src 'self' blob: http://localhost:* ws://localhost:* https: wss:; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http: blob:; media-src 'self' https: http: blob:; font-src 'self' https: data:; worker-src 'self' blob:"
+      content="default-src 'self'; connect-src 'self' blob: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https: wss:; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http: blob:; media-src 'self' https: http: blob:; font-src 'self' https: data:; worker-src 'self' blob:"
     />
     <style>
       * {
@@ -24,6 +24,20 @@
       #presentation-root {
         width: 100%;
         height: 100%;
+      }
+      /* Hide background video element when controller toggles "show video".
+         Defaults to a hard cut (display:none). When the controller sends
+         mode='fade' with a duration, body[data-hide-transition="fade"]
+         applies an opacity transition driven by --hide-bg-video-duration. */
+      body video {
+        transition: opacity var(--hide-bg-video-duration, 0ms) linear;
+      }
+      body.hide-bg-video[data-hide-transition='fade'] video {
+        opacity: 0;
+        pointer-events: none;
+      }
+      body.hide-bg-video:not([data-hide-transition='fade']) video {
+        display: none !important;
       }
     </style>
   </head>

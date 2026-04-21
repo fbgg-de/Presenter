@@ -53,7 +53,8 @@ export interface FrontendAPI {
   hideIdentifyWindows: () => Promise<void>;
 
   // ── Video commands ──
-  videoCommand: (command: { action: string; windowName?: string; value?: number }) => Promise<void>;
+  videoCommand: (command: { action: string; windowName?: string; value?: number; fadeDuration?: number }) => Promise<void>;
+  setVideoVisible: (payload?: { windowName?: string; value?: boolean; mode?: 'cut' | 'fade'; durationMs?: number }) => Promise<void>;
 
   // ── Media ──
   checkMediaFiles: (files: string[]) => Promise<MediaCheckResult>;
@@ -79,6 +80,7 @@ export interface FrontendAPI {
   onWsVideoAction: (callback: (data: unknown) => void) => (() => void) | void;
   onWsGetState: (callback: (data: unknown) => void) => (() => void) | void;
   sendWsStateResponse: (data: unknown) => void;
+  onPresentationWindowBoundsChanged: (callback: (data: { id: string; bounds: { x: number; y: number; width: number; height: number } }) => void) => (() => void) | void;
   removeAllWsListeners: () => void;
 }
 
@@ -90,6 +92,7 @@ export interface VideoStatus {
   volume?: number;
   currentTime?: number;
   duration?: number;
+  windowName?: string;
 }
 
 /** Presentation window preload API (separate preload script). */

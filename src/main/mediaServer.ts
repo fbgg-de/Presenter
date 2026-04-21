@@ -28,9 +28,22 @@ const MIME_TYPES: Record<string, string> = {
 
 // Extensions included in folder listings (no PDFs in media browser)
 const LISTABLE_EXTS = new Set([
-  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico',
-  '.mp4', '.webm', '.mov', '.avi', '.mkv',
-  '.mp3', '.wav', '.ogg',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.svg',
+  '.bmp',
+  '.ico',
+  '.mp4',
+  '.webm',
+  '.mov',
+  '.avi',
+  '.mkv',
+  '.mp3',
+  '.wav',
+  '.ogg',
 ]);
 
 export class LocalMediaServer {
@@ -43,26 +56,47 @@ export class LocalMediaServer {
   }
 
   /**
+   * Get the resolved media path currently served.
+   */
+  getMediaPath(): string {
+    return this.mediaPath;
+  }
+
+  /**
    * Start the media server. Returns the port it's listening on.
+   * If the preferred port is taken (EADDRINUSE), automatically tries up to 10
+   * consecutive fallback ports so a port conflict never silently prevents the
+   * server from starting.
    */
   start(preferredPort: number = 0): Promise<number> {
-    return new Promise((resolvePromise, reject) => {
-      this.server = createServer((req, res) => this.handleRequest(req, res));
+    const tryPort = (port: number, remaining: number): Promise<number> =>
+      new Promise((resolvePromise, reject) => {
+        const srv = createServer((req, res) => this.handleRequest(req, res));
 
-      this.server.on('error', (err) => {
-        console.error('[Media Server] Error:', err.message);
-        reject(err);
+        srv.once('error', (err: NodeJS.ErrnoException) => {
+          srv.close();
+          if (err.code === 'EADDRINUSE' && remaining > 0 && port > 0) {
+            // Port is taken — try the next one.
+            console.warn(`[Media Server] Port ${port} in use, trying ${port + 1}`);
+            tryPort(port + 1, remaining - 1).then(resolvePromise).catch(reject);
+          } else {
+            console.error('[Media Server] Error:', err.message);
+            reject(err);
+          }
+        });
+
+        srv.listen(port, '127.0.0.1', () => {
+          this.server = srv;
+          const address = srv.address();
+          if (address && typeof address !== 'string') {
+            this.port = address.port;
+            console.log(`[Media Server] Serving ${this.mediaPath} on http://127.0.0.1:${this.port}`);
+            resolvePromise(this.port);
+          }
+        });
       });
 
-      this.server.listen(preferredPort, '127.0.0.1', () => {
-        const address = this.server!.address();
-        if (address && typeof address !== 'string') {
-          this.port = address.port;
-          console.log(`[Media Server] Serving ${this.mediaPath} on http://127.0.0.1:${this.port}`);
-          resolvePromise(this.port);
-        }
-      });
-    });
+    return tryPort(preferredPort, 10);
   }
 
   /**
@@ -114,8 +148,8 @@ export class LocalMediaServer {
    * Handle an incoming HTTP request.
    */
   private handleRequest(req: IncomingMessage, res: ServerResponse): void {
-    // Only allow GET requests
-    if (req.method !== 'GET') {
+    const isHead = req.method === 'HEAD';
+    if (req.method !== 'GET' && !isHead) {
       res.writeHead(405);
       res.end('Method Not Allowed');
       return;
@@ -123,7 +157,7 @@ export class LocalMediaServer {
 
     // CORS headers for local use
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD');
 
     // Parse the URL and decode
     const url = new URL(req.url || '/', `http://localhost:${this.port}`);
@@ -131,15 +165,21 @@ export class LocalMediaServer {
 
     // ── /list — non-recursive directory listing with pagination ──
     if (requestedPath === '/list') {
+      // If no media path is configured (or it doesn't exist on disk), return
+      // 503 so the renderer can show a precise "configure media path" message
+      // instead of an empty list / spinner forever.
+      if (!this.mediaPath || !existsSync(this.mediaPath)) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'media_path_unset', mediaPath: this.mediaPath }));
+        return;
+      }
       try {
         const subPath = url.searchParams.get('path') || '';
         const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10) || 0);
         const limit = Math.max(1, Math.min(200, parseInt(url.searchParams.get('limit') || '50', 10) || 50));
 
         // Resolve and validate target directory
-        const targetDir = subPath
-          ? normalize(join(this.mediaPath, subPath))
-          : this.mediaPath;
+        const targetDir = subPath ? normalize(join(this.mediaPath, subPath)) : this.mediaPath;
 
         if (!targetDir.startsWith(this.mediaPath)) {
           res.writeHead(403);
@@ -183,22 +223,33 @@ export class LocalMediaServer {
 
     // Check if file exists
     if (!existsSync(fullPath)) {
-      res.writeHead(404);
-      res.end('Not Found');
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end(isHead ? '' : 'file_not_found');
       return;
     }
 
     // Get file stats
     const stat = statSync(fullPath);
     if (!stat.isFile()) {
-      res.writeHead(404);
-      res.end('Not Found');
+      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      res.end(isHead ? '' : 'not_a_file');
       return;
     }
 
     // Determine MIME type
     const ext = extname(fullPath).toLowerCase();
     const mimeType = MIME_TYPES[ext] || 'application/octet-stream';
+
+    // HEAD requests return headers only — used by renderer to probe existence.
+    if (isHead) {
+      res.writeHead(200, {
+        'Content-Length': stat.size,
+        'Content-Type': mimeType,
+        'Accept-Ranges': 'bytes',
+      });
+      res.end();
+      return;
+    }
 
     // Handle range requests for video streaming
     const range = req.headers.range;
@@ -246,7 +297,9 @@ export class LocalMediaServer {
           }
         }
       }
-    } catch { /* skip unreadable dirs */ }
+    } catch {
+      /* skip unreadable dirs */
+    }
     dirs.sort((a, b) => a.localeCompare(b));
     files.sort((a, b) => a.localeCompare(b));
     return { dirs, files };

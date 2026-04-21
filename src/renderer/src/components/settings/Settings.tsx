@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import {
   Accordion,
   AccordionDetails,
@@ -33,10 +33,10 @@ import { useAppSelector, useAppDispatch } from '@/store';
 import { updateSetting, type SettingsState } from '@/store/settingsSlice';
 import { toggleTheme } from '@/store/themeSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
-import { KeyboardMappingEditor } from '@/components/KeyboardMappingEditor';
-import { ColorSwatchButton } from '@/components/ColorPicker';
+import { KeyboardMappingEditor } from '@/components/settings/KeyboardMappingEditor';
+import { ColorSwatchButton } from '@/components/style/ColorPicker';
 import { exportSettings, importSettings, applyImportedSettings } from '@/utils/settingsExport';
-import { CompanionHelper } from '@/components/CompanionHelper';
+import { CompanionHelper } from '@/components/settings/CompanionHelper';
 
 type SettingConfig = {
   key: keyof SettingsState;
@@ -78,6 +78,9 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'windowFooterVisible', type: 'boolean', group: 'Presentation', label: 'Show window footer bar' },
   { key: 'transitionMode', type: 'select', values: ['cut', 'fade'], group: 'Presentation', label: 'Transition mode' },
   { key: 'transitionDuration', type: 'number', group: 'Presentation', label: 'Transition duration (ms)' },
+  { key: 'hideTransitionMode', type: 'select', values: ['cut', 'fade'], group: 'Presentation', label: 'Hide transition' },
+  { key: 'hideTransitionDuration', type: 'number', group: 'Presentation', label: 'Hide transition duration (ms)' },
+  { key: 'videoFadeDuration', type: 'number', group: 'Presentation', label: 'Video play/stop fade duration (ms)' },
   // Electron
   { key: 'mediaPath', type: 'string', group: 'Electron', label: 'Media directory path' },
   { key: 'wsPort', type: 'number', group: 'Electron', label: 'WebSocket port' },
@@ -349,6 +352,12 @@ const SettingRow = ({
         return LL.SETTINGS.OPTIONS.TRANSITION_MODE.TITLE();
       case 'transitionDuration':
         return LL.SETTINGS.OPTIONS.TRANSITION_DURATION.TITLE();
+      case 'hideTransitionMode':
+        return LL.SETTINGS.OPTIONS.HIDE_TRANSITION_MODE.TITLE();
+      case 'hideTransitionDuration':
+        return LL.SETTINGS.OPTIONS.HIDE_TRANSITION_DURATION.TITLE();
+      case 'videoFadeDuration':
+        return LL.SETTINGS.OPTIONS.VIDEO_FADE_DURATION.TITLE();
       case 'mediaPath':
         return LL.SETTINGS.OPTIONS.MEDIA_PATH.TITLE();
       case 'wsPort':

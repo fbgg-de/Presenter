@@ -42,6 +42,7 @@ const presentationApi = {
     volume?: number;
     currentTime?: number;
     duration?: number;
+    windowName?: string;
   }) => {
     ipcRenderer.send('video-status', status);
   },

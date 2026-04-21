@@ -141,13 +141,6 @@ export const ColorSwatchButton = ({ value, onChange, onClear, ariaLabel, size = 
           '&:hover': { borderColor: 'primary.main' },
         }}
       />
-      <TextField
-        size="small"
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="#000000"
-        sx={{ width: 110, '& input': { fontFamily: 'monospace', fontSize: '0.85rem' } }}
-      />
       {onClear && (
         <IconButton size="small" onClick={onClear} title="Clear">
           ×

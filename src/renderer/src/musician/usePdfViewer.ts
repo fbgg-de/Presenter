@@ -1,8 +1,8 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+﻿import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useGetPdfAreaMappingsQuery, useListPdfsQuery, useResolvePdfQuery, useSavePdfAreaMappingsMutation } from '@/api/pdfs.api';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import type { ShowItem } from '@/api/shows.api';
-import type { PdfAreaMapping } from '@/components/PdfAreaMappingEditor';
+import type { PdfAreaMapping } from '@/components/pdf/PdfAreaMappingEditor';
 
 export type PageViewMode = 'two-page' | 'one-page';
 export type SyncMode = 'off' | 'operator' | 'midi' | 'midi-ws';

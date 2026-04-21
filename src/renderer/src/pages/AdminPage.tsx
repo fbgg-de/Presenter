@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -60,8 +60,8 @@ import {
   type UpdateProviderRequest,
 } from '@/api/admin.api';
 import { useLogoutMutation, useGetSessionQuery } from '@/api/session.api';
-import { AdminLogs } from '@/components/AdminLogs';
-import { MetricsDashboard } from '@/components/MetricsDashboard';
+import { AdminLogs } from '@/components/admin/AdminLogs';
+import { MetricsDashboard } from '@/components/admin/MetricsDashboard';
 
 export const AdminPage = () => {
   const { LL } = useI18nContext();

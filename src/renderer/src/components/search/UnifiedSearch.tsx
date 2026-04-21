@@ -24,9 +24,7 @@ import {
   Close as CloseIcon,
   MusicNote as MusicNoteIcon,
   Image as ImageIcon,
-  Palette as PaletteIcon,
   MenuBook as MenuBookIcon,
-  LibraryMusic as CcliIcon,
   SelectAll as AllIcon,
   FolderOpen as FolderOpenIcon,
 } from '@mui/icons-material';
@@ -36,7 +34,7 @@ import { useSearchSongsQuery, useGetSongsAllQuery } from '@/api/songs.api';
 import type { SearchResult } from '@/api/search.api';
 import { useDebounce } from '@/hooks/useDebounce';
 
-type SearchType = '' | 'song' | 'media' | 'style' | 'bible' | 'ccli';
+type SearchType = '' | 'song' | 'media' | 'bible';
 
 interface UnifiedSearchProps {
   open: boolean;
@@ -55,9 +53,7 @@ const TYPE_CHIPS: { type: SearchType; icon: typeof AllIcon; colorKey: string }[]
   { type: '', icon: AllIcon, colorKey: '#888' },
   { type: 'song', icon: MusicNoteIcon, colorKey: '#1976d2' },
   { type: 'media', icon: ImageIcon, colorKey: '#f9a825' },
-  { type: 'style', icon: PaletteIcon, colorKey: '#9c27b0' },
   { type: 'bible', icon: MenuBookIcon, colorKey: '#388e3c' },
-  { type: 'ccli', icon: CcliIcon, colorKey: '#e65100' },
 ];
 
 const getTypeLabel = (type: SearchType, LL: ReturnType<typeof useI18nContext>['LL']): string => {
@@ -68,12 +64,8 @@ const getTypeLabel = (type: SearchType, LL: ReturnType<typeof useI18nContext>['L
       return LL.UNIFIED_SEARCH.SONGS();
     case 'media':
       return LL.UNIFIED_SEARCH.MEDIA();
-    case 'style':
-      return LL.UNIFIED_SEARCH.STYLES();
     case 'bible':
       return LL.UNIFIED_SEARCH.BIBLE();
-    case 'ccli':
-      return LL.UNIFIED_SEARCH.CCLI();
     default:
       return type;
   }
@@ -85,8 +77,6 @@ const getResultIcon = (type: string) => {
       return <MusicNoteIcon fontSize="small" sx={{ color: '#1976d2' }} />;
     case 'media':
       return <ImageIcon fontSize="small" sx={{ color: '#f9a825' }} />;
-    case 'style':
-      return <PaletteIcon fontSize="small" sx={{ color: '#9c27b0' }} />;
     case 'bible':
       return <MenuBookIcon fontSize="small" sx={{ color: '#388e3c' }} />;
     default:

@@ -6,6 +6,8 @@ import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
 import type { PresentationContent, PresentationBlock, PresentationLine, ContentType } from '@/presentation/types';
 import { resolveStyleCascade, mergeStyles, resolveStyleData, DEFAULT_STYLE, type ResolvedStyle } from '@/utils/styleUtils';
 import { useGetStylesQuery } from '@/api/styles.api';
+import { resolveMediaUrl } from '@/utils/mediaUrl';
+import { updateSetting } from '@/store/settingsSlice';
 import {
   setActiveItemIndex,
   setActiveBlockIndex,
@@ -21,23 +23,6 @@ import {
   freezeWindow as freezeWindowAction,
   unfreezeWindow as unfreezeWindowAction,
 } from '@/store/presentationSlice';
-
-const MEDIA_SERVER_BASE = 'http://localhost:9100';
-
-/** Resolve a relative media path to an absolute URL using the local media server. */
-function resolveMediaUrl(path: string | undefined): string | undefined {
-  if (!path) return undefined;
-  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('file://') || path.startsWith('/')) {
-    return path;
-  }
-  // Windows absolute path (e.g. C:\...) — convert to file:// URL so the renderer can load it
-  if (/^[a-zA-Z]:[/\\]/.test(path)) {
-    return 'file:///' + path.replace(/\\/g, '/');
-  }
-  // Normalise backslashes then encode each segment
-  const normalised = path.replace(/\\/g, '/');
-  return `${MEDIA_SERVER_BASE}/${normalised.split('/').map(encodeURIComponent).join('/')}`;
-}
 
 /**
  * Parse song block lines to extract language tags.
@@ -67,6 +52,7 @@ export const usePresentationSync = (): void => {
   const activeBlockIndex = useAppSelector((state) => state.presentation.activeBlockIndex);
   const activeLineIndex = useAppSelector((state) => state.presentation.activeLineIndex);
   const isBlack = useAppSelector((state) => state.presentation.isBlack);
+  const isTextHidden = useAppSelector((state) => state.presentation.isTextHidden);
 
   const currentShow = useAppSelector((state) => state.show.currentShow);
 
@@ -83,9 +69,10 @@ export const usePresentationSync = (): void => {
   // A signature of per-window styleIds — when a user assigns a preset to a
   // window we must re-broadcast even though the global state is unchanged.
   const windowStylesSig = useMemo(
-    () => (windowConfigs as Array<{ name?: string; styleId?: number }> | undefined)
-      ?.map((c) => `${c.name ?? ''}:${c.styleId ?? ''}`)
-      .join('|') ?? '',
+    () =>
+      (windowConfigs as Array<{ name?: string; styleId?: number }> | undefined)
+        ?.map((c) => `${c.name ?? ''}:${c.styleId ?? ''}`)
+        .join('|') ?? '',
     [windowConfigs],
   );
 
@@ -94,12 +81,19 @@ export const usePresentationSync = (): void => {
 
   // Resolve the song's active order
   const currentSongNumber = activeItem?.type === 'song' ? activeItem.songNumber : undefined;
-  const currentSong = useAppSelector((state) => currentSongNumber != null ? state.songs.songs[currentSongNumber] : undefined);
+  const currentSong = useAppSelector((state) => (currentSongNumber != null ? state.songs.songs[currentSongNumber] : undefined));
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
   // Use a ref to avoid sending duplicate content — compare key fields only
   const lastKeyRef = useRef('');
-  const rafRef = useRef<number>(0);
+  // Throttle/coalesce broadcast scheduling — see broadcast effect below.
+  const broadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastBroadcastAtRef = useRef(0);
+  // Mirror the navigation indices so the deferred flush always sends the
+  // newest values (otherwise a fast-repeating key would re-schedule the
+  // timer with a stale closure). Updated synchronously below.
+  const navStateRef = useRef({ activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden });
+  navStateRef.current = { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden };
 
   // ── Memoize expensive computations ──
   // These only recompute when content changes (song/show/styles), NOT on every index change.
@@ -157,9 +151,9 @@ export const usePresentationSync = (): void => {
 
     // Resolve the three-level style cascade (Global → Show → Item)
     const styles = allStyles ?? [];
-    const globalStyle = globalStyleId ? styles.find((s) => s.id === globalStyleId) : undefined;
-    const showStyle = currentShow?.styleId ? styles.find((s) => s.id === currentShow.styleId) : undefined;
-    const itemStyle = activeItem?.styleId ? styles.find((s) => s.id === activeItem.styleId) : undefined;
+    const globalStyle = globalStyleId ? styles.find((s) => s.id === globalStyleId && s.enabled !== false) : undefined;
+    const showStyle = currentShow?.styleId ? styles.find((s) => s.id === currentShow.styleId && s.enabled !== false) : undefined;
+    const itemStyle = activeItem?.styleId ? styles.find((s) => s.id === activeItem.styleId && s.enabled !== false) : undefined;
     const resolvedCascade = resolveStyleCascade(globalStyle, showStyle, itemStyle, undefined, styles);
     const rawStyle: ResolvedStyle = mergeStyles(DEFAULT_STYLE, resolvedCascade);
 
@@ -211,77 +205,117 @@ export const usePresentationSync = (): void => {
 
   // A cheap content-identity hash (changes only when actual style values change).
   const styleHash = useMemo(() => {
-    try { return JSON.stringify(style); } catch { return ''; }
+    try {
+      return JSON.stringify(style);
+    } catch {
+      return '';
+    }
   }, [style]);
 
   useEffect(() => {
     const b = broadcastRef.current;
     if (!b.currentShow) return;
 
-    // Compute next-block preview lines
-    let nextBlockPreviewLines: PresentationLine[] | undefined;
-    if (b.nextLinePreview && b.blocks.length > 0 && b.contentType === 'song') {
-      const nextBlockIndex = activeBlockIndex + 1;
-      if (nextBlockIndex < b.blocks.length) {
-        const nb = b.blocks[nextBlockIndex];
-        if (nb && nb.lines.length > 0) {
-          nextBlockPreviewLines = [nb.lines[0]];
+    // Throttled flush: when keys auto-repeat we get a Redux dispatch (and
+    // thus this effect) per keypress. Previously we cancelled-and-rescheduled
+    // a rAF on every keypress which meant the broadcast (and the
+    // wsBroadcast → musician_sync) only fired once the user RELEASED the key.
+    // Now we always send immediately if the throttle window has elapsed, and
+    // otherwise schedule a single trailing flush — guaranteeing the latest
+    // navigation state is delivered while still coalescing bursts.
+    const MIN_INTERVAL_MS = 16; // ~60fps; identical broadcasts are deduped per-window
+
+    const flush = () => {
+      broadcastTimerRef.current = null;
+      lastBroadcastAtRef.current = Date.now();
+
+      // Read the LATEST navigation state from refs — not the closure values,
+      // which may be stale by the time the trailing flush runs.
+      const nav = navStateRef.current;
+      const cb = broadcastRef.current;
+
+      // Compute next-block preview lines — style.nextLinePreview overrides global setting
+      const showNextLinePreview = cb.style.nextLinePreview !== undefined ? cb.style.nextLinePreview : cb.nextLinePreview;
+      let nextBlockPreviewLines: PresentationLine[] | undefined;
+      if (showNextLinePreview && cb.blocks.length > 0 && cb.contentType === 'song') {
+        const nextBlockIndex = nav.activeBlockIndex + 1;
+        if (nextBlockIndex < cb.blocks.length) {
+          const nb = cb.blocks[nextBlockIndex];
+          if (nb && nb.lines.length > 0) {
+            // Send only the first semantic group: first primary line + any immediately
+            // following translation lines (lines with a language tag).
+            const group: PresentationLine[] = [];
+            for (const line of nb.lines) {
+              if (!line.language && group.length > 0) break; // stop at second primary line
+              group.push(line);
+            }
+            nextBlockPreviewLines = group;
+          }
         }
       }
-    }
 
-    const content: PresentationContent = {
-      contentType: b.contentType,
-      displayMode: 'normal',
-      activeBlockIndex,
-      activeLineIndex,
-      blocks: b.blocks,
-      style: b.style,
-      isBlack,
-      title: b.title,
-      copyright: b.copyright,
-      authors: b.authors,
-      showCopyright: b.contentType === 'song' && !!b.copyright && activeBlockIndex >= b.blocks.length,
-      mediaSubType: b.activeItem?.mediaSubType,
-      mediaPath: resolveMediaUrl(b.activeItem?.mediaPath),
-      mediaColor: b.activeItem?.mediaColor,
-      bibleRef: b.activeItem?.bibleRef,
-      bibleTranslation: b.activeItem?.bibleTranslation,
-      nextBlockPreviewLines,
-      nextLinePreviewColor: b.nextLinePreviewColor,
-      transitionMode: b.transitionMode,
-      transitionDuration: b.transitionDuration,
-    };
+      const content: PresentationContent = {
+        contentType: cb.contentType,
+        displayMode: 'normal',
+        activeBlockIndex: nav.activeBlockIndex,
+        activeLineIndex: nav.activeLineIndex,
+        blocks: cb.blocks,
+        style: cb.style,
+        isBlack: nav.isBlack,
+        hideText: nav.isTextHidden,
+        title: cb.title,
+        songNumber: cb.currentSongNumber,
+        copyright: cb.copyright,
+        authors: cb.authors,
+        showCopyright: cb.contentType === 'song' && !!cb.copyright && nav.activeBlockIndex >= cb.blocks.length,
+        mediaSubType: cb.activeItem?.mediaSubType,
+        mediaPath: resolveMediaUrl(cb.activeItem?.mediaPath),
+        mediaColor: cb.activeItem?.mediaColor,
+        bibleRef: cb.activeItem?.bibleRef,
+        bibleTranslation: cb.activeItem?.bibleTranslation,
+        nextBlockPreviewLines,
+        nextLinePreviewColor: cb.nextLinePreviewColor,
+        transitionMode: cb.transitionMode,
+        transitionDuration: cb.transitionDuration,
+      };
 
-    // Deduplicate broadcasts using a lightweight key (includes styleHash so style
-    // edits actually re-broadcast and apply immediately).
-    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${b.blocks.length}|${b.nextLinePreview}|${b.nextLinePreviewColor}|${b.activeItem?.mediaPath}|${b.activeItem?.mediaColor}|${styleHash}|${windowStylesSig}`;
-    if (contentKey === lastKeyRef.current) return;
-    lastKeyRef.current = contentKey;
-
-    // Use requestAnimationFrame to batch rapid navigation into a single broadcast
-    cancelAnimationFrame(rafRef.current);
-    rafRef.current = requestAnimationFrame(() => {
       broadcastContent(content);
 
       // Broadcast musician_sync via WebSocket (Electron only) for musician views
       if (window.api?.wsBroadcast) {
         window.api.wsBroadcast('musician_sync', {
-          activeItemIndex,
-          activeBlockIndex,
-          activeLineIndex,
-          songNumber: b.currentSongNumber,
-          songTitle: b.title,
-          orderName: b.orderName,
-          contentType: b.contentType,
+          activeItemIndex: nav.activeItemIndex,
+          activeBlockIndex: nav.activeBlockIndex,
+          activeLineIndex: nav.activeLineIndex,
+          songNumber: cb.currentSongNumber,
+          songTitle: cb.title,
+          orderName: cb.orderName,
+          contentType: cb.contentType,
         });
       }
-    });
+    };
+
+    // Deduplicate scheduling using a lightweight key (includes styleHash so style
+    // edits actually re-broadcast and apply immediately).
+    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${b.blocks.length}|${b.nextLinePreview}|${b.nextLinePreviewColor}|${b.activeItem?.mediaPath}|${b.activeItem?.mediaColor}|${styleHash}|${windowStylesSig}`;
+    if (contentKey === lastKeyRef.current) return;
+    lastKeyRef.current = contentKey;
+
+    const elapsed = Date.now() - lastBroadcastAtRef.current;
+    if (elapsed >= MIN_INTERVAL_MS && broadcastTimerRef.current === null) {
+      // Leading edge — fire immediately for snappy feedback.
+      flush();
+    } else if (broadcastTimerRef.current === null) {
+      // Schedule a trailing flush; do NOT cancel an existing one (it will pick
+      // up the latest state from refs when it fires).
+      broadcastTimerRef.current = setTimeout(flush, Math.max(0, MIN_INTERVAL_MS - elapsed));
+    }
   }, [
     activeItemIndex,
     activeBlockIndex,
     activeLineIndex,
     isBlack,
+    isTextHidden,
     styleHash,
     // The following primitives change rarely but should still trigger a re-broadcast:
     contentType,
@@ -301,34 +335,50 @@ export const usePresentationSync = (): void => {
     setWindowStyleResolver((_id, config: WindowConfig) => {
       if (!allStyles) return undefined;
       let merged: ResolvedStyle | undefined;
+      const wname = config.name;
 
-      // Window-level preset
-      if (config.styleId) {
-        const s = allStyles.find((x) => x.id === config.styleId);
-        if (s) {
-          const resolved = resolveStyleData(s.data);
-          merged = mergeStyles(merged ?? {}, {
-            ...resolved,
-            backgroundImage: resolveMediaUrl(resolved.backgroundImage),
-            backgroundVideo: resolveMediaUrl(resolved.backgroundVideo),
-          });
-        }
-      }
+      // Helper: resolve a style id and merge it into `merged` (creating it if undefined).
+      const applyStyleId = (sid: number | undefined | null) => {
+        if (!sid) return;
+        const s = allStyles.find((x) => x.id === sid);
+        if (!s || !s.enabled) return;
+        const resolved = resolveStyleData(s.data);
+        merged = mergeStyles(merged ?? {}, {
+          ...resolved,
+          backgroundImage: resolveMediaUrl(resolved.backgroundImage),
+          backgroundVideo: resolveMediaUrl(resolved.backgroundVideo),
+        });
+      };
+
+      // Helper: if the given style has a per-window-name override matching `wname`,
+      // resolve and merge that override style. This implements the "window override"
+      // layer of the cascade for the General / Show / Item levels.
+      const applyWindowOverride = (style: { windowOverrides?: { window_name: string; override_style_id: number }[] } | undefined) => {
+        if (!style?.windowOverrides || !wname) return;
+        const wo = style.windowOverrides.find((w) => w.window_name === wname);
+        if (wo) applyStyleId(wo.override_style_id);
+      };
+
+      // Re-walk the General → Show → Item cascade, applying each level's per-window override.
+      const item = activeItemRef.current;
+      const globalStyleEntity = globalStyleId ? allStyles.find((x) => x.id === globalStyleId) : undefined;
+      const showStyleEntity = currentShow?.styleId ? allStyles.find((x) => x.id === currentShow.styleId) : undefined;
+      const itemStyleEntity = item?.styleId ? allStyles.find((x) => x.id === item.styleId) : undefined;
+      applyWindowOverride(globalStyleEntity);
+      applyWindowOverride(showStyleEntity);
+      applyWindowOverride(itemStyleEntity);
+
+      // Window-level preset (configured on the BrowserWindow itself)
+      applyStyleId(config.styleId);
 
       // Per-item per-window override (highest priority)
-      const item = activeItemRef.current;
-      const wname = config.name;
       if (item?.itemStyleByWindow && wname && item.itemStyleByWindow[wname] != null) {
-        const sid = item.itemStyleByWindow[wname];
-        if (sid) {
-          const s = allStyles.find((x) => x.id === sid);
-          if (s) merged = mergeStyles(merged ?? {}, resolveStyleData(s.data));
-        }
+        applyStyleId(item.itemStyleByWindow[wname]);
       }
       return merged;
     });
     return () => setWindowStyleResolver(undefined);
-  }, [allStyles]);
+  }, [allStyles, globalStyleId, currentShow?.styleId]);
 
   // ── WebSocket navigation action listener (Electron only, §22.2) ──
   const currentShowRef = useRef(currentShow);
@@ -423,4 +473,24 @@ export const usePresentationSync = (): void => {
     const cleanup = window.api.onWsGetState(handleGetState);
     return cleanup;
   }, []);
+
+  // ── Presentation window bounds change listener (Electron only) ──
+  // Updates windowConfigs in Redux/localStorage when user moves/resizes a presentation window.
+  const savedWindowConfigs = useAppSelector((state) => state.settings.windowConfigs);
+  const savedWindowConfigsRef = useRef(savedWindowConfigs);
+  savedWindowConfigsRef.current = savedWindowConfigs;
+
+  useEffect(() => {
+    if (!window.api?.onPresentationWindowBoundsChanged) return;
+
+    const cleanup = window.api.onPresentationWindowBoundsChanged(({ id, bounds }) => {
+      const configs = [...(savedWindowConfigsRef.current as Array<{ _runtimeId?: string; positionX?: number; positionY?: number; width?: number; height?: number }>)];
+      const idx = configs.findIndex((c) => c._runtimeId === id);
+      if (idx >= 0) {
+        configs[idx] = { ...configs[idx], positionX: bounds.x, positionY: bounds.y, width: bounds.width, height: bounds.height };
+        dispatch(updateSetting({ key: 'windowConfigs', value: configs }));
+      }
+    });
+    return cleanup || undefined;
+  }, [dispatch]);
 };

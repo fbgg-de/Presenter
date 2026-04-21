@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Alert,
   Box,
@@ -36,9 +36,10 @@ import {
   Home as HomeIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { ColorPicker } from '@/components/ColorPicker';
+import { ColorPicker } from '@/components/style/ColorPicker';
 import { useAppSelector } from '@/store';
 import type { MediaSubType } from '@/api/shows.api';
+import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
@@ -54,7 +55,7 @@ interface MediaFile {
 const isElectron = (): boolean => typeof window !== 'undefined' && !!window.api;
 
 const getMediaBaseUrl = (mediaPath: string): string | null => {
-  if (isElectron()) return `http://localhost:9100`;
+  if (isElectron()) return MEDIA_SERVER_BASE;
   if (mediaPath) return mediaPath.replace(/\/+$/, '');
   return null;
 };
@@ -126,6 +127,7 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
       replace ? setLoading(true) : setLoadingMore(true);
       if (replace) setError(null);
 
+      let didAbort = false;
       try {
         const subPath = path.join('/');
         const params = new URLSearchParams({
@@ -134,7 +136,35 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
           limit: String(PAGE_SIZE),
         });
 
-        const response = await fetch(`${mediaBaseUrl}/list?${params}`, { signal });
+        // Retry once with a short backoff on network errors — covers the
+        // narrow window between server-start completion and the socket
+        // actually accepting connections.
+        const url = `${mediaBaseUrl}/list?${params}`;
+        let response: Response | null = null;
+        let lastErr: unknown;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            response = await fetch(url, { signal });
+            break;
+          } catch (err) {
+            lastErr = err;
+            if (signal?.aborted) throw err;
+            await new Promise((r) => setTimeout(r, 150 * (attempt + 1)));
+          }
+        }
+        if (!response) throw lastErr ?? new Error('Network error');
+
+        // 503 → media path not configured / not present on disk.
+        if (response.status === 503) {
+          if (replace) {
+            setError(LL.MEDIA.CONFIGURE_PATH());
+            setDirs([]);
+            setFiles([]);
+            setHasMore(false);
+            setTotalFiles(0);
+          }
+          return;
+        }
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data: { dirs: string[]; files: string[]; totalFiles: number } = await response.json();
@@ -171,16 +201,21 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
         setOffset(newOffset);
         setHasMore(newOffset < data.totalFiles);
       } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') return;
+        if (err instanceof Error && err.name === 'AbortError') {
+          didAbort = true;
+          return;
+        }
         if (replace) setError(err instanceof Error ? err.message : 'Failed to load files');
       } finally {
         loadingMoreRef.current = false;
-        if (!signal?.aborted) {
+        // Always clear loading state — previously we skipped this on abort
+        // which left the spinner up forever after a quick tab/folder switch.
+        if (!didAbort) {
           replace ? setLoading(false) : setLoadingMore(false);
         }
       }
     },
-    [mediaBaseUrl],
+    [mediaBaseUrl, mediaPath, LL],
   );
 
   // Reset state when dialog opens; set initial tab based on pickType
@@ -461,7 +496,9 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
                           muted
                           playsInline
                           preload="metadata"
-                          onLoadedMetadata={(e) => { (e.target as HTMLVideoElement).currentTime = 0.5; }}
+                          onLoadedMetadata={(e) => {
+                            (e.target as HTMLVideoElement).currentTime = 0.5;
+                          }}
                           style={{ width: '100%', height: 100, objectFit: 'cover', display: 'block' }}
                         />
                       )}

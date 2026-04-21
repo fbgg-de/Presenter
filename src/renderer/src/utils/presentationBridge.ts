@@ -31,6 +31,19 @@ interface PresentationWindowEntry {
   window: Window | null; // null when using Electron IPC
   closed: boolean;
   isElectron: boolean;
+  /**
+   * JSON snapshot of the LAST payload sent to this window. Used to short-circuit
+   * the structured-clone cost of `ipcRenderer.send` when the active block/line
+   * change hasn't actually altered what this particular window would render —
+   * e.g. when a stream window only shows the current line so a *block* change
+   * with the same first line produces an identical payload.
+   *
+   * This is the single biggest perf fix for the "controller lags during fast
+   * key auto-repeat" issue in Electron — without it every key produces a fresh
+   * structured-clone of the entire content for EVERY presentation window on
+   * the controller's renderer thread, blocking paint.
+   */
+  lastSentSerialized?: string;
 }
 
 /** Registry of open presentation windows */
@@ -39,6 +52,38 @@ let windowCounter = 0;
 
 /** Last broadcast content — sent to newly opened windows for initial display */
 let lastBroadcastContent: PresentationContent | null = null;
+
+/**
+ * Module-level guard: the "restore saved windows on mount" logic in Footer
+ * must run at most once per renderer process lifetime. A component-level ref
+ * resets on every remount (HMR, route change, parent unmount) which previously
+ * caused duplicate presentation BrowserWindows to be opened on top of the ones
+ * that were already alive in the main process.
+ */
+let _hasRestoredSavedWindows = false;
+export function getHasRestoredSavedWindows(): boolean {
+  return _hasRestoredSavedWindows;
+}
+export function markRestoredSavedWindows(): void {
+  _hasRestoredSavedWindows = true;
+}
+
+/**
+ * Adopt an already-live Electron presentation window into the bridge registry
+ * WITHOUT creating a new BrowserWindow.  Used during the restore-on-mount pass
+ * so that BrowserWindows that survived a renderer reload are reused instead of
+ * spawning duplicates.
+ */
+export function adoptElectronWindow(id: string, config: WindowConfig): void {
+  if (openWindows.has(id)) return; // already tracked
+  openWindows.set(id, {
+    id,
+    config,
+    window: null,
+    closed: false,
+    isElectron: true,
+  });
+}
 
 /**
  * Optional resolver supplied by usePresentationSync that, given a window id and
@@ -219,10 +264,20 @@ export async function sendContent(id: string, content: PresentationContent): Pro
   if (entry.isElectron) {
     // Apply per-window config overrides
     const windowContent = applyWindowOverrides(content, entry.config, id);
+    // Renderer-side dedupe — skip the IPC roundtrip + structured clone if
+    // the payload is byte-identical to the last one we sent to this window.
+    let serialized = '';
+    try { serialized = JSON.stringify(windowContent); } catch { /* fall through */ }
+    if (serialized && serialized === entry.lastSentSerialized) return;
+    entry.lastSentSerialized = serialized || undefined;
     window.api.updatePresentationContent(id, windowContent as never);
   } else if (entry.window && !entry.window.closed) {
     // Apply per-window config overrides
     const windowContent = applyWindowOverrides(content, entry.config, id);
+    let serialized = '';
+    try { serialized = JSON.stringify(windowContent); } catch { /* fall through */ }
+    if (serialized && serialized === entry.lastSentSerialized) return;
+    entry.lastSentSerialized = serialized || undefined;
 
     entry.window.postMessage(
       {
@@ -236,13 +291,33 @@ export async function sendContent(id: string, content: PresentationContent): Pro
 
 /**
  * Broadcast content to ALL open presentation windows.
+ * Sends to every window in parallel — `sendContent` is fire-and-forget for IPC,
+ * so awaiting in a loop adds no value but adds tail latency.
  */
 export async function broadcastContent(content: PresentationContent): Promise<void> {
   lastBroadcastContent = content;
   // Always send per-window so each window gets its own resolved style override.
   for (const [id] of openWindows) {
-    await sendContent(id, content);
+    // Intentionally NOT awaited — IPC `send` is one-way and `postMessage` is sync.
+    void sendContent(id, content);
   }
+}
+
+/**
+ * Update an open window's stored config in the bridge registry.
+ * MUST be called whenever per-window settings (especially `styleId`) change in
+ * Redux/localStorage so the windowStyleResolver picks up the new value on the
+ * next broadcast — otherwise the bridge keeps using the config snapshot taken
+ * when the window was first opened, and style assignments appear to do nothing
+ * until the window is closed and reopened.
+ */
+export function updateWindowConfigInBridge(id: string, partial: Partial<WindowConfig>): void {
+  const entry = openWindows.get(id);
+  if (!entry) return;
+  entry.config = { ...entry.config, ...partial };
+  // Invalidate the per-window dedupe cache so the next broadcast actually
+  // picks up the new config (e.g. styleId, displayMode, languages).
+  entry.lastSentSerialized = undefined;
 }
 
 /**
@@ -432,14 +507,23 @@ function applyWindowOverrides(content: PresentationContent, config: WindowConfig
   if (id && windowStyleResolver) {
     const windowStyle = windowStyleResolver(id, config);
     if (windowStyle && typeof windowStyle === 'object') {
-      // Filter out null and undefined values — they must NOT override the base cascade.
-      // Null in the window-style means "disabled in that style preset"; it should not clear
-      // a property that was already resolved by the global→show→item cascade.
       const cleanStyle = Object.fromEntries(
         Object.entries(windowStyle as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined),
       );
       merged.style = { ...(merged.style || {}), ...cleanStyle } as typeof merged.style;
     }
   }
+
+  // Derive language filter from the resolved style when no explicit window-config override is set.
+  // Style-derived language order takes effect only when no window-level languages are configured.
+  if (!config.languages) {
+    const style = merged.style as { showAllLanguages?: boolean; languageOrder?: string[] } | undefined;
+    if (style?.showAllLanguages) {
+      merged.languages = undefined; // show all
+    } else if (style?.languageOrder && style.languageOrder.length > 0) {
+      merged.languages = style.languageOrder;
+    }
+  }
+
   return merged;
 }

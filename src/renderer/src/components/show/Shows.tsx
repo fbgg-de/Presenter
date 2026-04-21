@@ -174,6 +174,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
       await saveShowMutation({
         title: renameTitle.trim(),
         order: showToRename.order,
+        styleId: showToRename.styleId ?? null,
       }).unwrap();
 
       setShowToRename(null);
@@ -305,10 +306,11 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     <Typography variant="body1">{show.title}</Typography>
                                     {isCurrentShow && (
-                                      <Chip label={(LL as any).CURRENT()} size="small" color="success" icon={<CheckCircleIcon />} />
+                                      <Chip label={LL.SHOWS.CURRENT()} size="small" color="success" icon={<CheckCircleIcon />} />
                                     )}
                                   </Stack>
                                 }
+                                secondaryTypographyProps={{ component: 'div' } as object}
                                 secondary={
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     <Typography variant="caption">

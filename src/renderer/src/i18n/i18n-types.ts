@@ -774,6 +774,10 @@ type RootTranslation = {
 		 * D​e​l​e​t​e​ ​s​h​o​w
 		 */
 		DELETE: string
+		/**
+		 * C​u​r​r​e​n​t
+		 */
+		CURRENT: string
 	}
 	SHOW_ITEMS: {
 		/**
@@ -922,6 +926,10 @@ type RootTranslation = {
 		 * V​i​d​e​o​ ​p​l​a​y​b​a​c​k
 		 */
 		VIDEO_PLACEHOLDER: string
+		/**
+		 * C​o​n​t​r​o​l
+		 */
+		TITLE: string
 	}
 	STYLE: {
 		/**
@@ -1050,21 +1058,45 @@ type RootTranslation = {
 		 */
 		BACKGROUND_COLOR: string
 		/**
-		 * I​m​a​g​e​ ​U​R​L
+		 * I​m​a​g​e
 		 */
 		BACKGROUND_IMAGE: string
 		/**
-		 * V​i​d​e​o​ ​U​R​L
+		 * V​i​d​e​o
 		 */
 		BACKGROUND_VIDEO: string
 		/**
-		 * B​a​c​k​g​r​o​u​n​d​ ​F​i​t
+		 * F​i​t
 		 */
 		BG_FIT: string
 		/**
 		 * P​o​s​i​t​i​o​n
 		 */
 		BG_POSITION: string
+		/**
+		 * Z​o​o​m
+		 */
+		BG_ZOOM: string
+		/**
+		 * B​l​u​r
+		 */
+		BG_BLUR: string
+		/**
+		 * H​i​d​e​ ​i​m​a​g​e​ ​l​a​y​e​r
+		 */
+		PREVIEW_HIDE_IMAGE: string
+		/**
+		 * S​h​o​w​ ​i​m​a​g​e​ ​l​a​y​e​r
+		 */
+		PREVIEW_SHOW_IMAGE: string
+		/**
+		 * H​i​d​e​ ​v​i​d​e​o​ ​l​a​y​e​r
+		 */
+		PREVIEW_HIDE_VIDEO: string
+		/**
+		 * S​h​o​w​ ​v​i​d​e​o​ ​l​a​y​e​r
+		 */
+		PREVIEW_SHOW_VIDEO: string
 		/**
 		 * V​e​r​t​i​c​a​l​ ​A​l​i​g​n
 		 */
@@ -1086,7 +1118,7 @@ type RootTranslation = {
 		 */
 		FONT_SIZE: string
 		/**
-		 * B​o​l​d​ ​/​ ​I​t​a​l​i​c
+		 * T​e​x​t​ ​S​t​y​l​e
 		 */
 		FONT_BOLD_ITALIC: string
 		/**
@@ -1122,6 +1154,18 @@ type RootTranslation = {
 		 */
 		TEXT_SHADOW: string
 		/**
+		 * X​ ​O​f​f​s​e​t
+		 */
+		SHADOW_X: string
+		/**
+		 * Y​ ​O​f​f​s​e​t
+		 */
+		SHADOW_Y: string
+		/**
+		 * B​l​u​r
+		 */
+		SHADOW_BLUR: string
+		/**
 		 * S​h​a​d​o​w​ ​C​o​l​o​r
 		 */
 		SHADOW_COLOR: string
@@ -1129,6 +1173,14 @@ type RootTranslation = {
 		 * T​e​x​t​ ​S​t​r​o​k​e
 		 */
 		TEXT_STROKE: string
+		/**
+		 * W​i​d​t​h
+		 */
+		STROKE_WIDTH: string
+		/**
+		 * C​o​l​o​r
+		 */
+		STROKE_COLOR: string
 		/**
 		 * E​f​f​e​c​t​s
 		 */
@@ -1158,6 +1210,138 @@ type RootTranslation = {
 		 */
 		NEXT_LINE_COLOR: string
 		/**
+		 * O​p​a​c​i​t​y
+		 */
+		NEXT_LINE_OPACITY: string
+		/**
+		 * S​h​o​w​ ​o​t​h​e​r​ ​l​a​n​g​u​a​g​e​s
+		 */
+		SHOW_OTHER_LANGUAGES: string
+		/**
+		 * C​o​p​y​r​i​g​h​t
+		 */
+		SECTION_COPYRIGHT: string
+		/**
+		 * F​o​n​t
+		 */
+		COPYRIGHT_FONT: string
+		/**
+		 * A​l​i​g​n​m​e​n​t
+		 */
+		COPYRIGHT_ALIGNMENT: string
+		/**
+		 * P​a​d​d​i​n​g
+		 */
+		COPYRIGHT_PADDING: string
+		/**
+		 * C​o​l​o​r
+		 */
+		COPYRIGHT_COLOR: string
+		/**
+		 * S​i​z​e
+		 */
+		COPYRIGHT_SIZE: string
+		/**
+		 * T​e​x​t​ ​S​t​y​l​e
+		 */
+		COPYRIGHT_BOLD_ITALIC: string
+		/**
+		 * U​n​d​e​r​l​i​n​e
+		 */
+		COPYRIGHT_UNDERLINE: string
+		/**
+		 * O​p​a​c​i​t​y
+		 */
+		COPYRIGHT_OPACITY: string
+		/**
+		 * T​i​t​l​e​ ​F​o​n​t​ ​S​i​z​e
+		 */
+		COPYRIGHT_TITLE_SIZE: string
+		/**
+		 * T​i​t​l​e​ ​T​e​x​t​ ​S​t​y​l​e
+		 */
+		COPYRIGHT_TITLE_BOLD_ITALIC: string
+		/**
+		 * T​i​t​l​e​ ​S​p​a​c​i​n​g
+		 */
+		COPYRIGHT_TITLE_SPACING: string
+		/**
+		 * S​h​o​w​ ​S​o​n​g​ ​N​u​m​b​e​r​ ​i​n​ ​T​i​t​l​e
+		 */
+		COPYRIGHT_SHOW_SONG_NUMBER: string
+		/**
+		 * T​r​a​n​s​p​a​r​e​n​t
+		 */
+		BACKGROUND_TRANSPARENT: string
+		/**
+		 * N​o​ ​I​m​a​g​e​ ​(​s​u​p​p​r​e​s​s​ ​i​n​h​e​r​i​t​e​d​)
+		 */
+		BACKGROUND_IMAGE_NONE: string
+		/**
+		 * N​o​ ​V​i​d​e​o​ ​(​s​u​p​p​r​e​s​s​ ​i​n​h​e​r​i​t​e​d​)
+		 */
+		BACKGROUND_VIDEO_NONE: string
+		/**
+		 * E​a​s​e​ ​I​n
+		 */
+		VIDEO_EASE_IN: string
+		/**
+		 * E​a​s​e​ ​O​u​t
+		 */
+		VIDEO_EASE_OUT: string
+		/**
+		 * D​u​r​a​t​i​o​n​ ​(​s​)
+		 */
+		VIDEO_EASE_DURATION: string
+		/**
+		 * L​a​n​g​u​a​g​e​s
+		 */
+		TRANSLATION: string
+		/**
+		 * L​a​n​g​u​a​g​e​s
+		 */
+		TRANSLATION_SHOW_LANGUAGES: string
+		/**
+		 * P​r​i​m​a​r​y​ ​L​a​n​g​u​a​g​e
+		 */
+		TRANSLATION_PRIMARY: string
+		/**
+		 * T​r​a​n​s​l​a​t​i​o​n​ ​C​o​l​o​r
+		 */
+		TRANSLATION_COLOR: string
+		/**
+		 * D​e​f​a​u​l​t
+		 */
+		LANG_DEFAULT: string
+		/**
+		 * A​d​d​ ​L​a​n​g​u​a​g​e
+		 */
+		LANG_ADD: string
+		/**
+		 * R​e​m​o​v​e
+		 */
+		LANG_REMOVE: string
+		/**
+		 * L​a​n​g​u​a​g​e​ ​T​a​g
+		 */
+		LANG_TAG: string
+		/**
+		 * M​o​v​e​ ​u​p
+		 */
+		LANG_MOVE_UP: string
+		/**
+		 * M​o​v​e​ ​d​o​w​n
+		 */
+		LANG_MOVE_DOWN: string
+		/**
+		 * S​h​o​w​ ​a​l​l​ ​l​a​n​g​u​a​g​e​s
+		 */
+		SHOW_ALL_LANGUAGES: string
+		/**
+		 * S​h​o​w​ ​o​t​h​e​r​ ​l​a​n​g​u​a​g​e​s​ ​(​n​o​t​ ​l​i​s​t​e​d​ ​a​b​o​v​e​)
+		 */
+		SHOW_OTHER_LANGUAGES_HINT: string
+		/**
 		 * S​e​l​e​c​t​ ​a​ ​s​t​y​l​e
 		 */
 		SELECT: string
@@ -1169,6 +1353,10 @@ type RootTranslation = {
 		 * B​a​c​k​g​r​o​u​n​d
 		 */
 		SECTION_BACKGROUND: string
+		/**
+		 * P​a​r​a​g​r​a​p​h
+		 */
+		SECTION_PARAGRAPH: string
 		/**
 		 * T​y​p​o​g​r​a​p​h​y
 		 */
@@ -1257,6 +1445,14 @@ type RootTranslation = {
 		 * A​p​p​l​y​ ​a​d​d​i​t​i​o​n​a​l​ ​s​t​y​l​e​ ​o​v​e​r​r​i​d​e​s​ ​f​o​r​ ​w​i​n​d​o​w​s​ ​m​a​t​c​h​i​n​g​ ​t​h​e​ ​g​i​v​e​n​ ​n​a​m​e​.
 		 */
 		WINDOW_OVERRIDE_HINT: string
+		/**
+		 * S​h​o​w​ ​m​o​r​e
+		 */
+		GALLERY_EXPAND: string
+		/**
+		 * S​h​o​w​ ​l​e​s​s
+		 */
+		GALLERY_COLLAPSE: string
 	}
 	FONT: {
 		/**
@@ -1452,6 +1648,14 @@ type RootTranslation = {
 		 * W​i​n​d​o​w​ ​M​a​n​a​g​e​r
 		 */
 		WINDOW_MANAGER: string
+		/**
+		 * S​w​i​t​c​h​ ​t​o​ ​O​f​f​l​i​n​e​ ​M​o​d​e​ ​(​n​o​ ​b​a​c​k​e​n​d​ ​c​a​l​l​s​)
+		 */
+		OFFLINE_MODE_ON: string
+		/**
+		 * S​w​i​t​c​h​ ​t​o​ ​O​n​l​i​n​e​ ​M​o​d​e
+		 */
+		OFFLINE_MODE_OFF: string
 	}
 	FOOTER: {
 		/**
@@ -1479,11 +1683,11 @@ type RootTranslation = {
 		 */
 		NO_WINDOWS: string
 		/**
-		 * N​o​r​m​a​l
+		 * B​l​o​c​k​ ​V​i​e​w
 		 */
 		NORMAL_MODE: string
 		/**
-		 * S​t​r​e​a​m
+		 * S​t​r​e​a​m​ ​V​i​e​w
 		 */
 		STREAM_MODE: string
 		/**
@@ -1494,6 +1698,14 @@ type RootTranslation = {
 		 * H​i​d​e​ ​M​o​u​s​e
 		 */
 		HIDE_MOUSE: string
+		/**
+		 * H​i​d​e​ ​W​i​n​d​o​w
+		 */
+		HIDE_WINDOW: string
+		/**
+		 * S​h​o​w​ ​W​i​n​d​o​w
+		 */
+		SHOW_WINDOW: string
 		/**
 		 * F​u​l​l​s​c​r​e​e​n
 		 */
@@ -1526,6 +1738,18 @@ type RootTranslation = {
 		 * I​t​e​m​ ​S​t​y​l​e
 		 */
 		ITEM_STYLE: string
+		/**
+		 * B​r​i​n​g​ ​t​o​ ​F​r​o​n​t
+		 */
+		BRING_TO_FRONT: string
+		/**
+		 * H​i​d​e​ ​T​e​x​t​ ​o​n​ ​a​l​l​ ​W​i​n​d​o​w​s
+		 */
+		HIDE_TEXT: string
+		/**
+		 * S​h​o​w​ ​T​e​x​t​ ​o​n​ ​a​l​l​ ​W​i​n​d​o​w​s
+		 */
+		SHOW_TEXT: string
 	}
 	UNIFIED_SEARCH: {
 		/**
@@ -1587,9 +1811,29 @@ type RootTranslation = {
 		 */
 		MAPPING_PRESS: string
 		/**
+		 * H​o​l​d​ ​t​h​e​ ​d​e​s​i​r​e​d​ ​m​o​d​i​f​i​e​r​s​ ​a​n​d​ ​p​r​e​s​s​ ​t​h​e​ ​m​a​i​n​ ​k​e​y​.​ ​C​l​i​c​k​ ​A​p​p​l​y​ ​w​h​e​n​ ​d​o​n​e​.
+		 */
+		MAPPING_PRESS_HINT: string
+		/**
+		 * A​p​p​l​y
+		 */
+		MAPPING_APPLY: string
+		/**
 		 * R​e​s​e​t​ ​t​o​ ​D​e​f​a​u​l​t​s
 		 */
 		MAPPING_RESET: string
+		/**
+		 * R​e​s​e​t​ ​t​o​ ​d​e​f​a​u​l​t
+		 */
+		MAPPING_RESET_ROW: string
+		/**
+		 * C​u​r​r​e​n​t
+		 */
+		MAPPING_CURRENT: string
+		/**
+		 * N​e​w​ ​c​o​m​b​i​n​a​t​i​o​n
+		 */
+		MAPPING_NEW: string
 		/**
 		 * E​n​a​b​l​e​d
 		 */
@@ -1630,6 +1874,10 @@ type RootTranslation = {
 		 * T​o​g​g​l​e​ ​V​i​d​e​o​ ​P​l​a​y​/​P​a​u​s​e
 		 */
 		ACTION_TOGGLE_VIDEO: string
+		/**
+		 * T​o​g​g​l​e​ ​V​i​d​e​o​ ​V​i​s​i​b​i​l​i​t​y
+		 */
+		ACTION_TOGGLE_VIDEO_VISIBLE: string
 	}
 	SETTINGS: {
 		/**
@@ -2176,6 +2424,36 @@ type RootTranslation = {
 				 */
 				DESCRIPTION: string
 			}
+			HIDE_TRANSITION_MODE: {
+				/**
+				 * H​i​d​e​ ​t​r​a​n​s​i​t​i​o​n
+				 */
+				TITLE: string
+				/**
+				 * H​o​w​ ​b​a​c​k​g​r​o​u​n​d​ ​v​i​d​e​o​s​ ​d​i​s​a​p​p​e​a​r​ ​w​h​e​n​ ​h​i​d​d​e​n​:​ ​c​u​t​ ​(​i​n​s​t​a​n​t​)​ ​o​r​ ​f​a​d​e
+				 */
+				DESCRIPTION: string
+			}
+			HIDE_TRANSITION_DURATION: {
+				/**
+				 * H​i​d​e​ ​t​r​a​n​s​i​t​i​o​n​ ​d​u​r​a​t​i​o​n​ ​(​m​s​)
+				 */
+				TITLE: string
+				/**
+				 * D​u​r​a​t​i​o​n​ ​o​f​ ​t​h​e​ ​h​i​d​e​-​v​i​d​e​o​ ​f​a​d​e​ ​i​n​ ​m​i​l​l​i​s​e​c​o​n​d​s​ ​(​o​n​l​y​ ​u​s​e​d​ ​w​h​e​n​ ​m​o​d​e​ ​i​s​ ​f​a​d​e​)
+				 */
+				DESCRIPTION: string
+			}
+			VIDEO_FADE_DURATION: {
+				/**
+				 * V​i​d​e​o​ ​p​l​a​y​/​s​t​o​p​ ​f​a​d​e​ ​(​m​s​)
+				 */
+				TITLE: string
+				/**
+				 * D​u​r​a​t​i​o​n​ ​o​f​ ​t​h​e​ ​v​o​l​u​m​e​ ​f​a​d​e​-​i​n​ ​w​h​e​n​ ​s​t​a​r​t​i​n​g​ ​a​n​d​ ​f​a​d​e​-​o​u​t​ ​w​h​e​n​ ​s​t​o​p​p​i​n​g​/​p​a​u​s​i​n​g​ ​v​i​d​e​o​s​ ​(​0​ ​=​ ​i​n​s​t​a​n​t​)
+				 */
+				DESCRIPTION: string
+			}
 		}
 	}
 	VIDEO: {
@@ -2211,6 +2489,30 @@ type RootTranslation = {
 		 * U​n​m​u​t​e
 		 */
 		UNMUTE: string
+		/**
+		 * H​i​d​e​ ​v​i​d​e​o
+		 */
+		HIDE: string
+		/**
+		 * S​h​o​w​ ​v​i​d​e​o
+		 */
+		SHOW: string
+		/**
+		 * G​e​n​e​r​a​l
+		 */
+		GENERAL: string
+		/**
+		 * W​i​n​d​o​w
+		 */
+		WINDOW: string
+		/**
+		 * V​o​l​u​m​e
+		 */
+		VOLUME: string
+		/**
+		 * S​e​e​k
+		 */
+		SEEK: string
 		/**
 		 * V​i​d​e​o​ ​M​a​s​k​ ​E​d​i​t​o​r
 		 */
@@ -3880,6 +4182,10 @@ export type TranslationFunctions = {
 		 * Delete show
 		 */
 		DELETE: () => LocalizedString
+		/**
+		 * Current
+		 */
+		CURRENT: () => LocalizedString
 	}
 	SHOW_ITEMS: {
 		/**
@@ -4028,6 +4334,10 @@ export type TranslationFunctions = {
 		 * Video playback
 		 */
 		VIDEO_PLACEHOLDER: () => LocalizedString
+		/**
+		 * Control
+		 */
+		TITLE: () => LocalizedString
 	}
 	STYLE: {
 		/**
@@ -4155,21 +4465,45 @@ export type TranslationFunctions = {
 		 */
 		BACKGROUND_COLOR: () => LocalizedString
 		/**
-		 * Image URL
+		 * Image
 		 */
 		BACKGROUND_IMAGE: () => LocalizedString
 		/**
-		 * Video URL
+		 * Video
 		 */
 		BACKGROUND_VIDEO: () => LocalizedString
 		/**
-		 * Background Fit
+		 * Fit
 		 */
 		BG_FIT: () => LocalizedString
 		/**
 		 * Position
 		 */
 		BG_POSITION: () => LocalizedString
+		/**
+		 * Zoom
+		 */
+		BG_ZOOM: () => LocalizedString
+		/**
+		 * Blur
+		 */
+		BG_BLUR: () => LocalizedString
+		/**
+		 * Hide image layer
+		 */
+		PREVIEW_HIDE_IMAGE: () => LocalizedString
+		/**
+		 * Show image layer
+		 */
+		PREVIEW_SHOW_IMAGE: () => LocalizedString
+		/**
+		 * Hide video layer
+		 */
+		PREVIEW_HIDE_VIDEO: () => LocalizedString
+		/**
+		 * Show video layer
+		 */
+		PREVIEW_SHOW_VIDEO: () => LocalizedString
 		/**
 		 * Vertical Align
 		 */
@@ -4191,7 +4525,7 @@ export type TranslationFunctions = {
 		 */
 		FONT_SIZE: () => LocalizedString
 		/**
-		 * Bold / Italic
+		 * Text Style
 		 */
 		FONT_BOLD_ITALIC: () => LocalizedString
 		/**
@@ -4227,6 +4561,18 @@ export type TranslationFunctions = {
 		 */
 		TEXT_SHADOW: () => LocalizedString
 		/**
+		 * X Offset
+		 */
+		SHADOW_X: () => LocalizedString
+		/**
+		 * Y Offset
+		 */
+		SHADOW_Y: () => LocalizedString
+		/**
+		 * Blur
+		 */
+		SHADOW_BLUR: () => LocalizedString
+		/**
 		 * Shadow Color
 		 */
 		SHADOW_COLOR: () => LocalizedString
@@ -4234,6 +4580,14 @@ export type TranslationFunctions = {
 		 * Text Stroke
 		 */
 		TEXT_STROKE: () => LocalizedString
+		/**
+		 * Width
+		 */
+		STROKE_WIDTH: () => LocalizedString
+		/**
+		 * Color
+		 */
+		STROKE_COLOR: () => LocalizedString
 		/**
 		 * Effects
 		 */
@@ -4263,6 +4617,138 @@ export type TranslationFunctions = {
 		 */
 		NEXT_LINE_COLOR: () => LocalizedString
 		/**
+		 * Opacity
+		 */
+		NEXT_LINE_OPACITY: () => LocalizedString
+		/**
+		 * Show other languages
+		 */
+		SHOW_OTHER_LANGUAGES: () => LocalizedString
+		/**
+		 * Copyright
+		 */
+		SECTION_COPYRIGHT: () => LocalizedString
+		/**
+		 * Font
+		 */
+		COPYRIGHT_FONT: () => LocalizedString
+		/**
+		 * Alignment
+		 */
+		COPYRIGHT_ALIGNMENT: () => LocalizedString
+		/**
+		 * Padding
+		 */
+		COPYRIGHT_PADDING: () => LocalizedString
+		/**
+		 * Color
+		 */
+		COPYRIGHT_COLOR: () => LocalizedString
+		/**
+		 * Size
+		 */
+		COPYRIGHT_SIZE: () => LocalizedString
+		/**
+		 * Text Style
+		 */
+		COPYRIGHT_BOLD_ITALIC: () => LocalizedString
+		/**
+		 * Underline
+		 */
+		COPYRIGHT_UNDERLINE: () => LocalizedString
+		/**
+		 * Opacity
+		 */
+		COPYRIGHT_OPACITY: () => LocalizedString
+		/**
+		 * Title Font Size
+		 */
+		COPYRIGHT_TITLE_SIZE: () => LocalizedString
+		/**
+		 * Title Text Style
+		 */
+		COPYRIGHT_TITLE_BOLD_ITALIC: () => LocalizedString
+		/**
+		 * Title Spacing
+		 */
+		COPYRIGHT_TITLE_SPACING: () => LocalizedString
+		/**
+		 * Show Song Number in Title
+		 */
+		COPYRIGHT_SHOW_SONG_NUMBER: () => LocalizedString
+		/**
+		 * Transparent
+		 */
+		BACKGROUND_TRANSPARENT: () => LocalizedString
+		/**
+		 * No Image (suppress inherited)
+		 */
+		BACKGROUND_IMAGE_NONE: () => LocalizedString
+		/**
+		 * No Video (suppress inherited)
+		 */
+		BACKGROUND_VIDEO_NONE: () => LocalizedString
+		/**
+		 * Ease In
+		 */
+		VIDEO_EASE_IN: () => LocalizedString
+		/**
+		 * Ease Out
+		 */
+		VIDEO_EASE_OUT: () => LocalizedString
+		/**
+		 * Duration (s)
+		 */
+		VIDEO_EASE_DURATION: () => LocalizedString
+		/**
+		 * Languages
+		 */
+		TRANSLATION: () => LocalizedString
+		/**
+		 * Languages
+		 */
+		TRANSLATION_SHOW_LANGUAGES: () => LocalizedString
+		/**
+		 * Primary Language
+		 */
+		TRANSLATION_PRIMARY: () => LocalizedString
+		/**
+		 * Translation Color
+		 */
+		TRANSLATION_COLOR: () => LocalizedString
+		/**
+		 * Default
+		 */
+		LANG_DEFAULT: () => LocalizedString
+		/**
+		 * Add Language
+		 */
+		LANG_ADD: () => LocalizedString
+		/**
+		 * Remove
+		 */
+		LANG_REMOVE: () => LocalizedString
+		/**
+		 * Language Tag
+		 */
+		LANG_TAG: () => LocalizedString
+		/**
+		 * Move up
+		 */
+		LANG_MOVE_UP: () => LocalizedString
+		/**
+		 * Move down
+		 */
+		LANG_MOVE_DOWN: () => LocalizedString
+		/**
+		 * Show all languages
+		 */
+		SHOW_ALL_LANGUAGES: () => LocalizedString
+		/**
+		 * Show other languages (not listed above)
+		 */
+		SHOW_OTHER_LANGUAGES_HINT: () => LocalizedString
+		/**
 		 * Select a style
 		 */
 		SELECT: () => LocalizedString
@@ -4274,6 +4760,10 @@ export type TranslationFunctions = {
 		 * Background
 		 */
 		SECTION_BACKGROUND: () => LocalizedString
+		/**
+		 * Paragraph
+		 */
+		SECTION_PARAGRAPH: () => LocalizedString
 		/**
 		 * Typography
 		 */
@@ -4362,6 +4852,14 @@ export type TranslationFunctions = {
 		 * Apply additional style overrides for windows matching the given name.
 		 */
 		WINDOW_OVERRIDE_HINT: () => LocalizedString
+		/**
+		 * Show more
+		 */
+		GALLERY_EXPAND: () => LocalizedString
+		/**
+		 * Show less
+		 */
+		GALLERY_COLLAPSE: () => LocalizedString
 	}
 	FONT: {
 		/**
@@ -4556,6 +5054,14 @@ export type TranslationFunctions = {
 		 * Window Manager
 		 */
 		WINDOW_MANAGER: () => LocalizedString
+		/**
+		 * Switch to Offline Mode (no backend calls)
+		 */
+		OFFLINE_MODE_ON: () => LocalizedString
+		/**
+		 * Switch to Online Mode
+		 */
+		OFFLINE_MODE_OFF: () => LocalizedString
 	}
 	FOOTER: {
 		/**
@@ -4583,11 +5089,11 @@ export type TranslationFunctions = {
 		 */
 		NO_WINDOWS: () => LocalizedString
 		/**
-		 * Normal
+		 * Block View
 		 */
 		NORMAL_MODE: () => LocalizedString
 		/**
-		 * Stream
+		 * Stream View
 		 */
 		STREAM_MODE: () => LocalizedString
 		/**
@@ -4598,6 +5104,14 @@ export type TranslationFunctions = {
 		 * Hide Mouse
 		 */
 		HIDE_MOUSE: () => LocalizedString
+		/**
+		 * Hide Window
+		 */
+		HIDE_WINDOW: () => LocalizedString
+		/**
+		 * Show Window
+		 */
+		SHOW_WINDOW: () => LocalizedString
 		/**
 		 * Fullscreen
 		 */
@@ -4630,6 +5144,18 @@ export type TranslationFunctions = {
 		 * Item Style
 		 */
 		ITEM_STYLE: () => LocalizedString
+		/**
+		 * Bring to Front
+		 */
+		BRING_TO_FRONT: () => LocalizedString
+		/**
+		 * Hide Text on all Windows
+		 */
+		HIDE_TEXT: () => LocalizedString
+		/**
+		 * Show Text on all Windows
+		 */
+		SHOW_TEXT: () => LocalizedString
 	}
 	UNIFIED_SEARCH: {
 		/**
@@ -4691,9 +5217,29 @@ export type TranslationFunctions = {
 		 */
 		MAPPING_PRESS: () => LocalizedString
 		/**
+		 * Hold the desired modifiers and press the main key. Click Apply when done.
+		 */
+		MAPPING_PRESS_HINT: () => LocalizedString
+		/**
+		 * Apply
+		 */
+		MAPPING_APPLY: () => LocalizedString
+		/**
 		 * Reset to Defaults
 		 */
 		MAPPING_RESET: () => LocalizedString
+		/**
+		 * Reset to default
+		 */
+		MAPPING_RESET_ROW: () => LocalizedString
+		/**
+		 * Current
+		 */
+		MAPPING_CURRENT: () => LocalizedString
+		/**
+		 * New combination
+		 */
+		MAPPING_NEW: () => LocalizedString
 		/**
 		 * Enabled
 		 */
@@ -4734,6 +5280,10 @@ export type TranslationFunctions = {
 		 * Toggle Video Play/Pause
 		 */
 		ACTION_TOGGLE_VIDEO: () => LocalizedString
+		/**
+		 * Toggle Video Visibility
+		 */
+		ACTION_TOGGLE_VIDEO_VISIBLE: () => LocalizedString
 	}
 	SETTINGS: {
 		/**
@@ -5267,6 +5817,36 @@ export type TranslationFunctions = {
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
+			HIDE_TRANSITION_MODE: {
+				/**
+				 * Hide transition
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * How background videos disappear when hidden: cut (instant) or fade
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			HIDE_TRANSITION_DURATION: {
+				/**
+				 * Hide transition duration (ms)
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Duration of the hide-video fade in milliseconds (only used when mode is fade)
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			VIDEO_FADE_DURATION: {
+				/**
+				 * Video play/stop fade (ms)
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Duration of the volume fade-in when starting and fade-out when stopping/pausing videos (0 = instant)
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
 		}
 	}
 	VIDEO: {
@@ -5302,6 +5882,30 @@ export type TranslationFunctions = {
 		 * Unmute
 		 */
 		UNMUTE: () => LocalizedString
+		/**
+		 * Hide video
+		 */
+		HIDE: () => LocalizedString
+		/**
+		 * Show video
+		 */
+		SHOW: () => LocalizedString
+		/**
+		 * General
+		 */
+		GENERAL: () => LocalizedString
+		/**
+		 * Window
+		 */
+		WINDOW: () => LocalizedString
+		/**
+		 * Volume
+		 */
+		VOLUME: () => LocalizedString
+		/**
+		 * Seek
+		 */
+		SEEK: () => LocalizedString
 		/**
 		 * Video Mask Editor
 		 */

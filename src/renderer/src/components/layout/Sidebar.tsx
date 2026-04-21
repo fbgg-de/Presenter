@@ -1,4 +1,4 @@
-import { useEffect, useState, type DragEvent, MouseEvent } from 'react';
+﻿import { useEffect, useState, type DragEvent, MouseEvent } from 'react';
 import {
   Box,
   Chip,
@@ -40,19 +40,19 @@ import {
   FolderOpen as FolderOpenIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import DraggableList from '@/components/DraggableList';
+import DraggableList from '@/components/show/DraggableList';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { ISong } from '@/song';
 import { Song } from '@/song';
 import { CCLISong } from '@/song';
-import { Settings } from '@/components/Settings';
-import { SongEditor } from '@/components/SongEditor';
-import { SongLibrary } from '@/components/SongLibrary';
-import { Shows } from '@/components/Shows';
-import { BibleVersePicker } from '@/components/BibleVersePicker';
-import { MediaBrowser } from '@/components/MediaBrowser';
+import { Settings } from '@/components/settings/Settings';
+import { SongEditor } from '@/components/song/SongEditor';
+import { SongLibrary } from '@/components/song/SongLibrary';
+import { Shows } from '@/components/show/Shows';
+import { BibleVersePicker } from '@/components/search/BibleVersePicker';
+import { MediaBrowser } from '@/components/media/MediaBrowser';
 import { getShowItemIcon, getShowItemColor } from '@/utils/showItemIcons';
-import { UnifiedSearch } from '@/components/UnifiedSearch';
+import { UnifiedSearch } from '@/components/search/UnifiedSearch';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setCurrentShow, addShowItem, removeShowItem, reorderShowItems, setDirty, updateShowItem, selectIsDirty } from '@/store/showSlice';
 import {
@@ -68,11 +68,12 @@ import type { SongListItem } from '@/api/songs.api';
 import { useSaveShowMutation } from '@/api/shows.api';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
+import { useLazyGetSongQuery } from '@/api/songs.api';
 import { useMetrics } from '@/hooks/useMetrics';
 import { loadShowSongs } from '@/store/songsSlice';
 import { toggleTheme } from '@/store/themeSlice';
-import { StyleEditor } from '@/components/StyleEditor';
-import { WindowManager } from '@/components/WindowManager';
+import { StyleEditor } from '@/components/style/StyleEditor';
+import { WindowManager } from '@/components/layout/WindowManager';
 import { MUSICAL_KEYS, parseOrderKey } from '@/utils/orderKeyUtils';
 
 const Sidebar = () => {
@@ -105,6 +106,7 @@ const Sidebar = () => {
 
   const { data: session } = useGetSessionQuery();
   const [logout] = useLogoutMutation();
+  const [fetchSong] = useLazyGetSongQuery();
 
   // Add menu
   const [addMenuAnchor, setAddMenuAnchor] = useState<null | HTMLElement>(null);
@@ -195,15 +197,8 @@ const Sidebar = () => {
 
   const handleSongSelected = async (song: SongListItem) => {
     try {
-      const response = await fetch(`/rest/Song/${song.songNumber}`);
-      const data = await response.json();
-
-      let fullSong: ISong | undefined;
-      if (Array.isArray(data) && data.length > 0) {
-        fullSong = data[0];
-      } else if (data && typeof data === 'object' && data.songNumber) {
-        fullSong = data;
-      }
+      const result = await fetchSong({ songNumber: song.songNumber });
+      const fullSong = result.data;
 
       if (fullSong) {
         const songToAdd = new Song({
@@ -218,11 +213,8 @@ const Sidebar = () => {
           css: fullSong.css,
         });
 
-        // Add to Redux store
         dispatch(addSongToStore(songToAdd));
         dispatch(addToSongsOrder(songToAdd.songNumber));
-
-        // Add as show item
         dispatch(
           addShowItem({
             type: 'song',
@@ -231,10 +223,7 @@ const Sidebar = () => {
           }),
         );
 
-        // Track metric
         trackEvent('song_selected', 'song', String(songToAdd.songNumber));
-
-        // Clear search
         setOpenSongSearch(false);
       }
     } catch (error) {
@@ -276,6 +265,7 @@ const Sidebar = () => {
           await saveShowMutation({
             title: show.title,
             order: orderToSave,
+            styleId: override ? (currentShow?.styleId ?? null) : (show.styleId ?? null),
           }).unwrap();
         } catch (error) {
           console.error('Failed to create new show:', error);

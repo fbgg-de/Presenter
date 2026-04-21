@@ -35,7 +35,7 @@ import {
   Save as SaveIcon,
 } from '@mui/icons-material';
 import type { ISong, TBlocks } from '@/song';
-import { SONG_SEPARATOR, Song } from '@/song';
+import { SONG_BLOCK_SEPARATOR, Song } from '@/song';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { useRef, useEffect, useState } from 'react';
 import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
@@ -61,15 +61,18 @@ const Input = (props: TextFieldProps & { startAdornment?: ReactNode; endAdornmen
 };
 
 const SpeedDialBlock = styled(SpeedDial)`
-	position: absolute;
-	bottom: 0;
-	right: 0;
-	width: 32px;
-	& .MuiFab-root {
-		width: 32px;
-		height: 32px;
-		min-height: 32px;
-	},
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  & .MuiFab-root {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+  }
+  & .MuiSpeedDial-actions {
+    white-space: nowrap;
+  }
 `;
 
 const SpeedDialTranslate = styled(SpeedDial)`
@@ -430,9 +433,9 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                     if (inputElement) {
                       const cursorPosition = inputElement.selectionStart ?? 0;
                       setBlock(
-                        `${block.substring(0, cursorPosition)}\n${SONG_SEPARATOR}\n${block.substring(cursorPosition)}`.replace(
-                          `${SONG_SEPARATOR}\n\n`,
-                          `${SONG_SEPARATOR}\n`,
+                        `${block.substring(0, cursorPosition)}\n${SONG_BLOCK_SEPARATOR}\n${block.substring(cursorPosition)}`.replace(
+                          `${SONG_BLOCK_SEPARATOR}\n\n`,
+                          `${SONG_BLOCK_SEPARATOR}\n`,
                         ),
                       );
                       setTimeout(() => {

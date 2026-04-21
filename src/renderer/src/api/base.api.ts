@@ -14,20 +14,37 @@ export type ApiSuccess<T> = T;
 /** Read the backend base URL from localStorage. Called per-request so runtime changes take effect.
  *  In DEV mode the Vite proxy is used by default (empty string = relative URL),
  *  but an explicit localStorage value overrides that so users can test against a real backend. */
+/**
+ * Read the backend base URL from localStorage. Called per-request so runtime changes take effect.
+ * Default matches the settingsSlice default ('/') so they stay in sync.
+ * In a pure Vite-dev environment you can override this to '' in localStorage to use the proxy.
+ */
 export const getBackendBaseUrl = (): string => {
-  const normalized = localStorage.getItem('presenter_backend_url') || ''.trim().replace(/\/+$/, '');
-  if (normalized) {
-    return normalized;
+  try {
+    const stored = localStorage.getItem('presenter_backend_url');
+    if (stored !== null) {
+      // Normalize: trim whitespace and trailing slashes
+      return stored.trim().replace(/\/+$/, '');
+    }
+  } catch {
+    /* ignore */
   }
-  // In DEV mode with no explicit URL, use relative URLs so the Vite proxy handles them.
+  // Default: same as settingsSlice so the displayed value matches actual requests
   return '';
 };
 
 /**
  * Dynamic base query — resolves the backend URL on every request so that
  * changes made by ConnectivityChecker or Settings take effect immediately.
+ * In offline mode all backend requests are skipped and return empty data.
  */
 const dynamicBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extraOptions) => {
+  // Offline mode: skip all backend API calls silently
+  if (localStorage.getItem('presenter_offline_mode') === 'true') {
+    // Return empty success so RTK Query caches empty data instead of showing errors
+    return { data: null };
+  }
+
   const baseUrl = getBackendBaseUrl();
   const rawBaseQuery = fetchBaseQuery({
     baseUrl: baseUrl ? `${baseUrl}/` : '/',

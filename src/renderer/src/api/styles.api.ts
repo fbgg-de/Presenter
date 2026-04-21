@@ -1,14 +1,48 @@
 import { presenterApi } from './base.api';
 import type { ApiSuccess } from './base.api';
 
+/** Per-language typography overrides stored inside a style. */
+export interface LanguageStyleEntry {
+  /** '' = default (applies to all unmatched languages). */
+  language: string;
+  fontColorEnabled?: boolean;
+  fontColor?: string;
+  fontSizeEnabled?: boolean;
+  fontSize?: string;
+  fontStyleEnabled?: boolean;
+  fontBold?: boolean;
+  fontItalic?: boolean;
+  fontUnderline?: boolean;
+  letterSpacingEnabled?: boolean;
+  letterSpacing?: string;
+  textShadowEnabled?: boolean;
+  textShadow?: string;
+  textShadowColor?: string;
+  textStrokeEnabled?: boolean;
+  textStroke?: string;
+  opacityEnabled?: boolean;
+  opacity?: number;
+  nextLinePreviewEnabled?: boolean;
+  nextLinePreview?: boolean;
+  nextLinePreviewColor?: string;
+  nextLinePreviewOpacity?: number;
+}
+
 export type StyleData = {
   backgroundImage?: { enabled: boolean; value: string };
   backgroundVideo?: { enabled: boolean; value: string };
   backgroundVideoAutoplay?: { enabled: boolean; value: boolean };
+  backgroundVideoVolume?: { enabled: boolean; value: number };
+  backgroundVideoSize?: { enabled: boolean; value: 'cover' | 'contain' | '100% auto' | 'auto 100%' | 'auto' };
+  backgroundVideoPosition?: { enabled: boolean; value: string };
+  backgroundVideoZoom?: { enabled: boolean; value: number };
+  backgroundVideoBlur?: { enabled: boolean; value: number };
   backgroundColor?: { enabled: boolean; value: string };
+  backgroundBlur?: { enabled: boolean; value: number };
   backgroundSize?: { enabled: boolean; value: 'cover' | 'contain' | '100% auto' | 'auto 100%' | 'auto' };
   backgroundPosition?: { enabled: boolean; value: string };
   backgroundZoom?: { enabled: boolean; value: number };
+  nextLinePreview?: { enabled: boolean; value: boolean };
   fontFamily?: { enabled: boolean; value: string };
   fontFallback?: { enabled: boolean; value: string[] };
   fontColor?: { enabled: boolean; value: string };
@@ -28,7 +62,41 @@ export type StyleData = {
   opacity?: { enabled: boolean; value: number };
   hideText?: boolean;
   hideBackground?: boolean;
+  /** When true, show all language lines regardless of the languageStyles order */
+  showAllLanguages?: boolean;
   nextLinePreviewColor?: { enabled: boolean; value: string };
+  nextLinePreviewOpacity?: { enabled: boolean; value: number };
+  /** Language display overrides: "all", "EN", "EN,DE", … */
+  showLanguages?: { enabled: boolean; value: string };
+  /** The "primary" language tag rendered in the main style; others get translationColor. */
+  primaryLanguage?: { enabled: boolean; value: string };
+  /** Color for non-primary translation lines */
+  translationColor?: { enabled: boolean; value: string };
+  /** Per-language typography settings. First entry is 'default' (language: ''). */
+  languageStyles?: { enabled: boolean; value: LanguageStyleEntry[] };
+  /** Copyright section styles */
+  copyrightFontFamily?: { enabled: boolean; value: string };
+  copyrightFontColor?: { enabled: boolean; value: string };
+  copyrightFontSize?: { enabled: boolean; value: string };
+  copyrightFontBold?: { enabled: boolean; value: boolean };
+  copyrightFontItalic?: { enabled: boolean; value: boolean };
+  copyrightFontUnderline?: { enabled: boolean; value: boolean };
+  copyrightTextAlign?: { enabled: boolean; value: 'left' | 'center' | 'right' };
+  copyrightPadding?: { enabled: boolean; value: string };
+  copyrightOpacity?: { enabled: boolean; value: number };
+  /** Copyright title row settings */
+  copyrightTitleFontSize?: { enabled: boolean; value: string };
+  copyrightTitleFontBold?: { enabled: boolean; value: boolean };
+  copyrightTitleFontItalic?: { enabled: boolean; value: boolean };
+  copyrightTitleFontUnderline?: { enabled: boolean; value: boolean };
+  copyrightTitleSpacing?: { enabled: boolean; value: string };
+  copyrightShowSongNumber?: { enabled: boolean; value: boolean };
+  /** Suppress inherited background image/video from parent style levels */
+  suppressBackgroundImage?: boolean;
+  suppressBackgroundVideo?: boolean;
+  /** Video ease-in / ease-out (fade volume) */
+  backgroundVideoEaseIn?: { enabled: boolean; value: number };
+  backgroundVideoEaseOut?: { enabled: boolean; value: number };
   css?: string;
 };
 
@@ -62,6 +130,21 @@ const stylesApi = presenterApi.injectEndpoints({
         { type: 'Styles', id: 'LIST' },
         { type: 'Styles', id: arg.id },
       ],
+      async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
+        // Optimistic update so presentation windows reflect the new style immediately
+        // without waiting for the round-trip API refetch.
+        const patchResult = dispatch(
+          stylesApi.util.updateQueryData('getStyles', undefined, (draft) => {
+            const style = draft.find((s) => s.id === id);
+            if (style) Object.assign(style, patch);
+          }),
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
     }),
     deleteStyle: build.mutation<ApiSuccess<{ message: string }>, { id: number }>({
       query: ({ id }) => ({ url: `rest/Styles/${id}`, method: 'DELETE' }),

@@ -1,20 +1,19 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
-import { ThemeProvider, CssBaseline, Snackbar, Alert, Button } from '@mui/material';
+﻿import { useEffect, useMemo, useState } from 'react';
+import { ThemeProvider, CssBaseline } from '@mui/material';
 import { getTheme, resolveThemeMode } from './theme';
 import { detectLocale } from '@/i18n/i18n-util';
 import { navigatorDetector } from 'typesafe-i18n/detectors';
 import { loadAllLocales } from '@/i18n/i18n-util.sync';
 import TypesafeI18n from '@/i18n/i18n-react';
-import { useI18nContext } from '@/i18n/i18n-react';
+import SessionExpired from '@/components/SessionExpired';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '@/pages/LoginPage';
 import { MainPage } from '@/pages/MainPage';
 import { AdminPage } from '@/pages/AdminPage';
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage';
 import { MusicianPage } from '@/musician/MusicianPage';
-import ConnectivityChecker from '@/components/ConnectivityChecker';
+import ConnectivityChecker from '@/components/settings/ConnectivityChecker';
 import { useAppSelector } from '@/store';
-import { SESSION_EXPIRED_EVENT } from '@/api/base.api';
 
 // Load all locales upfront so switching is instant
 loadAllLocales();
@@ -34,20 +33,7 @@ const MusicianThemeWrapper = () => {
 const App = () => {
   const themeMode = useAppSelector((state) => state.theme.mode);
   const uiLanguage = useAppSelector((state) => state.settings.uiLanguage);
-  const [sessionExpired, setSessionExpired] = useState(false);
-
-  // Listen for session expiry events from the API layer
-  useEffect(() => {
-    const handler = () => setSessionExpired(true);
-    window.addEventListener(SESSION_EXPIRED_EVENT, handler);
-    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handler);
-  }, []);
-
-  const handleRelogin = useCallback(() => {
-    setSessionExpired(false);
-    window.location.href = '/login';
-  }, []);
-
+  const offlineMode = useAppSelector((state) => state.settings.offlineMode);
   // Resolve system theme and listen for OS preference changes
   const [resolvedMode, setResolvedMode] = useState(resolveThemeMode(themeMode));
 
@@ -67,14 +53,14 @@ const App = () => {
 
   // Determine locale: prefer user setting, then browser detection
   const detectedLocale = detectLocale(navigatorDetector);
-  const locale = (uiLanguage === 'de' ? 'de' : uiLanguage === 'en' ? 'en' : (detectedLocale === 'de' ? 'de' : 'en')) as 'en' | 'de';
+  const locale = (uiLanguage === 'de' ? 'de' : uiLanguage === 'en' ? 'en' : detectedLocale === 'de' ? 'de' : 'en') as 'en' | 'de';
 
   return (
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
-      <TypesafeI18n locale={locale}>
-        {/* Connectivity helper: shows dialog when Session/Accounts queries fail */}
+      <TypesafeI18n key={locale} locale={locale}>
         <ConnectivityChecker />
+        {!offlineMode && <SessionExpired />}
 
         <BrowserRouter>
           <Routes>
@@ -85,30 +71,8 @@ const App = () => {
             <Route path="/*" element={<MainPage />} />
           </Routes>
         </BrowserRouter>
-        <SessionExpiredSnackbar open={sessionExpired} onClose={() => setSessionExpired(false)} onRelogin={handleRelogin} />
       </TypesafeI18n>
     </ThemeProvider>
-  );
-};
-
-const SessionExpiredSnackbar = ({ open, onClose, onRelogin }: { open: boolean; onClose: () => void; onRelogin: () => void }) => {
-  const { LL } = useI18nContext();
-
-  return (
-    <Snackbar open={open} anchorOrigin={{ vertical: 'top', horizontal: 'center' }} onClose={onClose}>
-      <Alert
-        severity="warning"
-        variant="filled"
-        onClose={onClose}
-        action={
-          <Button color="inherit" size="small" onClick={onRelogin}>
-            {LL.AUTH.LOGIN()}
-          </Button>
-        }
-      >
-        {LL.AUTH.SESSION_EXPIRED()}
-      </Alert>
-    </Snackbar>
   );
 };
 

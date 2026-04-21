@@ -1,32 +1,20 @@
-import { useCallback, useRef, useState } from 'react';
+﻿import { useMemo, memo } from 'react';
 import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
 import { Image as ImageIcon, Videocam as VideocamIcon, Palette as PaletteIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { ShowItem } from '@/api/shows.api';
-import VideoControlBar from '@/components/VideoControlBar';
+import VideoControlBar from '@/components/media/VideoControlBar';
+import { resolveMediaUrl } from '@/utils/mediaUrl';
 
 interface ControlMediaProps {
   item: ShowItem;
 }
 
-/** Resolve a relative media path to the local media server URL. */
-function resolveMediaUrl(path: string | undefined): string | undefined {
-  if (!path) return undefined;
-  if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('file://') || path.startsWith('/')) {
-    return path;
-  }
-  // Normalise Windows backslashes then encode
-  const normalised = path.replace(/\\/g, '/');
-  return `http://localhost:9100/${normalised.split('/').map(encodeURIComponent).join('/')}`;
-}
 
 const ControlMedia = ({ item }: ControlMediaProps) => {
   const { LL } = useI18nContext();
   const resolvedPath = resolveMediaUrl(item.mediaPath);
-
-  // Callback ref: stores the actual DOM element in state, triggering VideoControlBar re-render
-  const [videoEl, setVideoEl] = useState<HTMLVideoElement | null>(null);
-  const videoCallbackRef = useCallback((el: HTMLVideoElement | null) => setVideoEl(el), []);
+  const videoSources = useMemo(() => (resolvedPath ? [resolvedPath] : []), [resolvedPath]);
 
   const renderContent = () => {
     switch (item.mediaSubType) {
@@ -60,7 +48,6 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
             {resolvedPath ? (
               <Box
                 component="video"
-                ref={videoCallbackRef}
                 src={resolvedPath}
                 playsInline
                 loop
@@ -129,15 +116,10 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
       <Card sx={{ border: `1px solid #f9a825` }}>
         <CardContent>{renderContent()}</CardContent>
       </Card>
-      {/* Video control bar — shown for all video items */}
-      {item.mediaSubType === 'video' && (
-        <VideoControlBar
-          label={item.mediaPath || item.label || LL.MEDIA.VIDEO()}
-          video={videoEl}
-        />
-      )}
+
+      {item.mediaSubType === 'video' && <VideoControlBar variant="general" videoSources={videoSources} showIfNoLocalSources={false} />}
     </Stack>
   );
 };
 
-export default ControlMedia;
+export default memo(ControlMedia);

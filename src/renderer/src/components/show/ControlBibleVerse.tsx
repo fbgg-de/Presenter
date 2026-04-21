@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardContent, CardMedia, Stack, Typography, Chip } from '@mui/material';
 import { MenuBook as MenuBookIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -39,4 +40,4 @@ const ControlBibleVerse = ({ item }: ControlBibleVerseProps) => {
   );
 };
 
-export default ControlBibleVerse;
+export default memo(ControlBibleVerse);

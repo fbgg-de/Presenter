@@ -4,6 +4,7 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setActiveBlockIndex, setActiveLineIndex } from '@/store/presentationSlice';
 import { selectCurrentSongOrder } from '@/store/songsSlice';
+import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
 
 // Stable sx objects (module scope so identity never changes between renders)
 const containerSx = {
@@ -11,12 +12,22 @@ const containerSx = {
   flexWrap: 'wrap',
   gap: 2,
   padding: '0 25px 20px',
-  alignContent: 'baseline',
+  alignContent: 'flex-start',
+  justifyContent: 'flex-start',
   overflowY: 'auto',
   userSelect: 'none',
 } as const;
 const blockNameSx = { padding: '6px', textAlign: 'center', cursor: 'pointer' } as const;
 const cardContentSx = { paddingX: 0 } as const;
+
+/**
+ * Parse a raw line into primary text and optional language tag.
+ */
+function parseLine(raw: string): { text: string; language?: string } {
+  const match = raw.match(SONG_TRANSLATION_LINE_REGEX);
+  if (match) return { text: match[2], language: match[1].toUpperCase() };
+  return { text: raw };
+}
 
 interface BlockCardProps {
   blockIndex: number;
@@ -38,8 +49,9 @@ interface BlockCardProps {
 }
 
 /**
- * Memoized block card. Re-renders only when its own props change, so navigating
- * between lines/blocks no longer re-renders every block in the song.
+ * Memoized block card. Re-renders only when its own props change.
+ * Translation lines (tagged with [XX]) are shown italic/grey and non-selectable.
+ * Only primary (untagged) lines count for activeLineIndex navigation.
  */
 const BlockCard = memo(function BlockCard({
   blockIndex,
@@ -59,8 +71,21 @@ const BlockCard = memo(function BlockCard({
   onLineClick,
   forwardRef,
 }: BlockCardProps) {
+  // Build display rows: each primary line may be followed by translation lines
+  type Row = { primaryIdx: number; text: string; translations: string[] };
+  const rows: Row[] = [];
+  let primaryIdx = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const parsed = parseLine(lines[i]);
+    if (!parsed.language) {
+      rows.push({ primaryIdx: primaryIdx++, text: parsed.text, translations: [] });
+    } else if (rows.length > 0) {
+      rows[rows.length - 1].translations.push(parsed.text);
+    }
+  }
+
   return (
-    <Card ref={forwardRef} sx={{ flexGrow: 1, border: `1px solid ${color}` }}>
+    <Card ref={forwardRef} sx={{ flexGrow: 1, minWidth: '150px', border: `1px solid ${color}` }}>
       <CardMedia sx={{ background: color }}>
         <Typography
           variant="h6"
@@ -78,30 +103,55 @@ const BlockCard = memo(function BlockCard({
             sx={{
               paddingX: '14px',
               background: selected ? color : 'none',
-              whiteSpace: 'pre-wrap',
+              whiteSpace: 'nowrap',
               cursor: 'pointer',
             }}
             onDoubleClick={() => onBlockDoubleClick(blockIndex)}
           >
-            (#{songNumber}) {songTitle ?? unknownLabel}
-            {songAuthors && `\n${songAuthors}`}
-            {songCopyright && `\n${songCopyright}`}
+            <strong>
+              (#{songNumber}) {songTitle ?? unknownLabel}
+            </strong>
+            <div>{songAuthors && `\n${songAuthors}`}</div>
+            <em>{songCopyright && `\n${songCopyright}`}</em>
           </Typography>
         ) : (
-          lines.map((line, lineIndex) => (
-            <Typography
-              key={lineIndex}
-              variant="body1"
-              sx={{
-                paddingX: '14px',
-                background: selected && lineIndex === activeLineIndex ? color : 'none',
-                cursor: 'pointer',
-              }}
-              onClick={() => onLineClick(blockIndex, lineIndex)}
-            >
-              {line}
-            </Typography>
-          ))
+          rows.map((row) => {
+            const isActive = selected && row.primaryIdx === activeLineIndex;
+            return (
+              <div key={row.primaryIdx}>
+                {/* Primary line — selectable */}
+                <Typography
+                  variant="body1"
+                  sx={{
+                    paddingX: '14px',
+                    background: isActive ? color : 'none',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onClick={() => onLineClick(blockIndex, row.primaryIdx)}
+                >
+                  {row.text}
+                </Typography>
+                {/* Translation lines — italic, grey, non-selectable */}
+                {row.translations.map((t, ti) => (
+                  <Typography
+                    key={ti}
+                    variant="body2"
+                    sx={{
+                      paddingX: '14px',
+                      fontStyle: 'italic',
+                      color: 'text.disabled',
+                      pointerEvents: 'none',
+                      lineHeight: 1.2,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {t}
+                  </Typography>
+                ))}
+              </div>
+            );
+          })
         )}
       </CardContent>
     </Card>
@@ -123,7 +173,9 @@ const ControlSong = () => {
 
   const selectedRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll selected block into view only when activeBlockIndex changes
+  // Scroll selected block into view only when activeBlockIndex changes.
+  // Use 'auto' (not 'smooth') — smooth-scrolls stack up under fast key auto-repeat
+  // and animations get cancelled mid-flight, making the controller appear to lag.
   useEffect(() => {
     selectedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [activeBlockIndex]);
@@ -199,4 +251,4 @@ const ControlSong = () => {
   );
 };
 
-export default ControlSong;
+export default memo(ControlSong);

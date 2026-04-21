@@ -1,5 +1,8 @@
 import type { ISong, TBlocks } from '@/song/index';
 
+/** Inline copy — avoids circular import with index.ts */
+const SONG_BLOCK_SEPARATOR = '---';
+
 export class Song implements ISong {
   title: string;
   authors?: string;
@@ -73,20 +76,31 @@ export class Song implements ISong {
   }
 
   getBlock(order: string, index: number) {
-    const currentOrder = this.getCurrentOrder(order);
-    return this.blocks[currentOrder[index]] ?? [];
+    // getBlocks() now expands separator-split sub-pages; getBlock() must be consistent.
+    const allBlocks = this.getBlocks(order);
+    const nonCopyright = allBlocks.filter((b) => !b.copyright);
+    return nonCopyright[index]?.lines ?? [];
   }
 
   getBlocks(order: string) {
     const blocks: { name: string; lines: string[]; copyright: boolean }[] = [];
     const currentOrder = this.getCurrentOrder(order);
 
-    currentOrder.forEach((order) => {
-      blocks.push({
-        name: order,
-        lines: this.blocks[order],
-        copyright: false,
-      });
+    currentOrder.forEach((blockName) => {
+      const rawLines = this.blocks[blockName] ?? [];
+      // Split on SONG_BLOCK_SEPARATOR ('---') into sub-pages
+      let pageIndex = 0;
+      let current: string[] = [];
+      for (const line of rawLines) {
+        if (line === SONG_BLOCK_SEPARATOR) {
+          blocks.push({ name: pageIndex === 0 ? blockName : `${blockName} (${pageIndex + 1})`, lines: current, copyright: false });
+          pageIndex++;
+          current = [];
+        } else {
+          current.push(line);
+        }
+      }
+      blocks.push({ name: pageIndex === 0 ? blockName : `${blockName} (${pageIndex + 1})`, lines: current, copyright: false });
     });
 
     blocks.push({ name: '© Copyright', lines: [], copyright: true });

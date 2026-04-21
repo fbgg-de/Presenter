@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PDF OCG (Optional Content Group) Layer Utilities
  *
  * Uses pdf-lib's low-level API to embed annotations as a named,
@@ -8,7 +8,7 @@
  * Layer name convention: `Annotations (<musicianName>)`
  */
 import { PDFDocument, PDFName, PDFString, PDFArray, PDFDict, PDFRef, PDFOperator, PDFStream, rgb, StandardFonts } from 'pdf-lib';
-import type { AnnotationEntry } from '@/components/PdfAnnotationToolbar';
+import type { AnnotationEntry } from '@/components/pdf/PdfAnnotationToolbar';
 
 /** Info about a single OCG layer found in a PDF */
 export interface OcgLayerInfo {

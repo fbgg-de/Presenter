@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PDF OCG (Optional Content Group) Export Utilities
  *
  * Uses pdf-lib's low-level API to embed annotations as named,
@@ -14,7 +14,7 @@
  * (/OC BDC … EMC) so compliant viewers (Acrobat, Preview) can toggle them.
  */
 import { PDFDocument, PDFName, PDFString, PDFArray, PDFDict, PDFRef, rgb, StandardFonts } from 'pdf-lib';
-import type { AnnotationEntry } from '@/components/PdfAnnotationToolbar';
+import type { AnnotationEntry } from '@/components/pdf/PdfAnnotationToolbar';
 
 /** Get the intrinsic page width (in PDF points) for page 1. Returns 612 as fallback. */
 export async function getPdfPageWidth(pdfBytes: ArrayBuffer): Promise<number> {

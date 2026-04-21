@@ -47,6 +47,7 @@ export interface WindowState {
   frozen: boolean;
   isBlack: boolean;
   fullscreen: boolean;
+  hidden?: boolean;
   bounds: { x: number; y: number; width: number; height: number };
   screenId?: number;
 }

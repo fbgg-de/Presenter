@@ -1,7 +1,7 @@
-import { Box, Stack, CircularProgress } from '@mui/material';
+﻿import { Box, Stack, CircularProgress } from '@mui/material';
 import { useRef, useCallback, useState, useEffect, MutableRefObject, Ref, RefObject } from 'react';
 import { Document, Page } from 'react-pdf';
-import { PdfAnnotationToolbar } from '@/components/PdfAnnotationToolbar';
+import { PdfAnnotationToolbar } from '@/components/pdf/PdfAnnotationToolbar';
 import { MusicianFooter } from './MusicianFooter';
 import type { PageViewMode } from './usePdfViewer';
 import { getPageState, setPageField } from './usePdfViewer';

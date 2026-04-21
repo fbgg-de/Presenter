@@ -1,4 +1,4 @@
-import {
+﻿import {
   Badge,
   Box,
   Chip,
@@ -37,11 +37,11 @@ import type { ShowItem } from '@/api/shows.api';
 import { addShowItem } from '@/store/showSlice';
 import { useSaveShowMutation } from '@/api/shows.api';
 import { useGetPdfCountsQuery } from '@/api/pdfs.api';
-import { UnifiedSearch } from '@/components/UnifiedSearch';
+import { UnifiedSearch } from '@/components/search/UnifiedSearch';
 import { Song } from '@/song';
 import type { ISong } from '@/song';
 import { getShowItemIcon, getShowItemColor } from '@/utils/showItemIcons';
-import DraggableList from '@/components/DraggableList';
+import DraggableList from '@/components/show/DraggableList';
 
 const SIDEBAR_WIDTH = 350;
 
@@ -131,7 +131,7 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
   const handleSaveShow = async () => {
     if (!currentShow) return;
     try {
-      await saveShowMutation({ title: currentShow.title, order: currentShow.order }).unwrap();
+      await saveShowMutation({ title: currentShow.title, order: currentShow.order, styleId: currentShow.styleId ?? null }).unwrap();
       dispatch(setDirty(false));
     } catch (error) {
       console.error('Failed to save show:', error);

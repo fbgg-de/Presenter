@@ -67,6 +67,9 @@ const songsApi = presenterApi.injectEndpoints({
     songExists: build.query<ApiSuccess<{ exists: boolean; order: string }>, { songNumber: number }>({
       query: ({ songNumber }) => `rest/SongExists/${songNumber}`,
     }),
+    getLanguageTags: build.query<ApiSuccess<string[]>, void>({
+      query: () => 'rest/LanguageTags',
+    }),
   }),
   overrideExisting: false,
 });
@@ -75,10 +78,12 @@ export const {
   useGetSongsAllQuery,
   useSearchSongsQuery,
   useGetSongQuery,
+  useLazyGetSongQuery,
   useCreateSongMutation,
   useUpdateSongMutation,
   useDeleteSongMutation,
   useSongExistsQuery,
+  useGetLanguageTagsQuery,
 } = songsApi;
 
 export { songsApi };

@@ -57,6 +57,9 @@ export interface PresentationContent {
   /** Song / item title (for reference display) */
   title?: string;
 
+  /** Song number */
+  songNumber?: number;
+
   /** Song copyright text */
   copyright?: string;
 

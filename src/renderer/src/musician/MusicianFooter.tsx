@@ -1,4 +1,4 @@
-import { Chip, IconButton, MenuItem, Paper, Select, Stack, Tooltip, Typography } from '@mui/material';
+﻿import { Chip, IconButton, MenuItem, Paper, Select, Stack, Tooltip, Typography } from '@mui/material';
 import {
   PictureAsPdf as PdfIcon,
   FitScreen as FitWidthIcon,
@@ -7,7 +7,7 @@ import {
   AspectRatio as Zoom100Icon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { PdfLayerViewer } from '@/components/PdfLayerViewer';
+import { PdfLayerViewer } from '@/components/pdf/PdfLayerViewer';
 
 interface LyricsFooterProps {
   variant: 'lyrics';
@@ -53,7 +53,7 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
       <Paper elevation={2} square sx={{ bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider', px: 2, py: 1, mt: 2 }}>
         {copyright && (
           <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
-            © {copyright}
+            {copyright}
           </Typography>
         )}
         <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap' }}>

@@ -54,6 +54,8 @@ class Shows extends RestController
         $account = $req->account;
         $title = $req->params->get('title');
         $order = $req->params->getAsArray('order');
+        $styleIdRaw = $req->params->get('styleId', null, false);
+        $styleId = ($styleIdRaw === null || $styleIdRaw === '' || (int)$styleIdRaw === 0) ? null : (int)$styleIdRaw;
 
         // Validate order doesn't contain invalid song numbers
         foreach ($order as $item) {
@@ -70,14 +72,17 @@ class Shows extends RestController
 
         $stmt = self::prepare('
 				INSERT INTO `shows` (
-					`account`, `title`, `order`
+					`account`, `title`, `order`, `style_id`
 				) VALUES (
-					?, ?, ?
+					?, ?, ?, ?
 				)
-				ON DUPLICATE KEY UPDATE `order` = VALUES(`order`), `date` = CURRENT_TIMESTAMP
+				ON DUPLICATE KEY UPDATE
+					`order` = VALUES(`order`),
+					`style_id` = VALUES(`style_id`),
+					`date` = CURRENT_TIMESTAMP
 			');
 
-        $stmt->bind_param('iss', $account, $title, $orderValue)->execute()->close();
+        $stmt->bind_param('issi', $account, $title, $orderValue, $styleId)->execute()->close();
 
         $res->success([
             'message' => 'show "' . $title . '" successfully uploaded'

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Box, Stack, Typography, Button, CircularProgress, IconButton, Tooltip } from '@mui/material';
 import {
   KeyboardArrowUp as PrevSongIcon,
@@ -12,16 +12,16 @@ import { useAppSelector, useAppDispatch } from '@/store';
 import { setCurrentShow, closeShowSelector } from '@/store/showSlice';
 import { setSongsOrder, setSongOrders } from '@/store/songsSlice';
 import { updateSetting } from '@/store/settingsSlice';
-import { Shows } from '@/components/Shows';
-import { QrCodeShare } from '@/components/QrCodeShare';
+import { Shows } from '@/components/show/Shows';
+import { QrCodeShare } from '@/components/settings/QrCodeShare';
 import { MusicianSidebar } from './MusicianSidebar';
 import { MusicianToolbar, floatingBtnSx, type SyncMode } from './MusicianToolbar';
 import { MusicianSettings } from './MusicianSettings';
 import { PdfView } from './PdfView';
 import { LyricsView } from './LyricsView';
 import { usePdfViewer } from './usePdfViewer';
-import { PdfUploadModal } from '@/components/PdfUploadModal';
-import { PdfAreaMappingEditor } from '@/components/PdfAreaMappingEditor';
+import { PdfUploadModal } from '@/components/pdf/PdfUploadModal';
+import { PdfAreaMappingEditor } from '@/components/pdf/PdfAreaMappingEditor';
 import { loadShowSongs } from '@/store/songsSlice';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import type { Show, ShowItem } from '@/api/shows.api';

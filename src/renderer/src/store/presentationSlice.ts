@@ -5,9 +5,11 @@ export interface PresentationState {
   activeBlockIndex: number;
   activeLineIndex: number;
   isBlack: boolean;
+  isTextHidden: boolean;
   isIdentifying: boolean;
   frozenWindows: string[]; // window names that are frozen
   keyboardDisabled: boolean;
+  videoVisible: boolean;
 }
 
 const initialState: PresentationState = {
@@ -15,9 +17,11 @@ const initialState: PresentationState = {
   activeBlockIndex: 0,
   activeLineIndex: 0,
   isBlack: false,
+  isTextHidden: false,
   isIdentifying: false,
   frozenWindows: [],
   keyboardDisabled: false,
+  videoVisible: true,
 };
 
 export const presentationSlice = createSlice({
@@ -85,6 +89,12 @@ export const presentationSlice = createSlice({
     setBlack: (state, action: PayloadAction<boolean>) => {
       state.isBlack = action.payload;
     },
+    toggleTextHidden: (state) => {
+      state.isTextHidden = !state.isTextHidden;
+    },
+    setTextHidden: (state, action: PayloadAction<boolean>) => {
+      state.isTextHidden = action.payload;
+    },
     toggleIdentify: (state) => {
       state.isIdentifying = !state.isIdentifying;
     },
@@ -110,6 +120,12 @@ export const presentationSlice = createSlice({
     setKeyboardDisabled: (state, action: PayloadAction<boolean>) => {
       state.keyboardDisabled = action.payload;
     },
+    setVideoVisible: (state, action: PayloadAction<boolean>) => {
+      state.videoVisible = action.payload;
+    },
+    toggleVideoVisible: (state) => {
+      state.videoVisible = !state.videoVisible;
+    },
   },
 });
 
@@ -125,12 +141,16 @@ export const {
   prevLine,
   toggleBlack,
   setBlack,
+  toggleTextHidden,
+  setTextHidden,
   toggleIdentify,
   setIdentifying,
   freezeWindow,
   unfreezeWindow,
   toggleFreezeWindow,
   setKeyboardDisabled,
+  setVideoVisible,
+  toggleVideoVisible,
 } = presentationSlice.actions;
 
 export default presentationSlice.reducer;

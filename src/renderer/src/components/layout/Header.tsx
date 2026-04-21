@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { AppBar, IconButton, Toolbar, Typography, Box, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
 import {
   LightMode,
@@ -10,6 +10,8 @@ import {
   Info as InfoIcon,
   Cable as CableIcon,
   PictureAsPdf as PdfIcon,
+  WifiOff as WifiOffIcon,
+  Wifi as WifiIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -17,9 +19,9 @@ import { useAppDispatch, useAppSelector } from '@/store';
 import { toggleTheme } from '@/store/themeSlice';
 import { updateSetting } from '@/store/settingsSlice';
 import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
-import { StyleEditor } from '@/components/StyleEditor';
-import { StyleInspector } from '@/components/StyleInspector';
-import { CompanionHelper } from '@/components/CompanionHelper';
+import { StyleEditor } from '@/components/style/StyleEditor';
+import { StyleInspector } from '@/components/style/StyleInspector';
+import { CompanionHelper } from '@/components/settings/CompanionHelper';
 
 const Header = () => {
   const { LL } = useI18nContext();
@@ -27,6 +29,7 @@ const Header = () => {
   const navigate = useNavigate();
   const themeMode = useAppSelector((state) => state.theme.mode);
   const uiLanguage = useAppSelector((state) => state.settings.uiLanguage);
+  const offlineMode = useAppSelector((state) => state.settings.offlineMode);
 
   const { data: session } = useGetSessionQuery();
   const [logout] = useLogoutMutation();
@@ -73,6 +76,18 @@ const Header = () => {
             {LL.COMMON.APP_NAME()}
           </Typography>
           <Box flexGrow={1} />
+
+          {/* Offline Mode Toggle */}
+          <Tooltip title={offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}>
+            <IconButton
+              size="small"
+              onClick={() => dispatch(updateSetting({ key: 'offlineMode', value: !offlineMode }))}
+              color={offlineMode ? 'warning' : 'default'}
+              sx={{ mr: 0.5 }}
+            >
+              {offlineMode ? <WifiOffIcon /> : <WifiIcon />}
+            </IconButton>
+          </Tooltip>
 
           {/* Language Switcher */}
           <Tooltip title={LL.HEADER.SWITCH_LANGUAGE()}>

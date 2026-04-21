@@ -16,15 +16,11 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useGetSessionQuery } from '@/api/session.api';
-import { presenterApi } from '@/api/base.api';
+import { useGetSessionQuery, useLazyGetSessionQuery } from '@/api/session.api';
+import { presenterApi, getBackendBaseUrl } from '@/api/base.api';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { updateSetting } from '@/store/settingsSlice';
 
-/** Extended API slice that includes the session endpoint — needed for dispatch. */
-const sessionEndpoints = presenterApi as typeof presenterApi & {
-  endpoints: { getSession: { initiate: (arg: undefined, opts?: { forceRefetch: boolean; subscribe: boolean }) => any } };
-};
 
 /**
  * Monitors backend connectivity via the existing Session endpoint.
@@ -39,9 +35,11 @@ export const ConnectivityChecker = () => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const backendUrl = useAppSelector((s) => s.settings.backendUrl);
+  const offlineMode = useAppSelector((s) => s.settings.offlineMode);
 
   // Use the existing Session endpoint to detect connectivity issues
-  const { isLoading, isError, refetch } = useGetSessionQuery();
+  const { isLoading, isError, refetch } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const [testSession] = useLazyGetSessionQuery();
 
   const [snackOpen, setSnackOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -52,10 +50,10 @@ export const ConnectivityChecker = () => {
   // Keep the input in sync when the store value changes
   useEffect(() => setUrlInput(backendUrl || ''), [backendUrl]);
 
-  // Show the snackbar when connectivity fails
+  // Show the snackbar when connectivity fails (not in offline mode)
   useEffect(() => {
-    if (!isLoading && isError) setSnackOpen(true);
-  }, [isLoading, isError]);
+    if (!offlineMode && !isLoading && isError) setSnackOpen(true);
+  }, [isLoading, isError, offlineMode]);
 
   // ── Test the backend URL using the existing getSession endpoint ──
   const testBackendUrl = useCallback(
@@ -67,7 +65,7 @@ export const ConnectivityChecker = () => {
       setTestResult(null);
 
       // Remember previous URL so we can revert on failure
-      const previousUrl = localStorage.getItem('presenter_backend_url') || '';
+      const previousUrl = localStorage.getItem('presenter_backend_url') ?? getBackendBaseUrl();
 
       try {
         // Point the dynamic base query at the new URL
@@ -77,12 +75,7 @@ export const ConnectivityChecker = () => {
         dispatch(presenterApi.util.resetApiState());
 
         // Dispatch the existing getSession endpoint
-        const result = await dispatch(
-          sessionEndpoints.endpoints.getSession.initiate(undefined, {
-            forceRefetch: true,
-            subscribe: false,
-          }),
-        ).unwrap();
+        const result = await testSession(undefined, true).unwrap();
 
         if (result) {
           setTestResult({ ok: true, message: LL.CONNECTIVITY.TEST_SUCCESS() });
@@ -91,7 +84,7 @@ export const ConnectivityChecker = () => {
         }
       } catch (err: any) {
         // Revert to the previous URL
-        localStorage.setItem('presenter_backend_url', previousUrl || '');
+        localStorage.setItem('presenter_backend_url', previousUrl);
         dispatch(presenterApi.util.resetApiState());
 
         const status = err?.status ?? '';

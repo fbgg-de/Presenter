@@ -1,4 +1,4 @@
-import type { StyleData, StyleEntity } from '@/api/styles.api';
+import type { LanguageStyleEntry, StyleData, StyleEntity } from '@/api/styles.api';
 import type { CSSProperties } from 'react';
 
 /**
@@ -9,10 +9,19 @@ export type ResolvedStyle = {
   backgroundImage?: string;
   backgroundVideo?: string;
   backgroundVideoAutoplay?: boolean;
+  backgroundVideoVolume?: number;
+  backgroundVideoSize?: string;
+  backgroundVideoPosition?: string;
+  backgroundVideoZoom?: number;
+  backgroundVideoBlur?: number;
   backgroundColor?: string;
   backgroundSize?: string;
   backgroundPosition?: string;
   backgroundZoom?: number;
+  backgroundBlur?: number;
+  nextLinePreview?: boolean;
+  nextLinePreviewColor?: string;
+  nextLinePreviewOpacity?: number;
   fontFamily?: string;
   fontFallback?: string[];
   fontColor?: string;
@@ -32,7 +41,38 @@ export type ResolvedStyle = {
   opacity?: number;
   hideText?: boolean;
   hideBackground?: boolean;
-  nextLinePreviewColor?: string;
+  /** Per-language typography overrides */
+  languageStyles?: LanguageStyleEntry[];
+  /**
+   * Ordered list of language tags to display (derived from languageStyles non-default entries).
+   * When present and showAllLanguages is false, only these languages are shown in this order.
+   */
+  languageOrder?: string[];
+  /** When true, show all language lines regardless of languageOrder */
+  showAllLanguages?: boolean;
+  /** Copyright section styles */
+  copyrightFontFamily?: string;
+  copyrightFontColor?: string;
+  copyrightFontSize?: string;
+  copyrightFontBold?: boolean;
+  copyrightFontItalic?: boolean;
+  copyrightFontUnderline?: boolean;
+  copyrightTextAlign?: 'left' | 'center' | 'right';
+  copyrightPadding?: string;
+  copyrightOpacity?: number;
+  /** Copyright title row settings */
+  copyrightTitleFontSize?: string;
+  copyrightTitleFontBold?: boolean;
+  copyrightTitleFontItalic?: boolean;
+  copyrightTitleFontUnderline?: boolean;
+  copyrightTitleSpacing?: string;
+  copyrightShowSongNumber?: boolean;
+  /** Suppress background image/video inherited from parent levels */
+  suppressBackgroundImage?: boolean;
+  suppressBackgroundVideo?: boolean;
+  /** Video ease in/out duration in seconds */
+  backgroundVideoEaseIn?: number;
+  backgroundVideoEaseOut?: number;
   css?: string;
 };
 
@@ -65,35 +105,72 @@ export function resolveStyleData(data: StyleData | undefined): ResolvedStyle {
     (result as any)[key] = val;
   };
 
-  set('backgroundImage',    extractEnabled(data.backgroundImage));
-  set('backgroundVideo',    extractEnabled(data.backgroundVideo));
+  set('backgroundImage', extractEnabled(data.backgroundImage));
+  set('backgroundVideo', extractEnabled(data.backgroundVideo));
   set('backgroundVideoAutoplay', extractEnabled(data.backgroundVideoAutoplay));
-  set('backgroundColor',    extractEnabled(data.backgroundColor));
-  set('backgroundSize',     extractEnabled(data.backgroundSize));
+  set('backgroundVideoVolume', extractEnabled(data.backgroundVideoVolume));
+  set('backgroundVideoSize', extractEnabled(data.backgroundVideoSize));
+  set('backgroundVideoPosition', extractEnabled(data.backgroundVideoPosition));
+  set('backgroundVideoZoom', extractEnabled(data.backgroundVideoZoom));
+  set('backgroundVideoBlur', extractEnabled(data.backgroundVideoBlur));
+  set('backgroundColor', extractEnabled(data.backgroundColor));
+  set('backgroundSize', extractEnabled(data.backgroundSize));
   set('backgroundPosition', extractEnabled(data.backgroundPosition));
-  set('backgroundZoom',     extractEnabled(data.backgroundZoom));
-  set('fontFamily',         extractEnabled(data.fontFamily));
-  set('fontFallback',       extractEnabled(data.fontFallback));
-  set('fontColor',          extractEnabled(data.fontColor));
-  set('fontSize',           extractEnabled(data.fontSize));
-  set('fontBold',           extractEnabled(data.fontBold));
-  set('fontItalic',         extractEnabled(data.fontItalic));
-  set('fontUnderline',      extractEnabled(data.fontUnderline));
-  set('lineHeight',         extractEnabled(data.lineHeight));
-  set('letterSpacing',      extractEnabled(data.letterSpacing));
-  set('padding',            extractEnabled(data.padding));
-  set('textTransform',      extractEnabled(data.textTransform));
-  set('textAlign',          extractEnabled(data.textAlign));
-  set('verticalAlign',      extractEnabled(data.verticalAlign));
-  set('textStroke',         extractEnabled(data.textStroke));
-  set('textShadow',         extractEnabled(data.textShadow));
-  set('textShadowColor',    extractEnabled(data.textShadowColor));
-  set('opacity',            extractEnabled(data.opacity));
+  set('backgroundZoom', extractEnabled(data.backgroundZoom));
+  set('backgroundBlur', extractEnabled(data.backgroundBlur));
   set('nextLinePreviewColor', extractEnabled(data.nextLinePreviewColor));
+  set('nextLinePreview', extractEnabled(data.nextLinePreview));
+  set('nextLinePreviewOpacity', extractEnabled(data.nextLinePreviewOpacity));
+  set('fontFamily', extractEnabled(data.fontFamily));
+  set('fontFallback', extractEnabled(data.fontFallback));
+  set('fontColor', extractEnabled(data.fontColor));
+  set('fontSize', extractEnabled(data.fontSize));
+  set('fontBold', extractEnabled(data.fontBold));
+  set('fontItalic', extractEnabled(data.fontItalic));
+  set('fontUnderline', extractEnabled(data.fontUnderline));
+  set('lineHeight', extractEnabled(data.lineHeight));
+  set('letterSpacing', extractEnabled(data.letterSpacing));
+  set('padding', extractEnabled(data.padding));
+  set('textTransform', extractEnabled(data.textTransform));
+  set('textAlign', extractEnabled(data.textAlign));
+  set('verticalAlign', extractEnabled(data.verticalAlign));
+  set('textStroke', extractEnabled(data.textStroke));
+  set('textShadow', extractEnabled(data.textShadow));
+  set('textShadowColor', extractEnabled(data.textShadowColor));
+  set('opacity', extractEnabled(data.opacity));
+  // nextLinePreviewColor and nextLinePreview handled in the background block above
 
   if (data.hideText !== undefined) result.hideText = data.hideText;
   if (data.hideBackground !== undefined) result.hideBackground = data.hideBackground;
+  if (data.showAllLanguages !== undefined) result.showAllLanguages = data.showAllLanguages;
+  set('copyrightFontFamily', extractEnabled(data.copyrightFontFamily));
+  set('copyrightFontColor', extractEnabled(data.copyrightFontColor));
+  set('copyrightFontSize', extractEnabled(data.copyrightFontSize));
+  set('copyrightFontBold', extractEnabled(data.copyrightFontBold));
+  set('copyrightFontItalic', extractEnabled(data.copyrightFontItalic));
+  set('copyrightFontUnderline', extractEnabled(data.copyrightFontUnderline));
+  set('copyrightTextAlign', extractEnabled(data.copyrightTextAlign));
+  set('copyrightPadding', extractEnabled(data.copyrightPadding));
+  set('copyrightOpacity', extractEnabled(data.copyrightOpacity));
+  set('copyrightTitleFontSize', extractEnabled(data.copyrightTitleFontSize));
+  set('copyrightTitleFontBold', extractEnabled(data.copyrightTitleFontBold));
+  set('copyrightTitleFontItalic', extractEnabled(data.copyrightTitleFontItalic));
+  set('copyrightTitleFontUnderline', extractEnabled(data.copyrightTitleFontUnderline));
+  set('copyrightTitleSpacing', extractEnabled(data.copyrightTitleSpacing));
+  set('copyrightShowSongNumber', extractEnabled(data.copyrightShowSongNumber));
+  if (data.suppressBackgroundImage) result.suppressBackgroundImage = true;
+  if (data.suppressBackgroundVideo) result.suppressBackgroundVideo = true;
+  set('backgroundVideoEaseIn', extractEnabled(data.backgroundVideoEaseIn));
+  set('backgroundVideoEaseOut', extractEnabled(data.backgroundVideoEaseOut));
   if (data.css) result.css = data.css;
+  if (data.languageStyles?.enabled && data.languageStyles.value?.length) {
+    result.languageStyles = data.languageStyles.value;
+    // Build the full display order from the languageStyles array (including default '' entry).
+    // '' represents the primary/untagged language line.
+    if (data.languageStyles.value.length > 1) {
+      result.languageOrder = data.languageStyles.value.map((e) => (e.language === '' ? '' : e.language.toUpperCase()));
+    }
+  }
 
   return result;
 }
@@ -112,6 +189,10 @@ export function mergeStyles(base: ResolvedStyle, override: ResolvedStyle): Resol
       (result as any)[key] = val;
     }
   }
+
+  // If override suppresses background image/video, clear the inherited value
+  if (override.suppressBackgroundImage) result.backgroundImage = undefined;
+  if (override.suppressBackgroundVideo) result.backgroundVideo = undefined;
 
   // Merge CSS strings
   if (base.css && override.css) {
@@ -140,8 +221,8 @@ export function resolveStyleCascade(
 ): ResolvedStyle {
   let result: ResolvedStyle = {};
 
-  // Apply global style
-  if (globalStyle) {
+  // Apply global style (skip if entity-level enabled is false)
+  if (globalStyle && globalStyle.enabled) {
     result = mergeStyles(result, resolveStyleData(globalStyle.data));
     // Apply window override for global
     if (windowName && globalStyle.windowOverrides) {
@@ -155,8 +236,8 @@ export function resolveStyleCascade(
     }
   }
 
-  // Apply show style
-  if (showStyle) {
+  // Apply show style (skip if entity-level enabled is false)
+  if (showStyle && showStyle.enabled) {
     result = mergeStyles(result, resolveStyleData(showStyle.data));
     if (windowName && showStyle.windowOverrides) {
       const windowOverride = showStyle.windowOverrides.find((w) => w.window_name === windowName);
@@ -169,8 +250,8 @@ export function resolveStyleCascade(
     }
   }
 
-  // Apply item style
-  if (itemStyle) {
+  // Apply item style (skip if entity-level enabled is false)
+  if (itemStyle && itemStyle.enabled) {
     result = mergeStyles(result, resolveStyleData(itemStyle.data));
     if (windowName && itemStyle.windowOverrides) {
       const windowOverride = itemStyle.windowOverrides.find((w) => w.window_name === windowName);
@@ -308,12 +389,14 @@ export function styleToTextCss(style: ResolvedStyle): CSSProperties {
  */
 export const DEFAULT_STYLE: ResolvedStyle = {
   backgroundColor: '#000000',
-  fontFamily: 'Arial',
+  fontFamily: 'Roboto',
+  fontFallback: ['Arial'],
   fontColor: '#FFFFFF',
-  fontSize: '4vh',
-  lineHeight: '1.4',
+  fontSize: '4vw',
+  fontBold: true,
+  lineHeight: '100%',
   textAlign: 'center',
-  padding: '5% 10%',
+  padding: '0vw 0vh',
 };
 
 /**

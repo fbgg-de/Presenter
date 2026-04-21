@@ -1,8 +1,49 @@
-import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Presentation, type PresentationProps } from '@/presentation/Presentation';
 import type { PresentationContent } from '@/presentation/types';
 import { EMPTY_CONTENT } from '@/presentation/types';
+
+/**
+ * Read the video fade duration from localStorage (set by the main renderer's settings).
+ * Returns 0 if not set (instant cut).
+ */
+function getVideoFadeDuration(): number {
+  try {
+    const v = localStorage.getItem('presenter_video_fade_duration');
+    const n = v !== null ? parseInt(v, 10) : 0;
+    return isNaN(n) || n < 0 ? 0 : n;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Smoothly ramp a video element's volume from `from` to `to` over `durationMs`.
+ * Calls `onDone` when finished.
+ */
+function fadeVolume(video: HTMLVideoElement, from: number, to: number, durationMs: number, onDone?: () => void): void {
+  if (durationMs <= 0) {
+    video.volume = Math.max(0, Math.min(1, to));
+    onDone?.();
+    return;
+  }
+  const steps = Math.max(1, Math.round(durationMs / 16)); // ~60fps
+  const stepDuration = durationMs / steps;
+  const delta = (to - from) / steps;
+  let step = 0;
+  const tick = () => {
+    step++;
+    const next = Math.max(0, Math.min(1, from + delta * step));
+    video.volume = next;
+    if (step < steps) {
+      setTimeout(tick, stepDuration);
+    } else {
+      video.volume = Math.max(0, Math.min(1, to));
+      onDone?.();
+    }
+  };
+  setTimeout(tick, stepDuration);
+}
 
 // Parse URL query params for window configuration
 const params = new URLSearchParams(window.location.search);
@@ -37,18 +78,31 @@ const applyUrlOverrides = (content: PresentationContent): PresentationContent =>
   return result;
 };
 
-// Export a function to update the presentation
+// Export a function to update the presentation.
+// We coalesce updates to the next animation frame so multiple presentation
+// windows that receive the same broadcast tick render on the same vsync
+// boundary — eliminating the visible offset between windows during fast nav.
+let pendingProps: PresentationProps | null = null;
+let rafScheduled = false;
+const commit = () => {
+  rafScheduled = false;
+  if (!pendingProps) return;
+  const props = pendingProps;
+  pendingProps = null;
+  lastProps = props;
+  root.render(<Presentation {...props} />);
+};
+
 export const updatePresentation = (props: PresentationProps) => {
   // Apply URL overrides if content is present
   if (props.content && props.content !== EMPTY_CONTENT) {
     props = { ...props, content: applyUrlOverrides(props.content) };
   }
-  lastProps = props;
-  root.render(
-    <StrictMode>
-      <Presentation {...props} />
-    </StrictMode>,
-  );
+  pendingProps = props;
+  if (!rafScheduled) {
+    rafScheduled = true;
+    requestAnimationFrame(commit);
+  }
 };
 
 // ── Listen for messages from the main window ──
@@ -123,23 +177,136 @@ if (window.presentationApi) {
       case 'VIDEO_COMMAND': {
         const videos = document.querySelectorAll('video');
         const action = (cmd as { action?: string }).action;
+        // Prefer the fadeDuration passed via IPC; fall back to localStorage for backwards compat.
+        const cmdFadeDuration = (cmd as { fadeDuration?: number }).fadeDuration;
+        const fadeDuration = typeof cmdFadeDuration === 'number' ? cmdFadeDuration : getVideoFadeDuration();
         videos.forEach((v) => {
           switch (action) {
-            case 'play': v.play().catch(() => {}); break;
-            case 'pause': v.pause(); break;
-            case 'toggle': if (v.paused) v.play().catch(() => {}); else v.pause(); break;
-            case 'stop': v.pause(); v.currentTime = 0; break;
-            case 'mute': v.muted = true; break;
-            case 'unmute': v.muted = false; break;
-            case 'toggle_mute': v.muted = !v.muted; break;
-            case 'set_volume': v.volume = Math.max(0, Math.min(1, (cmd as { value?: number }).value ?? 1)); break;
-            case 'loop': v.loop = true; break;
-            case 'unloop': v.loop = false; break;
-            case 'toggle_loop': v.loop = !v.loop; break;
-            case 'seek': v.currentTime = (cmd as { value?: number }).value ?? 0; break;
-            case 'seek_relative': v.currentTime = Math.max(0, v.currentTime + ((cmd as { value?: number }).value ?? 0)); break;
+            case 'play':
+              if (fadeDuration > 0) {
+                const targetVol = v.volume > 0 ? v.volume : 1;
+                v.muted = false;
+                v.volume = 0;
+                v.play().catch(() => {});
+                fadeVolume(v, 0, targetVol, fadeDuration);
+              } else {
+                v.play().catch(() => {});
+              }
+              break;
+            case 'pause':
+              if (fadeDuration > 0) {
+                const startVol = v.volume > 0 ? v.volume : (v.muted ? 0 : 1);
+                if (startVol > 0) {
+                  v.volume = startVol;
+                  v.muted = false;
+                  fadeVolume(v, startVol, 0, fadeDuration, () => {
+                    v.pause();
+                    v.volume = startVol;
+                  });
+                } else {
+                  v.pause();
+                }
+              } else {
+                v.pause();
+              }
+              break;
+            case 'toggle':
+              if (v.paused) {
+                if (fadeDuration > 0) {
+                  const targetVol = v.volume > 0 ? v.volume : 1;
+                  v.muted = false;
+                  v.volume = 0;
+                  v.play().catch(() => {});
+                  fadeVolume(v, 0, targetVol, fadeDuration);
+                } else {
+                  v.play().catch(() => {});
+                }
+              } else {
+                if (fadeDuration > 0) {
+                  const startVol = v.volume > 0 ? v.volume : (v.muted ? 0 : 1);
+                  if (startVol > 0) {
+                    v.volume = startVol;
+                    v.muted = false;
+                    fadeVolume(v, startVol, 0, fadeDuration, () => {
+                      v.pause();
+                      v.volume = startVol;
+                    });
+                  } else {
+                    v.pause();
+                  }
+                } else {
+                  v.pause();
+                }
+              }
+              break;
+            case 'stop':
+              if (fadeDuration > 0) {
+                const startVol = v.volume > 0 ? v.volume : (v.muted ? 0 : 1);
+                if (startVol > 0) {
+                  v.volume = startVol;
+                  v.muted = false;
+                  fadeVolume(v, startVol, 0, fadeDuration, () => {
+                    v.pause();
+                    v.currentTime = 0;
+                    v.volume = startVol;
+                  });
+                } else {
+                  v.pause();
+                  v.currentTime = 0;
+                }
+              } else {
+                v.pause();
+                v.currentTime = 0;
+              }
+              break;
+            case 'mute':
+              v.muted = true;
+              break;
+            case 'unmute':
+              v.muted = false;
+              break;
+            case 'toggle_mute':
+              v.muted = !v.muted;
+              break;
+            case 'set_volume':
+              v.volume = Math.max(0, Math.min(1, (cmd as { value?: number }).value ?? 1));
+              break;
+            case 'loop':
+              v.loop = true;
+              break;
+            case 'unloop':
+              v.loop = false;
+              break;
+            case 'toggle_loop':
+              v.loop = !v.loop;
+              break;
+            case 'seek':
+              v.currentTime = (cmd as { value?: number }).value ?? 0;
+              break;
+            case 'seek_relative':
+              v.currentTime = Math.max(0, v.currentTime + ((cmd as { value?: number }).value ?? 0));
+              break;
           }
         });
+        break;
+      }
+      case 'SET_VIDEO_VISIBLE': {
+        // Toggle a body class that hides background videos via CSS. The
+        // controller can either set an explicit value or toggle the current
+        // state. The class is read by Presentation.tsx via a global stylesheet
+        // so React doesn't need to re-render to reflect the change.
+        // `mode` ('cut'|'fade') and `durationMs` come from settings; we apply
+        // them via a data-attribute + CSS variable so the stylesheet can pick
+        // the right transition. Default to instant cut for backwards compat.
+        const c = cmd as { value?: boolean; mode?: 'cut' | 'fade'; durationMs?: number };
+        const body = document.body;
+        const mode = c.mode === 'fade' ? 'fade' : 'cut';
+        const durationMs = typeof c.durationMs === 'number' && c.durationMs >= 0 ? c.durationMs : 0;
+        body.dataset.hideTransition = mode;
+        body.style.setProperty('--hide-bg-video-duration', `${mode === 'fade' ? durationMs : 0}ms`);
+        if (c.value === true) body.classList.remove('hide-bg-video');
+        else if (c.value === false) body.classList.add('hide-bg-video');
+        else body.classList.toggle('hide-bg-video');
         break;
       }
     }
@@ -150,25 +317,58 @@ if (window.presentationApi) {
 updatePresentation({ content: EMPTY_CONTENT });
 
 // ── Video status reporting ──
-// Periodically report video state to the main window for the control bar
+// Only run the polling interval while a <video> element actually exists in the DOM.
+// Previously this fired every 250 ms even with no video, flooding IPC with messages
+// that the main process re-broadcasts to every other BrowserWindow → significant
+// background lag in Electron.
 if (window.presentationApi?.reportVideoStatus) {
-  setInterval(() => {
-    const videos = document.querySelectorAll('video');
-    if (videos.length === 0) {
-      window.presentationApi!.reportVideoStatus!({ hasVideo: false });
-      return;
-    }
-    // Report state of the first video (primary)
-    const v = videos[0];
-    window.presentationApi!.reportVideoStatus!({
-      hasVideo: true,
-      paused: v.paused,
-      muted: v.muted,
-      loop: v.loop,
-      volume: v.volume,
-      currentTime: v.currentTime,
-      duration: v.duration || 0,
-    });
-  }, 250);
-}
+  let pollInterval: ReturnType<typeof setInterval> | null = null;
+  let lastReportedHasVideo = false;
 
+  const startPolling = () => {
+    if (pollInterval) return;
+    pollInterval = setInterval(() => {
+      const videos = document.querySelectorAll('video');
+      if (videos.length === 0) {
+        if (lastReportedHasVideo) {
+          window.presentationApi!.reportVideoStatus!({ hasVideo: false, windowName: urlName || undefined });
+          lastReportedHasVideo = false;
+        }
+        stopPolling();
+        return;
+      }
+      const v = videos[0];
+      window.presentationApi!.reportVideoStatus!({
+        hasVideo: true,
+        paused: v.paused,
+        muted: v.muted,
+        loop: v.loop,
+        volume: v.volume,
+        currentTime: v.currentTime,
+        duration: v.duration || 0,
+        windowName: urlName || undefined,
+      });
+      lastReportedHasVideo = true;
+    }, 500);
+  };
+
+  const stopPolling = () => {
+    if (pollInterval) {
+      clearInterval(pollInterval);
+      pollInterval = null;
+    }
+  };
+
+  // Watch the DOM for video elements being added/removed and start/stop polling accordingly.
+  const observer = new MutationObserver(() => {
+    const hasVideo = document.querySelector('video') !== null;
+    if (hasVideo) startPolling();
+    else if (!hasVideo && lastReportedHasVideo) {
+      // Send a final "no video" status so the controller hides its UI
+      window.presentationApi!.reportVideoStatus!({ hasVideo: false, windowName: urlName || undefined });
+      lastReportedHasVideo = false;
+      stopPolling();
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+}

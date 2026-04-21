@@ -14,6 +14,8 @@ interface ManagedWindow {
   frozen: boolean;
   isBlack: boolean;
   queuedContent: PresentationContentIPC | null; // content queued while frozen
+  /** JSON-serialized snapshot of the last payload sent to this window — used to dedupe. */
+  lastSentPayload: string | null;
 }
 
 let windowCounter = 0;
@@ -25,6 +27,25 @@ export class PresentationWindowManager {
   private recreating = new Set<string>();
   /** Last broadcast content — re-sent after window recreation */
   private lastBroadcastContent: PresentationContentIPC | null = null;
+  /** Reference to main window for sending bounds-change notifications */
+  private mainWindow: BrowserWindow | null = null;
+
+  setMainWindow(win: BrowserWindow | null): void {
+    this.mainWindow = win;
+  }
+
+  private notifyBoundsChanged(id: string, win: BrowserWindow): void {
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
+    const bounds = win.getBounds();
+    const managed = this.windows.get(id);
+    if (!managed) return;
+    // Update config
+    managed.config.positionX = bounds.x;
+    managed.config.positionY = bounds.y;
+    managed.config.width = bounds.width;
+    managed.config.height = bounds.height;
+    this.mainWindow.webContents.send('presentation-window-bounds-changed', { id, bounds });
+  }
 
   /**
    * Create a new presentation window.
@@ -52,6 +73,7 @@ export class PresentationWindowManager {
         nodeIntegration: false,
         devTools: is.dev,
         webSecurity: false, // allow loading media from http://localhost:9100
+        backgroundThrottling: false,
       },
     });
 
@@ -92,7 +114,22 @@ export class PresentationWindowManager {
       }
     });
 
+    // Debounce bounds notifications (move/resize fire many times during drag)
+    let boundsTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleBoundsNotify = () => {
+      if (boundsTimer) clearTimeout(boundsTimer);
+      boundsTimer = setTimeout(() => {
+        boundsTimer = null;
+        if (!win.isDestroyed() && !win.isFullScreen()) {
+          this.notifyBoundsChanged(id, win);
+        }
+      }, 300);
+    };
+    win.on('move', scheduleBoundsNotify);
+    win.on('resize', scheduleBoundsNotify);
+
     win.on('closed', () => {
+      if (boundsTimer) { clearTimeout(boundsTimer); boundsTimer = null; }
       if (!this.recreating.has(id)) {
         this.windows.delete(id);
       }
@@ -105,6 +142,7 @@ export class PresentationWindowManager {
       frozen: config.frozen || false,
       isBlack: false,
       queuedContent: null,
+      lastSentPayload: null,
     };
 
     this.windows.set(id, managed);
@@ -120,6 +158,36 @@ export class PresentationWindowManager {
       managed.browserWindow.close();
     }
     this.windows.delete(id);
+  }
+
+  /**
+   * Focus (bring to front) a presentation window without changing always-on-top.
+   */
+  focusPresentationWindow(id: string): void {
+    const managed = this.windows.get(id);
+    if (managed && !managed.browserWindow.isDestroyed()) {
+      managed.browserWindow.focus();
+    }
+  }
+
+  /**
+   * Hide (make invisible) a presentation window.
+   */
+  hidePresentationWindow(id: string): void {
+    const managed = this.windows.get(id);
+    if (managed && !managed.browserWindow.isDestroyed()) {
+      managed.browserWindow.hide();
+    }
+  }
+
+  /**
+   * Show (make visible) a previously hidden presentation window.
+   */
+  showPresentationWindow(id: string): void {
+    const managed = this.windows.get(id);
+    if (managed && !managed.browserWindow.isDestroyed()) {
+      managed.browserWindow.show();
+    }
   }
 
   /**
@@ -302,6 +370,7 @@ export class PresentationWindowManager {
         frozen: managed.frozen,
         isBlack: managed.isBlack,
         fullscreen: managed.browserWindow.isFullScreen(),
+        hidden: !managed.browserWindow.isVisible(),
         bounds,
       });
     }
@@ -380,10 +449,7 @@ export class PresentationWindowManager {
    * Returns { applied, requiresReload } — `requiresReload` is true if some props
    * (frame/transparency/webPreferences) need a window recreation to take effect.
    */
-  updateWindowConfig(
-    id: string,
-    partial: Partial<WindowConfig>,
-  ): { applied: string[]; requiresReload: string[] } {
+  updateWindowConfig(id: string, partial: Partial<WindowConfig>): { applied: string[]; requiresReload: string[] } {
     const managed = this.windows.get(id);
     const applied: string[] = [];
     const requiresReload: string[] = [];
@@ -399,18 +465,23 @@ export class PresentationWindowManager {
     }
     if (partial.fullscreen !== undefined && partial.fullscreen !== cfg.fullscreen) {
       cfg.fullscreen = partial.fullscreen;
-      try { win.setFullScreen(partial.fullscreen); applied.push('fullscreen'); } catch { /* noop */ }
+      try {
+        win.setFullScreen(partial.fullscreen);
+        applied.push('fullscreen');
+      } catch {
+        /* noop */
+      }
     }
     if (partial.alwaysOnTop !== undefined && partial.alwaysOnTop !== cfg.alwaysOnTop) {
       cfg.alwaysOnTop = partial.alwaysOnTop;
-      try { win.setAlwaysOnTop(partial.alwaysOnTop); applied.push('alwaysOnTop'); } catch { /* noop */ }
+      try {
+        win.setAlwaysOnTop(partial.alwaysOnTop);
+        applied.push('alwaysOnTop');
+      } catch {
+        /* noop */
+      }
     }
-    if (
-      partial.width !== undefined ||
-      partial.height !== undefined ||
-      partial.positionX !== undefined ||
-      partial.positionY !== undefined
-    ) {
+    if (partial.width !== undefined || partial.height !== undefined || partial.positionX !== undefined || partial.positionY !== undefined) {
       const cur = win.getBounds();
       const next = {
         x: partial.positionX ?? cur.x,
@@ -422,16 +493,21 @@ export class PresentationWindowManager {
       cfg.positionY = next.y;
       cfg.width = next.width;
       cfg.height = next.height;
-      try { win.setBounds(next); applied.push('bounds'); } catch { /* noop */ }
+      try {
+        win.setBounds(next);
+        applied.push('bounds');
+      } catch {
+        /* noop */
+      }
     }
     if (partial.hideMouse !== undefined && partial.hideMouse !== cfg.hideMouse) {
       cfg.hideMouse = partial.hideMouse;
       try {
-        win.webContents.insertCSS(
-          partial.hideMouse ? '* { cursor: none !important; }' : '* { cursor: auto !important; }',
-        );
+        win.webContents.insertCSS(partial.hideMouse ? '* { cursor: none !important; }' : '* { cursor: auto !important; }');
         applied.push('hideMouse');
-      } catch { /* noop */ }
+      } catch {
+        /* noop */
+      }
     }
     if (partial.displayMode !== undefined && partial.displayMode !== cfg.displayMode) {
       cfg.displayMode = partial.displayMode;
@@ -471,13 +547,31 @@ export class PresentationWindowManager {
   /**
    * Send a video command (play/pause/stop/mute/unmute/seek/volume) to presentation windows.
    */
-  sendVideoCommand(action: string, windowName?: string, value?: number): void {
+  sendVideoCommand(action: string, windowName?: string, value?: number, fadeDuration?: number): void {
     this._forEachByName(windowName, (managed) => {
       if (!managed.browserWindow.isDestroyed()) {
         managed.browserWindow.webContents.send('presentation-command', {
           type: 'VIDEO_COMMAND',
           action,
           value,
+          fadeDuration,
+        });
+      }
+    });
+  }
+
+  /**
+   * Toggle background-video visibility per-window (or all when `windowName`
+   * is undefined). `value === undefined` means toggle the current state.
+   */
+  setVideoVisible(windowName?: string, value?: boolean, mode?: 'cut' | 'fade', durationMs?: number): void {
+    this._forEachByName(windowName, (managed) => {
+      if (!managed.browserWindow.isDestroyed()) {
+        managed.browserWindow.webContents.send('presentation-command', {
+          type: 'SET_VIDEO_VISIBLE',
+          value,
+          mode,
+          durationMs,
         });
       }
     });
@@ -532,6 +626,7 @@ export class PresentationWindowManager {
         nodeIntegration: false,
         devTools: is.dev,
         webSecurity: false, // allow loading media from http://localhost:9100
+        backgroundThrottling: false,
       },
     });
 
@@ -581,15 +676,27 @@ export class PresentationWindowManager {
     managed.frozen = false;
     managed.isBlack = false;
     managed.queuedContent = null;
+    managed.lastSentPayload = null;
   }
 
   private _sendContent(managed: ManagedWindow, content: PresentationContentIPC): void {
-    if (!managed.browserWindow.isDestroyed()) {
-      managed.browserWindow.webContents.send('presentation-update', {
-        type: 'UPDATE_PRESENTATION',
-        props: { content },
-      });
+    if (managed.browserWindow.isDestroyed()) return;
+    // Dedupe — skip the IPC roundtrip + structured clone if the payload is identical
+    // to the last one we sent to this window. This is the single biggest perf win
+    // for line/block switches because the renderer broadcasts the FULL content on
+    // every change.
+    let serialized: string;
+    try {
+      serialized = JSON.stringify(content);
+    } catch {
+      serialized = '';
     }
+    if (serialized && serialized === managed.lastSentPayload) return;
+    managed.lastSentPayload = serialized;
+    managed.browserWindow.webContents.send('presentation-update', {
+      type: 'UPDATE_PRESENTATION',
+      props: { content },
+    });
   }
 
   private _forEachByName(windowName: string | undefined, callback: (managed: ManagedWindow) => void): void {

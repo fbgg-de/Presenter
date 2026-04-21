@@ -45,7 +45,7 @@ const showsApi = presenterApi.injectEndpoints({
       },
       providesTags: [{ type: 'Shows', id: 'LIST' }],
     }),
-    saveShow: build.mutation<ApiSuccess<{ message: string }>, { title: string; order: ShowItem[] }>({
+    saveShow: build.mutation<ApiSuccess<{ message: string }>, { title: string; order: ShowItem[]; styleId?: number | null }>({
       query: (body) => ({ url: 'rest/Shows', method: 'POST', body }),
       invalidatesTags: [{ type: 'Shows', id: 'LIST' }],
     }),

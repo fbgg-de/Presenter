@@ -59,6 +59,10 @@ interface SettingsState {
   restoreWindowsOnStart: boolean;
   transitionMode: 'cut' | 'fade';
   transitionDuration: number;
+  hideTransitionMode: 'cut' | 'fade';
+  hideTransitionDuration: number;
+  videoFadeDuration: number;
+  offlineMode: boolean;
 }
 
 const loadString = (key: string, fallback: string): string => {
@@ -148,7 +152,7 @@ function loadMusicianSettings(): MusicianSettings {
 const musicianSettings = loadMusicianSettings();
 
 const initialState: SettingsState = {
-  backendUrl: loadString('presenter_backend_url', 'http://localhost:9000'),
+  backendUrl: loadString('presenter_backend_url', ''),
   uiLanguage: loadString('presenter_ui_language', ''),
   languageOverride: loadString('presenter_language_override', ''),
   confirmPageLeave: loadBool('presenter_confirm_page_leave', true),
@@ -176,7 +180,7 @@ const initialState: SettingsState = {
   bibleTranslation: loadString('presenter_bible_translation', 'ESV'),
   keyboardMapping: loadJson('presenter_keyboard_mapping', {}),
   keyboardEnabled: loadJson('presenter_keyboard_enabled', {}),
-  windowConfigs: (loadJson<object[]>('presenter_window_configs', [])).map((c) => {
+  windowConfigs: loadJson<object[]>('presenter_window_configs', []).map((c) => {
     // Strip transient runtime ID — it's only valid within a single app session.
     // On next start the restore logic will reopen all configs that lack _runtimeId.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -209,6 +213,10 @@ const initialState: SettingsState = {
   restoreWindowsOnStart: loadBool('presenter_restore_windows_on_start', false),
   transitionMode: loadString('presenter_transition_mode', 'cut') as 'cut' | 'fade',
   transitionDuration: loadNumber('presenter_transition_duration', 500),
+  hideTransitionMode: loadString('presenter_hide_transition_mode', 'cut') as 'cut' | 'fade',
+  hideTransitionDuration: loadNumber('presenter_hide_transition_duration', 300),
+  videoFadeDuration: loadNumber('presenter_video_fade_duration', 0),
+  offlineMode: loadBool('presenter_offline_mode', false),
 };
 
 // Musician setting keys that are stored in the grouped object

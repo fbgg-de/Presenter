@@ -56,8 +56,34 @@ class Styles extends RestController
 			');
         $stmt->bind_param('i', $account)->execute()->fetchAll($styles)->close();
 
+        // Bulk-fetch window overrides for ALL of this account's styles in one query
+        // so the renderer can resolve per-window override layers without making a
+        // separate GET /Styles/{id} request per style.
+        $overridesByStyle = [];
+        if (count($styles) > 0) {
+            $stmt = self::prepare('
+					SELECT swo.`style_id`, swo.`id`, swo.`window_name`, swo.`override_style_id`
+					FROM `style_window_overrides` swo
+					INNER JOIN `styles` s ON s.`id` = swo.`style_id`
+					WHERE s.`account` = ?
+				');
+            $stmt->bind_param('i', $account)->execute()->fetchAll($overrideRows)->close();
+            foreach ($overrideRows as $row) {
+                $sid = (int)$row['style_id'];
+                if (!isset($overridesByStyle[$sid])) {
+                    $overridesByStyle[$sid] = [];
+                }
+                $overridesByStyle[$sid][] = [
+                    'id' => (int)$row['id'],
+                    'window_name' => $row['window_name'],
+                    'override_style_id' => (int)$row['override_style_id'],
+                ];
+            }
+        }
+
         foreach ($styles as &$style) {
             $style['data'] = json_decode($style['data'], true);
+            $style['windowOverrides'] = $overridesByStyle[(int)$style['id']] ?? [];
         }
 
         $res->success($styles);

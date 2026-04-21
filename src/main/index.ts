@@ -14,6 +14,33 @@ import iconSvg from '../../favicon.svg?asset';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 
 const boundsFile = join(app.getPath('userData'), 'window-bounds.json');
+// Sidecar file mirroring `presenter_media_path` from renderer localStorage so
+// that the media server can be started BEFORE the renderer has finished
+// loading. Without this the very first /list request from MediaBrowser races
+// the server start and fails with ERR_CONNECTION_REFUSED.
+const mediaPathFile = join(app.getPath('userData'), 'media-path.json');
+
+function loadPersistedMediaPath(): string {
+  try {
+    if (existsSync(mediaPathFile)) {
+      const raw = JSON.parse(readFileSync(mediaPathFile, 'utf-8')) as { path?: string };
+      return typeof raw.path === 'string' ? raw.path : '';
+    }
+  } catch {
+    /* ignore */
+  }
+  return '';
+}
+
+function savePersistedMediaPath(mediaPath: string): void {
+  try {
+    const dir = app.getPath('userData');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(mediaPathFile, JSON.stringify({ path: mediaPath }), 'utf-8');
+  } catch {
+    /* ignore */
+  }
+}
 
 interface WindowBoundsData {
   x?: number;
@@ -83,6 +110,10 @@ function createWindow(): void {
       sandbox: false,
       contextIsolation: true,
       devTools: true,
+      // Prevent Chromium from throttling timers/rAF when the controller window
+      // is occluded by a fullscreen presentation window — without this, the
+      // controller's own UI freezes for hundreds of ms while keys auto-repeat.
+      backgroundThrottling: false,
     },
     ...(bounds.isMaximized ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } : bounds),
     minWidth: 600,
@@ -144,6 +175,8 @@ function createWindow(): void {
   if (wsServer) {
     wsServer.setMainWindow(mainWindow);
   }
+  // Set the main window reference for window bounds notifications
+  windowManager.setMainWindow(mainWindow);
 
   // Auto-start media server after renderer finishes loading
   mainWindow.webContents.on('did-finish-load', () => {
@@ -179,6 +212,8 @@ function autoStartMediaServer(): void {
             mediaServer = new LocalMediaServer(mediaPath);
             await mediaServer.start(9100);
           }
+          // Mirror to sidecar file for next launch's pre-start.
+          savePersistedMediaPath(mediaPath);
           console.log('[Media Server] Auto-started for path:', mediaPath);
         } catch (err) {
           console.error('[Media Server] Auto-start failed:', err);
@@ -267,22 +302,49 @@ app.whenReady().then(async () => {
   }
 
   // ── Start local media server (§7.2) ──
-  ipcMain.handle('start-media-server', async (_event, mediaPath: string) => {
-    if (mediaPath) {
-      try {
-        if (mediaServer) {
-          await mediaServer.updatePath(mediaPath);
-        } else {
-          mediaServer = new LocalMediaServer(mediaPath);
-          await mediaServer.start(9100);
-        }
-        return mediaServer.getBaseUrl();
-      } catch (err) {
-        console.error('[Media Server] Failed to start:', err);
-        return '';
-      }
+  // Pre-start from sidecar BEFORE the renderer asks. This eliminates the
+  // race where MediaBrowser's first `/list` fetch hits ERR_CONNECTION_REFUSED
+  // because the server hasn't been started yet.
+  const persistedMediaPath = loadPersistedMediaPath();
+  if (persistedMediaPath) {
+    try {
+      mediaServer = new LocalMediaServer(persistedMediaPath);
+      await mediaServer.start(9100);
+      console.log('[Media Server] Pre-started from sidecar for path:', persistedMediaPath);
+    } catch (err) {
+      console.error('[Media Server] Pre-start failed:', err);
+      mediaServer = null;
     }
-    return '';
+  }
+
+  // Mutex flag to prevent concurrent start-media-server calls racing on updatePath.
+  let mediaServerStarting = false;
+  ipcMain.handle('start-media-server', async (_event, mediaPath: string) => {
+    if (!mediaPath) return '';
+    // Idempotency: if already running with the same resolved path, just return the URL.
+    const { resolve: resolvePath } = await import('path');
+    if (mediaServer && mediaServer.getMediaPath() === resolvePath(mediaPath) && mediaServer.getPort() > 0) {
+      return mediaServer.getBaseUrl();
+    }
+    // Serialize concurrent calls to avoid stop/start races.
+    if (mediaServerStarting) return mediaServer?.getBaseUrl() ?? '';
+    mediaServerStarting = true;
+    try {
+      if (mediaServer) {
+        await mediaServer.updatePath(mediaPath);
+      } else {
+        mediaServer = new LocalMediaServer(mediaPath);
+        await mediaServer.start(9100);
+      }
+      // Mirror to sidecar so the next launch can pre-start.
+      savePersistedMediaPath(mediaPath);
+      return mediaServer.getBaseUrl();
+    } catch (err) {
+      console.error('[Media Server] Failed to start:', err);
+      return '';
+    } finally {
+      mediaServerStarting = false;
+    }
   });
 
   // Handle second-instance (single instance lock)

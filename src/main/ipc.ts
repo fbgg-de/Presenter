@@ -75,47 +75,35 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
   });
 
   // Native file picker — returns { path, url } or null if cancelled.
-  ipcMain.handle(
-    'pick-file',
-    async (
-      event,
-      options: { title?: string; filters?: Electron.FileFilter[]; defaultPath?: string } = {},
-    ) => {
-      const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-      const result = await dialog.showOpenDialog(win as BrowserWindow, {
-        title: options.title ?? 'Select File',
-        properties: ['openFile'],
-        filters: options.filters,
-        defaultPath: options.defaultPath,
-      });
-      if (result.canceled || result.filePaths.length === 0) return null;
-      const path = result.filePaths[0];
-      return { path, url: pathToFileURL(path).toString() };
-    },
-  );
+  ipcMain.handle('pick-file', async (event, options: { title?: string; filters?: Electron.FileFilter[]; defaultPath?: string } = {}) => {
+    const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const result = await dialog.showOpenDialog(win as BrowserWindow, {
+      title: options.title ?? 'Select File',
+      properties: ['openFile'],
+      filters: options.filters,
+      defaultPath: options.defaultPath,
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const path = result.filePaths[0];
+    return { path, url: pathToFileURL(path).toString() };
+  });
 
   // Native folder picker — returns the absolute path or null if cancelled.
-  ipcMain.handle(
-    'pick-directory',
-    async (event, options: { title?: string; defaultPath?: string } = {}) => {
-      const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
-      const result = await dialog.showOpenDialog(win as BrowserWindow, {
-        title: options.title ?? 'Select Folder',
-        properties: ['openDirectory'],
-        defaultPath: options.defaultPath,
-      });
-      if (result.canceled || result.filePaths.length === 0) return null;
-      return result.filePaths[0];
-    },
-  );
+  ipcMain.handle('pick-directory', async (event, options: { title?: string; defaultPath?: string } = {}) => {
+    const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const result = await dialog.showOpenDialog(win as BrowserWindow, {
+      title: options.title ?? 'Select Folder',
+      properties: ['openDirectory'],
+      defaultPath: options.defaultPath,
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
 
   // Apply runtime updates to an existing presentation window.
-  ipcMain.handle(
-    'update-window-config',
-    (_event, id: string, partial: Partial<WindowConfig>) => {
-      return windowManager.updateWindowConfig(id, partial);
-    },
-  );
+  ipcMain.handle('update-window-config', (_event, id: string, partial: Partial<WindowConfig>) => {
+    return windowManager.updateWindowConfig(id, partial);
+  });
 
   // ── Presentation window management ──
 
@@ -125,6 +113,18 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
 
   ipcMain.handle('close-presentation-window', (_event, id: string) => {
     windowManager.closePresentationWindow(id);
+  });
+
+  ipcMain.handle('focus-presentation-window', (_event, id: string) => {
+    windowManager.focusPresentationWindow(id);
+  });
+
+  ipcMain.handle('hide-presentation-window', (_event, id: string) => {
+    windowManager.hidePresentationWindow(id);
+  });
+
+  ipcMain.handle('show-presentation-window', (_event, id: string) => {
+    windowManager.showPresentationWindow(id);
   });
 
   ipcMain.on('update-presentation-content', (_event, id: string, content: PresentationContentIPC) => {
@@ -171,9 +171,16 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
 
   // ── Video commands (forwarded to presentation windows) ──
 
-  ipcMain.handle('video-command', (_event, command: { action: string; windowName?: string; value?: number }) => {
-    windowManager.sendVideoCommand(command.action, command.windowName, command.value);
+  ipcMain.handle('video-command', (_event, command: { action: string; windowName?: string; value?: number; fadeDuration?: number }) => {
+    windowManager.sendVideoCommand(command.action, command.windowName, command.value, command.fadeDuration);
   });
+
+  ipcMain.handle(
+    'set-video-visible',
+    (_event, payload: { windowName?: string; value?: boolean; mode?: 'cut' | 'fade'; durationMs?: number } = {}) => {
+      windowManager.setVideoVisible(payload.windowName, payload.value, payload.mode, payload.durationMs);
+    },
+  );
 
   // Forward video status from presentation windows to the main renderer
   ipcMain.on('video-status', (_event, status) => {

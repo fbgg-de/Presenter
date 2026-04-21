@@ -1,4 +1,4 @@
-/**
+﻿/**
  * PDF Annotation Toolbar � allows musicians to annotate PDF sheet music.
  * Stores each annotation as an individual row in the database (immediate auto-save).
  * Supports text comments, freehand drawings, highlights, and uploaded SVG icons.
@@ -65,7 +65,7 @@ import {
 import { useI18nContext } from '@/i18n/i18n-react';
 import { getPdfPageWidth } from '@/utils/pdfOcgExport';
 import { exportPdfWithAnnotations, type ExportLayerData } from '@/utils/pdfOcgExport';
-import { PdfLayerViewer } from '@/components/PdfLayerViewer';
+import { PdfLayerViewer } from '@/components/pdf/PdfLayerViewer';
 import { loadSvgImage, drawSvgIconOnCanvas, ICON_BASE_SIZE } from '@/utils/iconPaths';
 import {
   useListAnnotationsQuery,
