@@ -85,8 +85,8 @@ const WindowConfigForm = ({
     screenId?: number | '';
     styleId?: number;
     transparent?: boolean;
-    positionX?: number | '';
-    positionY?: number | '';
+    positionX?: number | undefined;
+    positionY?: number | undefined;
   };
   onChange: (patch: Partial<typeof cfg>) => void;
   screens: Array<{ id: number; label: string; bounds: { x: number; y: number; width: number; height: number }; isPrimary: boolean }>;
@@ -147,7 +147,7 @@ const WindowConfigForm = ({
         label={LL.WINDOW.POSITION_X()}
         type="number"
         value={cfg.positionX ?? ''}
-        onChange={(e) => onChange({ positionX: e.target.value === '' ? '' : Number(e.target.value) })}
+        onChange={(e) => onChange({ positionX: e.target.value === '' ? undefined : Number(e.target.value) })}
         size="small"
         placeholder="auto"
         sx={{ flex: 1 }}
@@ -156,7 +156,7 @@ const WindowConfigForm = ({
         label={LL.WINDOW.POSITION_Y()}
         type="number"
         value={cfg.positionY ?? ''}
-        onChange={(e) => onChange({ positionY: e.target.value === '' ? '' : Number(e.target.value) })}
+        onChange={(e) => onChange({ positionY: e.target.value === '' ? undefined : Number(e.target.value) })}
         size="small"
         placeholder="auto"
         sx={{ flex: 1 }}
@@ -412,14 +412,19 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
     [editConfigs, savedConfigs, dispatch],
   );
 
-  const handleCloseWindow = useCallback(async (id: string) => {
-    await closePresentationWindow(id);
-    setTimeout(() => {
-      getOpenWindows()
-        .then(setOpenWindowsList)
-        .catch(() => {});
-    }, 100);
-  }, []);
+  const handleCloseWindow = useCallback(
+    async (id: string) => {
+      await closePresentationWindow(id);
+      const configs = (savedConfigs || []).filter((c) => c._runtimeId !== id);
+      dispatch(updateSetting({ key: 'windowConfigs', value: configs }));
+      setTimeout(() => {
+        getOpenWindows()
+          .then(setOpenWindowsList)
+          .catch(() => {});
+      }, 100);
+    },
+    [savedConfigs, dispatch],
+  );
 
   return (
     <Drawer open={open} anchor="right" onClose={onClose}>

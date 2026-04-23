@@ -42,7 +42,7 @@ const pdfsApi = presenterApi.injectEndpoints({
     }),
     deletePdf: build.mutation<ApiSuccess<{ message: string }>, { songNumber: number; filename: string }>({
       query: ({ songNumber, filename }) => ({
-        url: `rest/Pdfs/${songNumber}/${filename}`,
+        url: `rest/Pdfs/${songNumber}/${encodeURIComponent(filename)}`,
         method: 'DELETE',
       }),
       invalidatesTags: (_res, _err, arg) => [{ type: 'Pdfs', id: arg.songNumber }],

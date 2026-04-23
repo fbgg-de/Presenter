@@ -10,7 +10,6 @@ interface ControlMediaProps {
   item: ShowItem;
 }
 
-
 const ControlMedia = ({ item }: ControlMediaProps) => {
   const { LL } = useI18nContext();
   const resolvedPath = resolveMediaUrl(item.mediaPath);

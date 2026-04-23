@@ -1,5 +1,5 @@
 ﻿import { useState } from 'react';
-import { AppBar, IconButton, Toolbar, Typography, Box, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
+import { AppBar, IconButton, Toolbar, Typography, Box, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, Divider, Snackbar } from '@mui/material';
 import {
   LightMode,
   DarkMode,
@@ -12,6 +12,7 @@ import {
   PictureAsPdf as PdfIcon,
   WifiOff as WifiOffIcon,
   Wifi as WifiIcon,
+  Link as LinkIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -41,6 +42,7 @@ const Header = () => {
   // Account menu
   const [accountAnchorEl, setAccountAnchorEl] = useState<null | HTMLElement>(null);
   const accountMenuOpen = Boolean(accountAnchorEl);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Style editor (kept for inspector → editor wiring) and inspector
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
@@ -66,6 +68,15 @@ const Header = () => {
     } catch (error) {
       console.error('Failed to logout:', error);
     }
+  };
+
+  const handleCopyAccountLink = () => {
+    if (session?.account) {
+      const url = `${window.location.origin}/a/${session.account}`;
+      void navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+    }
+    setAccountAnchorEl(null);
   };
 
   return (
@@ -185,6 +196,14 @@ const Header = () => {
                 <ListItemText>{LL.HEADER.ADMIN_DASHBOARD()}</ListItemText>
               </MenuItem>
             )}
+            {session?.account && (
+              <MenuItem onClick={handleCopyAccountLink}>
+                <ListItemIcon>
+                  <LinkIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>{LL.HEADER.COPY_ACCOUNT_LINK()}</ListItemText>
+              </MenuItem>
+            )}
             <MenuItem onClick={handleLogout}>
               <ListItemIcon>
                 <LogoutIcon fontSize="small" />
@@ -209,9 +228,16 @@ const Header = () => {
         }}
       />
 
-
       {/* Companion Helper */}
       <CompanionHelper open={companionHelperOpen} onClose={() => setCompanionHelperOpen(false)} />
+
+      {/* Copied link feedback */}
+      <Snackbar
+        open={linkCopied}
+        autoHideDuration={3000}
+        onClose={() => setLinkCopied(false)}
+        message={LL.HEADER.COPY_ACCOUNT_LINK_COPIED()}
+      />
     </>
   );
 };

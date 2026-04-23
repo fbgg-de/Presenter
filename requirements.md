@@ -1,7 +1,7 @@
 # Presenter -- Requirements Specification
 
-> **Version:** 2.0
-> **Date:** 2026-04-05
+> **Version:** 2.1
+> **Date:** 2026-04-23
 > **Author:** Marcel Birkholz
 > **Goal:** Unify the existing PHP + vanilla-JS web app and the Electron prototype into a single repository with a modern, maintainable architecture. The result must work as a standalone browser app **and** as an Electron desktop client.
 
@@ -875,6 +875,7 @@ If `ShowItem.key` (or `Song.key`) is not set, key-based variants are skipped.
 
 - **Polling for updates:** Browser-only clients poll `GET /rest/Pdfs/updates?since=` every **30 seconds** to detect changes made by other users (e.g., annotation saves). In Electron mode, the WebSocket `musician_pdf_updated` message is preferred; polling serves as a fallback.
 - **Security:** All PDF endpoints require authentication. Files in `data/` are not publicly accessible (protected by `.htaccess` or server config).
+- **Filename encoding:** PDF filenames (and media file paths used in styles) may contain special characters such as `#`, `%`, and spaces (e.g., `default-F#m.pdf`). The frontend uses `encodeURIComponent()` when constructing URLs and the PHP backend calls `urldecode()` on path segments. This ensures round-trip safety for all valid filenames.
 
 ### 11.3 Custom Names (Musician / Instrument Names)
 
@@ -1187,12 +1188,14 @@ Video playback controls are rendered at the **bottom of the control view** (not 
 An optional **preview line** can be displayed at the bottom of the presentation window showing the **first line of the next block** in the song order. This gives the operator and congregation a subtle heads-up of what comes next.
 
 - **Toggled on/off** via the `presenter_next_line_preview` setting (default: `true`).
-- **Color:** The preview line color is configurable via the style property `nextLinePreviewColor` (see 14.2) or the dedicated setting `presenter_next_line_preview_color` (default: `#AAAAAA`). The style property takes precedence if set.
+- **Color and appearance:** The preview line color and font size are controlled by **style properties** (`nextLinePreviewColor`, `nextLineFontSize`). The dedicated `presenter_next_line_preview_color` setting is kept for backwards compatibility but the style property takes precedence.
 - **Multi-language support:** When `presenter_next_line_translation` is `true` (default), the preview line includes all languages that the presentation window is configured to display. For example, if a window shows `"EN,DE"`, the next-block preview shows both the English and German first lines of the upcoming block.
 - **Positioning:** The preview line is rendered below the current block content with reduced opacity / smaller font size to visually distinguish it from the active content. Exact positioning and sizing follow the active style.
 - **Edge cases:**
   - If the current block is the last block in the song order, the preview shows the first line of the **next show item** (if it is a song), or nothing if the next item is a media/bible verse or there is no next item.
   - If the next block has no text lines (e.g., instrumental interlude), the preview is hidden.
+
+> **Note:** The settings `presenter_next_line_preview`, `presenter_next_line_preview_color`, and `presenter_next_line_translation` previously had dedicated UI controls in the Settings panel. These have been **removed from the UI** (they are now managed via style properties). The localStorage keys remain for backwards compatibility.
 
 ---
 
@@ -1521,11 +1524,23 @@ The `orders` field on a song is a JSON object mapping order names to block-name 
 2. OIDC redirect -> callback -> session.
 3. Admin login uses global OIDC config with admin group check.
 
-### 19.2 Provider Types
+### 19.2 Account Deep-Link
+
+A pre-built URL can be shared with users to automatically pre-select an account on the login page:
+
+```
+/a/{licenseNumber}
+```
+
+- The route `/a/:licenseNumber` is handled by React Router and immediately redirects to `/login?license={licenseNumber}`, which causes the login page's account selector to auto-select the matching account.
+- **Copy account link:** The **account profile dropdown menu** (top-right header) contains a "Copy account login link" action. Clicking it copies the current user's pre-filled `/a/{account}` URL (using `window.location.origin`) to the clipboard. A brief snackbar confirmation is shown.
+- This enables operators to share a direct login link with musicians, volunteers, or backup devices without requiring them to manually select the account.
+
+### 19.3 Provider Types
 
 - Per-tenant (DB-based) and Admin (global config).
 
-### 19.3 Session Handling
+### 19.4 Session Handling
 
 - Cookie-based PHP sessions. Frontend checks via `GET /rest/Session`.
 
@@ -1636,12 +1651,29 @@ Some settings are stored **per account in the database** so they are shared acro
 | `presenter_musician_block_indicator` | boolean | `true`                  | Show block selection indicator in musician view                                                   |
 | `presenter_midi_mappings`            | JSON    | `{}`                    | MIDI button-to-action mappings, keyed by device name                                              |
 | `presenter_midi_tracking_master`     | enum    | `operator`              | `operator` or `midi` — who controls musician view position                                        |
+| `presenter_offline_mode`             | boolean | `false`                 | Skip all backend API calls (offline/no-connectivity mode)                                         |
+| `presenter_cached_styles`            | JSON    | `[]`                    | Styles cached for offline use (populated when a show is loaded)                                   |
+| `presenter_desktop_app_dismissed`    | boolean | `false`                 | User dismissed the "Download Desktop App" banner; suppresses the banner for future sessions        |
 
 ### 21.4 Settings UI
 
-- Grouped sections: General, Behavior, Confirmations, Notifications, Presentation, Musician, Electron.
+- Grouped sections: General, Behavior, Confirmations, Notifications, Presentation, Keyboard, Musician, Electron, Desktop App.
 - Proper typed inputs. Tooltips. Search/filter.
 - Theme toggle in header, not in settings.
+- **Desktop App section:** A dedicated accordion section in the settings panel provides a download button for the native installer. The button is hidden when running inside the Electron app. Currently supported OS: Windows (installer served from `/app/presenter-setup.exe`). Additional platforms can be added as builds become available.
+
+### 21.5 Desktop App Download Banner
+
+When running in a **browser** (not inside Electron), a dismissable info banner is shown at the top of the main page:
+
+- **Title:** "Download Presenter Desktop App"
+- **Body:** Brief description of benefits (offline support, local media, MIDI, etc.)
+- **Download button:** Platform-detected download button (`Download for Windows`, etc.). The OS is detected from `navigator.userAgent`.
+- **Dismiss button:** Hides the banner and persists `presenter_desktop_app_dismissed = true` in localStorage.
+- **Post-dismiss hint:** A transient snackbar informs the user: "You can always download the desktop app in the app settings."
+- The banner is **never shown inside the Electron app** (detected via `window.api` preload presence).
+- Installers are served as static files from the `app/` directory at the web root (e.g., `app/presenter-setup.exe` for Windows).
+- Currently detected platforms: **Windows** (`win32`/`win64`/`windows` in `navigator.userAgent`). Other platforms fall back silently (banner not shown).
 
 ---
 
@@ -1664,8 +1696,11 @@ Default mappings:
 | `ArrowLeft`  | --       | Previous block                         |
 | `ArrowRight` | --       | Next block                             |
 | `B`          | --       | Toggle fade-to-black (all windows)     |
+| `B`          | `Ctrl`   | Toggle hide text (all windows)         |
 | `F`          | --       | Toggle fullscreen (presentation)       |
 | `Escape`     | --       | Close active drawer/dialog             |
+
+The **hide text** key binding (`Ctrl+B` by default) toggles the `hideText` flag on all open presentation windows simultaneously, hiding the text overlay without affecting the background. This binding is configurable via the Keyboard Mapping Editor in settings.
 
 ### 22.2 WebSocket Server (Electron-Only)
 
@@ -1898,7 +1933,19 @@ The `build:deploy` script produces a self-contained `dist/` folder ready for dep
 4. **Exclusions:** `config.php`, `data/`, `node_modules/`, `electron/`, `.env`, test files, and source TypeScript files are **not** included in `dist/`.
 5. **Result:** The `dist/` folder can be deployed directly to an Apache/Nginx server with PHP. The administrator copies `config-sample.php` to `config.php` and configures it. The `data/` folder is created automatically by the server at runtime.
 
-> **CI/CD (optional):** PR checks (lint, typecheck, test), release workflow, and auto-update can be added later via `.github/workflows/`.
+### 27.2 Electron Installer Distribution
+
+The `app/` directory at the repository root is used to store pre-built Electron installer files for distribution via the web app:
+
+| File                          | Platform | Built by                        |
+| ----------------------------- | -------- | ------------------------------- |
+| `app/presenter-setup.exe`     | Windows  | `yarn package:win` → Electron Builder |
+
+- The `app/` folder is **included in the `build:deploy` output** so that the installer is served at `/app/presenter-setup.exe`.
+- The frontend detects the user's OS and offers a platform-specific download link in the **Desktop App banner** (main page, browser mode only) and the **Desktop App section** of the settings panel.
+- As builds for macOS / Linux become available, additional entries are added here.
+
+> **Note:** After running `electron-builder` for Windows packaging, the local `electron` npm binary may be uninstalled by the builder. Run `yarn add -D electron` to reinstall it before resuming frontend development (`dev:frontend`).
 
 ---
 

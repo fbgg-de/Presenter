@@ -21,4 +21,3 @@ export const rendererInputs: Record<string, string> = {
 export const sharedServerConfig: UserConfig['server'] = {
   port: 5173,
 };
-

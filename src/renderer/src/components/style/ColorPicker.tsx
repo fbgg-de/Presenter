@@ -146,12 +146,7 @@ export const ColorSwatchButton = ({ value, onChange, onClear, ariaLabel, size = 
           ×
         </IconButton>
       )}
-      <Popover
-        open={!!anchor}
-        anchorEl={anchor}
-        onClose={() => setAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
+      <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
         <Box sx={{ p: 2, width: 260 }}>
           <ColorPicker value={value} onChange={onChange} />
         </Box>

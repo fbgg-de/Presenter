@@ -160,7 +160,9 @@ function createWindow(): void {
     }
     mainWindow!.show();
     // Enable bounds persistence after initial layout is complete
-    setTimeout(() => { persistEnabled = true; }, 500);
+    setTimeout(() => {
+      persistEnabled = true;
+    }, 500);
     if (is.dev) {
       mainWindow!.webContents.openDevTools();
     }
@@ -202,7 +204,8 @@ ipcMain.handle('get-media-server-url', () => {
 // Auto-start media server when main window finishes loading and a media path is configured
 function autoStartMediaServer(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return;
-  mainWindow.webContents.executeJavaScript(`localStorage.getItem('presenter_media_path') || ''`)
+  mainWindow.webContents
+    .executeJavaScript(`localStorage.getItem('presenter_media_path') || ''`)
     .then(async (mediaPath: string) => {
       if (mediaPath) {
         try {
@@ -375,4 +378,3 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   windowManager.destroyAll();
 });
-

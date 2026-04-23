@@ -19,8 +19,7 @@ const api = {
   openDirectory: (path: string) => electronAPI.ipcRenderer.invoke('open-directory', path),
   pickFile: (options?: { title?: string; filters?: { name: string; extensions: string[] }[]; defaultPath?: string }) =>
     electronAPI.ipcRenderer.invoke('pick-file', options ?? {}),
-  pickDirectory: (options?: { title?: string; defaultPath?: string }) =>
-    electronAPI.ipcRenderer.invoke('pick-directory', options ?? {}),
+  pickDirectory: (options?: { title?: string; defaultPath?: string }) => electronAPI.ipcRenderer.invoke('pick-directory', options ?? {}),
 
   // ── Presentation window management ──
   createPresentationWindow: (config: unknown) => electronAPI.ipcRenderer.invoke('create-presentation-window', config),
@@ -29,8 +28,12 @@ const api = {
   hidePresentationWindow: (id: string) => electronAPI.ipcRenderer.invoke('hide-presentation-window', id),
   showPresentationWindow: (id: string) => electronAPI.ipcRenderer.invoke('show-presentation-window', id),
   updateWindowConfig: (id: string, partial: unknown) => electronAPI.ipcRenderer.invoke('update-window-config', id, partial),
-  updatePresentationContent: (id: string, content: unknown) => { ipcRenderer.send('update-presentation-content', id, content); },
-  broadcastPresentationContent: (content: unknown) => { ipcRenderer.send('broadcast-presentation-content', content); },
+  updatePresentationContent: (id: string, content: unknown) => {
+    ipcRenderer.send('update-presentation-content', id, content);
+  },
+  broadcastPresentationContent: (content: unknown) => {
+    ipcRenderer.send('broadcast-presentation-content', content);
+  },
   listScreens: () => electronAPI.ipcRenderer.invoke('list-screens'),
   getWindowStates: () => electronAPI.ipcRenderer.invoke('get-window-states'),
 
@@ -43,8 +46,10 @@ const api = {
   hideIdentifyWindows: () => electronAPI.ipcRenderer.invoke('hide-identify-windows'),
 
   // ── Video commands ──
-  videoCommand: (command: { action: string; windowName?: string; value?: number }) => electronAPI.ipcRenderer.invoke('video-command', command),
-  setVideoVisible: (payload?: { windowName?: string; value?: boolean; mode?: 'cut' | 'fade'; durationMs?: number }) => electronAPI.ipcRenderer.invoke('set-video-visible', payload || {}),
+  videoCommand: (command: { action: string; windowName?: string; value?: number }) =>
+    electronAPI.ipcRenderer.invoke('video-command', command),
+  setVideoVisible: (payload?: { windowName?: string; value?: boolean; mode?: 'cut' | 'fade'; durationMs?: number }) =>
+    electronAPI.ipcRenderer.invoke('set-video-visible', payload || {}),
 
   // ── Media ──
   checkMediaFiles: (files: string[]) => electronAPI.ipcRenderer.invoke('check-media-files', files),
@@ -66,32 +71,45 @@ const api = {
   onVideoStatus: (callback: (status: unknown) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
     ipcRenderer.on('video-status-update', handler);
-    return () => { ipcRenderer.removeListener('video-status-update', handler); };
+    return () => {
+      ipcRenderer.removeListener('video-status-update', handler);
+    };
   },
 
   // ── IPC event listeners (main -> renderer) ──
   onWsNavigationAction: (callback: (data: unknown) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
     ipcRenderer.on('ws-navigation-action', handler);
-    return () => { ipcRenderer.removeListener('ws-navigation-action', handler); };
+    return () => {
+      ipcRenderer.removeListener('ws-navigation-action', handler);
+    };
   },
   onWsVideoAction: (callback: (data: unknown) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
     ipcRenderer.on('ws-video-action', handler);
-    return () => { ipcRenderer.removeListener('ws-video-action', handler); };
+    return () => {
+      ipcRenderer.removeListener('ws-video-action', handler);
+    };
   },
   onWsGetState: (callback: (data: unknown) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
     ipcRenderer.on('ws-get-state', handler);
-    return () => { ipcRenderer.removeListener('ws-get-state', handler); };
+    return () => {
+      ipcRenderer.removeListener('ws-get-state', handler);
+    };
   },
   sendWsStateResponse: (data: unknown) => {
     ipcRenderer.send('ws-state-response', data);
   },
-  onPresentationWindowBoundsChanged: (callback: (data: { id: string; bounds: { x: number; y: number; width: number; height: number } }) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { id: string; bounds: { x: number; y: number; width: number; height: number } });
+  onPresentationWindowBoundsChanged: (
+    callback: (data: { id: string; bounds: { x: number; y: number; width: number; height: number } }) => void,
+  ) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) =>
+      callback(data as { id: string; bounds: { x: number; y: number; width: number; height: number } });
     ipcRenderer.on('presentation-window-bounds-changed', handler);
-    return () => { ipcRenderer.removeListener('presentation-window-bounds-changed', handler); };
+    return () => {
+      ipcRenderer.removeListener('presentation-window-bounds-changed', handler);
+    };
   },
   removeAllWsListeners: () => {
     ipcRenderer.removeAllListeners('ws-navigation-action');

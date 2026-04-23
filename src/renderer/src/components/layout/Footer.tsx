@@ -906,7 +906,18 @@ const Footer = () => {
               </Stack>
             </>
           ) : (
-            <Stack direction="row" alignItems="center" sx={{ width: '100%' }}>
+            <Stack direction="row" alignItems="center" sx={{ width: '100%' }} gap={0.5}>
+              <Tooltip title={LL.WINDOW.OPEN()}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    setWindowManagerOpen(true);
+                    setWindowManagerOpenWithNew(true);
+                  }}
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
               <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, textAlign: 'center' }}>
                 {LL.FOOTER.NO_WINDOWS()}
               </Typography>
@@ -919,17 +930,6 @@ const Footer = () => {
                 <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
                   <IconButton size="small" onClick={() => setWindowManagerOpen(true)}>
                     <WindowManagerIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={LL.WINDOW.OPEN()}>
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      setWindowManagerOpen(true);
-                      setWindowManagerOpenWithNew(true);
-                    }}
-                  >
-                    <AddIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
               </Stack>

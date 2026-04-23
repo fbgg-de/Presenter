@@ -267,7 +267,11 @@ export async function sendContent(id: string, content: PresentationContent): Pro
     // Renderer-side dedupe — skip the IPC roundtrip + structured clone if
     // the payload is byte-identical to the last one we sent to this window.
     let serialized = '';
-    try { serialized = JSON.stringify(windowContent); } catch { /* fall through */ }
+    try {
+      serialized = JSON.stringify(windowContent);
+    } catch {
+      /* fall through */
+    }
     if (serialized && serialized === entry.lastSentSerialized) return;
     entry.lastSentSerialized = serialized || undefined;
     window.api.updatePresentationContent(id, windowContent as never);
@@ -275,7 +279,11 @@ export async function sendContent(id: string, content: PresentationContent): Pro
     // Apply per-window config overrides
     const windowContent = applyWindowOverrides(content, entry.config, id);
     let serialized = '';
-    try { serialized = JSON.stringify(windowContent); } catch { /* fall through */ }
+    try {
+      serialized = JSON.stringify(windowContent);
+    } catch {
+      /* fall through */
+    }
     if (serialized && serialized === entry.lastSentSerialized) return;
     entry.lastSentSerialized = serialized || undefined;
 

@@ -18,4 +18,3 @@ const PresentationSyncHost = () => {
 };
 
 export default PresentationSyncHost;
-

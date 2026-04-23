@@ -4,6 +4,7 @@ import {
   AccordionDetails,
   AccordionSummary,
   Box,
+  Button,
   Drawer,
   IconButton,
   Menu,
@@ -18,6 +19,7 @@ import {
 } from '@mui/material';
 import {
   Close as CloseIcon,
+  Download as DownloadIcon,
   ExpandMore as ExpandMoreIcon,
   FileDownload as ExportIcon,
   FileUpload as ImportIcon,
@@ -71,9 +73,6 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'notificationTime', type: 'number', group: 'Notifications', label: 'Auto-dismiss (ms)' },
   { key: 'uploadNotifications', type: 'boolean', group: 'Notifications', label: 'Song upload notifications' },
   // Presentation
-  { key: 'nextLinePreview', type: 'boolean', group: 'Presentation', label: 'Next-line preview' },
-  { key: 'nextLinePreviewColor', type: 'color', group: 'Presentation', label: 'Preview line color' },
-  { key: 'nextLineTranslation', type: 'boolean', group: 'Presentation', label: 'Preview translations' },
   { key: 'bibleTranslation', type: 'string', group: 'Presentation', label: 'Default Bible translation' },
   { key: 'windowFooterVisible', type: 'boolean', group: 'Presentation', label: 'Show window footer bar' },
   { key: 'transitionMode', type: 'select', values: ['cut', 'fade'], group: 'Presentation', label: 'Transition mode' },
@@ -286,6 +285,32 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
               </AccordionDetails>
             </Accordion>
           )}
+
+          {/* Desktop App Download — hidden inside Electron */}
+          {(!filterLower || LL.DESKTOP_APP.SETTINGS_SECTION().toLowerCase().includes(filterLower)) &&
+            !(typeof window !== 'undefined' && !!(window as { api?: unknown }).api) && (
+              <Accordion defaultExpanded={false}>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography fontWeight={600}>{LL.DESKTOP_APP.SETTINGS_SECTION()}</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Stack spacing={1}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<DownloadIcon />}
+                      onClick={() => {
+                        const a = document.createElement('a');
+                        a.href = '/app/presenter-setup.exe';
+                        a.download = '';
+                        a.click();
+                      }}
+                    >
+                      {LL.DESKTOP_APP.SETTINGS_DOWNLOAD()} — {LL.DESKTOP_APP.OS_WINDOWS()}
+                    </Button>
+                  </Stack>
+                </AccordionDetails>
+              </Accordion>
+            )}
         </Stack>
       </Stack>
     </Drawer>

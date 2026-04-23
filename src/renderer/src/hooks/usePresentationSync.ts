@@ -1,26 +1,26 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useAppSelector, useAppDispatch } from '@/store';
+import { useAppDispatch, useAppSelector } from '@/store';
 import { selectCurrentSongOrder } from '@/store/songsSlice';
 import { broadcastContent, setWindowStyleResolver, type WindowConfig } from '@/utils/presentationBridge';
 import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
-import type { PresentationContent, PresentationBlock, PresentationLine, ContentType } from '@/presentation/types';
-import { resolveStyleCascade, mergeStyles, resolveStyleData, DEFAULT_STYLE, type ResolvedStyle } from '@/utils/styleUtils';
+import type { ContentType, PresentationBlock, PresentationContent, PresentationLine } from '@/presentation/types';
+import { DEFAULT_STYLE, mergeStyles, type ResolvedStyle, resolveStyleCascade, resolveStyleData } from '@/utils/styleUtils';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { updateSetting } from '@/store/settingsSlice';
 import {
-  setActiveItemIndex,
-  setActiveBlockIndex,
-  setActiveLineIndex,
-  nextItem,
-  prevItem,
-  nextBlock,
-  prevBlock,
-  nextLine,
-  prevLine,
-  toggleBlack,
-  setBlack,
   freezeWindow as freezeWindowAction,
+  nextBlock,
+  nextItem,
+  nextLine,
+  prevBlock,
+  prevItem,
+  prevLine,
+  setActiveBlockIndex,
+  setActiveItemIndex,
+  setActiveLineIndex,
+  setBlack,
+  toggleBlack,
   unfreezeWindow as unfreezeWindowAction,
 } from '@/store/presentationSlice';
 
@@ -64,7 +64,18 @@ export const usePresentationSync = (): void => {
   const transitionDuration = useAppSelector((state) => state.settings.transitionDuration);
 
   // Fetch all styles for cascade resolution
-  const { data: allStyles } = useGetStylesQuery();
+  const offlineMode = useAppSelector((state) => state.settings.offlineMode);
+  const cachedStyles = useAppSelector((state) => state.settings.cachedStyles);
+  const { data: fetchedStyles } = useGetStylesQuery(undefined, { skip: offlineMode });
+  const allStyles = offlineMode ? (cachedStyles as typeof fetchedStyles) : fetchedStyles;
+
+  // Cache styles to localStorage whenever we get a fresh fetch
+  useEffect(() => {
+    if (!offlineMode && fetchedStyles && fetchedStyles.length > 0) {
+      dispatch(updateSetting({ key: 'cachedStyles', value: fetchedStyles as unknown as object[] }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedStyles, offlineMode]);
 
   // A signature of per-window styleIds — when a user assigns a preset to a
   // window we must re-broadcast even though the global state is unchanged.
@@ -446,8 +457,7 @@ export const usePresentationSync = (): void => {
       }
     };
 
-    const cleanup = window.api.onWsNavigationAction(handleWsAction);
-    return cleanup;
+    return window.api.onWsNavigationAction(handleWsAction);
   }, [dispatch]);
 
   // ── WebSocket state request handler (Electron only) ──
@@ -470,8 +480,7 @@ export const usePresentationSync = (): void => {
       });
     };
 
-    const cleanup = window.api.onWsGetState(handleGetState);
-    return cleanup;
+    return window.api.onWsGetState(handleGetState);
   }, []);
 
   // ── Presentation window bounds change listener (Electron only) ──
@@ -484,7 +493,15 @@ export const usePresentationSync = (): void => {
     if (!window.api?.onPresentationWindowBoundsChanged) return;
 
     const cleanup = window.api.onPresentationWindowBoundsChanged(({ id, bounds }) => {
-      const configs = [...(savedWindowConfigsRef.current as Array<{ _runtimeId?: string; positionX?: number; positionY?: number; width?: number; height?: number }>)];
+      const configs = [
+        ...(savedWindowConfigsRef.current as Array<{
+          _runtimeId?: string;
+          positionX?: number;
+          positionY?: number;
+          width?: number;
+          height?: number;
+        }>),
+      ];
       const idx = configs.findIndex((c) => c._runtimeId === id);
       if (idx >= 0) {
         configs[idx] = { ...configs[idx], positionX: bounds.x, positionY: bounds.y, width: bounds.width, height: bounds.height };

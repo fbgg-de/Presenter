@@ -1,7 +1,8 @@
-import type { ISong, TBlocks } from '@/song/index';
+import type { ISong, TBlocks } from '@/song';
 
-/** Inline copy — avoids circular import with index.ts */
-const SONG_BLOCK_SEPARATOR = '---';
+export const SONG_CUSTOM_NUMBER_LIMIT = 10000;
+export const SONG_BLOCK_SEPARATOR = '---';
+export const SONG_TRANSLATION_LINE_REGEX = /^\[(\w{2})] (.*)$/;
 
 export class Song implements ISong {
   title: string;

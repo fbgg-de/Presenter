@@ -98,22 +98,25 @@ const BlockCard = memo(function BlockCard({
       </CardMedia>
       <CardContent sx={cardContentSx}>
         {copyright ? (
-          <Typography
-            variant="body1"
+          <Stack
             sx={{
               paddingX: '14px',
               background: selected ? color : 'none',
-              whiteSpace: 'nowrap',
               cursor: 'pointer',
             }}
             onDoubleClick={() => onBlockDoubleClick(blockIndex)}
           >
-            <strong>
+            <Typography
+              sx={{
+                fontWeight: 'bold',
+                whiteSpace: 'nowrap',
+              }}
+            >
               (#{songNumber}) {songTitle ?? unknownLabel}
-            </strong>
-            <div>{songAuthors && `\n${songAuthors}`}</div>
-            <em>{songCopyright && `\n${songCopyright}`}</em>
-          </Typography>
+            </Typography>
+            {songAuthors && <Typography>{songAuthors}</Typography>}
+            {songCopyright && <Typography sx={{ fontStyle: 'italic' }}>{songCopyright}</Typography>}
+          </Stack>
         ) : (
           rows.map((row) => {
             const isActive = selected && row.primaryIdx === activeLineIndex;

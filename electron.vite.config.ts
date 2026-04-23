@@ -52,8 +52,6 @@ export default defineConfig({
       },
     },
     server: sharedServerConfig,
-    plugins: [
-      react()
-    ],
+    plugins: [react()],
   },
 });

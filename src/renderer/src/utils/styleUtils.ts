@@ -394,7 +394,7 @@ export const DEFAULT_STYLE: ResolvedStyle = {
   fontColor: '#FFFFFF',
   fontSize: '4vw',
   fontBold: true,
-  lineHeight: '100%',
+  lineHeight: '120%',
   textAlign: 'center',
   padding: '0vw 0vh',
 };

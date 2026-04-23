@@ -547,7 +547,7 @@ const createEmptyStyleData = (): StyleData => ({
   fontColor: { enabled: true, value: '#FFFFFF' },
   fontSize: { enabled: true, value: '4vw' },
   fontBold: { enabled: true, value: true },
-  lineHeight: { enabled: false, value: '100%' },
+  lineHeight: { enabled: false, value: '120%' },
   textAlign: { enabled: true, value: 'center' },
   padding: { enabled: true, value: '0vw 0vh' },
 });
@@ -612,7 +612,9 @@ const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew?: bool
     if (!style) return DEFAULT_STYLE;
     return mergeStyles(DEFAULT_STYLE, resolveStyleData(style.data));
   }, [style]);
-  const containerCss = useMemo(() => styleToContainerCss(resolved), [resolved]);
+  const containerCssRaw = useMemo(() => styleToContainerCss(resolved), [resolved]);
+  // Exclude padding so the thumb's 16:9 aspect-ratio box is not offset by style padding
+  const { padding: _thumbPadding, ...containerCss } = containerCssRaw as ReturnType<typeof styleToContainerCss> & { padding?: string };
   const textCss = useMemo(() => styleToTextCss(resolved), [resolved]);
   const bgImgSrc = resolved.backgroundImage ? resolveMediaUrl(resolved.backgroundImage) : undefined;
   const bgVideoSrc = resolved.backgroundVideo ? resolveMediaUrl(resolved.backgroundVideo) : undefined;
@@ -963,7 +965,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
     textShadow: '2px 2px 4px',
     textShadowColor: '#000000',
     textStroke: '1px black',
-    lineHeight: '100%',
+    lineHeight: '120%',
     letterSpacing: '0px',
     padding: '0vw 0vh',
     opacity: 1,
@@ -1072,7 +1074,9 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
   const resolvedPreview = useMemo(() => mergeStyles(DEFAULT_STYLE, resolveStyleData(styleData)), [styleData]);
   const previewContainerCss = useMemo(() => styleToContainerCss(resolvedPreview), [resolvedPreview]);
-  const { padding: previewPadding, ...previewContainerCssNoPadding } = previewContainerCss as ReturnType<typeof styleToContainerCss> & { padding?: string };
+  const { padding: previewPadding, ...previewContainerCssNoPadding } = previewContainerCss as ReturnType<typeof styleToContainerCss> & {
+    padding?: string;
+  };
   const previewTextCss = useMemo(() => styleToTextCss(resolvedPreview), [resolvedPreview]);
 
   const bgImageVal = getProp<string>('backgroundImage').value || '';
@@ -1234,9 +1238,14 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
               <StylePropRow
                 label={LL.STYLE.BACKGROUND_IMAGE_NONE()}
                 enabled={!!styleData.suppressBackgroundImage}
-                onToggle={(e) => { setStyleData((prev) => ({ ...prev, suppressBackgroundImage: e })); setIsDirty(true); }}
+                onToggle={(e) => {
+                  setStyleData((prev) => ({ ...prev, suppressBackgroundImage: e }));
+                  setIsDirty(true);
+                }}
               >
-                <Typography variant="caption" color="text.secondary">Overrides inherited image</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Overrides inherited image
+                </Typography>
               </StylePropRow>
               {bgImageEnabled && (
                 <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" sx={{ pl: '184px', py: 0.5 }}>
@@ -1307,9 +1316,14 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
               <StylePropRow
                 label={LL.STYLE.BACKGROUND_VIDEO_NONE()}
                 enabled={!!styleData.suppressBackgroundVideo}
-                onToggle={(e) => { setStyleData((prev) => ({ ...prev, suppressBackgroundVideo: e })); setIsDirty(true); }}
+                onToggle={(e) => {
+                  setStyleData((prev) => ({ ...prev, suppressBackgroundVideo: e }));
+                  setIsDirty(true);
+                }}
               >
-                <Typography variant="caption" color="text.secondary">Overrides inherited video</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Overrides inherited video
+                </Typography>
               </StylePropRow>
               {bgVideoEnabled && (
                 <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" sx={{ pl: '184px', py: 0.5 }}>
@@ -1768,8 +1782,16 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   const pH = parts[1] || parts[0] || '4vw';
                   return (
                     <Stack direction="row" spacing={1} alignItems="flex-start">
-                      <CssUnitInput value={pV} onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${v} ${pH}` })} label="Vertical" />
-                      <CssUnitInput value={pH} onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${pV} ${v}` })} label="Horizontal" />
+                      <CssUnitInput
+                        value={pV}
+                        onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${v} ${pH}` })}
+                        label="Vertical"
+                      />
+                      <CssUnitInput
+                        value={pH}
+                        onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${pV} ${v}` })}
+                        label="Horizontal"
+                      />
                     </Stack>
                   );
                 })()}
@@ -1780,58 +1802,183 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                 enabled={getProp<string>('copyrightTextAlign').enabled}
                 onToggle={(e) => togglePropEnabled('copyrightTextAlign', e)}
               >
-                <ToggleButtonGroup size="small" exclusive value={getProp<string>('copyrightTextAlign').value || 'center'} onChange={(_, val) => val && updateProp('copyrightTextAlign', { enabled: true, value: val })}>
-                  <ToggleButton value="left"><AlignLeftIcon /></ToggleButton>
-                  <ToggleButton value="center"><AlignCenterIcon /></ToggleButton>
-                  <ToggleButton value="right"><AlignRightIcon /></ToggleButton>
+                <ToggleButtonGroup
+                  size="small"
+                  exclusive
+                  value={getProp<string>('copyrightTextAlign').value || 'center'}
+                  onChange={(_, val) => val && updateProp('copyrightTextAlign', { enabled: true, value: val })}
+                >
+                  <ToggleButton value="left">
+                    <AlignLeftIcon />
+                  </ToggleButton>
+                  <ToggleButton value="center">
+                    <AlignCenterIcon />
+                  </ToggleButton>
+                  <ToggleButton value="right">
+                    <AlignRightIcon />
+                  </ToggleButton>
                 </ToggleButtonGroup>
               </StylePropRow>
               {/* 4. Opacity */}
-              <StylePropRow label={LL.STYLE.COPYRIGHT_OPACITY()} enabled={getProp<number>('copyrightOpacity').enabled} onToggle={(e) => togglePropEnabled('copyrightOpacity', e)}>
-                <Slider min={0} max={1} step={0.05} value={getProp<number>('copyrightOpacity').value ?? 1} onChange={(_, v) => updateProp('copyrightOpacity', { enabled: true, value: v as number })} valueLabelDisplay="auto" valueLabelFormat={(v) => `${Math.round((v as number) * 100)}%`} sx={{ width: 200 }} />
+              <StylePropRow
+                label={LL.STYLE.COPYRIGHT_OPACITY()}
+                enabled={getProp<number>('copyrightOpacity').enabled}
+                onToggle={(e) => togglePropEnabled('copyrightOpacity', e)}
+              >
+                <Slider
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={getProp<number>('copyrightOpacity').value ?? 1}
+                  onChange={(_, v) => updateProp('copyrightOpacity', { enabled: true, value: v as number })}
+                  valueLabelDisplay="auto"
+                  valueLabelFormat={(v) => `${Math.round((v as number) * 100)}%`}
+                  sx={{ width: 200 }}
+                />
               </StylePropRow>
               {/* 5. Title Font Size */}
-              <StylePropRow label={LL.STYLE.COPYRIGHT_TITLE_SIZE()} enabled={getProp<string>('copyrightTitleFontSize').enabled} onToggle={(e) => togglePropEnabled('copyrightTitleFontSize', e)}>
-                <CssUnitInput value={getProp<string>('copyrightTitleFontSize').value || '2.5vh'} onChange={(v) => updateProp('copyrightTitleFontSize', { enabled: true, value: v })} />
+              <StylePropRow
+                label={LL.STYLE.COPYRIGHT_TITLE_SIZE()}
+                enabled={getProp<string>('copyrightTitleFontSize').enabled}
+                onToggle={(e) => togglePropEnabled('copyrightTitleFontSize', e)}
+              >
+                <CssUnitInput
+                  value={getProp<string>('copyrightTitleFontSize').value || '2.5vh'}
+                  onChange={(v) => updateProp('copyrightTitleFontSize', { enabled: true, value: v })}
+                />
               </StylePropRow>
               {/* 6. Title Text Style */}
               <StylePropRow
                 label={LL.STYLE.COPYRIGHT_TITLE_BOLD_ITALIC()}
-                enabled={getProp<boolean>('copyrightTitleFontBold').enabled || getProp<boolean>('copyrightTitleFontItalic').enabled || getProp<boolean>('copyrightTitleFontUnderline').enabled}
-                onToggle={(e) => { togglePropEnabled('copyrightTitleFontBold', e); togglePropEnabled('copyrightTitleFontItalic', e); togglePropEnabled('copyrightTitleFontUnderline', e); }}
+                enabled={
+                  getProp<boolean>('copyrightTitleFontBold').enabled ||
+                  getProp<boolean>('copyrightTitleFontItalic').enabled ||
+                  getProp<boolean>('copyrightTitleFontUnderline').enabled
+                }
+                onToggle={(e) => {
+                  togglePropEnabled('copyrightTitleFontBold', e);
+                  togglePropEnabled('copyrightTitleFontItalic', e);
+                  togglePropEnabled('copyrightTitleFontUnderline', e);
+                }}
               >
                 <ToggleButtonGroup size="small">
-                  <ToggleButton value="bold" selected={getProp<boolean>('copyrightTitleFontBold').value || false} onClick={() => updateProp('copyrightTitleFontBold', { enabled: true, value: !getProp<boolean>('copyrightTitleFontBold').value })}><BoldIcon /></ToggleButton>
-                  <ToggleButton value="italic" selected={getProp<boolean>('copyrightTitleFontItalic').value || false} onClick={() => updateProp('copyrightTitleFontItalic', { enabled: true, value: !getProp<boolean>('copyrightTitleFontItalic').value })}><ItalicIcon /></ToggleButton>
-                  <ToggleButton value="underline" selected={getProp<boolean>('copyrightTitleFontUnderline').value || false} onClick={() => updateProp('copyrightTitleFontUnderline', { enabled: true, value: !getProp<boolean>('copyrightTitleFontUnderline').value })}><UnderlineIcon /></ToggleButton>
+                  <ToggleButton
+                    value="bold"
+                    selected={getProp<boolean>('copyrightTitleFontBold').value || false}
+                    onClick={() =>
+                      updateProp('copyrightTitleFontBold', { enabled: true, value: !getProp<boolean>('copyrightTitleFontBold').value })
+                    }
+                  >
+                    <BoldIcon />
+                  </ToggleButton>
+                  <ToggleButton
+                    value="italic"
+                    selected={getProp<boolean>('copyrightTitleFontItalic').value || false}
+                    onClick={() =>
+                      updateProp('copyrightTitleFontItalic', { enabled: true, value: !getProp<boolean>('copyrightTitleFontItalic').value })
+                    }
+                  >
+                    <ItalicIcon />
+                  </ToggleButton>
+                  <ToggleButton
+                    value="underline"
+                    selected={getProp<boolean>('copyrightTitleFontUnderline').value || false}
+                    onClick={() =>
+                      updateProp('copyrightTitleFontUnderline', {
+                        enabled: true,
+                        value: !getProp<boolean>('copyrightTitleFontUnderline').value,
+                      })
+                    }
+                  >
+                    <UnderlineIcon />
+                  </ToggleButton>
                 </ToggleButtonGroup>
               </StylePropRow>
               {/* 7. Title Spacing */}
-              <StylePropRow label={LL.STYLE.COPYRIGHT_TITLE_SPACING()} enabled={getProp<string>('copyrightTitleSpacing').enabled} onToggle={(e) => togglePropEnabled('copyrightTitleSpacing', e)}>
-                <CssUnitInput value={getProp<string>('copyrightTitleSpacing').value || '0.5vh'} onChange={(v) => updateProp('copyrightTitleSpacing', { enabled: true, value: v })} />
+              <StylePropRow
+                label={LL.STYLE.COPYRIGHT_TITLE_SPACING()}
+                enabled={getProp<string>('copyrightTitleSpacing').enabled}
+                onToggle={(e) => togglePropEnabled('copyrightTitleSpacing', e)}
+              >
+                <CssUnitInput
+                  value={getProp<string>('copyrightTitleSpacing').value || '0.5vh'}
+                  onChange={(v) => updateProp('copyrightTitleSpacing', { enabled: true, value: v })}
+                />
               </StylePropRow>
               {/* 8. Show Song Number in Title */}
-              <StylePropRow label={LL.STYLE.COPYRIGHT_SHOW_SONG_NUMBER()} enabled={getProp<boolean>('copyrightShowSongNumber').enabled} onToggle={(e) => togglePropEnabled('copyrightShowSongNumber', e)}>
-                <Switch size="small" checked={getProp<boolean>('copyrightShowSongNumber').value || false} onChange={(e) => updateProp('copyrightShowSongNumber', { enabled: true, value: e.target.checked })} />
+              <StylePropRow
+                label={LL.STYLE.COPYRIGHT_SHOW_SONG_NUMBER()}
+                enabled={getProp<boolean>('copyrightShowSongNumber').enabled}
+                onToggle={(e) => togglePropEnabled('copyrightShowSongNumber', e)}
+              >
+                <Switch
+                  size="small"
+                  checked={getProp<boolean>('copyrightShowSongNumber').value || false}
+                  onChange={(e) => updateProp('copyrightShowSongNumber', { enabled: true, value: e.target.checked })}
+                />
               </StylePropRow>
               {/* 9. Size */}
-              <StylePropRow label={LL.STYLE.COPYRIGHT_SIZE()} enabled={getProp<string>('copyrightFontSize').enabled} onToggle={(e) => togglePropEnabled('copyrightFontSize', e)}>
-                <CssUnitInput value={getProp<string>('copyrightFontSize').value || '2vh'} onChange={(v) => updateProp('copyrightFontSize', { enabled: true, value: v })} />
+              <StylePropRow
+                label={LL.STYLE.COPYRIGHT_SIZE()}
+                enabled={getProp<string>('copyrightFontSize').enabled}
+                onToggle={(e) => togglePropEnabled('copyrightFontSize', e)}
+              >
+                <CssUnitInput
+                  value={getProp<string>('copyrightFontSize').value || '2vh'}
+                  onChange={(v) => updateProp('copyrightFontSize', { enabled: true, value: v })}
+                />
               </StylePropRow>
               {/* 10. Color */}
-              <StylePropRow label={LL.STYLE.COPYRIGHT_COLOR()} enabled={getProp<string>('copyrightFontColor').enabled} onToggle={(e) => togglePropEnabled('copyrightFontColor', e)}>
-                <ColorSwatchButton value={getProp<string>('copyrightFontColor').value || '#FFFFFF'} onChange={(c) => updateProp('copyrightFontColor', { enabled: true, value: c })} />
+              <StylePropRow
+                label={LL.STYLE.COPYRIGHT_COLOR()}
+                enabled={getProp<string>('copyrightFontColor').enabled}
+                onToggle={(e) => togglePropEnabled('copyrightFontColor', e)}
+              >
+                <ColorSwatchButton
+                  value={getProp<string>('copyrightFontColor').value || '#FFFFFF'}
+                  onChange={(c) => updateProp('copyrightFontColor', { enabled: true, value: c })}
+                />
               </StylePropRow>
               {/* 11. Text Style (Bold / Italic / Underline) */}
               <StylePropRow
                 label={LL.STYLE.COPYRIGHT_BOLD_ITALIC()}
-                enabled={getProp<boolean>('copyrightFontBold').enabled || getProp<boolean>('copyrightFontItalic').enabled || getProp<boolean>('copyrightFontUnderline').enabled}
-                onToggle={(e) => { togglePropEnabled('copyrightFontBold', e); togglePropEnabled('copyrightFontItalic', e); togglePropEnabled('copyrightFontUnderline', e); }}
+                enabled={
+                  getProp<boolean>('copyrightFontBold').enabled ||
+                  getProp<boolean>('copyrightFontItalic').enabled ||
+                  getProp<boolean>('copyrightFontUnderline').enabled
+                }
+                onToggle={(e) => {
+                  togglePropEnabled('copyrightFontBold', e);
+                  togglePropEnabled('copyrightFontItalic', e);
+                  togglePropEnabled('copyrightFontUnderline', e);
+                }}
               >
                 <ToggleButtonGroup size="small">
-                  <ToggleButton value="bold" selected={getProp<boolean>('copyrightFontBold').value || false} onClick={() => updateProp('copyrightFontBold', { enabled: true, value: !getProp<boolean>('copyrightFontBold').value })}><BoldIcon /></ToggleButton>
-                  <ToggleButton value="italic" selected={getProp<boolean>('copyrightFontItalic').value || false} onClick={() => updateProp('copyrightFontItalic', { enabled: true, value: !getProp<boolean>('copyrightFontItalic').value })}><ItalicIcon /></ToggleButton>
-                  <ToggleButton value="underline" selected={getProp<boolean>('copyrightFontUnderline').value || false} onClick={() => updateProp('copyrightFontUnderline', { enabled: true, value: !getProp<boolean>('copyrightFontUnderline').value })}><UnderlineIcon /></ToggleButton>
+                  <ToggleButton
+                    value="bold"
+                    selected={getProp<boolean>('copyrightFontBold').value || false}
+                    onClick={() => updateProp('copyrightFontBold', { enabled: true, value: !getProp<boolean>('copyrightFontBold').value })}
+                  >
+                    <BoldIcon />
+                  </ToggleButton>
+                  <ToggleButton
+                    value="italic"
+                    selected={getProp<boolean>('copyrightFontItalic').value || false}
+                    onClick={() =>
+                      updateProp('copyrightFontItalic', { enabled: true, value: !getProp<boolean>('copyrightFontItalic').value })
+                    }
+                  >
+                    <ItalicIcon />
+                  </ToggleButton>
+                  <ToggleButton
+                    value="underline"
+                    selected={getProp<boolean>('copyrightFontUnderline').value || false}
+                    onClick={() =>
+                      updateProp('copyrightFontUnderline', { enabled: true, value: !getProp<boolean>('copyrightFontUnderline').value })
+                    }
+                  >
+                    <UnderlineIcon />
+                  </ToggleButton>
                 </ToggleButtonGroup>
               </StylePropRow>
             </Section>

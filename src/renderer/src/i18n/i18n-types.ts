@@ -1656,6 +1656,56 @@ type RootTranslation = {
 		 * S​w​i​t​c​h​ ​t​o​ ​O​n​l​i​n​e​ ​M​o​d​e
 		 */
 		OFFLINE_MODE_OFF: string
+		/**
+		 * O​f​f​l​i​n​e​ ​M​o​d​e
+		 */
+		OFFLINE_MODE_LABEL_ON: string
+		/**
+		 * O​n​l​i​n​e​ ​M​o​d​e
+		 */
+		OFFLINE_MODE_LABEL_OFF: string
+		/**
+		 * C​o​p​y​ ​a​c​c​o​u​n​t​ ​l​o​g​i​n​ ​l​i​n​k
+		 */
+		COPY_ACCOUNT_LINK: string
+		/**
+		 * L​i​n​k​ ​c​o​p​i​e​d​!
+		 */
+		COPY_ACCOUNT_LINK_COPIED: string
+	}
+	DESKTOP_APP: {
+		/**
+		 * D​o​w​n​l​o​a​d​ ​P​r​e​s​e​n​t​e​r​ ​D​e​s​k​t​o​p​ ​A​p​p
+		 */
+		BANNER_TITLE: string
+		/**
+		 * G​e​t​ ​t​h​e​ ​b​e​s​t​ ​e​x​p​e​r​i​e​n​c​e​ ​w​i​t​h​ ​t​h​e​ ​n​a​t​i​v​e​ ​d​e​s​k​t​o​p​ ​a​p​p​ ​—​ ​o​f​f​l​i​n​e​ ​s​u​p​p​o​r​t​,​ ​l​o​c​a​l​ ​m​e​d​i​a​,​ ​M​I​D​I​ ​a​n​d​ ​m​o​r​e​.
+		 */
+		BANNER_BODY: string
+		/**
+		 * D​o​w​n​l​o​a​d​ ​f​o​r​ ​W​i​n​d​o​w​s
+		 */
+		DOWNLOAD_WINDOWS: string
+		/**
+		 * D​i​s​m​i​s​s
+		 */
+		DISMISS: string
+		/**
+		 * Y​o​u​ ​c​a​n​ ​a​l​w​a​y​s​ ​d​o​w​n​l​o​a​d​ ​t​h​e​ ​d​e​s​k​t​o​p​ ​a​p​p​ ​i​n​ ​t​h​e​ ​a​p​p​ ​s​e​t​t​i​n​g​s​.
+		 */
+		DISMISS_HINT: string
+		/**
+		 * D​e​s​k​t​o​p​ ​A​p​p
+		 */
+		SETTINGS_SECTION: string
+		/**
+		 * D​o​w​n​l​o​a​d​ ​d​e​s​k​t​o​p​ ​a​p​p​ ​i​n​s​t​a​l​l​e​r
+		 */
+		SETTINGS_DOWNLOAD: string
+		/**
+		 * W​i​n​d​o​w​s
+		 */
+		OS_WINDOWS: string
 	}
 	FOOTER: {
 		/**
@@ -1878,6 +1928,10 @@ type RootTranslation = {
 		 * T​o​g​g​l​e​ ​V​i​d​e​o​ ​V​i​s​i​b​i​l​i​t​y
 		 */
 		ACTION_TOGGLE_VIDEO_VISIBLE: string
+		/**
+		 * H​i​d​e​ ​T​e​x​t​ ​o​n​ ​A​l​l​ ​W​i​n​d​o​w​s
+		 */
+		ACTION_HIDE_TEXT_ALL: string
 	}
 	SETTINGS: {
 		/**
@@ -5062,6 +5116,56 @@ export type TranslationFunctions = {
 		 * Switch to Online Mode
 		 */
 		OFFLINE_MODE_OFF: () => LocalizedString
+		/**
+		 * Offline Mode
+		 */
+		OFFLINE_MODE_LABEL_ON: () => LocalizedString
+		/**
+		 * Online Mode
+		 */
+		OFFLINE_MODE_LABEL_OFF: () => LocalizedString
+		/**
+		 * Copy account login link
+		 */
+		COPY_ACCOUNT_LINK: () => LocalizedString
+		/**
+		 * Link copied!
+		 */
+		COPY_ACCOUNT_LINK_COPIED: () => LocalizedString
+	}
+	DESKTOP_APP: {
+		/**
+		 * Download Presenter Desktop App
+		 */
+		BANNER_TITLE: () => LocalizedString
+		/**
+		 * Get the best experience with the native desktop app — offline support, local media, MIDI and more.
+		 */
+		BANNER_BODY: () => LocalizedString
+		/**
+		 * Download for Windows
+		 */
+		DOWNLOAD_WINDOWS: () => LocalizedString
+		/**
+		 * Dismiss
+		 */
+		DISMISS: () => LocalizedString
+		/**
+		 * You can always download the desktop app in the app settings.
+		 */
+		DISMISS_HINT: () => LocalizedString
+		/**
+		 * Desktop App
+		 */
+		SETTINGS_SECTION: () => LocalizedString
+		/**
+		 * Download desktop app installer
+		 */
+		SETTINGS_DOWNLOAD: () => LocalizedString
+		/**
+		 * Windows
+		 */
+		OS_WINDOWS: () => LocalizedString
 	}
 	FOOTER: {
 		/**
@@ -5284,6 +5388,10 @@ export type TranslationFunctions = {
 		 * Toggle Video Visibility
 		 */
 		ACTION_TOGGLE_VIDEO_VISIBLE: () => LocalizedString
+		/**
+		 * Hide Text on All Windows
+		 */
+		ACTION_HIDE_TEXT_ALL: () => LocalizedString
 	}
 	SETTINGS: {
 		/**

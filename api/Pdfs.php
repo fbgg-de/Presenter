@@ -129,7 +129,7 @@ class Pdfs extends RestController
         }
 
         // GET /rest/Pdfs/{songNumber}/{filename} — serve file
-        $filename = $req->path->get(1, '', false);
+        $filename = urldecode($req->path->get(1, '', false));
         if ($filename) {
             $filePath = $songPath . '/' . $filename;
             if (!file_exists($filePath)) {
@@ -260,7 +260,7 @@ class Pdfs extends RestController
         }
 
         // PUT /rest/Pdfs/{songNumber}/{filename} — overwrite PDF file with raw bytes
-        $filename = $req->path->get(1, '', false);
+        $filename = urldecode($req->path->get(1, '', false));
         if ($filename) {
             if (!str_ends_with(strtolower($filename), '.pdf')) {
                 $res->error(400, 'Filename must end with .pdf');
@@ -322,9 +322,8 @@ class Pdfs extends RestController
             $res->error(400, 'Song number is required');
         }
 
-        $filename = $req->path->get(1, '', false);
+        $filename = urldecode($req->path->get(1, '', false));
         if (!$filename) {
-            // Try from body
             $filename = $req->params->get('filename', '', false);
         }
 

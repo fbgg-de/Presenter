@@ -78,7 +78,9 @@ export class LocalMediaServer {
           if (err.code === 'EADDRINUSE' && remaining > 0 && port > 0) {
             // Port is taken — try the next one.
             console.warn(`[Media Server] Port ${port} in use, trying ${port + 1}`);
-            tryPort(port + 1, remaining - 1).then(resolvePromise).catch(reject);
+            tryPort(port + 1, remaining - 1)
+              .then(resolvePromise)
+              .catch(reject);
           } else {
             console.error('[Media Server] Error:', err.message);
             reject(err);

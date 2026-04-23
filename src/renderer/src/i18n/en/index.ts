@@ -452,6 +452,21 @@ const en = {
     WINDOW_MANAGER: 'Window Manager',
     OFFLINE_MODE_ON: 'Switch to Offline Mode (no backend calls)',
     OFFLINE_MODE_OFF: 'Switch to Online Mode',
+    OFFLINE_MODE_LABEL_ON: 'Offline Mode',
+    OFFLINE_MODE_LABEL_OFF: 'Online Mode',
+    COPY_ACCOUNT_LINK: 'Copy account login link',
+    COPY_ACCOUNT_LINK_COPIED: 'Link copied!',
+  },
+
+  DESKTOP_APP: {
+    BANNER_TITLE: 'Download Presenter Desktop App',
+    BANNER_BODY: 'Get the best experience with the native desktop app — offline support, local media, MIDI and more.',
+    DOWNLOAD_WINDOWS: 'Download for Windows',
+    DISMISS: 'Dismiss',
+    DISMISS_HINT: 'You can always download the desktop app in the app settings.',
+    SETTINGS_SECTION: 'Desktop App',
+    SETTINGS_DOWNLOAD: 'Download desktop app installer',
+    OS_WINDOWS: 'Windows',
   },
 
   FOOTER: {
@@ -515,6 +530,7 @@ const en = {
     ACTION_CLOSE_DRAWER: 'Close Drawer',
     ACTION_TOGGLE_VIDEO: 'Toggle Video Play/Pause',
     ACTION_TOGGLE_VIDEO_VISIBLE: 'Toggle Video Visibility',
+    ACTION_HIDE_TEXT_ALL: 'Hide Text on All Windows',
   },
 
   SETTINGS: {

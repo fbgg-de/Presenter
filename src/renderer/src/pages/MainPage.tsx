@@ -15,6 +15,7 @@ import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import PresentationSyncHost from '@/components/layout/PresentationSyncHost';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
 
 export const MainPage = () => {
   const dispatch = useAppDispatch();
@@ -77,6 +78,7 @@ export const MainPage = () => {
     <RequireAuth>
       <Shows open={isShowSelectorOpen} onShowSelected={handleShowSelected} />
       <PresentationSyncHost />
+      <DesktopAppBanner />
       {!isShowSelectorOpen && (
         <Stack height="100vh">
           {isMobile ? (

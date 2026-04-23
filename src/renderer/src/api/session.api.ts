@@ -52,5 +52,11 @@ const sessionApi = presenterApi.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useGetSessionQuery, useLazyGetSessionQuery, useLogoutMutation, useGetOidcAuthUrlQuery, useGetAdminOidcAuthUrlQuery, useGetAccountsQuery } =
-  sessionApi;
+export const {
+  useGetSessionQuery,
+  useLazyGetSessionQuery,
+  useLogoutMutation,
+  useGetOidcAuthUrlQuery,
+  useGetAdminOidcAuthUrlQuery,
+  useGetAccountsQuery,
+} = sessionApi;

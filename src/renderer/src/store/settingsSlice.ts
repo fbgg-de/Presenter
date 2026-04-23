@@ -63,6 +63,8 @@ interface SettingsState {
   hideTransitionDuration: number;
   videoFadeDuration: number;
   offlineMode: boolean;
+  cachedStyles: object[];
+  desktopAppDismissed: boolean;
 }
 
 const loadString = (key: string, fallback: string): string => {
@@ -217,6 +219,8 @@ const initialState: SettingsState = {
   hideTransitionDuration: loadNumber('presenter_hide_transition_duration', 300),
   videoFadeDuration: loadNumber('presenter_video_fade_duration', 0),
   offlineMode: loadBool('presenter_offline_mode', false),
+  cachedStyles: loadJson<object[]>('presenter_cached_styles', []),
+  desktopAppDismissed: loadBool('presenter_desktop_app_dismissed', false),
 };
 
 // Musician setting keys that are stored in the grouped object

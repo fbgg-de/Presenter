@@ -35,10 +35,7 @@ export interface FrontendAPI {
   // ── Presentation window management ──
   createPresentationWindow: (config: WindowConfig) => Promise<string>;
   closePresentationWindow: (id: string) => Promise<void>;
-  updateWindowConfig: (
-    id: string,
-    partial: Partial<WindowConfig>,
-  ) => Promise<{ applied: string[]; requiresReload: string[] }>;
+  updateWindowConfig: (id: string, partial: Partial<WindowConfig>) => Promise<{ applied: string[]; requiresReload: string[] }>;
   updatePresentationContent: (id: string, content: PresentationContentIPC) => void;
   broadcastPresentationContent: (content: PresentationContentIPC) => void;
   listScreens: () => Promise<ScreenInfo[]>;
@@ -80,7 +77,9 @@ export interface FrontendAPI {
   onWsVideoAction: (callback: (data: unknown) => void) => (() => void) | void;
   onWsGetState: (callback: (data: unknown) => void) => (() => void) | void;
   sendWsStateResponse: (data: unknown) => void;
-  onPresentationWindowBoundsChanged: (callback: (data: { id: string; bounds: { x: number; y: number; width: number; height: number } }) => void) => (() => void) | void;
+  onPresentationWindowBoundsChanged: (
+    callback: (data: { id: string; bounds: { x: number; y: number; width: number; height: number } }) => void,
+  ) => (() => void) | void;
   removeAllWsListeners: () => void;
 }
 

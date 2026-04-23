@@ -195,7 +195,7 @@ if (window.presentationApi) {
               break;
             case 'pause':
               if (fadeDuration > 0) {
-                const startVol = v.volume > 0 ? v.volume : (v.muted ? 0 : 1);
+                const startVol = v.volume > 0 ? v.volume : v.muted ? 0 : 1;
                 if (startVol > 0) {
                   v.volume = startVol;
                   v.muted = false;
@@ -223,7 +223,7 @@ if (window.presentationApi) {
                 }
               } else {
                 if (fadeDuration > 0) {
-                  const startVol = v.volume > 0 ? v.volume : (v.muted ? 0 : 1);
+                  const startVol = v.volume > 0 ? v.volume : v.muted ? 0 : 1;
                   if (startVol > 0) {
                     v.volume = startVol;
                     v.muted = false;
@@ -241,7 +241,7 @@ if (window.presentationApi) {
               break;
             case 'stop':
               if (fadeDuration > 0) {
-                const startVol = v.volume > 0 ? v.volume : (v.muted ? 0 : 1);
+                const startVol = v.volume > 0 ? v.volume : v.muted ? 0 : 1;
                 if (startVol > 0) {
                   v.volume = startVol;
                   v.muted = false;

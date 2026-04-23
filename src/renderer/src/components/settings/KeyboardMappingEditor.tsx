@@ -35,6 +35,7 @@ export const DEFAULT_KEYBOARD_MAPPING: Record<string, string> = {
   next_line: 'ArrowDown',
   jump_to_start: 'Home',
   toggle_black: 'KeyB',
+  toggle_text_hidden: 'Ctrl+KeyB',
   close_drawer: 'Escape',
   toggle_video_playback: 'Space',
   toggle_video_visible: 'Ctrl+Space',
@@ -50,6 +51,7 @@ export const DEFAULT_KEYBOARD_ENABLED: Record<string, boolean> = {
   next_line: true,
   jump_to_start: true,
   toggle_black: true,
+  toggle_text_hidden: true,
   close_drawer: true,
   toggle_video_playback: true,
   toggle_video_visible: true,
@@ -65,6 +67,7 @@ const ACTIONS = [
   'next_line',
   'jump_to_start',
   'toggle_black',
+  'toggle_text_hidden',
   'close_drawer',
   'toggle_video_playback',
   'toggle_video_visible',
@@ -92,12 +95,14 @@ const useActionLabel = (): ((action: ActionId) => string) => {
           return LL.KEYBOARD.ACTION_NEXT_LINE();
         case 'toggle_black':
           return LL.KEYBOARD.ACTION_TOGGLE_BLACK();
+        case 'toggle_text_hidden':
+          return LL.KEYBOARD.ACTION_HIDE_TEXT_ALL();
         case 'close_drawer':
           return LL.KEYBOARD.ACTION_CLOSE_DRAWER();
         case 'toggle_video_playback':
           return LL.KEYBOARD.ACTION_TOGGLE_VIDEO();
-      case 'toggle_video_visible':
-        return LL.KEYBOARD.ACTION_TOGGLE_VIDEO_VISIBLE();
+        case 'toggle_video_visible':
+          return LL.KEYBOARD.ACTION_TOGGLE_VIDEO_VISIBLE();
         default:
           return action;
       }
@@ -209,10 +214,14 @@ export const KeyboardMappingEditor = () => {
     if (!captureAction) return;
 
     const isModifier = (code: string) =>
-      code === 'ControlLeft' || code === 'ControlRight' ||
-      code === 'ShiftLeft' || code === 'ShiftRight' ||
-      code === 'AltLeft' || code === 'AltRight' ||
-      code === 'MetaLeft' || code === 'MetaRight';
+      code === 'ControlLeft' ||
+      code === 'ControlRight' ||
+      code === 'ShiftLeft' ||
+      code === 'ShiftRight' ||
+      code === 'AltLeft' ||
+      code === 'AltRight' ||
+      code === 'MetaLeft' ||
+      code === 'MetaRight';
 
     const onKeyDown = (e: KeyboardEvent) => {
       e.preventDefault();
@@ -248,7 +257,14 @@ export const KeyboardMappingEditor = () => {
       // user just released them, clear the modifier flags too so the chip
       // resets visually.
       if (!next.mainKey) setPendingBoth(next);
-      else setPendingBoth({ ...next, ctrl: pendingRef.current.ctrl || next.ctrl, shift: pendingRef.current.shift || next.shift, alt: pendingRef.current.alt || next.alt, meta: pendingRef.current.meta || next.meta });
+      else
+        setPendingBoth({
+          ...next,
+          ctrl: pendingRef.current.ctrl || next.ctrl,
+          shift: pendingRef.current.shift || next.shift,
+          alt: pendingRef.current.alt || next.alt,
+          meta: pendingRef.current.meta || next.meta,
+        });
     };
 
     window.addEventListener('keydown', onKeyDown, true);
@@ -345,11 +361,15 @@ export const KeyboardMappingEditor = () => {
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
               <Stack alignItems="center" spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">{LL.KEYBOARD.MAPPING_CURRENT()}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {LL.KEYBOARD.MAPPING_CURRENT()}
+                </Typography>
                 <Chip label={currentCombo || '—'} size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
               </Stack>
               <Stack alignItems="center" spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">{LL.KEYBOARD.MAPPING_NEW()}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {LL.KEYBOARD.MAPPING_NEW()}
+                </Typography>
                 <Chip
                   label={liveCombo || LL.KEYBOARD.MAPPING_PRESS()}
                   size="small"

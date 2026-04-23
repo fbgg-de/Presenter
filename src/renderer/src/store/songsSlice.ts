@@ -71,49 +71,44 @@ const initialState: SongsState = {
  * Async thunk that fetches all songs referenced in a show via RTK Query,
  * adds them to the Redux store, and sets the song order + per-song order names.
  */
-export const loadShowSongs = createAsyncThunk(
-  'songs/loadShowSongs',
-  async (show: Show, { dispatch }) => {
-    if (!show.order || show.order.length === 0) {
-      dispatch(setSongsOrder([]));
-      dispatch(setSongOrders({}));
-      return;
-    }
+export const loadShowSongs = createAsyncThunk('songs/loadShowSongs', async (show: Show, { dispatch }) => {
+  if (!show.order || show.order.length === 0) {
+    dispatch(setSongsOrder([]));
+    dispatch(setSongOrders({}));
+    return;
+  }
 
-    const songNumbers: number[] = [];
-    const orderMap: Record<number, string> = {};
+  const songNumbers: number[] = [];
+  const orderMap: Record<number, string> = {};
 
-    for (const item of show.order) {
-      if (item.type === 'song' && item.songNumber != null) {
-        songNumbers.push(item.songNumber);
-        if (item.order) {
-          orderMap[item.songNumber] = item.order;
-        }
+  for (const item of show.order) {
+    if (item.type === 'song' && item.songNumber != null) {
+      songNumbers.push(item.songNumber);
+      if (item.order) {
+        orderMap[item.songNumber] = item.order;
       }
     }
+  }
 
-    const songsApi = await getSongsApi();
-    const uniqueNumbers = [...new Set(songNumbers)];
-    const fetchPromises = uniqueNumbers.map(async (songNumber) => {
-      try {
-        const result = await dispatch(
-          songsApi.endpoints.getSong.initiate({ songNumber }, { forceRefetch: false }),
-        );
-        const data = 'data' in result ? (result as { data?: ISong }).data : undefined;
-        if (data && data.songNumber) {
-          dispatch(addSongToStore(new Song(data)));
-        }
-      } catch (err) {
-        console.error(`Failed to fetch song #${songNumber}:`, err);
+  const songsApi = await getSongsApi();
+  const uniqueNumbers = [...new Set(songNumbers)];
+  const fetchPromises = uniqueNumbers.map(async (songNumber) => {
+    try {
+      const result = await dispatch(songsApi.endpoints.getSong.initiate({ songNumber }, { forceRefetch: false }));
+      const data = 'data' in result ? (result as { data?: ISong }).data : undefined;
+      if (data && data.songNumber) {
+        dispatch(addSongToStore(new Song(data)));
       }
-    });
+    } catch (err) {
+      console.error(`Failed to fetch song #${songNumber}:`, err);
+    }
+  });
 
-    await Promise.all(fetchPromises);
+  await Promise.all(fetchPromises);
 
-    dispatch(setSongsOrder(songNumbers));
-    dispatch(setSongOrders(orderMap));
-  },
-);
+  dispatch(setSongsOrder(songNumbers));
+  dispatch(setSongOrders(orderMap));
+});
 
 export const songsSlice = createSlice({
   name: 'songs',

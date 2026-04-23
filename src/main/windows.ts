@@ -129,7 +129,10 @@ export class PresentationWindowManager {
     win.on('resize', scheduleBoundsNotify);
 
     win.on('closed', () => {
-      if (boundsTimer) { clearTimeout(boundsTimer); boundsTimer = null; }
+      if (boundsTimer) {
+        clearTimeout(boundsTimer);
+        boundsTimer = null;
+      }
       if (!this.recreating.has(id)) {
         this.windows.delete(id);
       }

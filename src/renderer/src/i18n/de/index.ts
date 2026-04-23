@@ -455,6 +455,21 @@ const de: Translation = {
     WINDOW_MANAGER: 'Fensterverwaltung',
     OFFLINE_MODE_ON: 'In Offline-Modus wechseln (keine Backend-Aufrufe)',
     OFFLINE_MODE_OFF: 'In Online-Modus wechseln',
+    OFFLINE_MODE_LABEL_ON: 'Offline-Modus',
+    OFFLINE_MODE_LABEL_OFF: 'Online-Modus',
+    COPY_ACCOUNT_LINK: 'Konto-Login-Link kopieren',
+    COPY_ACCOUNT_LINK_COPIED: 'Link kopiert!',
+  },
+
+  DESKTOP_APP: {
+    BANNER_TITLE: 'Presenter Desktop-App herunterladen',
+    BANNER_BODY: 'Erlebe das beste Erlebnis mit der nativen Desktop-App – Offline-Unterstützung, lokale Medien, MIDI und mehr.',
+    DOWNLOAD_WINDOWS: 'Für Windows herunterladen',
+    DISMISS: 'Schließen',
+    DISMISS_HINT: 'Du kannst die Desktop-App jederzeit in den App-Einstellungen herunterladen.',
+    SETTINGS_SECTION: 'Desktop-App',
+    SETTINGS_DOWNLOAD: 'Desktop-App-Installer herunterladen',
+    OS_WINDOWS: 'Windows',
   },
 
   FOOTER: {
@@ -518,6 +533,7 @@ const de: Translation = {
     ACTION_CLOSE_DRAWER: 'Drawer schließen',
     ACTION_TOGGLE_VIDEO: 'Video abspielen/pausieren',
     ACTION_TOGGLE_VIDEO_VISIBLE: 'Video-Sichtbarkeit umschalten',
+    ACTION_HIDE_TEXT_ALL: 'Text auf allen Fenstern ausblenden',
   },
 
   SETTINGS: {

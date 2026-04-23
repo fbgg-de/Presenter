@@ -6,6 +6,7 @@ import {
   setActiveLineIndex,
   setBlack,
   toggleBlack,
+  toggleTextHidden,
   toggleVideoVisible,
 } from '@/store/presentationSlice';
 import { selectCurrentSongOrder } from '@/store/songsSlice';
@@ -13,8 +14,7 @@ import { DEFAULT_KEYBOARD_MAPPING, DEFAULT_KEYBOARD_ENABLED } from '@/components
 import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
 
 /** Count only primary (non-translated) lines in a raw block lines array. */
-const countPrimaryLines = (lines: string[]): number =>
-  lines.filter((l) => !SONG_TRANSLATION_LINE_REGEX.test(l)).length;
+const countPrimaryLines = (lines: string[]): number => lines.filter((l) => !SONG_TRANSLATION_LINE_REGEX.test(l)).length;
 
 /** Build a combo string from a keyboard event (matches KeyboardMappingEditor.eventToCombo) */
 const eventToCombo = (e: KeyboardEvent): string => {
@@ -213,6 +213,10 @@ export const useKeyboardNavigation = () => {
         case 'toggle_black':
           e.preventDefault();
           dispatch(toggleBlack());
+          break;
+        case 'toggle_text_hidden':
+          e.preventDefault();
+          dispatch(toggleTextHidden());
           break;
         case 'jump_to_start':
           e.preventDefault();

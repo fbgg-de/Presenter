@@ -1,6 +1,7 @@
 .vscode
 .idea
 
+app
 node_modules
 dist
 out

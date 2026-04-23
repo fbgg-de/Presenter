@@ -6,7 +6,7 @@ import { navigatorDetector } from 'typesafe-i18n/detectors';
 import { loadAllLocales } from '@/i18n/i18n-util.sync';
 import TypesafeI18n from '@/i18n/i18n-react';
 import SessionExpired from '@/components/SessionExpired';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Navigate, useParams } from 'react-router-dom';
 import { LoginPage } from '@/pages/LoginPage';
 import { MainPage } from '@/pages/MainPage';
 import { AdminPage } from '@/pages/AdminPage';
@@ -28,6 +28,12 @@ const MusicianThemeWrapper = () => {
       <MusicianPage />
     </ThemeProvider>
   );
+};
+
+/** Redirect /a/:licenseNumber → /login?license=... so the account is pre-selected */
+const AccountLoginRedirect = () => {
+  const { licenseNumber } = useParams<{ licenseNumber: string }>();
+  return <Navigate to={`/login?license=${encodeURIComponent(licenseNumber ?? '')}`} replace />;
 };
 
 const App = () => {
@@ -65,6 +71,7 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/a/:licenseNumber" element={<AccountLoginRedirect />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/notes" element={<MusicianThemeWrapper />} />

@@ -7,6 +7,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  Divider,
   IconButton,
   Snackbar,
   Stack,
@@ -14,13 +15,12 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Close as CloseIcon, Settings as SettingsIcon } from '@mui/icons-material';
+import { Close as CloseIcon, Settings as SettingsIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSessionQuery, useLazyGetSessionQuery } from '@/api/session.api';
 import { presenterApi, getBackendBaseUrl } from '@/api/base.api';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { updateSetting } from '@/store/settingsSlice';
-
 
 /**
  * Monitors backend connectivity via the existing Session endpoint.
@@ -103,9 +103,7 @@ export const ConnectivityChecker = () => {
         //   HTTP error    → { status: number, data: any }
         //   FETCH_ERROR   → { status: 'FETCH_ERROR', error: string }
         //   PARSING_ERROR → { status: 'PARSING_ERROR', error: string, data: string }
-        const message = (
-          readable(err?.error) || readable(err?.data) || readable(err?.message) || String(err)
-        ).slice(0, 200);
+        const message = (readable(err?.error) || readable(err?.data) || readable(err?.message) || String(err)).slice(0, 200);
         setTestResult({ ok: false, message: `${status ? status + ' — ' : ''}${message}` });
       } finally {
         setTesting(false);
@@ -192,6 +190,21 @@ export const ConnectivityChecker = () => {
                 {testResult.message}
               </Alert>
             )}
+
+            <Divider />
+
+            <Stack direction="row" alignItems="center" justifyContent="space-between">
+              <Typography variant="body2">{offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}</Typography>
+              <Button
+                variant={offlineMode ? 'contained' : 'outlined'}
+                color={offlineMode ? 'warning' : 'inherit'}
+                size="small"
+                startIcon={offlineMode ? <WifiOffIcon /> : <WifiIcon />}
+                onClick={() => dispatch(updateSetting({ key: 'offlineMode', value: !offlineMode }))}
+              >
+                {offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}
+              </Button>
+            </Stack>
           </Stack>
         </DialogContent>
 

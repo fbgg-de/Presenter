@@ -542,7 +542,6 @@ const Sidebar = () => {
               </IconButton>
             </Tooltip>
 
-
             {/* Account Menu */}
             <Tooltip title={LL.HEADER.ACCOUNT_MENU()}>
               <IconButton size="small" onClick={(e) => setAccountMenuAnchor(e.currentTarget)}>
@@ -819,7 +818,10 @@ const Sidebar = () => {
                   {/* Per-window style badge */}
                   {item.itemStyleByWindow && Object.values(item.itemStyleByWindow).some((v) => v != null) && (
                     <Tooltip title={LL.FOOTER.ITEM_STYLE()}>
-                      <PaletteIcon fontSize="small" sx={{ color: i === activeItemIndex ? 'rgba(255,255,255,0.8)' : 'text.secondary', opacity: 0.8 }} />
+                      <PaletteIcon
+                        fontSize="small"
+                        sx={{ color: i === activeItemIndex ? 'rgba(255,255,255,0.8)' : 'text.secondary', opacity: 0.8 }}
+                      />
                     </Tooltip>
                   )}
                   {/* Context menu button */}

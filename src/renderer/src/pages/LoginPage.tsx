@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Card, CardContent, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import { Security as SecurityIcon } from '@mui/icons-material';
+import { Alert, Box, Button, Card, CardContent, Divider, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Security as SecurityIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetAccountsQuery, useGetAdminOidcAuthUrlQuery, useGetOidcAuthUrlQuery } from '@/api/session.api';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { updateSetting } from '@/store/settingsSlice';
 
 const useQueryParam = (name: string): string | null => {
   const { search } = useLocation();
@@ -16,8 +18,11 @@ type SelectedAccount = number | 'admin' | '';
 
 export const LoginPage = () => {
   const { LL } = useI18nContext();
+  const dispatch = useAppDispatch();
+  const offlineMode = useAppSelector((s) => s.settings.offlineMode);
 
   const next = useQueryParam('next') ?? '/';
+  const licenseParam = useQueryParam('license');
 
   // License selection - load from localStorage on mount
   const { data: accounts, isLoading: accountsLoading, error: accountsError } = useGetAccountsQuery();
@@ -28,6 +33,20 @@ export const LoginPage = () => {
   // Restore saved account after accounts have loaded and validated
   useEffect(() => {
     if (accountsLoading || !accounts) return;
+
+    // URL-supplied license number takes priority over localStorage
+    if (licenseParam !== null) {
+      if (licenseParam === 'admin') {
+        setSelectedLicense('admin');
+        return;
+      }
+      const n = Number(licenseParam);
+      if (!isNaN(n) && accounts.some((a) => a.license === n)) {
+        setSelectedLicense(n);
+        return;
+      }
+    }
+
     try {
       const saved = localStorage.getItem(LAST_SELECTED_ACCOUNT_KEY);
       if (!saved) return;
@@ -43,8 +62,8 @@ export const LoginPage = () => {
     } catch {
       // ignore
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [accountsLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accountsLoading, licenseParam]);
 
   const redirectUrl = window.location.origin + next;
 
@@ -111,76 +130,103 @@ export const LoginPage = () => {
 
             {errorText && <Alert severity="error">{errorText}</Alert>}
 
-            {accountsError && <Alert severity="error">{LL.ERRORS.LOAD_LICENSES()}</Alert>}
+            {accountsError && !offlineMode && <Alert severity="error">{LL.ERRORS.LOAD_LICENSES()}</Alert>}
 
-            <TextField
-              select
-              label={LL.AUTH.ACCOUNT()}
-              value={selectedLicense}
-              disabled={accountsLoading}
-              onChange={(e) => {
-                const v = e.target.value;
-                if (v === 'admin' || v === '') {
-                  onSelectLicense(v as SelectedAccount);
-                } else {
-                  onSelectLicense(Number(v));
-                }
-              }}
-              helperText={LL.AUTH.SELECT_HELP()}
-            >
-              <MenuItem value="">{LL.AUTH.SELECT_PROMPT()}</MenuItem>
-              <MenuItem value="admin">{LL.AUTH.ADMIN_LABEL()}</MenuItem>
-              {(accounts ?? []).map((a) => (
-                <MenuItem key={a.license} value={a.license}>
-                  {a.name ? a.name : `#${a.license}`}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            {selectedLicense === '' && (
-              <Typography variant="body2" color="text.secondary">
-                {LL.AUTH.SELECT_PROMPT()}
-              </Typography>
-            )}
-
-            {selectedLicense !== '' && (
-              <Stack gap={1}>
-                <Button
-                  fullWidth
-                  variant="contained"
-                  startIcon={<SecurityIcon />}
-                  disabled={isAdminSelected ? adminOidcLoading : oidcLoading}
-                  onClick={() => {
-                    setErrorText(null);
-                    const url = isAdminSelected ? adminOidcUrlData?.url : oidcUrlData?.url;
-                    if (!url) {
-                      setErrorText(isAdminSelected ? LL.ERRORS.ADMIN_CONFIG_MISSING() : LL.ERRORS.NO_PROVIDER_FOR_ACCOUNT());
-                      return;
+            {!offlineMode && (
+              <>
+                <TextField
+                  select
+                  label={LL.AUTH.ACCOUNT()}
+                  value={selectedLicense}
+                  disabled={accountsLoading}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === 'admin' || v === '') {
+                      onSelectLicense(v as SelectedAccount);
+                    } else {
+                      onSelectLicense(Number(v));
                     }
-                    openUrl(url);
                   }}
+                  helperText={LL.AUTH.SELECT_HELP()}
                 >
-                  {LL.AUTH.LOGIN()}
-                </Button>
+                  <MenuItem value="">{LL.AUTH.SELECT_PROMPT()}</MenuItem>
+                  <MenuItem value="admin">{LL.AUTH.ADMIN_LABEL()}</MenuItem>
+                  {(accounts ?? []).map((a) => (
+                    <MenuItem key={a.license} value={a.license}>
+                      {a.name ? a.name : `#${a.license}`}
+                    </MenuItem>
+                  ))}
+                </TextField>
 
-                {isAdminSelected && adminOidcError && (
-                  <Alert severity="error">
-                    <Typography variant="subtitle2" gutterBottom>
-                      {LL.ERRORS.ADMIN_OIDC_CONFIG()}
-                    </Typography>
-                    <Typography variant="body2">{LL.ERRORS.LOGIN_UNAVAILABLE()}</Typography>
-                  </Alert>
+                {selectedLicense === '' && (
+                  <Typography variant="body2" color="text.secondary">
+                    {LL.AUTH.SELECT_PROMPT()}
+                  </Typography>
                 )}
-                {isTenantSelected && oidcError && (
-                  <Alert severity="error">
-                    <Typography variant="subtitle2" gutterBottom>
-                      {LL.ERRORS.PROVIDER_CONFIG()}
-                    </Typography>
-                    <Typography variant="body2">{LL.ERRORS.CONTACT_ADMIN_ASSIGN_PROVIDER()}</Typography>
-                  </Alert>
+
+                {selectedLicense !== '' && (
+                  <Stack gap={1}>
+                    <Button
+                      fullWidth
+                      variant="contained"
+                      startIcon={<SecurityIcon />}
+                      disabled={isAdminSelected ? adminOidcLoading : oidcLoading}
+                      onClick={() => {
+                        setErrorText(null);
+                        const url = isAdminSelected ? adminOidcUrlData?.url : oidcUrlData?.url;
+                        if (!url) {
+                          setErrorText(isAdminSelected ? LL.ERRORS.ADMIN_CONFIG_MISSING() : LL.ERRORS.NO_PROVIDER_FOR_ACCOUNT());
+                          return;
+                        }
+                        openUrl(url);
+                      }}
+                    >
+                      {LL.AUTH.LOGIN()}
+                    </Button>
+
+                    {isAdminSelected && adminOidcError && (
+                      <Alert severity="error">
+                        <Typography variant="subtitle2" gutterBottom>
+                          {LL.ERRORS.ADMIN_OIDC_CONFIG()}
+                        </Typography>
+                        <Typography variant="body2">{LL.ERRORS.LOGIN_UNAVAILABLE()}</Typography>
+                      </Alert>
+                    )}
+                    {isTenantSelected && oidcError && (
+                      <Alert severity="error">
+                        <Typography variant="subtitle2" gutterBottom>
+                          {LL.ERRORS.PROVIDER_CONFIG()}
+                        </Typography>
+                        <Typography variant="body2">{LL.ERRORS.CONTACT_ADMIN_ASSIGN_PROVIDER()}</Typography>
+                      </Alert>
+                    )}
+                  </Stack>
                 )}
-              </Stack>
+              </>
             )}
+
+            <Divider />
+
+            {/* Offline mode toggle */}
+            <Stack gap={1}>
+              {offlineMode && (
+                <Alert severity="info" icon={<WifiOffIcon fontSize="small" />}>
+                  {LL.HEADER.OFFLINE_MODE_ON()}
+                </Alert>
+              )}
+              <Tooltip title={offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}>
+                <Button
+                  size="small"
+                  variant={offlineMode ? 'contained' : 'outlined'}
+                  color={offlineMode ? 'warning' : 'inherit'}
+                  startIcon={offlineMode ? <WifiOffIcon /> : <WifiIcon />}
+                  onClick={() => dispatch(updateSetting({ key: 'offlineMode', value: !offlineMode }))}
+                  fullWidth
+                >
+                  {offlineMode ? LL.HEADER.OFFLINE_MODE_LABEL_OFF() : LL.HEADER.OFFLINE_MODE_LABEL_ON()}
+                </Button>
+              </Tooltip>
+            </Stack>
           </Stack>
         </CardContent>
       </Card>
