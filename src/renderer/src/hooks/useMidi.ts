@@ -2,10 +2,14 @@
  * Web MIDI API hook for musician PDF view (§11.10).
  * Handles MIDI device detection, MIDI Learn mapping, auto-reconnect,
  * and dispatching navigation actions from MIDI events.
+ *
+ * Mappings are device-independent: the same MIDI key (e.g. "cc_64", "note_60")
+ * from ANY connected device will trigger its mapped action.
+ * Multiple distinct keys can each map to different actions simultaneously.
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { updateSetting } from '@/store/settingsSlice';
+import { useAppDispatch } from '@/store';
+import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
 
 export type MidiAction = 'next_page' | 'prev_page' | 'next_song' | 'prev_song' | 'next_block' | 'prev_block' | 'toggle_tracking';
 
@@ -23,7 +27,8 @@ interface UseMidiOptions {
 }
 
 /**
- * Build a MIDI message key from a MIDI event (e.g., "note_60", "cc_64").
+ * Build a device-independent MIDI message key from a MIDI event.
+ * Format: "note_60", "cc_64", "pc_5", "msg_0xe0_0"
  */
 const midiMessageKey = (data: Uint8Array): string | null => {
   if (data.length < 2) return null;
@@ -43,50 +48,55 @@ const midiMessageKey = (data: Uint8Array): string | null => {
 
 export const useMidi = ({ onAction, enabled = true }: UseMidiOptions) => {
   const dispatch = useAppDispatch();
-  const midiMappings = useAppSelector((s) => s.settings.midiMappings);
+
+  const { midiMappings } = useGetSettings();
+  const updateSetting = useUpdateSetting();
+
   const [status, setStatus] = useState<MidiStatus>('disconnected');
   const [devices, setDevices] = useState<MidiDevice[]>([]);
   const [learnAction, setLearnAction] = useState<MidiAction | null>(null);
-  const [learnDeviceName, setLearnDeviceName] = useState<string>('');
 
   const accessRef = useRef<MIDIAccess | null>(null);
   const onActionRef = useRef(onAction);
   onActionRef.current = onAction;
 
+  // Keep refs up-to-date so the stable handler always reads latest values
+  const midiMappingsRef = useRef(midiMappings);
+  midiMappingsRef.current = midiMappings;
+  const learnActionRef = useRef(learnAction);
+  learnActionRef.current = learnAction;
+  const dispatchRef = useRef(dispatch);
+  dispatchRef.current = dispatch;
+
   // Check support
   const isSupported = typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator;
 
-  // Handle incoming MIDI message
-  const handleMidiMessage = useCallback(
-    (deviceName: string, event: MIDIMessageEvent) => {
-      if (!event.data || event.data.length < 2) return;
-      const key = midiMessageKey(event.data);
-      if (!key) return;
+  // Stable handler — reads everything from refs, never needs to be recreated
+  const handleMidiMessage = useCallback((event: MIDIMessageEvent) => {
+    if (!event.data || event.data.length < 2) return;
+    // Ignore Note Off (velocity 0 or status 0x80)
+    const statusByte = event.data[0] & 0xf0;
+    if (statusByte === 0x80) return;
+    if (statusByte === 0x90 && event.data.length >= 3 && event.data[2] === 0) return;
 
-      // If in learn mode, map this message to the target action
-      if (learnAction && (learnDeviceName === '' || learnDeviceName === deviceName)) {
-        const newMappings = { ...midiMappings };
-        if (!newMappings[deviceName]) {
-          newMappings[deviceName] = {};
-        }
-        newMappings[deviceName] = { ...newMappings[deviceName], [key]: learnAction };
-        dispatch(updateSetting({ key: 'midiMappings', value: newMappings }));
-        setLearnAction(null);
-        setLearnDeviceName('');
-        return;
-      }
+    const key = midiMessageKey(event.data);
+    if (!key) return;
 
-      // Look up the mapping for this device
-      const deviceMap = midiMappings[deviceName];
-      if (deviceMap && deviceMap[key]) {
-        const action = deviceMap[key] as MidiAction;
-        onActionRef.current?.(action);
-      }
-    },
-    [learnAction, learnDeviceName, midiMappings, dispatch],
-  );
+    // MIDI Learn: map this key to the target action
+    const currentLearnAction = learnActionRef.current;
+    if (currentLearnAction) {
+      const newMappings = { ...midiMappingsRef.current, [key]: currentLearnAction };
+      updateSetting('midiMappings', newMappings);
+      setLearnAction(null);
+      return;
+    }
 
-  // Connect to MIDI devices
+    // Look up and fire the mapped action
+    const action = midiMappingsRef.current[key] as MidiAction | undefined;
+    if (action) onActionRef.current?.(action);
+  }, []); // stable — no deps, reads via refs
+
+  // Connect to MIDI devices — only re-runs when enabled changes, not on every mapping change
   useEffect(() => {
     if (!enabled || !isSupported) {
       setStatus(isSupported ? 'disconnected' : 'unsupported');
@@ -115,15 +125,12 @@ export const useMidi = ({ onAction, enabled = true }: UseMidiOptions) => {
           setStatus(devs.some((d) => d.connected) ? 'connected' : 'disconnected');
         };
 
-        // Attach message handlers
         const attachHandlers = () => {
           access.inputs.forEach((input) => {
-            const deviceName = input.name || `MIDI ${input.id}`;
-            input.onmidimessage = (event) => handleMidiMessage(deviceName, event);
+            input.onmidimessage = handleMidiMessage;
           });
         };
 
-        // Handle device connect/disconnect (auto-reconnect)
         access.onstatechange = () => {
           updateDevices();
           attachHandlers();
@@ -149,41 +156,29 @@ export const useMidi = ({ onAction, enabled = true }: UseMidiOptions) => {
     };
   }, [enabled, isSupported, handleMidiMessage]);
 
-  // Start MIDI learn for a specific action
-  const startLearn = useCallback((action: MidiAction, deviceName?: string) => {
+  const startLearn = useCallback((action: MidiAction) => {
     setLearnAction(action);
-    setLearnDeviceName(deviceName || '');
   }, []);
 
-  // Cancel MIDI learn
   const cancelLearn = useCallback(() => {
     setLearnAction(null);
-    setLearnDeviceName('');
   }, []);
 
-  // Clear mapping for a device
-  const clearMapping = useCallback(
-    (deviceName: string) => {
-      const newMappings = { ...midiMappings };
-      delete newMappings[deviceName];
-      dispatch(updateSetting({ key: 'midiMappings', value: newMappings }));
-    },
-    [midiMappings, dispatch],
-  );
+  /** Remove a single key→action mapping */
+  const removeMapping = useCallback((midiKey: string) => {
+    const newMappings = { ...midiMappingsRef.current };
+    delete newMappings[midiKey];
+    updateSetting('midiMappings', newMappings);
+  }, []);
 
-  // Remove a single mapping entry
-  const removeMapping = useCallback(
-    (deviceName: string, midiKey: string) => {
-      const newMappings = { ...midiMappings };
-      if (newMappings[deviceName]) {
-        const deviceMap = { ...newMappings[deviceName] };
-        delete deviceMap[midiKey];
-        newMappings[deviceName] = deviceMap;
-        dispatch(updateSetting({ key: 'midiMappings', value: newMappings }));
-      }
-    },
-    [midiMappings, dispatch],
-  );
+  /** Clear all mappings for a specific action */
+  const clearActionMappings = useCallback((action: MidiAction) => {
+    const newMappings = { ...midiMappingsRef.current };
+    Object.keys(newMappings).forEach((k) => {
+      if (newMappings[k] === action) delete newMappings[k];
+    });
+    updateSetting('midiMappings', newMappings);
+  }, []);
 
   return {
     status,
@@ -193,8 +188,8 @@ export const useMidi = ({ onAction, enabled = true }: UseMidiOptions) => {
     learnAction,
     startLearn,
     cancelLearn,
-    clearMapping,
     removeMapping,
+    clearActionMappings,
     midiMappings,
   };
 };

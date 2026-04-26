@@ -1062,40 +1062,55 @@ Musicians can use **Bluetooth MIDI foot-switches** (and USB MIDI devices) for ha
 
 - Uses the browser's **Web MIDI API** (`navigator.requestMIDIAccess()`). Works in Chromium-based browsers and Electron.
 - **Constraint:** Web MIDI API requires HTTPS or localhost in most browsers. This must be documented in setup instructions.
+- A status indicator in the MIDI settings panel shows connection state: **Connected**, **Scanning…**, **Disconnected**, or **Not available** (when the API is missing).
 
 #### MIDI Learn
 
-- A **"MIDI Learn"** button in the musician view settings opens a mapping dialog.
-- The user selects an action (e.g., "Next Page") and then presses the desired foot-switch / MIDI button. The app listens for the next incoming MIDI message and maps it to the chosen action.
-- **Available actions:** Next page, Previous page, Next song, Previous song, Next block, Previous block.
+- A **"MIDI Learn"** button per action opens learn-mode for that specific action.
+- The user clicks **Learn** next to e.g. "Next page" and then presses the desired foot-switch / MIDI button. The app listens for the next incoming MIDI message and maps that exact key to the chosen action.
+- Note Off (status `0x80`) and Note On with velocity 0 are intentionally ignored — only the press, not the release, registers as a learn event.
+- **Available actions** (`MidiAction` enum):
+  - `next_page`, `prev_page` — turn pages.
+  - `next_song`, `prev_song` — navigate songs in the current show.
+  - `next_block`, `prev_block` — move between blocks.
+  - `toggle_tracking` — flip the **Tracking Master** between operator-driven and self-driven modes.
 
-#### Device-Specific Mappings
+#### Device-Independent Mappings
 
-- MIDI mappings are stored **per MIDI device name** in localStorage (`presenter_midi_mappings` — JSON object keyed by device name).
-- When multiple MIDI devices are connected, each retains its own mapping independently.
+Mappings are intentionally **device-independent**. The same MIDI message coming from any connected device dispatches the mapped action — useful when switching between several pedals or rehearsing on a USB controller and then performing with a Bluetooth foot-switch.
+
+- Mapping storage key in Redux settings: **`midiMappings`** (a flat object).
+- Each key is a MIDI-message identifier in one of the formats produced by `midiMessageKey()`:
+  - `note_<n>` — Note On (status `0x90`), e.g. `note_60` for middle C.
+  - `cc_<n>` — Control Change (status `0xB0`), e.g. `cc_64` for the sustain pedal.
+  - `pc_<n>` — Program Change (status `0xC0`).
+  - `msg_<status>_<value>` — fall-through for any other channel-voice / system-realtime message.
+- Each value is a `MidiAction` string from the list above.
 - Example:
   ```json
   {
-    "AirTurn PED": {
+    "midiMappings": {
       "note_60": "next_page",
       "note_62": "prev_page",
-      "note_64": "next_song"
+      "note_64": "next_song",
+      "cc_64":   "next_block"
     }
   }
   ```
+- Multiple keys can target the same action; "Clear all mappings for this action" in the UI removes every key currently bound to a given `MidiAction`.
 
 #### Auto-Reconnect
 
-- When a Bluetooth MIDI device disconnects and reconnects, the app **automatically re-establishes** the MIDI connection and restores the saved mapping.
-- A small status indicator in the musician view toolbar shows MIDI connection state (connected / disconnected / scanning).
+- Each detected MIDI input is wired up via `MIDIInput.onmidimessage`. When a Bluetooth MIDI device disconnects and reconnects, `MIDIAccess.onstatechange` re-attaches the handler automatically, so saved mappings continue to work without operator intervention.
+- Status transitions are surfaced both as the top-level status indicator and in the live device list (`Devices ({count})`).
 
 #### Tracking Master
 
 - Configurable toggle: **who controls the musician view's position?**
-  - **Operator (default):** The musician view follows the operator's block selection via WebSocket sync. MIDI foot-switch presses are ignored for navigation (but can still be used for page turns).
+  - **Operator (default):** The musician view follows the operator's block selection via WebSocket sync. MIDI foot-switch presses are still allowed for page turns.
   - **MIDI (self):** The musician navigates independently via MIDI. Operator sync is paused. Useful during rehearsal or when the musician needs to jump ahead.
-- Stored in `presenter_midi_tracking_master` (`operator` | `midi`, default `operator`).
-- Switching tracking master can also be mapped to a MIDI button.
+- Stored in the redux setting `midiTrackingMaster` (`'operator' | 'midi'`, default `'operator'`); persisted via the standard settings persistence layer.
+- The `toggle_tracking` MIDI action flips this value. It can also be changed manually in the MIDI settings panel.
 
 #### WebSocket Sharing
 
@@ -1176,12 +1191,46 @@ Examples: left half `{x:0,y:0,w:50,h:100}`, right half `{x:50,y:0,w:50,h:100}`, 
 
 ### 12.7 Video Controls
 
-Video playback controls are rendered at the **bottom of the control view** (not inside the presentation window).
+Video playback controls are rendered at the **bottom of the control view** (not inside the presentation window). The layout follows a strict **master/slave** model that depends on the active item:
 
-- **Single video:** Play / Pause / Stop buttons, seekable progress bar with time display.
-- **Multiple videos:** When multiple videos are active (e.g., different presentation windows showing different background videos, or a media item with a video plus a style background video), **multiple video control bars are stacked** vertically at the bottom of the control area. Each bar is labeled with the source context (e.g., window name or "Background Video").
-- **Global controls:** Above the individual video control bars, a row of **global Play / Pause / Stop buttons** is displayed. These buttons affect **all active videos simultaneously**, making it easy to start, pause, or stop everything at once.
-- Video state is synced across all presentation windows displaying the same video.
+#### Master/slave model
+
+- **Media-item video active (operator selected a video media item):**
+  The **item preview** shown in the control view is the **master**. It is the only place that produces audio (presentation windows hard-mute their `<video>` elements; style background videos are also always muted in presentation windows).
+  - The preview controls (Play/Pause, Stop, Loop, Mute, Volume slider, Seek bar) act **only on the local preview** — they do **not** broadcast play/pause/seek/volume to presentation windows.
+  - The presentation windows play the same video independently, driven by the item settings (`mediaAutoplay`, `mediaLoop`).
+  - The "general" row at the bottom of the control view is **hidden** in this case.
+  - Per-window rows collapse to a **slim variant** showing only the window-name chip + a per-window **Hide/Show video** button.
+
+- **No media-item video active (style background videos only):**
+  - The **general row** at the bottom shows: **Hide-all-windows** toggle, **Pause-all** and **Stop-all** buttons. These commands target every open presentation window. The general row has no label chip.
+  - **Per-window rows** below the general row show one bar per open presentation window. Each bar is a **single horizontal line** containing, in order:
+    `chip · Play/Pause · Stop · Hide/Show · Loop · seek bar (with mm:ss timestamps) · Mute · Volume slider · filename`.
+    Each control acts on that window's video only. The Loop button toggles loop state on the local `<video>` of the targeted window.
+
+#### Item preview controls
+
+The video controls beneath the item-preview frame contain:
+
+- Row 1: **seek bar** with current and total timestamps; the slider holds its drag value until the underlying `currentTime` catches up so it never visually snaps back.
+- Row 2: **Play/Pause · Stop · Loop · Mute · Volume slider · filename**. The Loop button is bound to the item's `mediaLoop` setting and toggling it propagates to both the preview and presentation windows (the playback infrastructure picks up the new setting via the broadcast cascade).
+
+#### Display options panel
+
+A single-row **Display Options** strip below the preview lets the operator tune image and video items inline:
+
+- **Fit** dropdown (cover / contain / fill).
+- **Position** picker — a compact 3×3 grid (the same `CompactPositionPicker` component used in the style editor, now extracted to `components/common/CompactPositionPicker.tsx` and reused).
+- **Zoom** slider (50–300 %, with a reset-to-100 % button).
+- **Blur** slider (0–40 px).
+- For videos: a single **Autoplay** switch. The previously dedicated "Loop" switch was removed in favour of the Loop button in the preview controls (single source of truth for `mediaLoop`).
+
+All adjustments take effect **immediately** in both the preview and the presentation windows. The broadcast layer (`usePresentationSync`) lists the relevant media properties (`mediaPath`, `mediaColor`, `mediaObjectFit`, `mediaObjectPosition`, `mediaZoom`, `mediaBlur`, `mediaAutoplay`, `mediaLoop`) in both the dedup key and the effect dependency array so changes are picked up without requiring a slide change.
+
+#### Audio policy
+
+- **Only the item preview** ever plays audio. All presentation-window `<video>` tags are hard-muted (both for media items and for style background videos) so the operator never hears a duplicate audio track.
+- The volume slider in the item-preview controls drives only the preview. The volume slider in the per-window bars (when shown) controls the corresponding window's audio output, but in practice presentation windows are muted; the slider is preserved for completeness and for environments where presentation windows route to dedicated audio outputs.
 
 ### 12.8 Next-Block Preview Line
 
@@ -1649,7 +1698,7 @@ Some settings are stored **per account in the database** so they are shared acro
 | `presenter_musician_band`            | string  | (none)                  | Active band / order name for musician view (PDF + order)                                          |
 | `presenter_musician_page_view`       | enum    | `single`                | `single`, `two-page`, or `continuous` PDF page view mode                                          |
 | `presenter_musician_block_indicator` | boolean | `true`                  | Show block selection indicator in musician view                                                   |
-| `presenter_midi_mappings`            | JSON    | `{}`                    | MIDI button-to-action mappings, keyed by device name                                              |
+| `presenter_midi_mappings`            | JSON    | `{}`                    | Device-independent MIDI button-to-action mappings (key formats: `note_n`, `cc_n`, `pc_n`, `msg_status_value`) |
 | `presenter_midi_tracking_master`     | enum    | `operator`              | `operator` or `midi` — who controls musician view position                                        |
 | `presenter_offline_mode`             | boolean | `false`                 | Skip all backend API calls (offline/no-connectivity mode)                                         |
 | `presenter_cached_styles`            | JSON    | `[]`                    | Styles cached for offline use (populated when a show is loaded)                                   |

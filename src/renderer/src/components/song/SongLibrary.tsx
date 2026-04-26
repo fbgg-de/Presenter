@@ -30,8 +30,8 @@ import {
 } from '@mui/icons-material';
 import { useGetSongsAllQuery, useDeleteSongMutation } from '@/api/songs.api';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector } from '@/store';
 import type { SongListItem } from '@/api/songs.api';
+import { useGetSettings } from '@/store/settingsSlice';
 
 type SortOrder = 'lexicographic' | 'numeric';
 
@@ -47,7 +47,8 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('lexicographic');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [songToDelete, setSongToDelete] = useState<SongListItem | null>(null);
-  const showDeleteFromDb = useAppSelector((state) => state.settings.showDeleteFromDb);
+
+  const { showDeleteFromDb } = useGetSettings();
 
   const { data: allSongs, isLoading } = useGetSongsAllQuery({ order: sortOrder });
   const [deleteSong, { isLoading: isDeleting }] = useDeleteSongMutation();

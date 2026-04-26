@@ -20,41 +20,24 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, RestartAlt as ResetIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { updateSetting } from '@/store/settingsSlice';
+import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
 
 /** Default keyboard mapping per §22.1 */
-export const DEFAULT_KEYBOARD_MAPPING: Record<string, string> = {
-  prev_item: 'PageUp',
-  next_item: 'PageDown',
-  'Ctrl+prev_item': 'Ctrl+ArrowUp',
-  'Ctrl+next_item': 'Ctrl+ArrowDown',
-  prev_block: 'ArrowLeft',
-  next_block: 'ArrowRight',
-  prev_line: 'ArrowUp',
-  next_line: 'ArrowDown',
-  jump_to_start: 'Home',
-  toggle_black: 'KeyB',
-  toggle_text_hidden: 'Ctrl+KeyB',
-  close_drawer: 'Escape',
-  toggle_video_playback: 'Space',
-  toggle_video_visible: 'Ctrl+Space',
-};
-
-/** Default enabled state per action (all enabled by default) */
-export const DEFAULT_KEYBOARD_ENABLED: Record<string, boolean> = {
-  prev_item: true,
-  next_item: true,
-  prev_block: true,
-  next_block: true,
-  prev_line: true,
-  next_line: true,
-  jump_to_start: true,
-  toggle_black: true,
-  toggle_text_hidden: true,
-  close_drawer: true,
-  toggle_video_playback: true,
-  toggle_video_visible: true,
+export const DEFAULT_KEYBOARD_MAPPING: Record<string, { enabled: boolean; key: string }> = {
+  prev_item: { enabled: true, key: 'PageUp' },
+  next_item: { enabled: true, key: 'PageDown' },
+  'Ctrl+prev_item': { enabled: true, key: 'Ctrl+ArrowUp' },
+  'Ctrl+next_item': { enabled: true, key: 'Ctrl+ArrowDown' },
+  prev_block: { enabled: true, key: 'ArrowLeft' },
+  next_block: { enabled: true, key: 'ArrowRight' },
+  prev_line: { enabled: true, key: 'ArrowUp' },
+  next_line: { enabled: true, key: 'ArrowDown' },
+  jump_to_start: { enabled: true, key: 'Home' },
+  toggle_black: { enabled: true, key: 'KeyB' },
+  toggle_text_hidden: { enabled: true, key: 'Ctrl+KeyB' },
+  close_drawer: { enabled: true, key: 'Escape' },
+  toggle_video_playback: { enabled: true, key: 'Space' },
+  toggle_video_visible: { enabled: true, key: 'Ctrl+Space' },
 };
 
 /** All configurable actions */
@@ -149,9 +132,10 @@ const comboToPending = (combo: string): Pending => {
 
 export const KeyboardMappingEditor = () => {
   const { LL } = useI18nContext();
-  const dispatch = useAppDispatch();
-  const keyboardMapping = useAppSelector((state) => state.settings.keyboardMapping);
-  const keyboardEnabled = useAppSelector((state) => state.settings.keyboardEnabled) as Record<string, boolean> | undefined;
+
+  const { keyboardMapping } = useGetSettings();
+  const updateSetting = useUpdateSetting();
+
   const getActionLabel = useActionLabel();
 
   const [captureAction, setCaptureAction] = useState<ActionId | null>(null);
@@ -168,20 +152,20 @@ export const KeyboardMappingEditor = () => {
 
   // Merge user mapping with defaults
   const getMappedKey = (action: ActionId): string => {
-    return keyboardMapping[action] || DEFAULT_KEYBOARD_MAPPING[action] || '';
+    return keyboardMapping[action]?.key || DEFAULT_KEYBOARD_MAPPING[action]?.key || '';
   };
 
   // Check if action is enabled
   const isActionEnabled = (action: ActionId): boolean => {
-    if (keyboardEnabled && action in keyboardEnabled) return keyboardEnabled[action];
-    return DEFAULT_KEYBOARD_ENABLED[action] ?? true;
+    if (keyboardMapping[action] && 'enabled' in keyboardMapping[action]) return keyboardMapping[action].enabled;
+    return DEFAULT_KEYBOARD_MAPPING[action]?.enabled ?? true;
   };
 
   // Toggle enabled state for an action
   const handleToggleEnabled = (action: ActionId) => {
     const current = isActionEnabled(action);
-    const newEnabled = { ...(keyboardEnabled || DEFAULT_KEYBOARD_ENABLED), [action]: !current };
-    dispatch(updateSetting({ key: 'keyboardEnabled', value: newEnabled }));
+    const combo = getMappedKey(action);
+    updateSetting('keyboardMapping', { ...keyboardMapping, [action]: { enabled: !current, key: combo } });
   };
 
   /** Open the capture dialog for an action — seeds pending with current combo. */
@@ -195,14 +179,15 @@ export const KeyboardMappingEditor = () => {
   const handleResetRow = (action: ActionId) => {
     const next = { ...keyboardMapping };
     delete next[action];
-    dispatch(updateSetting({ key: 'keyboardMapping', value: next }));
+    updateSetting('keyboardMapping', next);
   };
 
   /** Apply the currently captured chord and close the dialog. */
   const handleApplyCapture = () => {
     if (!captureAction || !pendingRef.current.mainKey) return;
     const combo = pendingToCombo(pendingRef.current);
-    dispatch(updateSetting({ key: 'keyboardMapping', value: { ...keyboardMapping, [captureAction]: combo } }));
+    const enabled = isActionEnabled(captureAction);
+    updateSetting('keyboardMapping', { ...keyboardMapping, [captureAction]: { enabled, key: combo } });
     setCaptureAction(null);
   };
 
@@ -276,8 +261,7 @@ export const KeyboardMappingEditor = () => {
   }, [captureAction, setPendingBoth]);
 
   const handleReset = () => {
-    dispatch(updateSetting({ key: 'keyboardMapping', value: {} }));
-    dispatch(updateSetting({ key: 'keyboardEnabled', value: { ...DEFAULT_KEYBOARD_ENABLED } }));
+    updateSetting('keyboardMapping', {});
   };
 
   const liveCombo = pendingToCombo(pending);

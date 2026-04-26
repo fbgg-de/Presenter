@@ -251,6 +251,15 @@ const en = {
     ADD_BY_URL: 'Add by URL',
     ROOT_FOLDER: 'Root',
     LOAD_MORE: 'Load more',
+    DISPLAY_OPTIONS: 'Display Options',
+    FIT_COVER: 'Cover',
+    FIT_CONTAIN: 'Contain',
+    FIT_FILL: 'Fill',
+    POSITION: 'Position',
+    ZOOM: 'Zoom',
+    BLUR: 'Blur',
+    AUTOPLAY: 'Autoplay',
+    LOOP: 'Loop',
   },
 
   CONTROL: {
@@ -459,7 +468,7 @@ const en = {
   },
 
   DESKTOP_APP: {
-    BANNER_TITLE: 'Download Presenter Desktop App',
+    BANNER_TITLE: 'Desktop App Available',
     BANNER_BODY: 'Get the best experience with the native desktop app — offline support, local media, MIDI and more.',
     DOWNLOAD_WINDOWS: 'Download for Windows',
     DISMISS: 'Dismiss',
@@ -467,6 +476,13 @@ const en = {
     SETTINGS_SECTION: 'Desktop App',
     SETTINGS_DOWNLOAD: 'Download desktop app installer',
     OS_WINDOWS: 'Windows',
+    MODAL_TITLE: 'Download Presenter Desktop App',
+    MODAL_BODY: 'The Presenter desktop app unlocks offline support, local media files, MIDI input, real-time WebSocket sync and more.',
+    MODAL_MORE_OPTIONS: 'More options…',
+    MODAL_DETECT_HINT: 'Your OS: {os}',
+    MODAL_UNAVAILABLE: 'Not yet available for this OS. Check back later.',
+    OS_MACOS: 'macOS',
+    OS_LINUX: 'Linux',
   },
 
   FOOTER: {
@@ -692,6 +708,8 @@ const en = {
     UNMUTE: 'Unmute',
     HIDE: 'Hide video',
     SHOW: 'Show video',
+    HIDE_ALL: 'Hide video on all windows',
+    SHOW_ALL: 'Show video on all windows',
     GENERAL: 'General',
     WINDOW: 'Window',
     VOLUME: 'Volume',
@@ -712,6 +730,8 @@ const en = {
     CLIP_PATH_PREFIX: 'clip-path:',
     MASK_APPLY: 'Apply Mask',
     AUTOPLAY: 'Autoplay',
+    REPLAY: 'Replay from start',
+    AUDIO_FROM_PREVIEW: 'Audio is controlled by the item preview in the control view',
   },
 
   METRICS: {
@@ -921,6 +941,8 @@ const en = {
     CURRENT_MAPPINGS: 'Current Mappings',
     NO_MAPPINGS: 'No MIDI mappings configured. Use "Learn" to assign buttons.',
     MAPPING_ENTRY: '{key} → {action}',
+    NO_MAPPING: 'No mapping',
+    CLEAR_ACTION: 'Clear all mappings for this action',
     NEXT_PAGE: 'Next Page',
     PREV_PAGE: 'Previous Page',
     NEXT_SONG: 'Next Song',

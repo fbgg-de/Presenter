@@ -2,8 +2,9 @@ import { createSlice, createAsyncThunk, type PayloadAction } from '@reduxjs/tool
 import type { ISong } from '@/song';
 import { Song } from '@/song';
 import type { Show } from '@/api/shows.api';
+import { useAppSelector } from './hooks';
 
-// Lazy import to avoid circular dependency — songsApi injects into presenterApi
+// Lazy import to avoid circular dependency
 let _songsApi: typeof import('@/api/songs.api').songsApi | null = null;
 const getSongsApi = async () => {
   if (!_songsApi) {
@@ -16,12 +17,57 @@ const getSongsApi = async () => {
 export interface SongsState {
   songs: Record<number, ISong>;
   songsOrder: number[];
-  songOrders: Record<number, string>; // per-song active order name
+  songOrders: Record<number, string>;
+}
+
+// ── Storage key ──────────────────────────────────────────────────────────────
+const CACHE_KEY = 'presenter_cache';
+
+interface CacheData {
+  songs?: Record<number, unknown>;
+  order?: number[];
+  songOrders?: Record<number, string>;
+  styles?: object[];
+}
+
+function loadCache(): CacheData {
+  try {
+    const v = localStorage.getItem(CACHE_KEY);
+    if (v) return JSON.parse(v) as CacheData;
+    // Migration: read old individual keys
+    const migrated: CacheData = {};
+    const oldSongs = localStorage.getItem('songs');
+    if (oldSongs) migrated.songs = JSON.parse(oldSongs);
+    const oldOrder = localStorage.getItem('order');
+    if (oldOrder) migrated.order = JSON.parse(oldOrder);
+    const oldSongOrders = localStorage.getItem('songOrders');
+    if (oldSongOrders) migrated.songOrders = JSON.parse(oldSongOrders);
+    const oldStyles = localStorage.getItem('presenter_cached_styles');
+    if (oldStyles) migrated.styles = JSON.parse(oldStyles);
+    if (Object.keys(migrated).length > 0) {
+      // Persist migrated data to new key and clean up old keys
+      localStorage.setItem(CACHE_KEY, JSON.stringify(migrated));
+      localStorage.removeItem('songs');
+      localStorage.removeItem('order');
+      localStorage.removeItem('songOrders');
+      localStorage.removeItem('presenter_cached_styles');
+    }
+    return migrated;
+  } catch {
+    return {};
+  }
+}
+
+function saveCache(patch: Partial<CacheData>): void {
+  try {
+    const current = loadCache();
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...current, ...patch }));
+  } catch {}
 }
 
 const loadSongs = (): Record<number, ISong> => {
   try {
-    const raw = JSON.parse(localStorage.getItem('songs') ?? '{}');
+    const raw = loadCache().songs ?? {};
     const songs: Record<number, ISong> = {};
     for (const [key, song] of Object.entries(raw)) {
       songs[parseInt(key)] = new Song(song as ISong);
@@ -32,33 +78,15 @@ const loadSongs = (): Record<number, ISong> => {
   }
 };
 
-const loadSongsOrder = (): number[] => {
-  try {
-    return JSON.parse(localStorage.getItem('order') ?? '[]');
-  } catch {
-    return [];
-  }
-};
-
-const loadSongOrders = (): Record<number, string> => {
-  try {
-    return JSON.parse(localStorage.getItem('songOrders') ?? '{}');
-  } catch {
-    return {};
-  }
-};
+const loadSongsOrder = (): number[] => loadCache().order ?? [];
+const loadSongOrders = (): Record<number, string> => loadCache().songOrders ?? {};
 
 const persistSongs = (songs: Record<number, ISong>, order: number[]) => {
-  try {
-    localStorage.setItem('songs', JSON.stringify(songs));
-    localStorage.setItem('order', JSON.stringify(order));
-  } catch {}
+  saveCache({ songs: songs as Record<number, unknown>, order });
 };
 
 const persistSongOrders = (songOrders: Record<number, string>) => {
-  try {
-    localStorage.setItem('songOrders', JSON.stringify(songOrders));
-  } catch {}
+  saveCache({ songOrders });
 };
 
 const initialState: SongsState = {
@@ -66,6 +94,10 @@ const initialState: SongsState = {
   songsOrder: loadSongsOrder(),
   songOrders: loadSongOrders(),
 };
+
+// ── Helpers exported for settingsSlice (cachedStyles) ────────────────────────
+export const loadCachedStyles = (): object[] => loadCache().styles ?? [];
+export const saveCachedStyles = (styles: object[]): void => saveCache({ styles });
 
 /**
  * Async thunk that fetches all songs referenced in a show via RTK Query,
@@ -184,6 +216,8 @@ export const selectCurrentSongOrder = (state: { songs: SongsState }, songNumber:
   const available = Object.keys(song.order);
   return available.length > 0 ? available[0] : 'Default';
 };
+
+export const useGetSongs = () => useAppSelector((state) => state.songs);
 
 export const {
   setSongs,

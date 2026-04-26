@@ -1,7 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { Stack, Typography } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector } from '@/store';
 import ControlSong from '@/components/show/ControlSong';
 import ControlBibleVerse from '@/components/show/ControlBibleVerse';
 import ControlMedia from '@/components/show/ControlMedia';
@@ -9,13 +8,19 @@ import { useGetStylesQuery } from '@/api/styles.api';
 import { resolveStyleCascade, mergeStyles, DEFAULT_STYLE } from '@/utils/styleUtils';
 import VideoControlBar from '@/components/media/VideoControlBar';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
-import { getOpenWindows, type WindowConfig } from '@/utils/presentationBridge';
+import { getOpenWindows } from '@/utils/presentationBridge';
+import { useGetSettings } from '@/store/settingsSlice';
+import { useGetPresentationSettings } from '@/store/presentationSlice';
+import { WindowConfig } from '@/store/windowSlice';
+import { useGetShow } from '@/store/showSlice';
 
 const Control = () => {
   const { LL } = useI18nContext();
-  const activeItemIndex = useAppSelector((state) => state.presentation.activeItemIndex);
-  const currentShow = useAppSelector((state) => state.show.currentShow);
-  const globalStyleId = useAppSelector((state) => state.settings.globalStyleId);
+
+  const { globalStyleId } = useGetSettings();
+  const { activeItemIndex } = useGetPresentationSettings();
+  const { currentShow } = useGetShow();
+
   const { data: allStyles } = useGetStylesQuery();
 
   // Get the active show item
@@ -101,13 +106,26 @@ const Control = () => {
       default:
         return <ControlSong />;
     }
-  }, [activeItemIndex, activeItem?.type, activeItem?.mediaSubType, activeItem?.mediaPath, activeItem?.styleId]);
+  }, [
+    activeItemIndex,
+    activeItem?.type,
+    activeItem?.mediaSubType,
+    activeItem?.mediaPath,
+    activeItem?.styleId,
+    // Media display props — must trigger re-render so the preview updates immediately
+    activeItem?.mediaZoom,
+    activeItem?.mediaBlur,
+    activeItem?.mediaObjectFit,
+    activeItem?.mediaObjectPosition,
+    activeItem?.mediaAutoplay,
+    activeItem?.mediaLoop,
+    activeItem?.mediaColor,
+  ]);
 
   return (
     <Stack sx={{ flexGrow: 1, overflow: 'hidden' }}>
       <Stack sx={{ flexGrow: 1, overflow: 'auto' }}>{renderControl}</Stack>
-      <VideoControlBar variant="general" videoSources={videoSources} showIfNoLocalSources={!localHasVideos} label={LL.VIDEO.GENERAL()} />
-
+      {!mediaVideoUrl && <VideoControlBar variant="general" videoSources={videoSources} showIfNoLocalSources={!localHasVideos} />}
       {perWindowRows.map((w) => (
         <VideoControlBar
           key={w.id}
@@ -116,6 +134,7 @@ const Control = () => {
           windowName={w.config.name}
           label={w.config.name}
           showIfNoLocalSources
+          slim={!!mediaVideoUrl}
         />
       ))}
     </Stack>

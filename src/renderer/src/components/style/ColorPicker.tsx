@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Box, TextField, Stack, Typography, Paper, Popover, IconButton } from '@mui/material';
 import { HexColorPicker } from 'react-colorful';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { normalizeHex } from '@/utils';
 
 const COLOR_PRESETS = [
   { name: 'Black', value: '#000000' },
@@ -17,14 +18,6 @@ const COLOR_PRESETS = [
   { name: 'Navy', value: '#001F3F' },
   { name: 'Teal', value: '#39CCCC' },
 ];
-
-const normalizeHex = (s: string): string => {
-  if (!s) return '#000000';
-  const v = s.trim().toUpperCase();
-  if (/^#[0-9A-F]{6}$/.test(v)) return v;
-  if (/^[0-9A-F]{6}$/.test(v)) return `#${v}`;
-  return s;
-};
 
 interface ColorPickerProps {
   value: string;

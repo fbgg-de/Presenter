@@ -42,17 +42,7 @@ import {
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useListPdfsQuery, useUploadPdfMutation, useDeletePdfMutation, useRenamePdfMutation, type PdfFileInfo } from '@/api/pdfs.api';
 import { MUSICAL_KEYS } from '@/utils/orderKeyUtils';
-
-const formatFileSize = (bytes: number): string => {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-};
-
-const formatDateTime = (ts: number): string => {
-  const d = new Date(ts * 1000);
-  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
+import { formatDateTime, formatFileSize } from '@/utils';
 
 /**
  * Try to detect a musical key from a filename.

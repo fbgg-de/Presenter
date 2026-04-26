@@ -28,9 +28,6 @@ import {
   MenuBook as MenuBookIcon,
   Save as SaveIcon,
   Palette as PaletteIcon,
-  LightMode,
-  DarkMode,
-  SettingsBrightness,
   AccountCircle as AccountCircleIcon,
   Logout as LogoutIcon,
   PictureAsPdf as PdfIcon,
@@ -53,16 +50,17 @@ import { BibleVersePicker } from '@/components/search/BibleVersePicker';
 import { MediaBrowser } from '@/components/media/MediaBrowser';
 import { getShowItemIcon, getShowItemColor } from '@/utils/showItemIcons';
 import { UnifiedSearch } from '@/components/search/UnifiedSearch';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { setCurrentShow, addShowItem, removeShowItem, reorderShowItems, setDirty, updateShowItem, selectIsDirty } from '@/store/showSlice';
+import { useAppDispatch } from '@/store';
+import { setCurrentShow, addShowItem, removeShowItem, reorderShowItems, setDirty, updateShowItem, useGetShow } from '@/store/showSlice';
 import {
   addSongToStore,
   setSongsOrder as setSongsOrderAction,
   addToSongsOrder,
   setSongOrders as setSongOrdersAction,
   setCurrentSongOrder as setCurrentSongOrderAction,
+  useGetSongs,
 } from '@/store/songsSlice';
-import { setActiveItemIndex, setKeyboardDisabled } from '@/store/presentationSlice';
+import { setActiveItemIndex, setKeyboardDisabled, useGetPresentationSettings } from '@/store/presentationSlice';
 import type { Show, ShowItem, MediaSubType } from '@/api/shows.api';
 import type { SongListItem } from '@/api/songs.api';
 import { useSaveShowMutation } from '@/api/shows.api';
@@ -71,23 +69,24 @@ import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
 import { useLazyGetSongQuery } from '@/api/songs.api';
 import { useMetrics } from '@/hooks/useMetrics';
 import { loadShowSongs } from '@/store/songsSlice';
-import { toggleTheme } from '@/store/themeSlice';
 import { StyleEditor } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
 import { MUSICAL_KEYS, parseOrderKey } from '@/utils/orderKeyUtils';
+import { useGetSettings } from '@/store/settingsSlice';
+import { useGetWindows } from '@/store/windowSlice';
 
 const Sidebar = () => {
   const { palette } = useTheme();
   const navigate = useNavigate();
-  const songClick = useAppSelector((state) => state.settings.songClick);
+
+  const { songClick } = useGetSettings();
+  const { currentShow, isDirty } = useGetShow();
+
   const dispatch = useAppDispatch();
-  const currentShow = useAppSelector((state) => state.show.currentShow);
-  const isDirty = useAppSelector(selectIsDirty);
-  const themeMode = useAppSelector((state) => state.theme.mode);
 
   // Redux state
-  const songs = useAppSelector((state) => state.songs.songs);
-  const activeItemIndex = useAppSelector((state) => state.presentation.activeItemIndex);
+  const { activeItemIndex } = useGetPresentationSettings();
+  const { songs } = useGetSongs();
 
   const { LL } = useI18nContext();
   const { trackEvent } = useMetrics();
@@ -126,10 +125,9 @@ const Sidebar = () => {
   const [itemStyleWindowName, setItemStyleWindowName] = useState<string>('');
 
   // Window names available for per-item style overrides (from the footer's saved configs)
-  const savedWindowConfigs = useAppSelector((state) => state.settings.windowConfigs) as Array<{ name?: string }>;
-  const windowNames = (savedWindowConfigs || []).map((c) => (c?.name || '').trim()).filter((n) => n.length > 0);
+  const { windowConfigs: savedWindowConfigs } = useGetWindows();
 
-  const themeIcon = themeMode === 'dark' ? <DarkMode /> : themeMode === 'light' ? <LightMode /> : <SettingsBrightness />;
+  const windowNames = (savedWindowConfigs || []).map((c) => (c?.name || '').trim()).filter((n) => n.length > 0);
 
   const handleLogout = async () => {
     setAccountMenuAnchor(null);

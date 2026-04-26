@@ -14,15 +14,17 @@ import { navigatorDetector } from 'typesafe-i18n/detectors';
 import { loadLocale } from '@/i18n/i18n-util.sync';
 import TypesafeI18n from '@/i18n/i18n-react';
 
+import { getSettings } from '@/store/settingsSlice';
+
 // Determine locale
 const detectedLocale = detectLocale(navigatorDetector);
-const savedLocale = localStorage.getItem('presenter_ui_language');
+const savedLocale = getSettings('uiLanguage');
 const locale = (savedLocale || detectedLocale) as 'en' | 'de';
 loadLocale(locale);
 
 /** Wrapper that reads the musician-specific theme from Redux */
 const MusicianApp = () => {
-  const musicianTheme = useSelector((s: RootState) => s.settings.musicianTheme);
+  const musicianTheme = useSelector((s: RootState) => s.musician.musicianTheme);
   const muiTheme = useMemo(() => getTheme(musicianTheme), [musicianTheme]);
 
   return (

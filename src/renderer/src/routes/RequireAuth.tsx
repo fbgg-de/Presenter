@@ -1,15 +1,17 @@
 import type { PropsWithChildren } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useGetSessionQuery } from '@/api/session.api';
-import { useAppSelector } from '@/store';
+import { useGetSettings } from '@/store/settingsSlice';
 
 export const RequireAuth = ({ children }: PropsWithChildren) => {
   const location = useLocation();
-  const offlineMode = useAppSelector((s) => s.settings.offlineMode);
+  const { offlineMode } = useGetSettings();
   const { data, isLoading, isError } = useGetSessionQuery(undefined, { skip: offlineMode });
 
   // In offline mode, always allow access without authentication
-  if (offlineMode) return <>{children}</>;
+  if (offlineMode) {
+    return <>{children}</>;
+  }
 
   if (isLoading) {
     return null;

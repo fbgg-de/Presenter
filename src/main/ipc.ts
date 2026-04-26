@@ -171,8 +171,8 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
 
   // ── Video commands (forwarded to presentation windows) ──
 
-  ipcMain.handle('video-command', (_event, command: { action: string; windowName?: string; value?: number; fadeDuration?: number }) => {
-    windowManager.sendVideoCommand(command.action, command.windowName, command.value, command.fadeDuration);
+  ipcMain.handle('video-command', (_event, command: { action: string; windowName?: string; value?: number; fadeDuration?: number; target?: string }) => {
+    windowManager.sendVideoCommand(command.action, command.windowName, command.value, command.fadeDuration, command.target);
   });
 
   ipcMain.handle(

@@ -1,5 +1,18 @@
 ﻿import { useState } from 'react';
-import { AppBar, IconButton, Toolbar, Typography, Box, Tooltip, Menu, MenuItem, ListItemIcon, ListItemText, Divider, Snackbar } from '@mui/material';
+import {
+  AppBar,
+  IconButton,
+  Toolbar,
+  Typography,
+  Box,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Snackbar,
+} from '@mui/material';
 import {
   LightMode,
   DarkMode,
@@ -16,9 +29,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppDispatch, useAppSelector } from '@/store';
-import { toggleTheme } from '@/store/themeSlice';
-import { updateSetting } from '@/store/settingsSlice';
+import { useAppDispatch } from '@/store';
+import { useUpdateSetting, toggleTheme, useGetSettings, Languages } from '@/store/settingsSlice';
 import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
 import { StyleEditor } from '@/components/style/StyleEditor';
 import { StyleInspector } from '@/components/style/StyleInspector';
@@ -28,9 +40,9 @@ const Header = () => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const themeMode = useAppSelector((state) => state.theme.mode);
-  const uiLanguage = useAppSelector((state) => state.settings.uiLanguage);
-  const offlineMode = useAppSelector((state) => state.settings.offlineMode);
+
+  const { themeMode, uiLanguage, offlineMode } = useGetSettings();
+  const updateSetting = useUpdateSetting();
 
   const { data: session } = useGetSessionQuery();
   const [logout] = useLogoutMutation();
@@ -55,8 +67,8 @@ const Header = () => {
 
   const currentLangLabel = uiLanguage === 'de' ? '🇩🇪' : '🇬🇧';
 
-  const handleLanguageChange = (lang: string) => {
-    dispatch(updateSetting({ key: 'uiLanguage', value: lang }));
+  const handleLanguageChange = (lang: Languages) => {
+    updateSetting('uiLanguage', lang);
     setLangAnchorEl(null);
   };
 
@@ -92,7 +104,7 @@ const Header = () => {
           <Tooltip title={offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}>
             <IconButton
               size="small"
-              onClick={() => dispatch(updateSetting({ key: 'offlineMode', value: !offlineMode }))}
+              onClick={() => updateSetting('offlineMode', !offlineMode)}
               color={offlineMode ? 'warning' : 'default'}
               sx={{ mr: 0.5 }}
             >
@@ -115,7 +127,7 @@ const Header = () => {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <MenuItem onClick={() => handleLanguageChange('en')} selected={uiLanguage === 'en' || uiLanguage === ''}>
+            <MenuItem onClick={() => handleLanguageChange('en')} selected={uiLanguage === 'en'}>
               <ListItemIcon>
                 <Typography>🇬🇧</Typography>
               </ListItemIcon>

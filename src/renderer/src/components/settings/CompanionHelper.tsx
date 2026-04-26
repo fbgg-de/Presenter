@@ -26,7 +26,7 @@ import {
 } from '@mui/material';
 import { ContentCopy as CopyIcon, Close as CloseIcon, Cable as CableIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector } from '@/store';
+import { useGetSettings } from '@/store/settingsSlice';
 
 type WSAction = {
   action: string;
@@ -62,7 +62,9 @@ const WS_ACTIONS: WSAction[] = [
 
 export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const { LL } = useI18nContext();
-  const wsPort = useAppSelector((state) => state.settings.wsPort);
+
+  const { wsPort } = useGetSettings();
+
   const [targetWindow, setTargetWindow] = useState('');
   const [copiedAction, setCopiedAction] = useState<string | null>(null);
 

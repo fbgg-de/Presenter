@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect, ReactNode } from 'react';
 import { IconButton, SpeedDial, SpeedDialAction, Stack, Tooltip, Typography, useTheme } from '@mui/material';
 import {
   Settings as SettingsIcon,
@@ -24,9 +25,7 @@ import {
 } from '@mui/icons-material';
 import { alpha, type Palette } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { updateSetting } from '@/store/settingsSlice';
-import { useState, useCallback, useEffect, ReactNode } from 'react';
+import { useUpdateMusicianSetting, useGetMusicianSettings } from '@/store/musicianSlice';
 
 const FAB_SIZE = 44;
 const NAV_MARGIN = 36;
@@ -136,6 +135,7 @@ interface MusicianToolbarProps {
   hasPdfs: boolean;
   /** Triggers an immediate annotation reload from the server. Only available when a PDF is shown. */
   onRefetchAnnotations?: () => void;
+  onOpenMidi?: () => void;
 }
 
 export const MusicianToolbar = ({
@@ -158,12 +158,14 @@ export const MusicianToolbar = ({
   onToggleAnnotate,
   hasPdfs,
   onRefetchAnnotations,
+  onOpenMidi,
 }: MusicianToolbarProps) => {
   const { LL } = useI18nContext();
-  const dispatch = useAppDispatch();
   const { palette } = useTheme();
   const isDark = palette.mode === 'dark';
-  const toolbarExpanded = useAppSelector((s) => s.settings.musicianToolbarExpanded);
+
+  const { musicianToolbarExpanded } = useGetMusicianSettings();
+  const updateMusicianSetting = useUpdateMusicianSetting();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
@@ -239,7 +241,7 @@ export const MusicianToolbar = ({
     'midi-ws': 'MIDI over WebSocket',
   };
 
-  const toggleExpanded = () => dispatch(updateSetting({ key: 'musicianToolbarExpanded', value: !toolbarExpanded }));
+  const toggleExpanded = () => updateMusicianSetting('musicianToolbarExpanded', !musicianToolbarExpanded);
 
   const zoomPercent = Math.round(zoomLevel * 100);
 
@@ -289,14 +291,14 @@ export const MusicianToolbar = ({
           ))}
         </SpeedDial>
         <FloatingButton
-          icon={toolbarExpanded ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+          icon={musicianToolbarExpanded ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
           tooltip={LL.MUSICIAN.TOOLBAR_TOGGLE()}
           onClick={toggleExpanded}
         />
       </Stack>
 
       {/* Expandable toolbar column */}
-      {toolbarExpanded && (
+      {musicianToolbarExpanded && (
         <>
           {/* Sidebar toggle */}
           <FloatingButton
@@ -436,7 +438,10 @@ export const MusicianToolbar = ({
             </SpeedDial>
           )}
 
-          {/* 7. Settings */}
+          {/* 7. MIDI Mapping */}
+          {onOpenMidi && <FloatingButton icon={<MidiIcon fontSize="small" />} tooltip={LL.MIDI.SETTINGS()} onClick={onOpenMidi} />}
+
+          {/* 8. Settings */}
           <FloatingButton icon={<SettingsIcon fontSize="small" />} tooltip={LL.MUSICIAN.SETTINGS()} onClick={onOpenSettings} />
         </>
       )}

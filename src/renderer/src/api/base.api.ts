@@ -1,6 +1,8 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 import type { BaseQueryFn, FetchArgs, FetchBaseQueryError } from '@reduxjs/toolkit/query';
 
+import { getSetting } from '@/store/settingsSlice';
+
 /** Custom event dispatched when the session has expired (401 from backend) */
 export const SESSION_EXPIRED_EVENT = 'presenter:session-expired';
 
@@ -21,14 +23,13 @@ export type ApiSuccess<T> = T;
  */
 export const getBackendBaseUrl = (): string => {
   try {
-    const stored = localStorage.getItem('presenter_backend_url');
-    if (stored !== null) {
+    const backendUrl = getSetting('backendUrl');
+
+    if (backendUrl !== undefined && backendUrl !== null) {
       // Normalize: trim whitespace and trailing slashes
-      return stored.trim().replace(/\/+$/, '');
+      return String(backendUrl).trim().replace(/\/+$/, '');
     }
-  } catch {
-    /* ignore */
-  }
+  } catch {}
   // Default: same as settingsSlice so the displayed value matches actual requests
   return '';
 };
@@ -40,10 +41,12 @@ export const getBackendBaseUrl = (): string => {
  */
 const dynamicBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extraOptions) => {
   // Offline mode: skip all backend API calls silently
-  if (localStorage.getItem('presenter_offline_mode') === 'true') {
-    // Return empty success so RTK Query caches empty data instead of showing errors
-    return { data: null };
-  }
+  try {
+    if (getSetting('offlineMode')) {
+      // Return empty success so RTK Query caches empty data instead of showing errors
+      return { data: null };
+    }
+  } catch {}
 
   const baseUrl = getBackendBaseUrl();
   const rawBaseQuery = fetchBaseQuery({

@@ -44,9 +44,10 @@ import {
   TextFields as HideTextIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { toggleBlack, toggleFreezeWindow, toggleTextHidden } from '@/store/presentationSlice';
-import { updateSetting } from '@/store/settingsSlice';
+import { useAppDispatch } from '@/store';
+import { toggleBlack, toggleFreezeWindow, toggleTextHidden, useGetPresentationSettings } from '@/store/presentationSlice';
+import { useGetWindows, useUpdateWindows, WindowConfig } from '@/store/windowSlice';
+import type { SavedWindowConfig } from '@/store/windowSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { StyleEditor } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
@@ -61,23 +62,16 @@ import {
   adoptElectronWindow,
   getHasRestoredSavedWindows,
   markRestoredSavedWindows,
-  type WindowConfig,
 } from '@/utils/presentationBridge';
-
-/** Saved window config with optional runtime id */
-interface SavedWindowConfig extends WindowConfig {
-  _runtimeId?: string; // set when the window is open
-}
+import { useGetSettings } from '@/store/settingsSlice';
 
 const Footer = () => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const windowFooterVisible = useAppSelector((state) => state.settings.windowFooterVisible);
-  const restoreWindowsOnStart = useAppSelector((state) => state.settings.restoreWindowsOnStart);
-  const savedConfigs = useAppSelector((state) => state.settings.windowConfigs) as SavedWindowConfig[];
-  const isBlack = useAppSelector((state) => state.presentation.isBlack);
-  const isTextHidden = useAppSelector((state) => state.presentation.isTextHidden);
-  const frozenWindows = useAppSelector((state) => state.presentation.frozenWindows);
+  const { windowConfigs: savedConfigs } = useGetWindows();
+  const { windowFooterVisible, restoreWindowsOnStart } = useGetSettings();
+  const updateWindowSetting = useUpdateWindows();
+  const { isBlack, isTextHidden, frozenWindows } = useGetPresentationSettings();
 
   const { data: styles = [] } = useGetStylesQuery();
 
@@ -144,9 +138,9 @@ const Footer = () => {
   // ── Persist configs whenever the open windows list changes ──
   const persistConfigs = useCallback(
     (configs: SavedWindowConfig[]) => {
-      dispatch(updateSetting({ key: 'windowConfigs', value: configs }));
+      updateWindowSetting('windowConfigs', configs);
     },
-    [dispatch],
+    [updateWindowSetting],
   );
 
   // Drag-and-drop handlers for chip reordering

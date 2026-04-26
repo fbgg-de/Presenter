@@ -8,10 +8,10 @@ import {
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { setCurrentShow, closeShowSelector } from '@/store/showSlice';
-import { setSongsOrder, setSongOrders } from '@/store/songsSlice';
-import { updateSetting } from '@/store/settingsSlice';
+import { useAppDispatch } from '@/store';
+import { setCurrentShow, closeShowSelector, useGetShow } from '@/store/showSlice';
+import { setSongsOrder, setSongOrders, useGetSongs } from '@/store/songsSlice';
+import { useGetMusicianSettings, useUpdateMusicianSetting } from '@/store/musicianSlice';
 import { Shows } from '@/components/show/Shows';
 import { QrCodeShare } from '@/components/settings/QrCodeShare';
 import { MusicianSidebar } from './MusicianSidebar';
@@ -22,9 +22,12 @@ import { LyricsView } from './LyricsView';
 import { usePdfViewer } from './usePdfViewer';
 import { PdfUploadModal } from '@/components/pdf/PdfUploadModal';
 import { PdfAreaMappingEditor } from '@/components/pdf/PdfAreaMappingEditor';
+import { MidiLearnDialog } from '@/components/midi/MidiLearnDialog';
+import { useMidi, type MidiAction } from '@/hooks/useMidi';
 import { loadShowSongs } from '@/store/songsSlice';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import type { Show, ShowItem } from '@/api/shows.api';
+import { useGetPresentationSettings } from '@/store/presentationSlice';
 
 /**
  * Top-level page component for the Musician View.
@@ -34,31 +37,31 @@ import type { Show, ShowItem } from '@/api/shows.api';
  * entry-point (musician.tsx).
  */
 export const MusicianPage = () => {
-  const { LL } = useI18nContext();
-  const dispatch = useAppDispatch();
-  const { palette } = useTheme();
   const NAV_MARGIN = 36;
 
-  // ── Redux selectors ──────────────────────────────────────────────
-  const currentShow = useAppSelector((s) => s.show.currentShow);
-  const isShowSelectorOpen = useAppSelector((s) => s.show.isShowSelectorOpen);
-  const songs = useAppSelector((s) => s.songs.songs);
+  const { palette } = useTheme();
+  const { LL } = useI18nContext();
+  const {
+    musicianName,
+    musicianBand,
+    musicianTheme,
+    musicianPageView: defaultPageView,
+    musicianBlockIndicator: blockIndicator,
+    musicianTextSize: textSize,
+    musicianShowFooter: showFooter,
+    musicianSyncMode: syncModeSetting,
+    musicianSidebarOpen: persistedSidebarOpen,
+    musicianLastItemIndex: persistedLastItemIndex,
+  } = useGetMusicianSettings();
+  const { currentShow, isShowSelectorOpen } = useGetShow();
+  const { songs } = useGetSongs();
 
   // Operator's live position — read-only, never mutated by the musician
-  const operatorItemIndex = useAppSelector((s) => s.presentation.activeItemIndex);
-  const operatorActiveBlockIndex = useAppSelector((s) => s.presentation.activeBlockIndex);
+  const { activeItemIndex: operatorItemIndex, activeBlockIndex: operatorActiveBlockIndex } = useGetPresentationSettings();
 
-  // Musician-specific settings
-  const musicianName = useAppSelector((s) => s.settings.musicianName);
-  const musicianBand = useAppSelector((s) => s.settings.musicianBand);
-  const musicianTheme = useAppSelector((s) => s.settings.musicianTheme);
-  const defaultPageView = useAppSelector((s) => s.settings.musicianPageView);
-  const blockIndicator = useAppSelector((s) => s.settings.musicianBlockIndicator);
-  const textSize = useAppSelector((s) => s.settings.musicianTextSize);
-  const showFooter = useAppSelector((s) => s.settings.musicianShowFooter);
-  const syncModeSetting = useAppSelector((s) => s.settings.musicianSyncMode) as SyncMode;
-  const persistedSidebarOpen = useAppSelector((s) => s.settings.musicianSidebarOpen);
-  const persistedLastItemIndex = useAppSelector((s) => s.settings.musicianLastItemIndex);
+  const updateMusicianSetting = useUpdateMusicianSetting();
+
+  const dispatch = useAppDispatch();
 
   // ── Local UI state ───────────────────────────────────────────────
   const [activeItemIndex, setActiveItemIndex] = useState(persistedLastItemIndex);
@@ -69,6 +72,7 @@ export const MusicianPage = () => {
   const [areaMappingOpen, setAreaMappingOpen] = useState(false);
   const [annotateMode, setAnnotateMode] = useState(false);
   const [pdfOverrideFilename, setPdfOverrideFilename] = useState<string | null>(null);
+  const [midiOpen, setMidiOpen] = useState(false);
   const [syncMode, setSyncMode] = useState<SyncMode>(syncModeSetting);
   const initialLoadDone = useRef(false);
   /** Holds the latest annotation refetch function registered by PdfAnnotationToolbar */
@@ -78,13 +82,10 @@ export const MusicianPage = () => {
   }, []);
 
   // Persist sync mode changes
-  const handleSetSyncMode = useCallback(
-    (mode: SyncMode) => {
-      setSyncMode(mode);
-      dispatch(updateSetting({ key: 'musicianSyncMode', value: mode }));
-    },
-    [dispatch],
-  );
+  const handleSetSyncMode = useCallback((mode: SyncMode) => {
+    setSyncMode(mode);
+    updateMusicianSetting('musicianSyncMode', mode);
+  }, []);
 
   // ── Active item derivation ───────────────────────────────────────
   const showItems: ShowItem[] = currentShow?.order ?? [];
@@ -94,7 +95,7 @@ export const MusicianPage = () => {
     if (showItems.length > 0 && activeItemIndex >= showItems.length) {
       const clamped = Math.max(0, showItems.length - 1);
       setActiveItemIndex(clamped);
-      dispatch(updateSetting({ key: 'musicianLastItemIndex', value: clamped }));
+      updateMusicianSetting('musicianLastItemIndex', clamped);
     }
   }, [showItems.length, activeItemIndex, dispatch]);
 
@@ -201,9 +202,9 @@ export const MusicianPage = () => {
       setAnnotateMode(false);
       setPdfOverrideFilename(null);
       setActiveItemIndex(index);
-      dispatch(updateSetting({ key: 'musicianLastItemIndex', value: index }));
+      updateMusicianSetting('musicianLastItemIndex', index);
     },
-    [pdfViewer, dispatch],
+    [pdfViewer, updateMusicianSetting],
   );
 
   /** Manual navigation (prev/next buttons) — disables sync first */
@@ -211,21 +212,45 @@ export const MusicianPage = () => {
     (index: number) => {
       if (syncMode !== 'off') {
         setSyncMode('off');
-        dispatch(updateSetting({ key: 'musicianSyncMode', value: 'off' }));
+        updateMusicianSetting('musicianSyncMode', 'off');
       }
       handleSelectItem(index);
     },
-    [syncMode, dispatch, handleSelectItem],
+    [syncMode, updateMusicianSetting, handleSelectItem],
   );
 
-  // Persist sidebar toggle
+  /** Handle MIDI actions for navigation */
+  const handleMidiAction = useCallback(
+    (action: MidiAction) => {
+      switch (action) {
+        case 'next_song':
+          if (activeItemIndex < showItems.length - 1) handleManualNav(activeItemIndex + 1);
+          break;
+        case 'prev_song':
+          if (activeItemIndex > 0) handleManualNav(activeItemIndex - 1);
+          break;
+        case 'next_page':
+          if (pdfViewer.currentPage < pdfViewer.numPages) pdfViewer.setCurrentPage(pdfViewer.currentPage + 1);
+          break;
+        case 'prev_page':
+          if (pdfViewer.currentPage > 1) pdfViewer.setCurrentPage(pdfViewer.currentPage - 1);
+          break;
+      }
+    },
+    [activeItemIndex, showItems.length, handleManualNav, pdfViewer],
+  );
+
+  // Always-on MIDI — MIDI is a local hardware input and should work regardless of
+  // the network sync mode. The MidiLearnDialog has its own separate useMidi instance.
+  useMidi({ onAction: handleMidiAction, enabled: true });
+
   const handleToggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => {
       const next = !prev;
-      dispatch(updateSetting({ key: 'musicianSidebarOpen', value: next }));
+      updateMusicianSetting('musicianSidebarOpen', next);
       return next;
     });
-  }, [dispatch]);
+  }, [updateMusicianSetting]);
 
   // Reset annotate mode when the active item changes
   useEffect(() => {
@@ -281,6 +306,9 @@ export const MusicianPage = () => {
           onSave={pdfViewer.handleSaveAreaMappings}
         />
       )}
+
+      {/* MIDI mapping dialog */}
+      <MidiLearnDialog open={midiOpen} onClose={() => setMidiOpen(false)} onAction={handleMidiAction} />
 
       {/* Settings drawer */}
       <MusicianSettings
@@ -344,6 +372,7 @@ export const MusicianPage = () => {
             onToggleAnnotate={() => setAnnotateMode((a) => !a)}
             hasPdfs={hasPdfs}
             onRefetchAnnotations={() => annotationRefetchRef.current?.()}
+            onOpenMidi={() => setMidiOpen(true)}
           />
 
           {/* Main content */}

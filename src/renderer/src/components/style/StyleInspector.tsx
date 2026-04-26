@@ -19,9 +19,11 @@ import {
   Box,
 } from '@mui/material';
 import { useGetStylesQuery } from '@/api/styles.api';
-import { useAppSelector } from '@/store';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { resolveStyleData, DEFAULT_STYLE, type ResolvedStyle } from '@/utils/styleUtils';
+import { useGetPresentationSettings } from '@/store/presentationSlice';
+import { useGetSettings } from '@/store/settingsSlice';
+import { useGetShow } from '@/store/showSlice';
 
 interface StyleInspectorProps {
   open: boolean;
@@ -87,12 +89,13 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
   const { LL } = useI18nContext();
   const { data: allStyles = [] } = useGetStylesQuery();
 
-  const currentShow = useAppSelector((state) => state.show.currentShow);
-  const activeItemIndex = useAppSelector((state) => state.presentation.activeItemIndex);
+  const { globalStyleId } = useGetSettings();
+  const { activeItemIndex } = useGetPresentationSettings();
+  const { currentShow } = useGetShow();
+
   const activeItem = currentShow?.order?.[activeItemIndex];
 
   // Resolve each style level
-  const globalStyleId = useAppSelector((state) => state.settings.globalStyleId) || undefined;
   const showStyleId = currentShow?.styleId;
   const itemStyleId = activeItem?.styleId;
 

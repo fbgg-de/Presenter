@@ -257,6 +257,15 @@ const de: Translation = {
     ADD_BY_URL: 'Per URL hinzufügen',
     ROOT_FOLDER: 'Stammordner',
     LOAD_MORE: 'Mehr laden',
+    DISPLAY_OPTIONS: 'Anzeigeoptionen',
+    FIT_COVER: 'Füllen',
+    FIT_CONTAIN: 'Einpassen',
+    FIT_FILL: 'Strecken',
+    POSITION: 'Position',
+    ZOOM: 'Zoom',
+    BLUR: 'Unschärfe',
+    AUTOPLAY: 'Automatisch abspielen',
+    LOOP: 'Wiederholen',
   },
 
   CONTROL: {
@@ -462,7 +471,7 @@ const de: Translation = {
   },
 
   DESKTOP_APP: {
-    BANNER_TITLE: 'Presenter Desktop-App herunterladen',
+    BANNER_TITLE: 'Desktop-App verfügbar',
     BANNER_BODY: 'Erlebe das beste Erlebnis mit der nativen Desktop-App – Offline-Unterstützung, lokale Medien, MIDI und mehr.',
     DOWNLOAD_WINDOWS: 'Für Windows herunterladen',
     DISMISS: 'Schließen',
@@ -470,6 +479,13 @@ const de: Translation = {
     SETTINGS_SECTION: 'Desktop-App',
     SETTINGS_DOWNLOAD: 'Desktop-App-Installer herunterladen',
     OS_WINDOWS: 'Windows',
+    MODAL_TITLE: 'Presenter Desktop-App herunterladen',
+    MODAL_BODY: 'Die Presenter Desktop-App schaltet Offline-Unterstützung, lokale Mediendateien, MIDI-Eingabe, Echtzeit-WebSocket-Sync und mehr frei.',
+    MODAL_MORE_OPTIONS: 'Weitere Optionen…',
+    MODAL_DETECT_HINT: 'Dein Betriebssystem: {os}',
+    MODAL_UNAVAILABLE: 'Für dieses Betriebssystem noch nicht verfügbar. Schau später noch einmal vorbei.',
+    OS_MACOS: 'macOS',
+    OS_LINUX: 'Linux',
   },
 
   FOOTER: {
@@ -701,6 +717,8 @@ const de: Translation = {
     UNMUTE: 'Ton an',
     HIDE: 'Video ausblenden',
     SHOW: 'Video einblenden',
+    HIDE_ALL: 'Video auf allen Fenstern ausblenden',
+    SHOW_ALL: 'Video auf allen Fenstern einblenden',
     GENERAL: 'Allgemein',
     WINDOW: 'Fenster',
     VOLUME: 'Lautstärke',
@@ -721,6 +739,8 @@ const de: Translation = {
     CLIP_PATH_PREFIX: 'clip-path:',
     MASK_APPLY: 'Maske anwenden',
     AUTOPLAY: 'Automatisch abspielen',
+    REPLAY: 'Von Anfang abspielen',
+    AUDIO_FROM_PREVIEW: 'Audio wird durch die Vorschau im Steuerungsbereich gesteuert',
   },
 
   METRICS: {
@@ -931,6 +951,8 @@ const de: Translation = {
     CURRENT_MAPPINGS: 'Aktuelle Zuordnungen',
     NO_MAPPINGS: 'Keine MIDI-Zuordnungen konfiguriert. Verwende "Learn", um Tasten zuzuweisen.',
     MAPPING_ENTRY: '{key} → {action}',
+    NO_MAPPING: 'Keine Zuordnung',
+    CLEAR_ACTION: 'Alle Zuordnungen für diese Aktion löschen',
     NEXT_PAGE: 'Nächste Seite',
     PREV_PAGE: 'Vorherige Seite',
     NEXT_SONG: 'Nächstes Lied',

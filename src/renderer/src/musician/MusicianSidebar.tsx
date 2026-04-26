@@ -30,8 +30,8 @@ import {
 import { useState, useCallback, useMemo, MouseEvent } from 'react';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppSelector, useAppDispatch } from '@/store';
-import { removeShowItem, updateShowItem, setDirty, reorderShowItems, setShowSelectorOpen, selectIsDirty } from '@/store/showSlice';
-import { addSongToStore, addToSongsOrder } from '@/store/songsSlice';
+import { removeShowItem, updateShowItem, setDirty, reorderShowItems, setShowSelectorOpen, useGetShow } from '@/store/showSlice';
+import { addSongToStore, addToSongsOrder, useGetSongs } from '@/store/songsSlice';
 import { parseOrderKey, MUSICAL_KEYS } from '@/utils/orderKeyUtils';
 import type { ShowItem } from '@/api/shows.api';
 import { addShowItem } from '@/store/showSlice';
@@ -42,6 +42,7 @@ import { Song } from '@/song';
 import type { ISong } from '@/song';
 import { getShowItemIcon, getShowItemColor } from '@/utils/showItemIcons';
 import DraggableList from '@/components/show/DraggableList';
+import { useGetMusicianSettings } from '@/store/musicianSlice';
 
 const SIDEBAR_WIDTH = 350;
 
@@ -58,10 +59,11 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const { palette } = useTheme();
-  const songs = useAppSelector((s) => s.songs.songs);
-  const blockIndicator = useAppSelector((s) => s.settings.musicianBlockIndicator);
-  const currentShow = useAppSelector((s) => s.show.currentShow);
-  const isDirty = useAppSelector(selectIsDirty);
+
+  const { currentShow, isDirty } = useGetShow();
+  const { songs } = useGetSongs();
+  const { musicianBlockIndicator } = useGetMusicianSettings();
+
   const showItems = currentShow?.order ?? [];
 
   // Collect unique song numbers for PDF count batch query
@@ -394,7 +396,7 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
                         }}
                       />
                     )}
-                    {blockIndicator && i === operatorActiveIndex && (
+                    {musicianBlockIndicator && i === operatorActiveIndex && (
                       <Chip label="●" size="small" color="primary" sx={{ height: 16, fontSize: '0.6rem', ml: 0.25 }} />
                     )}
                     {item.type === 'song' && item.songNumber != null && pdfCounts && (pdfCounts[String(item.songNumber)] ?? 0) > 0 && (

@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, Card, CardContent, Divider, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { Security as SecurityIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon } from '@mui/icons-material';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetAccountsQuery, useGetAdminOidcAuthUrlQuery, useGetOidcAuthUrlQuery } from '@/api/session.api';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { updateSetting } from '@/store/settingsSlice';
+import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
 
 const useQueryParam = (name: string): string | null => {
   const { search } = useLocation();
@@ -18,10 +17,23 @@ type SelectedAccount = number | 'admin' | '';
 
 export const LoginPage = () => {
   const { LL } = useI18nContext();
-  const dispatch = useAppDispatch();
-  const offlineMode = useAppSelector((s) => s.settings.offlineMode);
+  const navigate = useNavigate();
+
+  const { offlineMode } = useGetSettings();
+  const updateSetting = useUpdateSetting();
 
   const next = useQueryParam('next') ?? '/';
+
+  // In offline mode, redirect immediately to the intended destination
+  useEffect(() => {
+    if (offlineMode) {
+      try {
+        navigate(decodeURIComponent(next), { replace: true });
+      } catch {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [offlineMode, navigate, next]);
   const licenseParam = useQueryParam('license');
 
   // License selection - load from localStorage on mount
@@ -220,7 +232,7 @@ export const LoginPage = () => {
                   variant={offlineMode ? 'contained' : 'outlined'}
                   color={offlineMode ? 'warning' : 'inherit'}
                   startIcon={offlineMode ? <WifiOffIcon /> : <WifiIcon />}
-                  onClick={() => dispatch(updateSetting({ key: 'offlineMode', value: !offlineMode }))}
+                  onClick={() => updateSetting('offlineMode', !offlineMode)}
                   fullWidth
                 >
                   {offlineMode ? LL.HEADER.OFFLINE_MODE_LABEL_OFF() : LL.HEADER.OFFLINE_MODE_LABEL_ON()}

@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
+import { MusicianViewConfig } from '../shared/types';
 
 // Custom APIs for renderer — full ElectronAPI per §7.3
 const api = {
@@ -46,7 +47,7 @@ const api = {
   hideIdentifyWindows: () => electronAPI.ipcRenderer.invoke('hide-identify-windows'),
 
   // ── Video commands ──
-  videoCommand: (command: { action: string; windowName?: string; value?: number }) =>
+  videoCommand: (command: { action: string; windowName?: string; value?: number; fadeDuration?: number; target?: string }) =>
     electronAPI.ipcRenderer.invoke('video-command', command),
   setVideoVisible: (payload?: { windowName?: string; value?: boolean; mode?: 'cut' | 'fade'; durationMs?: number }) =>
     electronAPI.ipcRenderer.invoke('set-video-visible', payload || {}),
@@ -57,7 +58,7 @@ const api = {
   startMediaServer: (mediaPath: string) => electronAPI.ipcRenderer.invoke('start-media-server', mediaPath),
 
   // ── Musician view ──
-  openMusicianView: (config?: unknown) => electronAPI.ipcRenderer.invoke('open-musician-view', config || {}),
+  openMusicianView: (config?: MusicianViewConfig) => electronAPI.ipcRenderer.invoke('open-musician-view', config || {}),
 
   // ── Settings export/import ──
   exportSettings: () => electronAPI.ipcRenderer.invoke('export-settings'),

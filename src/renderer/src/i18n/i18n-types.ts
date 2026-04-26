@@ -912,6 +912,42 @@ type RootTranslation = {
 		 * L​o​a​d​ ​m​o​r​e
 		 */
 		LOAD_MORE: string
+		/**
+		 * D​i​s​p​l​a​y​ ​O​p​t​i​o​n​s
+		 */
+		DISPLAY_OPTIONS: string
+		/**
+		 * C​o​v​e​r
+		 */
+		FIT_COVER: string
+		/**
+		 * C​o​n​t​a​i​n
+		 */
+		FIT_CONTAIN: string
+		/**
+		 * F​i​l​l
+		 */
+		FIT_FILL: string
+		/**
+		 * P​o​s​i​t​i​o​n
+		 */
+		POSITION: string
+		/**
+		 * Z​o​o​m
+		 */
+		ZOOM: string
+		/**
+		 * B​l​u​r
+		 */
+		BLUR: string
+		/**
+		 * A​u​t​o​p​l​a​y
+		 */
+		AUTOPLAY: string
+		/**
+		 * L​o​o​p
+		 */
+		LOOP: string
 	}
 	CONTROL: {
 		/**
@@ -1675,7 +1711,7 @@ type RootTranslation = {
 	}
 	DESKTOP_APP: {
 		/**
-		 * D​o​w​n​l​o​a​d​ ​P​r​e​s​e​n​t​e​r​ ​D​e​s​k​t​o​p​ ​A​p​p
+		 * D​e​s​k​t​o​p​ ​A​p​p​ ​A​v​a​i​l​a​b​l​e
 		 */
 		BANNER_TITLE: string
 		/**
@@ -1706,6 +1742,35 @@ type RootTranslation = {
 		 * W​i​n​d​o​w​s
 		 */
 		OS_WINDOWS: string
+		/**
+		 * D​o​w​n​l​o​a​d​ ​P​r​e​s​e​n​t​e​r​ ​D​e​s​k​t​o​p​ ​A​p​p
+		 */
+		MODAL_TITLE: string
+		/**
+		 * T​h​e​ ​P​r​e​s​e​n​t​e​r​ ​d​e​s​k​t​o​p​ ​a​p​p​ ​u​n​l​o​c​k​s​ ​o​f​f​l​i​n​e​ ​s​u​p​p​o​r​t​,​ ​l​o​c​a​l​ ​m​e​d​i​a​ ​f​i​l​e​s​,​ ​M​I​D​I​ ​i​n​p​u​t​,​ ​r​e​a​l​-​t​i​m​e​ ​W​e​b​S​o​c​k​e​t​ ​s​y​n​c​ ​a​n​d​ ​m​o​r​e​.
+		 */
+		MODAL_BODY: string
+		/**
+		 * M​o​r​e​ ​o​p​t​i​o​n​s​…
+		 */
+		MODAL_MORE_OPTIONS: string
+		/**
+		 * Y​o​u​r​ ​O​S​:​ ​{​o​s​}
+		 * @param {unknown} os
+		 */
+		MODAL_DETECT_HINT: RequiredParams<'os'>
+		/**
+		 * N​o​t​ ​y​e​t​ ​a​v​a​i​l​a​b​l​e​ ​f​o​r​ ​t​h​i​s​ ​O​S​.​ ​C​h​e​c​k​ ​b​a​c​k​ ​l​a​t​e​r​.
+		 */
+		MODAL_UNAVAILABLE: string
+		/**
+		 * m​a​c​O​S
+		 */
+		OS_MACOS: string
+		/**
+		 * L​i​n​u​x
+		 */
+		OS_LINUX: string
 	}
 	FOOTER: {
 		/**
@@ -2552,6 +2617,14 @@ type RootTranslation = {
 		 */
 		SHOW: string
 		/**
+		 * H​i​d​e​ ​v​i​d​e​o​ ​o​n​ ​a​l​l​ ​w​i​n​d​o​w​s
+		 */
+		HIDE_ALL: string
+		/**
+		 * S​h​o​w​ ​v​i​d​e​o​ ​o​n​ ​a​l​l​ ​w​i​n​d​o​w​s
+		 */
+		SHOW_ALL: string
+		/**
 		 * G​e​n​e​r​a​l
 		 */
 		GENERAL: string
@@ -2631,6 +2704,14 @@ type RootTranslation = {
 		 * A​u​t​o​p​l​a​y
 		 */
 		AUTOPLAY: string
+		/**
+		 * R​e​p​l​a​y​ ​f​r​o​m​ ​s​t​a​r​t
+		 */
+		REPLAY: string
+		/**
+		 * A​u​d​i​o​ ​i​s​ ​c​o​n​t​r​o​l​l​e​d​ ​b​y​ ​t​h​e​ ​i​t​e​m​ ​p​r​e​v​i​e​w​ ​i​n​ ​t​h​e​ ​c​o​n​t​r​o​l​ ​v​i​e​w
+		 */
+		AUDIO_FROM_PREVIEW: string
 	}
 	METRICS: {
 		/**
@@ -3419,6 +3500,14 @@ type RootTranslation = {
 		 * @param {unknown} key
 		 */
 		MAPPING_ENTRY: RequiredParams<'action' | 'key'>
+		/**
+		 * N​o​ ​m​a​p​p​i​n​g
+		 */
+		NO_MAPPING: string
+		/**
+		 * C​l​e​a​r​ ​a​l​l​ ​m​a​p​p​i​n​g​s​ ​f​o​r​ ​t​h​i​s​ ​a​c​t​i​o​n
+		 */
+		CLEAR_ACTION: string
 		/**
 		 * N​e​x​t​ ​P​a​g​e
 		 */
@@ -4374,6 +4463,42 @@ export type TranslationFunctions = {
 		 * Load more
 		 */
 		LOAD_MORE: () => LocalizedString
+		/**
+		 * Display Options
+		 */
+		DISPLAY_OPTIONS: () => LocalizedString
+		/**
+		 * Cover
+		 */
+		FIT_COVER: () => LocalizedString
+		/**
+		 * Contain
+		 */
+		FIT_CONTAIN: () => LocalizedString
+		/**
+		 * Fill
+		 */
+		FIT_FILL: () => LocalizedString
+		/**
+		 * Position
+		 */
+		POSITION: () => LocalizedString
+		/**
+		 * Zoom
+		 */
+		ZOOM: () => LocalizedString
+		/**
+		 * Blur
+		 */
+		BLUR: () => LocalizedString
+		/**
+		 * Autoplay
+		 */
+		AUTOPLAY: () => LocalizedString
+		/**
+		 * Loop
+		 */
+		LOOP: () => LocalizedString
 	}
 	CONTROL: {
 		/**
@@ -5135,7 +5260,7 @@ export type TranslationFunctions = {
 	}
 	DESKTOP_APP: {
 		/**
-		 * Download Presenter Desktop App
+		 * Desktop App Available
 		 */
 		BANNER_TITLE: () => LocalizedString
 		/**
@@ -5166,6 +5291,34 @@ export type TranslationFunctions = {
 		 * Windows
 		 */
 		OS_WINDOWS: () => LocalizedString
+		/**
+		 * Download Presenter Desktop App
+		 */
+		MODAL_TITLE: () => LocalizedString
+		/**
+		 * The Presenter desktop app unlocks offline support, local media files, MIDI input, real-time WebSocket sync and more.
+		 */
+		MODAL_BODY: () => LocalizedString
+		/**
+		 * More options…
+		 */
+		MODAL_MORE_OPTIONS: () => LocalizedString
+		/**
+		 * Your OS: {os}
+		 */
+		MODAL_DETECT_HINT: (arg: { os: unknown }) => LocalizedString
+		/**
+		 * Not yet available for this OS. Check back later.
+		 */
+		MODAL_UNAVAILABLE: () => LocalizedString
+		/**
+		 * macOS
+		 */
+		OS_MACOS: () => LocalizedString
+		/**
+		 * Linux
+		 */
+		OS_LINUX: () => LocalizedString
 	}
 	FOOTER: {
 		/**
@@ -5999,6 +6152,14 @@ export type TranslationFunctions = {
 		 */
 		SHOW: () => LocalizedString
 		/**
+		 * Hide video on all windows
+		 */
+		HIDE_ALL: () => LocalizedString
+		/**
+		 * Show video on all windows
+		 */
+		SHOW_ALL: () => LocalizedString
+		/**
 		 * General
 		 */
 		GENERAL: () => LocalizedString
@@ -6078,6 +6239,14 @@ export type TranslationFunctions = {
 		 * Autoplay
 		 */
 		AUTOPLAY: () => LocalizedString
+		/**
+		 * Replay from start
+		 */
+		REPLAY: () => LocalizedString
+		/**
+		 * Audio is controlled by the item preview in the control view
+		 */
+		AUDIO_FROM_PREVIEW: () => LocalizedString
 	}
 	METRICS: {
 		/**
@@ -6844,6 +7013,14 @@ export type TranslationFunctions = {
 		 * {key} → {action}
 		 */
 		MAPPING_ENTRY: (arg: { action: unknown, key: unknown }) => LocalizedString
+		/**
+		 * No mapping
+		 */
+		NO_MAPPING: () => LocalizedString
+		/**
+		 * Clear all mappings for this action
+		 */
+		CLEAR_ACTION: () => LocalizedString
 		/**
 		 * Next Page
 		 */

@@ -8,10 +8,13 @@ import {
   toggleBlack,
   toggleTextHidden,
   toggleVideoVisible,
+  useGetPresentationSettings,
 } from '@/store/presentationSlice';
-import { selectCurrentSongOrder } from '@/store/songsSlice';
-import { DEFAULT_KEYBOARD_MAPPING, DEFAULT_KEYBOARD_ENABLED } from '@/components/settings/KeyboardMappingEditor';
+import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
+import { DEFAULT_KEYBOARD_MAPPING } from '@/components/settings/KeyboardMappingEditor';
 import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
+import { useGetSettings } from '@/store/settingsSlice';
+import { useGetShow } from '@/store/showSlice';
 
 /** Count only primary (non-translated) lines in a raw block lines array. */
 const countPrimaryLines = (lines: string[]): number => lines.filter((l) => !SONG_TRANSLATION_LINE_REGEX.test(l)).length;
@@ -37,30 +40,22 @@ const eventToCombo = (e: KeyboardEvent): string => {
 export const useKeyboardNavigation = () => {
   const dispatch = useAppDispatch();
 
-  const keyboardDisabled = useAppSelector((state) => state.presentation.keyboardDisabled);
-  const resetBlackOnSwitch = useAppSelector((state) => state.settings.resetBlackOnSwitch);
-  const keyboardMapping = useAppSelector((state) => state.settings.keyboardMapping);
-  const keyboardEnabled = useAppSelector((state) => state.settings.keyboardEnabled) as Record<string, boolean> | undefined;
-  const hideTransitionMode = useAppSelector((state) => state.settings.hideTransitionMode);
-  const hideTransitionDuration = useAppSelector((state) => state.settings.hideTransitionDuration);
-  const videoVisible = useAppSelector((state) => state.presentation.videoVisible);
-  const videoFadeDuration = useAppSelector((state) => state.settings.videoFadeDuration);
+  const { resetBlackOnSwitch, keyboardMapping, hideTransitionMode, hideTransitionDuration, videoFadeDuration } = useGetSettings();
+  const { keyboardDisabled, videoVisible, activeItemIndex, activeBlockIndex, activeLineIndex } = useGetPresentationSettings();
+  const { songsOrder, songs } = useGetSongs();
+  const { currentShow } = useGetShow();
 
-  const activeItemIndex = useAppSelector((state) => state.presentation.activeItemIndex);
-  const activeBlockIndex = useAppSelector((state) => state.presentation.activeBlockIndex);
-  const activeLineIndex = useAppSelector((state) => state.presentation.activeLineIndex);
-
-  const currentSongNumber = useAppSelector((state) => state.songs.songsOrder[state.presentation.activeItemIndex]);
-  const currentSong = useAppSelector((state) => (currentSongNumber != null ? state.songs.songs[currentSongNumber] : undefined));
+  const currentSongNumber = songsOrder[activeItemIndex];
+  const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
-  const songsOrderLength = useAppSelector((state) => state.songs.songsOrder.length);
+  const showItemCount = currentShow?.order?.length ?? songsOrder.length;
 
   // Build reverse mapping: combo string → action id
   const comboToAction = useMemo(() => {
     const merged = { ...DEFAULT_KEYBOARD_MAPPING, ...keyboardMapping };
     const reverse: Record<string, string> = {};
-    for (const [action, combo] of Object.entries(merged)) {
-      if (combo) reverse[combo] = action;
+    for (const [action, data] of Object.entries(merged)) {
+      if (data?.key) reverse[data.key] = action;
     }
     return reverse;
   }, [keyboardMapping]);
@@ -68,10 +63,10 @@ export const useKeyboardNavigation = () => {
   // Helper to check if an action is enabled
   const isEnabled = useMemo(() => {
     return (action: string): boolean => {
-      if (keyboardEnabled && action in keyboardEnabled) return keyboardEnabled[action];
-      return DEFAULT_KEYBOARD_ENABLED[action] ?? true;
+      if (keyboardMapping[action] && 'enabled' in keyboardMapping[action]) return keyboardMapping[action].enabled;
+      return DEFAULT_KEYBOARD_MAPPING[action]?.enabled ?? true;
     };
-  }, [keyboardEnabled]);
+  }, [keyboardMapping]);
 
   // Keep a ref of all values the handler needs
   const stateRef = useRef({
@@ -84,7 +79,7 @@ export const useKeyboardNavigation = () => {
     activeLineIndex,
     currentSong,
     orderName,
-    songsOrderLength,
+    showItemCount,
     hideTransitionMode,
     hideTransitionDuration,
     videoVisible,
@@ -100,7 +95,7 @@ export const useKeyboardNavigation = () => {
     activeLineIndex,
     currentSong,
     orderName,
-    songsOrderLength,
+    showItemCount,
     hideTransitionMode,
     hideTransitionDuration,
     videoVisible,
@@ -134,7 +129,7 @@ export const useKeyboardNavigation = () => {
       };
 
       const nextSong = () => {
-        if (s.activeItemIndex < s.songsOrderLength - 1) {
+        if (s.activeItemIndex < s.showItemCount - 1) {
           dispatch(setActiveItemIndex(s.activeItemIndex + 1));
           if (s.resetBlackOnSwitch) dispatch(setBlack(false));
         }

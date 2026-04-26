@@ -1,290 +1,173 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { useAppSelector, useAppDispatch } from './hooks';
+import type { MidiAction } from '@/hooks/useMidi';
+import { useCallback } from 'react';
 
-// All localStorage-backed settings per §21.3
-// Each key corresponds to a `presenter_*` localStorage key
+const SETTINGS_KEY = 'presenter_settings';
 
-interface SettingsState {
+export type Languages = 'en' | 'de';
+type ClickBehaviour = 'click' | 'double-click';
+type Transition = 'cut' | 'fade';
+type ThemeMode = 'dark' | 'light' | 'system';
+type Order = 'lexicographic' | 'numeric';
+type TrackingMaster = 'operator' | 'midi';
+
+export interface SettingsState {
+  autoCheckUpdates: boolean;
   backendUrl: string;
-  uiLanguage: string;
-  languageOverride: string;
+  bibleTranslation: string;
+  cachedStyles: object[];
   confirmPageLeave: boolean;
   confirmShowDeletion: boolean;
   confirmShowOverwrite: boolean;
   confirmSongDelete: boolean;
   defaultNewVerseName: string;
   defaultVerseName: string;
-  notificationCount: number;
-  notificationTime: number;
-  overrideSongImport: boolean;
-  reloadSongAfterEdit: boolean;
-  resetBlackOnSwitch: boolean;
-  showLimit: number;
+  desktopAppDismissed: boolean;
+  globalStyleId: number;
+  hideTransitionDuration: number;
+  hideTransitionMode: Transition;
+  keyboardMapping: Record<string, { enabled: boolean; key: string }>;
+  keyboardNavigationBlocks: boolean;
+  keyboardNavigationLines: boolean;
+  keyboardNavigationSongs: boolean;
+  mediaPath: string;
+  midiMappings: Partial<Record<MidiAction, string>>;
+  midiTrackingMaster: TrackingMaster;
   nextLinePreview: boolean;
   nextLinePreviewColor: string;
   nextLineTranslation: boolean;
-  showDeleteFromDb: boolean;
-  uploadNotifications: boolean;
-  songClick: 'click' | 'double-click';
-  songOrder: 'lexicographic' | 'numeric';
-  controlLayout: 'boxed' | 'list';
-  touchDuration: number;
-  verseClick: 'click' | 'double-click';
-  bibleTranslation: string;
-  keyboardMapping: Record<string, string>;
-  keyboardEnabled: Record<string, boolean>;
-  windowConfigs: object[];
-  windowPresets: Record<string, object>;
-  windowFooterVisible: boolean;
-  mediaPath: string;
-  wsPort: number;
-  autoCheckUpdates: boolean;
-  musicianName: string;
-  musicianBand: string;
-  musicianPageView: 'two-page' | 'one-page';
-  musicianBlockIndicator: boolean;
-  musicianTextSize: number;
-  musicianTheme: 'dark' | 'light';
-  musicianShowFooter: boolean;
-  musicianToolbarExpanded: boolean;
-  musicianSyncMode: 'off' | 'operator' | 'midi' | 'midi-ws';
-  musicianSidebarOpen: boolean;
-  musicianLastItemIndex: number;
-  midiMappings: Record<string, Record<string, string>>;
-  midiTrackingMaster: 'operator' | 'midi';
-  globalStyleId: number;
-  showSaveFormat: string;
-  keyboardNavigationSongs: boolean;
-  keyboardNavigationBlocks: boolean;
-  keyboardNavigationLines: boolean;
-  restoreWindowsOnStart: boolean;
-  transitionMode: 'cut' | 'fade';
-  transitionDuration: number;
-  hideTransitionMode: 'cut' | 'fade';
-  hideTransitionDuration: number;
-  videoFadeDuration: number;
+  notificationCount: number;
+  notificationTime: number;
   offlineMode: boolean;
-  cachedStyles: object[];
-  desktopAppDismissed: boolean;
+  overrideSongImport: boolean;
+  reloadSongAfterEdit: boolean;
+  resetBlackOnSwitch: boolean;
+  restoreWindowsOnStart: boolean;
+  showDeleteFromDb: boolean;
+  showLimit: number;
+  showSaveFormat: string;
+  songClick: ClickBehaviour;
+  songOrder: Order;
+  themeMode: ThemeMode;
+  touchDuration: number;
+  transitionDuration: number;
+  transitionMode: Transition;
+  uiLanguage: Languages;
+  uploadNotifications: boolean;
+  verseClick: ClickBehaviour;
+  videoFadeDuration: number;
+  windowFooterVisible: boolean;
+  wsPort: number;
 }
 
-const loadString = (key: string, fallback: string): string => {
-  try {
-    return localStorage.getItem(key) ?? fallback;
-  } catch {
-    return fallback;
-  }
+const defaultState: SettingsState = {
+  autoCheckUpdates: true,
+  backendUrl: '',
+  bibleTranslation: 'ESV',
+  cachedStyles: [],
+  confirmPageLeave: true,
+  confirmShowDeletion: true,
+  confirmShowOverwrite: true,
+  confirmSongDelete: true,
+  defaultNewVerseName: 'Outro',
+  defaultVerseName: 'Vers 1',
+  desktopAppDismissed: false,
+  globalStyleId: 0,
+  hideTransitionDuration: 300,
+  hideTransitionMode: 'cut',
+  keyboardMapping: {},
+  keyboardNavigationBlocks: true,
+  keyboardNavigationLines: true,
+  keyboardNavigationSongs: true,
+  mediaPath: '',
+  midiMappings: {},
+  midiTrackingMaster: 'operator',
+  nextLinePreview: true,
+  nextLinePreviewColor: '#AAAAAA',
+  nextLineTranslation: true,
+  notificationCount: 4,
+  notificationTime: 3500,
+  offlineMode: false,
+  overrideSongImport: false,
+  reloadSongAfterEdit: false,
+  resetBlackOnSwitch: false,
+  restoreWindowsOnStart: true,
+  showDeleteFromDb: false,
+  showLimit: 10,
+  showSaveFormat: 'Show {dd}.{MM}.{yyyy}',
+  songClick: 'double-click',
+  songOrder: 'lexicographic',
+  themeMode: 'system',
+  touchDuration: 300,
+  transitionDuration: 500,
+  transitionMode: 'cut',
+  uiLanguage: 'en',
+  uploadNotifications: true,
+  verseClick: 'double-click',
+  videoFadeDuration: 0,
+  windowFooterVisible: true,
+  wsPort: 9001,
 };
 
-const loadBool = (key: string, fallback: boolean): boolean => {
-  try {
-    const v = localStorage.getItem(key);
-    if (v === null) return fallback;
-    return v === 'true';
-  } catch {
-    return fallback;
+let initialState: SettingsState = { ...defaultState };
+try {
+  const settings = localStorage.getItem(SETTINGS_KEY);
+  if (settings) {
+    initialState = { ...defaultState, ...JSON.parse(settings) };
   }
-};
-
-const loadNumber = (key: string, fallback: number): number => {
-  try {
-    const v = localStorage.getItem(key);
-    if (v === null) return fallback;
-    const n = Number(v);
-    return isNaN(n) ? fallback : n;
-  } catch {
-    return fallback;
-  }
-};
-
-const loadJson = <T>(key: string, fallback: T): T => {
-  try {
-    const v = localStorage.getItem(key);
-    if (v === null) return fallback;
-    return JSON.parse(v) as T;
-  } catch {
-    return fallback;
-  }
-};
-
-// ── Grouped musician settings ──
-// All musician-specific settings are stored in a single localStorage key
-const MUSICIAN_SETTINGS_KEY = 'presenter_musician_settings';
-
-interface MusicianSettings {
-  name: string;
-  band: string;
-  pageView: 'two-page' | 'one-page';
-  blockIndicator: boolean;
-  textSize: number;
-  theme: 'dark' | 'light';
-  showFooter: boolean;
-  toolbarExpanded: boolean;
-  syncMode: 'off' | 'operator' | 'midi' | 'midi-ws';
-  sidebarOpen: boolean;
-  lastItemIndex: number;
+} catch {
+  console.log('Failed to load settings from localStorage, using defaults');
 }
-
-const defaultMusicianSettings: MusicianSettings = {
-  name: '',
-  band: '',
-  pageView: 'one-page',
-  blockIndicator: true,
-  textSize: 16,
-  theme: 'dark',
-  showFooter: true,
-  toolbarExpanded: true,
-  syncMode: 'operator',
-  sidebarOpen: true,
-  lastItemIndex: 0,
-};
-
-/** Load grouped musician settings */
-function loadMusicianSettings(): MusicianSettings {
-  try {
-    const grouped = localStorage.getItem(MUSICIAN_SETTINGS_KEY);
-    if (grouped) {
-      const parsed = JSON.parse(grouped);
-      return { ...defaultMusicianSettings, ...parsed };
-    }
-  } catch {}
-
-  return { ...defaultMusicianSettings };
-}
-
-const musicianSettings = loadMusicianSettings();
-
-const initialState: SettingsState = {
-  backendUrl: loadString('presenter_backend_url', ''),
-  uiLanguage: loadString('presenter_ui_language', ''),
-  languageOverride: loadString('presenter_language_override', ''),
-  confirmPageLeave: loadBool('presenter_confirm_page_leave', true),
-  confirmShowDeletion: loadBool('presenter_confirm_show_deletion', true),
-  confirmShowOverwrite: loadBool('presenter_confirm_show_overwrite', true),
-  confirmSongDelete: loadBool('presenter_confirm_song_delete', true),
-  defaultNewVerseName: loadString('presenter_default_new_verse_name', 'Outro'),
-  defaultVerseName: loadString('presenter_default_verse_name', 'Vers 1'),
-  notificationCount: loadNumber('presenter_notification_count', 4),
-  notificationTime: loadNumber('presenter_notification_time', 3500),
-  overrideSongImport: loadBool('presenter_override_song_import', false),
-  reloadSongAfterEdit: loadBool('presenter_reload_song_after_edit', false),
-  resetBlackOnSwitch: loadBool('presenter_reset_black_on_switch', false),
-  showLimit: loadNumber('presenter_show_limit', 10),
-  nextLinePreview: loadBool('presenter_next_line_preview', true),
-  nextLinePreviewColor: loadString('presenter_next_line_preview_color', '#AAAAAA'),
-  nextLineTranslation: loadBool('presenter_next_line_translation', true),
-  showDeleteFromDb: loadBool('presenter_show_delete_from_db', false),
-  uploadNotifications: loadBool('presenter_upload_notifications', true),
-  songClick: loadString('presenter_song_click', 'double-click') as 'click' | 'double-click',
-  songOrder: loadString('presenter_song_order', 'lexicographic') as 'lexicographic' | 'numeric',
-  controlLayout: loadString('presenter_control_layout', 'boxed') as 'boxed' | 'list',
-  touchDuration: loadNumber('presenter_touch_duration', 300),
-  verseClick: loadString('presenter_verse_click', 'double-click') as 'click' | 'double-click',
-  bibleTranslation: loadString('presenter_bible_translation', 'ESV'),
-  keyboardMapping: loadJson('presenter_keyboard_mapping', {}),
-  keyboardEnabled: loadJson('presenter_keyboard_enabled', {}),
-  windowConfigs: loadJson<object[]>('presenter_window_configs', []).map((c) => {
-    // Strip transient runtime ID — it's only valid within a single app session.
-    // On next start the restore logic will reopen all configs that lack _runtimeId.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { _runtimeId: _, ...rest } = c as any;
-    return rest;
-  }),
-  windowPresets: loadJson('presenter_window_presets', {}),
-  windowFooterVisible: loadBool('presenter_window_footer_visible', true),
-  mediaPath: loadString('presenter_media_path', ''),
-  wsPort: loadNumber('presenter_ws_port', 9001),
-  autoCheckUpdates: loadBool('presenter_auto_check_updates', true),
-  musicianName: musicianSettings.name,
-  musicianBand: musicianSettings.band,
-  musicianPageView: musicianSettings.pageView,
-  musicianBlockIndicator: musicianSettings.blockIndicator,
-  musicianTextSize: musicianSettings.textSize,
-  musicianTheme: musicianSettings.theme,
-  musicianShowFooter: musicianSettings.showFooter,
-  musicianToolbarExpanded: musicianSettings.toolbarExpanded,
-  musicianSyncMode: musicianSettings.syncMode,
-  musicianSidebarOpen: musicianSettings.sidebarOpen,
-  musicianLastItemIndex: musicianSettings.lastItemIndex,
-  midiMappings: loadJson('presenter_midi_mappings', {}),
-  midiTrackingMaster: loadString('presenter_midi_tracking_master', 'operator') as 'operator' | 'midi',
-  globalStyleId: loadNumber('presenter_global_style_id', 0),
-  showSaveFormat: loadString('presenter_show_save_format', 'Show {dd}.{MM}.{yyyy}'),
-  keyboardNavigationSongs: loadBool('presenter_keyboard_navigation_songs', true),
-  keyboardNavigationBlocks: loadBool('presenter_keyboard_navigation_blocks', true),
-  keyboardNavigationLines: loadBool('presenter_keyboard_navigation_lines', true),
-  restoreWindowsOnStart: loadBool('presenter_restore_windows_on_start', false),
-  transitionMode: loadString('presenter_transition_mode', 'cut') as 'cut' | 'fade',
-  transitionDuration: loadNumber('presenter_transition_duration', 500),
-  hideTransitionMode: loadString('presenter_hide_transition_mode', 'cut') as 'cut' | 'fade',
-  hideTransitionDuration: loadNumber('presenter_hide_transition_duration', 300),
-  videoFadeDuration: loadNumber('presenter_video_fade_duration', 0),
-  offlineMode: loadBool('presenter_offline_mode', false),
-  cachedStyles: loadJson<object[]>('presenter_cached_styles', []),
-  desktopAppDismissed: loadBool('presenter_desktop_app_dismissed', false),
-};
-
-// Musician setting keys that are stored in the grouped object
-const musicianKeyMap: Record<string, keyof MusicianSettings> = {
-  musicianName: 'name',
-  musicianBand: 'band',
-  musicianPageView: 'pageView',
-  musicianBlockIndicator: 'blockIndicator',
-  musicianTextSize: 'textSize',
-  musicianTheme: 'theme',
-  musicianShowFooter: 'showFooter',
-  musicianToolbarExpanded: 'toolbarExpanded',
-  musicianSyncMode: 'syncMode',
-  musicianSidebarOpen: 'sidebarOpen',
-  musicianLastItemIndex: 'lastItemIndex',
-};
-
-// Helper to persist a setting
-const persist = (key: string, value: unknown) => {
-  try {
-    // Check if this is a musician setting — persist to grouped key
-    const musicianField = musicianKeyMap[key];
-    if (musicianField) {
-      const current = loadJson<MusicianSettings>(MUSICIAN_SETTINGS_KEY, defaultMusicianSettings);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (current as any)[musicianField] = value;
-      localStorage.setItem(MUSICIAN_SETTINGS_KEY, JSON.stringify(current));
-      return;
-    }
-
-    // Standard key
-    const lsKey = 'presenter_' + key.replace(/([A-Z])/g, '_$1').toLowerCase();
-    if (typeof value === 'object') {
-      localStorage.setItem(lsKey, JSON.stringify(value));
-    } else {
-      localStorage.setItem(lsKey, String(value));
-    }
-  } catch {}
-};
 
 export const settingsSlice = createSlice({
   name: 'settings',
   initialState,
   reducers: {
-    setSetting: <K extends keyof SettingsState>(state: SettingsState, action: PayloadAction<{ key: K; value: SettingsState[K] }>) => {
-      const { key, value } = action.payload;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (state as any)[key] = value;
-      persist(key, value);
-    },
     updateSetting: (state, action: PayloadAction<{ key: keyof SettingsState; value: unknown }>) => {
       const { key, value } = action.payload;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (state as any)[key] = value;
-      persist(key, value);
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state));
+    },
+    toggleTheme: (state) => {
+      switch (state.themeMode) {
+        case 'dark':
+          state.themeMode = 'light';
+          break;
+        case 'light':
+          state.themeMode = 'system';
+          break;
+        default:
+          state.themeMode = 'dark';
+      }
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state));
     },
   },
 });
 
-export const { updateSetting } = settingsSlice.actions;
+export const { toggleTheme } = settingsSlice.actions;
 
-// Typed setting updater for use in components
-export const setSettingAction = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) =>
-  settingsSlice.actions.updateSetting({ key, value: value as unknown });
+export const getSetting = <K extends keyof SettingsState>(k: K): SettingsState[K] => {
+  try {
+    const settings = localStorage.getItem(SETTINGS_KEY);
+    if (settings) {
+      const parsed = JSON.parse(settings);
+      if (parsed[k] !== undefined) {
+        return parsed[k];
+      }
+    }
+  } catch {}
+  return defaultState[k];
+};
+export const useGetSettings = () => useAppSelector((state) => state.settings);
+export const useUpdateSetting = () => {
+  const dispatch = useAppDispatch();
+  return useCallback(
+    <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
+      dispatch(settingsSlice.actions.updateSetting({ key, value }));
+    },
+    [dispatch],
+  );
+};
 
-export type { SettingsState };
 export default settingsSlice.reducer;

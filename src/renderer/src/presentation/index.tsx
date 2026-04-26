@@ -3,18 +3,28 @@ import { Presentation, type PresentationProps } from '@/presentation/Presentatio
 import type { PresentationContent } from '@/presentation/types';
 import { EMPTY_CONTENT } from '@/presentation/types';
 
+import { getSetting } from '@/store/settingsSlice';
+
 /**
  * Read the video fade duration from localStorage (set by the main renderer's settings).
  * Returns 0 if not set (instant cut).
  */
 function getVideoFadeDuration(): number {
-  try {
-    const v = localStorage.getItem('presenter_video_fade_duration');
-    const n = v !== null ? parseInt(v, 10) : 0;
-    return isNaN(n) || n < 0 ? 0 : n;
-  } catch {
-    return 0;
-  }
+  const v = getSetting('videoFadeDuration');
+  const n = v !== undefined && v !== null ? parseInt(String(v), 10) : 0;
+  return isNaN(n) || n < 0 ? 0 : n;
+}
+
+/**
+ * Read the hide-transition duration from localStorage (set by the main renderer's
+ * settings). Used to make the auto-hide of style background videos (when a
+ * media-item video becomes active) fade smoothly instead of cutting abruptly.
+ * Defaults to 400ms which is gentler than an instant cut.
+ */
+function getHideTransitionDuration(): number {
+  const v = getSetting('hideTransitionDuration');
+  const n = v !== undefined && v !== null ? parseInt(String(v), 10) : NaN;
+  return isNaN(n) || n < 0 ? 400 : n;
 }
 
 /**
@@ -33,8 +43,7 @@ function fadeVolume(video: HTMLVideoElement, from: number, to: number, durationM
   let step = 0;
   const tick = () => {
     step++;
-    const next = Math.max(0, Math.min(1, from + delta * step));
-    video.volume = next;
+    video.volume = Math.max(0, Math.min(1, from + delta * step));
     if (step < steps) {
       setTimeout(tick, stepDuration);
     } else {
@@ -93,10 +102,134 @@ const commit = () => {
   root.render(<Presentation {...props} />);
 };
 
+// ── Heavy-asset preloading ────────────────────────────────────────────────────
+//
+// When the operator switches to a new item that has a different background
+// image / background video / media-item video, browsers will momentarily show a
+// flash of black before the new asset is decoded and painted. To prevent this,
+// we **stage** the new content: when an incoming update has different heavy
+// assets than the current view, we preload them in the background and only
+// commit the new content once they are ready (or after a max grace period).
+// This means the operator continues to see the OLD slide cleanly while the new
+// slide's resources warm up, and the swap is then effectively instant.
+//
+// The grace period bounds the wait so we never appear stuck if a network
+// resource is slow or unavailable.
+const PRELOAD_MAX_WAIT_MS = 1000;
+let preloadTimer: ReturnType<typeof setTimeout> | null = null;
+let lastCommittedHeavyKey = '';
+
+/** Build a key over the assets that need to be preloaded. */
+function heavyAssetKey(c: PresentationContent): string {
+  const styleBgImg = c.style?.backgroundImage ?? '';
+  const styleBgVideo = c.style?.backgroundVideo ?? '';
+  const itemPath = c.contentType === 'media' && (c.mediaSubType === 'image' || c.mediaSubType === 'video') ? (c.mediaPath ?? '') : '';
+  return `${styleBgImg}|${styleBgVideo}|${itemPath}`;
+}
+
+/** Promise-based preload of an image. Resolves whether or not it succeeds. */
+function preloadImage(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const img = new globalThis.Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = url;
+  });
+}
+
+/** Promise-based preload of a video — resolves once enough is buffered to play. */
+function preloadVideo(url: string): Promise<void> {
+  return new Promise((resolve) => {
+    const v = document.createElement('video');
+    v.preload = 'auto';
+    v.muted = true;
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      // Detach from DOM if it was attached; we never appended it so this is a no-op.
+      resolve();
+    };
+    v.oncanplay = finish;
+    v.onerror = finish;
+    v.src = url;
+  });
+}
+
+/** Preload all heavy assets referenced by `content`. Resolves when all done. */
+function preloadHeavyAssets(content: PresentationContent): Promise<void> {
+  const tasks: Promise<void>[] = [];
+  const styleBgImg = content.style?.backgroundImage;
+  const styleBgVideo = content.style?.backgroundVideo;
+  if (styleBgImg) tasks.push(preloadImage(styleBgImg));
+  if (styleBgVideo) tasks.push(preloadVideo(styleBgVideo));
+  if (content.contentType === 'media' && content.mediaPath) {
+    if (content.mediaSubType === 'image') tasks.push(preloadImage(content.mediaPath));
+    else if (content.mediaSubType === 'video') tasks.push(preloadVideo(content.mediaPath));
+  }
+  if (tasks.length === 0) return Promise.resolve();
+  return Promise.all(tasks).then(() => undefined);
+}
+
 export const updatePresentation = (props: PresentationProps) => {
   // Apply URL overrides if content is present
   if (props.content && props.content !== EMPTY_CONTENT) {
     props = { ...props, content: applyUrlOverrides(props.content) };
+  }
+
+  // Cosmetic / non-asset changes (block navigation, line nav, position/zoom/blur,
+  // etc.) commit immediately. Only when a NEW heavy asset (different background
+  // image/video, different media-item path) appears do we wait for it to preload
+  // before swapping. The grace period bounds how long we hold the old slide.
+  const incomingHeavyKey = props.content && props.content !== EMPTY_CONTENT ? heavyAssetKey(props.content) : '';
+  const heavyAssetsChanged = incomingHeavyKey !== '' && incomingHeavyKey !== lastCommittedHeavyKey;
+
+  if (heavyAssetsChanged) {
+    // Cancel any in-flight preload — the latest update wins.
+    if (preloadTimer) {
+      clearTimeout(preloadTimer);
+      preloadTimer = null;
+    }
+
+    // Pre-warm the body class for media-item active state so style background
+    // videos can already start fading out while the new asset preloads.
+    if (props.content) {
+      const isMediaVideo = props.content.contentType === 'media' && props.content.mediaSubType === 'video';
+      if (isMediaVideo) {
+        const dur = getHideTransitionDuration();
+        document.body.style.setProperty('--hide-bg-video-duration', `${dur}ms`);
+      }
+      document.body.classList.toggle('media-item-active', props.content.contentType === 'media' && props.content.mediaSubType === 'video');
+    }
+
+    let committed = false;
+    const finalize = () => {
+      if (committed) return;
+      committed = true;
+      preloadTimer = null;
+      lastCommittedHeavyKey = incomingHeavyKey;
+      pendingProps = props;
+      if (!rafScheduled) {
+        rafScheduled = true;
+        requestAnimationFrame(commit);
+      }
+    };
+
+    // Hard cap: never wait longer than the grace period.
+    preloadTimer = setTimeout(finalize, PRELOAD_MAX_WAIT_MS);
+    // Resolve as soon as preload finishes, whichever comes first.
+    if (props.content) void preloadHeavyAssets(props.content).then(finalize);
+    return;
+  }
+
+  // Same heavy assets → commit immediately (no flicker possible).
+  if (props.content && props.content !== EMPTY_CONTENT) {
+    const isMediaVideo = props.content.contentType === 'media' && props.content.mediaSubType === 'video';
+    if (isMediaVideo) {
+      const dur = getHideTransitionDuration();
+      document.body.style.setProperty('--hide-bg-video-duration', `${dur}ms`);
+    }
+    document.body.classList.toggle('media-item-active', isMediaVideo);
   }
   pendingProps = props;
   if (!rafScheduled) {
@@ -175,11 +308,16 @@ if (window.presentationApi) {
         break;
       }
       case 'VIDEO_COMMAND': {
-        const videos = document.querySelectorAll('video');
+        const target = (cmd as { target?: string }).target;
+        // 'media-item' targets only the item video, not style background videos.
+        const selector = target === 'media-item' ? 'video[data-role="media-item"]' : 'video';
+        const videos = document.querySelectorAll<HTMLVideoElement>(selector);
         const action = (cmd as { action?: string }).action;
         // Prefer the fadeDuration passed via IPC; fall back to localStorage for backwards compat.
+        // For media-item targets we intentionally skip fadeDuration — they are always muted
+        // and must never have their muted/volume state touched.
         const cmdFadeDuration = (cmd as { fadeDuration?: number }).fadeDuration;
-        const fadeDuration = typeof cmdFadeDuration === 'number' ? cmdFadeDuration : getVideoFadeDuration();
+        const fadeDuration = target === 'media-item' ? 0 : typeof cmdFadeDuration === 'number' ? cmdFadeDuration : getVideoFadeDuration();
         videos.forEach((v) => {
           switch (action) {
             case 'play':

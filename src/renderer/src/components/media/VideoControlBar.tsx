@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Chip, IconButton, Slider, Stack, Tooltip, Typography } from '@mui/material';
 import {
   PlayArrow as PlayIcon,
@@ -12,27 +12,10 @@ import {
   DesktopWindows as ScreenIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { setVideoVisible as setVideoVisibleRedux } from '@/store/presentationSlice';
-
-/** Format seconds as mm:ss */
-function formatTime(seconds: number): string {
-  if (!isFinite(seconds) || seconds < 0) return '0:00';
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-/** Extract filename from URL/path */
-function videoName(url: string): string {
-  try {
-    const decoded = decodeURIComponent(url);
-    const parts = decoded.replace(/\\/g, '/').split('/');
-    return parts[parts.length - 1] || url;
-  } catch {
-    return url;
-  }
-}
+import { useAppDispatch } from '@/store';
+import { setVideoVisible as setVideoVisibleRedux, useGetPresentationSettings } from '@/store/presentationSlice';
+import { useGetSettings } from '@/store/settingsSlice';
+import { formatTime } from '@/utils';
 
 type VideoStatus = {
   hasVideo: boolean;
@@ -47,25 +30,18 @@ type VideoStatus = {
 
 type Props = {
   videoSources: string[];
-  /** When set, this bar only acts on / displays the named window's video.
-   *  When undefined, this is the GENERAL bar that affects all windows. */
+  /** When set, this bar only acts on / displays the named window's video. */
   windowName?: string;
-  /** Optional label rendered before the controls (used as a fallback chip
-   *  label when `variant='window'`). */
+  /** Optional label rendered before the controls. */
   label?: string;
-  /**
-   * Layout variant.
-   *   - `'general'` (default when no windowName): only play/pause, stop, hide.
-   *     Name, loop, seek/time and volume are hidden because they may differ
-   *     across windows.
-   *   - `'window'`  (default when windowName is set): full controls including
-   *     a leading screen-icon chip with the window name, name, loop, seek and
-   *     volume — these reflect the named window's current state.
-   */
   variant?: 'general' | 'window';
-  // If true, the bar will show when no local style-derived sources are present
-  // but a presentation window reports a video via IPC. Default true.
   showIfNoLocalSources?: boolean;
+  /** When true, audio controls are hidden in the general bar
+   *  (preview is master for media-item videos). Ignored for window variant. */
+  disableAudio?: boolean;
+  /** When true, the window variant collapses to only the hide/show button.
+   *  Used when the item-preview is master for a media-item video. */
+  slim?: boolean;
 };
 
 const sendVideoCommand = (action: string, windowName?: string, value?: number, fadeDuration?: number) => {
@@ -74,23 +50,36 @@ const sendVideoCommand = (action: string, windowName?: string, value?: number, f
   }
 };
 
-const VideoControlBar = ({ videoSources, windowName, label, variant, showIfNoLocalSources = true }: Props) => {
+/** Extract filename from URL/path */
+function videoName(url: string): string {
+  try {
+    const decoded = decodeURIComponent(url);
+    const parts = decoded.replace(/\\/g, '/').split('/');
+    return parts[parts.length - 1] || url;
+  } catch {
+    return url;
+  }
+}
+
+const VideoControlBar = ({
+  videoSources,
+  windowName,
+  label,
+  variant,
+  showIfNoLocalSources = true,
+  disableAudio = false,
+  slim = false,
+}: Props) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const hideTransitionMode = useAppSelector((s) => s.settings.hideTransitionMode);
-  const hideTransitionDuration = useAppSelector((s) => s.settings.hideTransitionDuration);
-  const videoFadeDuration = useAppSelector((s) => s.settings.videoFadeDuration);
-  // For the general bar, keep visibility in Redux so keyboard shortcuts stay in sync.
-  const globalVideoVisible = useAppSelector((s) => s.presentation.videoVisible);
 
-  // Resolve variant: explicit prop wins, otherwise default by presence of windowName.
+  const { hideTransitionMode, hideTransitionDuration, videoFadeDuration } = useGetSettings();
+  const { videoVisible: globalVideoVisible } = useGetPresentationSettings();
+
   const resolvedVariant: 'general' | 'window' = variant ?? (windowName ? 'window' : 'general');
   const isWindow = resolvedVariant === 'window';
 
-  // Per-window status registry — keep last-known status keyed by windowName.
-  // The General bar (no windowName) aggregates all of them.
   const [statusByWindow, setStatusByWindow] = useState<Record<string, VideoStatus>>({});
-  // Per-window bars manage visibility locally; the general bar delegates to Redux.
   const [localVideoVisible, setLocalVideoVisible] = useState(true);
   const videoVisible = isWindow ? localVideoVisible : globalVideoVisible;
 
@@ -145,15 +134,12 @@ const VideoControlBar = ({ videoSources, windowName, label, variant, showIfNoLoc
     };
   }, []);
 
-  // Resolve the effective status: filter to a single window, or aggregate.
   const effectiveStatus: VideoStatus = useMemo(() => {
     if (windowName) {
       return (
-        statusByWindow[windowName] || { hasVideo: false, paused: false, muted: false, loop: true, volume: 1, currentTime: 0, duration: 0 }
+        statusByWindow[windowName] ?? { hasVideo: false, paused: false, muted: false, loop: true, volume: 1, currentTime: 0, duration: 0 }
       );
     }
-    // Aggregate: hasVideo if any reports true; paused if ALL paused; use the
-    // first-found timing/volume so the seek slider has a sensible value.
     const all = Object.values(statusByWindow).filter((s) => s.hasVideo);
     if (all.length === 0) return { hasVideo: false, paused: false, muted: false, loop: true, volume: 1, currentTime: 0, duration: 0 };
     return {
@@ -185,30 +171,76 @@ const VideoControlBar = ({ videoSources, windowName, label, variant, showIfNoLoc
       dispatch(setVideoVisibleRedux(next));
     }
     if (window.api?.setVideoVisible) {
-      window.api.setVideoVisible({
-        windowName,
-        value: next,
-        mode: hideTransitionMode,
-        durationMs: hideTransitionDuration,
-      });
+      window.api.setVideoVisible({ windowName, value: next, mode: hideTransitionMode, durationMs: hideTransitionDuration });
     }
   }, [videoVisible, isWindow, windowName, hideTransitionMode, hideTransitionDuration, dispatch]);
 
-  const loopTitle = useMemo(() => (effectiveStatus.loop ? LL.VIDEO.LOOP_ON() : LL.VIDEO.LOOP_OFF()), [effectiveStatus.loop, LL]);
+  // Seek slider — drag-hold until currentTime catches up
+  const seekDragging = useRef(false);
+  const seekTarget = useRef<number | null>(null);
+  const [seekDisplay, setSeekDisplay] = useState<number | null>(null);
+  const displaySeek = seekDisplay !== null ? seekDisplay : effectiveStatus.currentTime;
+  if (seekTarget.current !== null && Math.abs(effectiveStatus.currentTime - seekTarget.current) < 1.5) {
+    seekTarget.current = null;
+    if (!seekDragging.current) setSeekDisplay(null);
+  }
+
+  // Volume slider
+  const volumeDragging = useRef(false);
+  const [volumeDisplay, setVolumeDisplay] = useState<number | null>(null);
+  const displayVolume = volumeDisplay !== null ? volumeDisplay : effectiveStatus.muted ? 0 : effectiveStatus.volume;
 
   if (!hasVideos) return null;
 
-  return (
-    <Stack
-      direction="row"
-      alignItems="center"
-      spacing={1}
-      sx={{ px: 2, py: 0.5, borderTop: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}
-    >
-      {/* Window-variant rows are visually anchored by a screen-icon Chip with
-          the window name so it's clear these controls are per-window. The
-          general bar shows a plain caption label (e.g. "General"). */}
-      {isWindow ? (
+  // ── General row: Hide-all-windows + global Pause/Stop (affect every window).
+  // No label chip; audio is intentionally not exposed here (audio is the
+  // domain of the item-preview master, when applicable).
+  if (!isWindow) {
+    return (
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1}
+        sx={{ px: 2, py: 0.5, borderTop: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}
+      >
+        <Tooltip title={videoVisible ? LL.VIDEO.HIDE_ALL() : LL.VIDEO.SHOW_ALL()}>
+          <IconButton size="small" onClick={handleToggleVisible} color={videoVisible ? 'default' : 'warning'}>
+            {videoVisible ? <ShowIcon fontSize="small" /> : <HideIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={isPlaying ? LL.VIDEO.PAUSE() : LL.VIDEO.PLAY()}>
+          <IconButton size="small" onClick={handlePlayPause}>
+            {isPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={LL.VIDEO.STOP()}>
+          <IconButton size="small" onClick={handleStop}>
+            <StopIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+        {videoSources.length > 0 && (
+          <Stack sx={{ minWidth: 0, ml: 'auto' }}>
+            {videoSources.map((src, i) => (
+              <Typography key={i} variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
+                {videoName(src)}
+              </Typography>
+            ))}
+          </Stack>
+        )}
+      </Stack>
+    );
+  }
+
+  // ── Window variant — slim mode: only chip + hide/show (used when a media
+  //    item video is active and the preview is master).
+  if (slim) {
+    return (
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1}
+        sx={{ px: 2, py: 0.5, borderTop: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}
+      >
         <Chip
           icon={<ScreenIcon sx={{ fontSize: 16 }} />}
           label={windowName || label || ''}
@@ -216,9 +248,31 @@ const VideoControlBar = ({ videoSources, windowName, label, variant, showIfNoLoc
           variant="outlined"
           sx={{ fontWeight: 500, minWidth: 80 }}
         />
-      ) : (
-        label && <Chip label={label} size="small" variant="filled" sx={{ fontWeight: 500, minWidth: 80 }} />
-      )}
+        <Tooltip title={videoVisible ? LL.VIDEO.HIDE() : LL.VIDEO.SHOW()}>
+          <IconButton size="small" onClick={handleToggleVisible} color={videoVisible ? 'default' : 'warning'}>
+            {videoVisible ? <ShowIcon fontSize="small" /> : <HideIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    );
+  }
+
+  // ── Window variant — full single-line layout:
+  //    chip · play/pause · stop · hide · loop · seek · mute · volume · filename
+  return (
+    <Stack
+      direction="row"
+      alignItems="center"
+      spacing={1}
+      sx={{ px: 2, py: 0.5, borderTop: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}
+    >
+      <Chip
+        icon={<ScreenIcon sx={{ fontSize: 16 }} />}
+        label={windowName || label || ''}
+        size="small"
+        variant="outlined"
+        sx={{ fontWeight: 500, minWidth: 80 }}
+      />
       <Tooltip title={isPlaying ? LL.VIDEO.PAUSE() : LL.VIDEO.PLAY()}>
         <IconButton size="small" onClick={handlePlayPause}>
           {isPlaying ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
@@ -234,61 +288,81 @@ const VideoControlBar = ({ videoSources, windowName, label, variant, showIfNoLoc
           {videoVisible ? <ShowIcon fontSize="small" /> : <HideIcon fontSize="small" />}
         </IconButton>
       </Tooltip>
-      {/* Name / loop / seek / volume only on the per-window bar — these can
-          differ between windows so they're meaningless on the general bar. */}
-      {isWindow && videoSources.length > 0 && (
-        <Stack sx={{ minWidth: 0 }}>
-          {videoSources.map((src, i) => (
-            <Typography key={i} variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
-              {videoName(src)}
-            </Typography>
-          ))}
-        </Stack>
-      )}
-      {isWindow && (
-        <Tooltip title={loopTitle}>
-          <IconButton
-            size="small"
-            onClick={() => sendVideoCommand('toggle_loop', windowName)}
-            color={effectiveStatus.loop ? 'primary' : 'default'}
-          >
-            <LoopIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-      )}
-      {isWindow && (
+      <Tooltip title={effectiveStatus.loop ? LL.VIDEO.LOOP_ON() : LL.VIDEO.LOOP_OFF()}>
+        <IconButton
+          size="small"
+          onClick={() => sendVideoCommand('toggle_loop', windowName)}
+          color={effectiveStatus.loop ? 'primary' : 'default'}
+        >
+          <LoopIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      {/* Position (seek) — comes BEFORE the volume slider per request. */}
+      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', minWidth: 32 }}>
+        {formatTime(displaySeek)}
+      </Typography>
+      <Slider
+        disabled={!effectiveStatus.hasVideo}
+        size="small"
+        min={0}
+        max={effectiveStatus.duration || 100}
+        value={displaySeek}
+        onMouseDown={() => {
+          seekDragging.current = true;
+          setSeekDisplay(effectiveStatus.currentTime);
+        }}
+        onChange={(_e, v) => {
+          if (seekDragging.current) setSeekDisplay(v as number);
+        }}
+        onChangeCommitted={(_e, v) => {
+          seekDragging.current = false;
+          seekTarget.current = v as number;
+          setSeekDisplay(v as number);
+          sendVideoCommand('seek', windowName, v as number);
+        }}
+        sx={{ flex: 1, minWidth: 80 }}
+      />
+      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', minWidth: 32 }}>
+        {formatTime(effectiveStatus.duration)}
+      </Typography>
+      {!disableAudio && (
         <>
-          {/* Seek bar */}
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', minWidth: 32 }}>
-            {formatTime(effectiveStatus.currentTime)}
-          </Typography>
-          <Slider
-            size="small"
-            min={0}
-            max={effectiveStatus.duration || 100}
-            value={effectiveStatus.currentTime}
-            onChange={(_e, v) => sendVideoCommand('seek', windowName, v as number)}
-            sx={{ flex: 1, mx: 1 }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', minWidth: 32 }}>
-            {formatTime(effectiveStatus.duration)}
-          </Typography>
-          {/* Volume */}
           <Tooltip title={effectiveStatus.muted ? LL.VIDEO.UNMUTE() : LL.VIDEO.MUTE()}>
             <IconButton size="small" onClick={() => sendVideoCommand('toggle_mute', windowName)}>
               {effectiveStatus.muted ? <VolumeOffIcon fontSize="small" /> : <VolumeUpIcon fontSize="small" />}
             </IconButton>
           </Tooltip>
           <Slider
+            disabled={!effectiveStatus.hasVideo}
             size="small"
             min={0}
             max={1}
             step={0.05}
-            value={effectiveStatus.muted ? 0 : effectiveStatus.volume}
-            onChange={(_e, v) => sendVideoCommand('set_volume', windowName, v as number)}
+            value={displayVolume}
+            onMouseDown={() => {
+              volumeDragging.current = true;
+              setVolumeDisplay(effectiveStatus.muted ? 0 : effectiveStatus.volume);
+            }}
+            onChange={(_e, v) => {
+              if (volumeDragging.current) setVolumeDisplay(v as number);
+            }}
+            onChangeCommitted={(_e, v) => {
+              volumeDragging.current = false;
+              setVolumeDisplay(null);
+              sendVideoCommand('set_volume', windowName, v as number);
+            }}
             sx={{ width: 80 }}
           />
         </>
+      )}
+      {videoSources.length > 0 && (
+        <Stack sx={{ minWidth: 0 }}>
+          {videoSources.map((src, i) => (
+            <Typography key={i} variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem', maxWidth: 140 }}>
+              {videoName(src)}
+            </Typography>
+          ))}
+        </Stack>
       )}
     </Stack>
   );

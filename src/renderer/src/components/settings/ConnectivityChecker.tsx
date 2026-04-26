@@ -19,8 +19,8 @@ import { Close as CloseIcon, Settings as SettingsIcon, WifiOff as WifiOffIcon, W
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSessionQuery, useLazyGetSessionQuery } from '@/api/session.api';
 import { presenterApi, getBackendBaseUrl } from '@/api/base.api';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { updateSetting } from '@/store/settingsSlice';
+import { useAppDispatch } from '@/store';
+import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
 
 /**
  * Monitors backend connectivity via the existing Session endpoint.
@@ -34,8 +34,9 @@ import { updateSetting } from '@/store/settingsSlice';
 export const ConnectivityChecker = () => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const backendUrl = useAppSelector((s) => s.settings.backendUrl);
-  const offlineMode = useAppSelector((s) => s.settings.offlineMode);
+
+  const { backendUrl, offlineMode } = useGetSettings();
+  const updateSetting = useUpdateSetting();
 
   // Use the existing Session endpoint to detect connectivity issues
   const { isLoading, isError, refetch } = useGetSessionQuery(undefined, { skip: offlineMode });
@@ -65,11 +66,10 @@ export const ConnectivityChecker = () => {
       setTestResult(null);
 
       // Remember previous URL so we can revert on failure
-      const previousUrl = localStorage.getItem('presenter_backend_url') ?? getBackendBaseUrl();
+      const previousUrl = backendUrl || getBackendBaseUrl();
 
       try {
-        // Point the dynamic base query at the new URL
-        localStorage.setItem('presenter_backend_url', normalized);
+        updateSetting('backendUrl', normalized);
 
         // Reset the API cache so the next query hits the new URL
         dispatch(presenterApi.util.resetApiState());
@@ -83,8 +83,9 @@ export const ConnectivityChecker = () => {
           throw new Error('Empty response');
         }
       } catch (err: any) {
-        // Revert to the previous URL
-        localStorage.setItem('presenter_backend_url', previousUrl);
+        // Revert to the previous URL (manual localStorage bypass)
+        updateSetting('backendUrl', previousUrl);
+
         dispatch(presenterApi.util.resetApiState());
 
         const status = err?.status ?? '';
@@ -115,8 +116,7 @@ export const ConnectivityChecker = () => {
   // ── Apply the successfully-tested URL ──
   const applyUrl = useCallback(() => {
     const normalized = urlInput.trim().replace(/\/+$/, '');
-    dispatch(updateSetting({ key: 'backendUrl', value: normalized }));
-    localStorage.setItem('presenter_backend_url', normalized);
+    updateSetting('backendUrl', normalized);
     setDialogOpen(false);
     setSnackOpen(false);
     setTestResult(null);
@@ -200,7 +200,7 @@ export const ConnectivityChecker = () => {
                 color={offlineMode ? 'warning' : 'inherit'}
                 size="small"
                 startIcon={offlineMode ? <WifiOffIcon /> : <WifiIcon />}
-                onClick={() => dispatch(updateSetting({ key: 'offlineMode', value: !offlineMode }))}
+                onClick={() => updateSetting('offlineMode', !offlineMode)}
               >
                 {offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}
               </Button>

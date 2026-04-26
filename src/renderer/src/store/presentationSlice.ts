@@ -1,4 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
+import { useAppSelector } from './hooks';
 
 export interface PresentationState {
   activeItemIndex: number;
@@ -7,7 +8,7 @@ export interface PresentationState {
   isBlack: boolean;
   isTextHidden: boolean;
   isIdentifying: boolean;
-  frozenWindows: string[]; // window names that are frozen
+  frozenWindows: string[];
   keyboardDisabled: boolean;
   videoVisible: boolean;
 }
@@ -152,5 +153,7 @@ export const {
   setVideoVisible,
   toggleVideoVisible,
 } = presentationSlice.actions;
+
+export const useGetPresentationSettings = () => useAppSelector((state) => state.presentation);
 
 export default presentationSlice.reducer;

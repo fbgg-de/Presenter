@@ -1,29 +1,5 @@
 import type { PresentationContent } from '@/presentation/types';
-
-/**
- * Window configuration for creating presentation windows.
- */
-export interface WindowConfig {
-  name?: string;
-  top?: number;
-  left?: number;
-  positionX?: number;
-  positionY?: number;
-  width?: number;
-  height?: number;
-  displayMode?: 'normal' | 'stream';
-  languages?: string[];
-  streamLines?: number;
-  fullscreen?: boolean;
-  frameless?: boolean;
-  alwaysOnTop?: boolean;
-  transparent?: boolean;
-  hideMouse?: boolean;
-  hideText?: boolean;
-  hideBackground?: boolean;
-  /** Optional preset (style entity id) applied to this window only. */
-  styleId?: number;
-}
+import { WindowConfig } from '@/store/settingsSlice';
 
 interface PresentationWindowEntry {
   id: string;
@@ -326,6 +302,11 @@ export function updateWindowConfigInBridge(id: string, partial: Partial<WindowCo
   // Invalidate the per-window dedupe cache so the next broadcast actually
   // picks up the new config (e.g. styleId, displayMode, languages).
   entry.lastSentSerialized = undefined;
+  // Immediately re-send the last broadcast content so the style change takes
+  // effect without waiting for the next navigation event.
+  if (lastBroadcastContent) {
+    void sendContent(id, lastBroadcastContent);
+  }
 }
 
 /**

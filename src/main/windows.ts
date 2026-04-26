@@ -550,7 +550,7 @@ export class PresentationWindowManager {
   /**
    * Send a video command (play/pause/stop/mute/unmute/seek/volume) to presentation windows.
    */
-  sendVideoCommand(action: string, windowName?: string, value?: number, fadeDuration?: number): void {
+  sendVideoCommand(action: string, windowName?: string, value?: number, fadeDuration?: number, target?: string): void {
     this._forEachByName(windowName, (managed) => {
       if (!managed.browserWindow.isDestroyed()) {
         managed.browserWindow.webContents.send('presentation-command', {
@@ -558,6 +558,7 @@ export class PresentationWindowManager {
           action,
           value,
           fadeDuration,
+          target,
         });
       }
     });

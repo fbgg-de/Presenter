@@ -50,7 +50,7 @@ export interface FrontendAPI {
   hideIdentifyWindows: () => Promise<void>;
 
   // ── Video commands ──
-  videoCommand: (command: { action: string; windowName?: string; value?: number; fadeDuration?: number }) => Promise<void>;
+  videoCommand: (command: { action: string; windowName?: string; value?: number; fadeDuration?: number; target?: string }) => Promise<void>;
   setVideoVisible: (payload?: { windowName?: string; value?: boolean; mode?: 'cut' | 'fade'; durationMs?: number }) => Promise<void>;
 
   // ── Media ──

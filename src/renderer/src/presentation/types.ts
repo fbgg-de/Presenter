@@ -77,6 +77,24 @@ export interface PresentationContent {
   /** Solid color value */
   mediaColor?: string;
 
+  /** CSS objectFit for image/video */
+  mediaObjectFit?: 'cover' | 'contain' | 'fill';
+
+  /** CSS objectPosition */
+  mediaObjectPosition?: string;
+
+  /** Zoom factor (100 = 1x) */
+  mediaZoom?: number;
+
+  /** Blur in px */
+  mediaBlur?: number;
+
+  /** Video autoplay */
+  mediaAutoplay?: boolean;
+
+  /** Video loop */
+  mediaLoop?: boolean;
+
   // ── Bible fields ──
 
   /** Bible verse reference */

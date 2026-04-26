@@ -13,14 +13,16 @@ import { AdminPage } from '@/pages/AdminPage';
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage';
 import { MusicianPage } from '@/musician/MusicianPage';
 import ConnectivityChecker from '@/components/settings/ConnectivityChecker';
-import { useAppSelector } from '@/store';
+import { useGetSettings } from '@/store/settingsSlice';
+import { useGetMusicianSettings } from '@/store/musicianSlice';
 
 // Load all locales upfront so switching is instant
 loadAllLocales();
 
 /** Wrapper providing the musician-specific theme */
 const MusicianThemeWrapper = () => {
-  const musicianTheme = useAppSelector((s) => s.settings.musicianTheme);
+  const { musicianTheme } = useGetMusicianSettings();
+
   const muiTheme = useMemo(() => getTheme(musicianTheme), [musicianTheme]);
   return (
     <ThemeProvider theme={muiTheme}>
@@ -37,9 +39,8 @@ const AccountLoginRedirect = () => {
 };
 
 const App = () => {
-  const themeMode = useAppSelector((state) => state.theme.mode);
-  const uiLanguage = useAppSelector((state) => state.settings.uiLanguage);
-  const offlineMode = useAppSelector((state) => state.settings.offlineMode);
+  const { themeMode, uiLanguage, offlineMode } = useGetSettings();
+
   // Resolve system theme and listen for OS preference changes
   const [resolvedMode, setResolvedMode] = useState(resolveThemeMode(themeMode));
 

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store';
-import { selectCurrentSongOrder } from '@/store/songsSlice';
-import { broadcastContent, setWindowStyleResolver, type WindowConfig } from '@/utils/presentationBridge';
+import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
+import { broadcastContent, setWindowStyleResolver } from '@/utils/presentationBridge';
 import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
 import type { ContentType, PresentationBlock, PresentationContent, PresentationLine } from '@/presentation/types';
 import { DEFAULT_STYLE, mergeStyles, type ResolvedStyle, resolveStyleCascade, resolveStyleData } from '@/utils/styleUtils';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
-import { updateSetting } from '@/store/settingsSlice';
+import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
+import { useGetWindows, useUpdateWindows, WindowConfig } from '@/store/windowSlice';
 import {
   freezeWindow as freezeWindowAction,
   nextBlock,
@@ -22,7 +23,9 @@ import {
   setBlack,
   toggleBlack,
   unfreezeWindow as unfreezeWindowAction,
+  useGetPresentationSettings,
 } from '@/store/presentationSlice';
+import { useGetShow } from '@/store/showSlice';
 
 /**
  * Parse song block lines to extract language tags.
@@ -48,31 +51,24 @@ const parseSongLines = (rawLines: string[]): PresentationLine[] => {
  */
 export const usePresentationSync = (): void => {
   const dispatch = useAppDispatch();
-  const activeItemIndex = useAppSelector((state) => state.presentation.activeItemIndex);
-  const activeBlockIndex = useAppSelector((state) => state.presentation.activeBlockIndex);
-  const activeLineIndex = useAppSelector((state) => state.presentation.activeLineIndex);
-  const isBlack = useAppSelector((state) => state.presentation.isBlack);
-  const isTextHidden = useAppSelector((state) => state.presentation.isTextHidden);
+  const { nextLinePreview, nextLinePreviewColor, globalStyleId, transitionMode, transitionDuration, offlineMode, cachedStyles } =
+    useGetSettings();
+  const { windowConfigs } = useGetWindows();
+  const { currentShow } = useGetShow();
+  const { songs } = useGetSongs();
+  const updateWindowSetting = useUpdateWindows();
 
-  const currentShow = useAppSelector((state) => state.show.currentShow);
-
-  const nextLinePreview = useAppSelector((state) => state.settings.nextLinePreview);
-  const nextLinePreviewColor = useAppSelector((state) => state.settings.nextLinePreviewColor);
-  const globalStyleId = useAppSelector((state) => state.settings.globalStyleId);
-  const windowConfigs = useAppSelector((state) => state.settings.windowConfigs);
-  const transitionMode = useAppSelector((state) => state.settings.transitionMode);
-  const transitionDuration = useAppSelector((state) => state.settings.transitionDuration);
+  const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden } = useGetPresentationSettings();
+  const updateSetting = useUpdateSetting();
 
   // Fetch all styles for cascade resolution
-  const offlineMode = useAppSelector((state) => state.settings.offlineMode);
-  const cachedStyles = useAppSelector((state) => state.settings.cachedStyles);
   const { data: fetchedStyles } = useGetStylesQuery(undefined, { skip: offlineMode });
   const allStyles = offlineMode ? (cachedStyles as typeof fetchedStyles) : fetchedStyles;
 
   // Cache styles to localStorage whenever we get a fresh fetch
   useEffect(() => {
     if (!offlineMode && fetchedStyles && fetchedStyles.length > 0) {
-      dispatch(updateSetting({ key: 'cachedStyles', value: fetchedStyles as unknown as object[] }));
+      updateSetting('cachedStyles', fetchedStyles as unknown as object[]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchedStyles, offlineMode]);
@@ -92,7 +88,7 @@ export const usePresentationSync = (): void => {
 
   // Resolve the song's active order
   const currentSongNumber = activeItem?.type === 'song' ? activeItem.songNumber : undefined;
-  const currentSong = useAppSelector((state) => (currentSongNumber != null ? state.songs.songs[currentSongNumber] : undefined));
+  const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
   // Use a ref to avoid sending duplicate content — compare key fields only
@@ -162,9 +158,9 @@ export const usePresentationSync = (): void => {
 
     // Resolve the three-level style cascade (Global → Show → Item)
     const styles = allStyles ?? [];
-    const globalStyle = globalStyleId ? styles.find((s) => s.id === globalStyleId && s.enabled !== false) : undefined;
-    const showStyle = currentShow?.styleId ? styles.find((s) => s.id === currentShow.styleId && s.enabled !== false) : undefined;
-    const itemStyle = activeItem?.styleId ? styles.find((s) => s.id === activeItem.styleId && s.enabled !== false) : undefined;
+    const globalStyle = globalStyleId ? styles.find((s) => s.id === globalStyleId && s.enabled) : undefined;
+    const showStyle = currentShow?.styleId ? styles.find((s) => s.id === currentShow.styleId && s.enabled) : undefined;
+    const itemStyle = activeItem?.styleId ? styles.find((s) => s.id === activeItem.styleId && s.enabled) : undefined;
     const resolvedCascade = resolveStyleCascade(globalStyle, showStyle, itemStyle, undefined, styles);
     const rawStyle: ResolvedStyle = mergeStyles(DEFAULT_STYLE, resolvedCascade);
 
@@ -282,6 +278,12 @@ export const usePresentationSync = (): void => {
         mediaSubType: cb.activeItem?.mediaSubType,
         mediaPath: resolveMediaUrl(cb.activeItem?.mediaPath),
         mediaColor: cb.activeItem?.mediaColor,
+        mediaObjectFit: cb.activeItem?.mediaObjectFit,
+        mediaObjectPosition: cb.activeItem?.mediaObjectPosition,
+        mediaZoom: cb.activeItem?.mediaZoom,
+        mediaBlur: cb.activeItem?.mediaBlur,
+        mediaAutoplay: cb.activeItem?.mediaAutoplay,
+        mediaLoop: cb.activeItem?.mediaLoop,
         bibleRef: cb.activeItem?.bibleRef,
         bibleTranslation: cb.activeItem?.bibleTranslation,
         nextBlockPreviewLines,
@@ -308,7 +310,8 @@ export const usePresentationSync = (): void => {
 
     // Deduplicate scheduling using a lightweight key (includes styleHash so style
     // edits actually re-broadcast and apply immediately).
-    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${b.blocks.length}|${b.nextLinePreview}|${b.nextLinePreviewColor}|${b.activeItem?.mediaPath}|${b.activeItem?.mediaColor}|${styleHash}|${windowStylesSig}`;
+    const ai = b.activeItem;
+    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${b.blocks.length}|${b.nextLinePreview}|${b.nextLinePreviewColor}|${ai?.mediaPath}|${ai?.mediaColor}|${ai?.mediaObjectFit}|${ai?.mediaObjectPosition}|${ai?.mediaZoom}|${ai?.mediaBlur}|${ai?.mediaAutoplay}|${ai?.mediaLoop}|${styleHash}|${windowStylesSig}`;
     if (contentKey === lastKeyRef.current) return;
     lastKeyRef.current = contentKey;
 
@@ -334,6 +337,16 @@ export const usePresentationSync = (): void => {
     nextLinePreview,
     nextLinePreviewColor,
     windowStylesSig,
+    // Media-item display props (zoom/blur/fit/position/autoplay/loop/path/color)
+    // — the user can edit these on the active item and we need to re-broadcast.
+    activeItem?.mediaPath,
+    activeItem?.mediaColor,
+    activeItem?.mediaObjectFit,
+    activeItem?.mediaObjectPosition,
+    activeItem?.mediaZoom,
+    activeItem?.mediaBlur,
+    activeItem?.mediaAutoplay,
+    activeItem?.mediaLoop,
   ]);
 
   // ── Register a per-window style resolver so windows with a configured
@@ -389,7 +402,7 @@ export const usePresentationSync = (): void => {
       return merged;
     });
     return () => setWindowStyleResolver(undefined);
-  }, [allStyles, globalStyleId, currentShow?.styleId]);
+  }, [allStyles, globalStyleId, currentShow?.styleId, windowStylesSig]);
 
   // ── WebSocket navigation action listener (Electron only, §22.2) ──
   const currentShowRef = useRef(currentShow);
@@ -485,9 +498,8 @@ export const usePresentationSync = (): void => {
 
   // ── Presentation window bounds change listener (Electron only) ──
   // Updates windowConfigs in Redux/localStorage when user moves/resizes a presentation window.
-  const savedWindowConfigs = useAppSelector((state) => state.settings.windowConfigs);
-  const savedWindowConfigsRef = useRef(savedWindowConfigs);
-  savedWindowConfigsRef.current = savedWindowConfigs;
+  const savedWindowConfigsRef = useRef(windowConfigs);
+  savedWindowConfigsRef.current = windowConfigs;
 
   useEffect(() => {
     if (!window.api?.onPresentationWindowBoundsChanged) return;
@@ -505,7 +517,7 @@ export const usePresentationSync = (): void => {
       const idx = configs.findIndex((c) => c._runtimeId === id);
       if (idx >= 0) {
         configs[idx] = { ...configs[idx], positionX: bounds.x, positionY: bounds.y, width: bounds.width, height: bounds.height };
-        dispatch(updateSetting({ key: 'windowConfigs', value: configs }));
+        updateWindowSetting('windowConfigs', configs as any);
       }
     });
     return cleanup || undefined;

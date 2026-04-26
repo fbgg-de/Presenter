@@ -49,7 +49,17 @@ export interface PresentationProps {
   content?: PresentationContent;
 }
 
-/** Generate a content identity key for detecting meaningful changes (item level only, not block switches). */
+/**
+ * Generate a content identity key for detecting **meaningful** content changes
+ * (item-level only, not block switches, and NOT cosmetic display-only edits).
+ *
+ * Display-only props such as `mediaObjectFit`, `mediaObjectPosition`,
+ * `mediaZoom`, `mediaBlur`, `mediaAutoplay` and `mediaLoop` are deliberately
+ * EXCLUDED — they are pure CSS / DOM-attribute updates and should be applied
+ * in place. Including them would force the cross-fade machinery to capture a
+ * "previous" snapshot and remount the `<video>` element on every slider tick,
+ * causing the video to restart and a visible background flicker.
+ */
 function contentIdentityKey(c: PresentationContent): string {
   return `${c.contentType}|${c.mediaPath ?? ''}|${c.bibleRef ?? ''}|${c.mediaColor ?? ''}|${c.style?.backgroundImage ?? ''}|${c.style?.backgroundVideo ?? ''}|${c.style?.backgroundColor ?? ''}`;
 }
@@ -218,10 +228,13 @@ const StreamMode = ({
     const blockChanged = prevBlockIndexRef.current !== activeBlockIndex;
     // Auto-advance: block increased by exactly 1 AND flatIndex moved forward → it was a nextLine crossing
     const wasAutoAdvance = blockChanged && activeBlockIndex === prevBlockIndexRef.current + 1 && flatIndex > prevFlatIndexRef.current;
+    // Multi-block jump: manually jumped over more than 1 block (e.g. clicking a specific block in control)
+    const multiBlockJump = blockChanged && Math.abs(activeBlockIndex - prevBlockIndexRef.current) > 1;
     prevBlockIndexRef.current = activeBlockIndex;
     prevFlatIndexRef.current = flatIndex;
-    // Smooth: line changes within block, or auto-advance. Instant: explicit block jump.
-    activeLineRef.current?.scrollIntoView({ behavior: !blockChanged || wasAutoAdvance ? 'smooth' : 'instant', block: 'start' });
+    // Smooth: line changes within block, auto-advance or single-step backwards.
+    // Instant: only if jumping multiple blocks at once.
+    activeLineRef.current?.scrollIntoView({ behavior: !blockChanged || wasAutoAdvance || !multiBlockJump ? 'smooth' : 'instant', block: 'start' });
   }, [flatIndex, activeBlockIndex]);
 
   return (
@@ -253,6 +266,12 @@ const StreamMode = ({
  * Renders a media item (image, video, or solid color).
  */
 const MediaContent = ({ content }: { content: PresentationContent }) => {
+  const objectFit: CSSProperties['objectFit'] = content.mediaObjectFit ?? 'cover';
+  const objectPosition = content.mediaObjectPosition ?? 'center';
+  const zoomTransform =
+    content.mediaZoom && content.mediaZoom !== 100 ? `scale(${content.mediaZoom / 100})` : undefined;
+  const filterStyle = content.mediaBlur ? `blur(${content.mediaBlur}px)` : undefined;
+
   switch (content.mediaSubType) {
     case 'color':
       return (
@@ -268,16 +287,28 @@ const MediaContent = ({ content }: { content: PresentationContent }) => {
       return content.mediaPath ? (
         <video
           src={content.mediaPath}
-          autoPlay
-          loop
-          controls
+          autoPlay={content.mediaAutoplay !== false}
+          loop={content.mediaLoop !== false}
+          muted
           playsInline
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: 'contain',
+          data-role="media-item"
+          // Apply layout/object-fit/position via a ref callback so they update
+          // even when React reuses the same <video> element across renders.
+          // Some browsers don't repaint after a style.objectPosition diff on a
+          // currently-playing <video>, so we also poke `style.objectPosition`
+          // imperatively here. transformOrigin tracks position for the zoom
+          // anchor as well.
+          ref={(el) => {
+            if (!el) return;
+            el.style.position = 'absolute';
+            el.style.inset = '0';
+            el.style.width = '100%';
+            el.style.height = '100%';
+            el.style.objectFit = objectFit ?? 'cover';
+            el.style.objectPosition = objectPosition;
+            el.style.transform = zoomTransform || '';
+            el.style.transformOrigin = objectPosition;
+            el.style.filter = filterStyle || '';
           }}
         />
       ) : null;
@@ -292,7 +323,10 @@ const MediaContent = ({ content }: { content: PresentationContent }) => {
             inset: 0,
             width: '100%',
             height: '100%',
-            objectFit: 'cover',
+            objectFit,
+            objectPosition,
+            ...(zoomTransform ? { transform: zoomTransform, transformOrigin: objectPosition } : {}),
+            ...(filterStyle ? { filter: filterStyle } : {}),
           }}
         />
       ) : null;
@@ -736,6 +770,20 @@ export const Presentation = (props: PresentationProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content && contentIdentityKey(content), transitionMode, transitionDuration]);
 
+  // Preload the incoming background image so it's in the browser cache before
+  // it becomes visible, eliminating the flash-of-black when switching slides.
+  const prevBgImageRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const bgImg = content?.style?.backgroundImage;
+    const mediaImg = content?.contentType === 'media' && content.mediaSubType === 'image' ? content.mediaPath : undefined;
+    const urlToPreload = bgImg || mediaImg;
+    if (urlToPreload && urlToPreload !== prevBgImageRef.current) {
+      prevBgImageRef.current = urlToPreload;
+      const img = new globalThis.Image();
+      img.src = urlToPreload;
+    }
+  }, [content?.style?.backgroundImage, content?.contentType, content?.mediaSubType, content?.mediaPath]);
+
   // Legacy mode — simple block rendering
   if (!content && legacyBlock) {
     return (
@@ -937,7 +985,7 @@ export const Presentation = (props: PresentationProps) => {
           src={resolvedStyle.backgroundVideo}
           autoPlay={resolvedStyle.backgroundVideoAutoplay !== false}
           loop
-          muted={!resolvedStyle.backgroundVideoVolume || resolvedStyle.backgroundVideoVolume <= 0}
+          muted
           playsInline
           ref={(el) => {
             if (!el) return;

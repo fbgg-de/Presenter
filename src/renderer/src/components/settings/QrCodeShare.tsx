@@ -14,7 +14,7 @@ import {
 import { Close as CloseIcon, ContentCopy as CopyIcon, Check as CheckIcon, QrCode2 as QrCodeIcon } from '@mui/icons-material';
 import { QRCodeSVG } from 'qrcode.react';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector } from '@/store';
+import { useGetSettings } from '@/store/settingsSlice';
 
 interface QrCodeShareProps {
   open: boolean;
@@ -23,7 +23,7 @@ interface QrCodeShareProps {
 
 export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
   const { LL } = useI18nContext();
-  const wsPort = useAppSelector((state) => state.settings.wsPort);
+  const { wsPort } = useGetSettings();
   const [copied, setCopied] = useState(false);
 
   // Build the musician view URL

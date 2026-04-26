@@ -205,7 +205,23 @@ ipcMain.handle('get-media-server-url', () => {
 function autoStartMediaServer(): void {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents
-    .executeJavaScript(`localStorage.getItem('presenter_media_path') || ''`)
+    .executeJavaScript(
+      `
+      (() => {
+        const getSettings = (key) => {
+          const SETTINGS_KEY = 'presenter_settings';
+          try {
+            const v = localStorage.getItem(SETTINGS_KEY);
+            const settings = v ? JSON.parse(v) : {};
+            return key ? settings[key] : settings;
+          } catch {
+            return key ? undefined : {};
+          }
+        };
+        return getSettings('mediaPath') || '';
+      })()
+    `,
+    )
     .then(async (mediaPath: string) => {
       if (mediaPath) {
         try {
@@ -280,7 +296,22 @@ app.whenReady().then(async () => {
     mainWindow.webContents.on('did-finish-load', async () => {
       try {
         const autoCheck = await mainWindow!.webContents.executeJavaScript(
-          `localStorage.getItem('presenter_auto_check_updates') !== 'false'`,
+          `
+          (() => {
+            const getSettings = (key) => {
+              const SETTINGS_KEY = 'presenter_settings';
+              try {
+                const v = localStorage.getItem(SETTINGS_KEY);
+                const settings = v ? JSON.parse(v) : {};
+                return key ? settings[key] : settings;
+              } catch {
+                return key ? undefined : {};
+              }
+            };
+            const val = getSettings('autoCheckUpdates');
+            return val !== false && val !== 'false';
+          })()
+          `,
         );
         if (autoCheck) {
           setTimeout(() => autoUpdater.checkForUpdates(), 8000);
@@ -341,6 +372,11 @@ app.whenReady().then(async () => {
       }
       // Mirror to sidecar so the next launch can pre-start.
       savePersistedMediaPath(mediaPath);
+
+      // Also ensure it is saved in renderer settings if not already (consistency)
+      // Note: we can't easily write to localStorage from here, but the renderer
+      // usually calls this AFTER setting its own state.
+
       return mediaServer.getBaseUrl();
     } catch (err) {
       console.error('[Media Server] Failed to start:', err);

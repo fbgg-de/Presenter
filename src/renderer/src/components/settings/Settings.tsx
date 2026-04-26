@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import {
   Accordion,
   AccordionDetails,
@@ -31,9 +31,8 @@ import {
   SettingsBrightness,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { updateSetting, type SettingsState } from '@/store/settingsSlice';
-import { toggleTheme } from '@/store/themeSlice';
+import { useAppDispatch } from '@/store';
+import { useUpdateSetting, type SettingsState, useGetSettings, toggleTheme } from '@/store/settingsSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { KeyboardMappingEditor } from '@/components/settings/KeyboardMappingEditor';
 import { ColorSwatchButton } from '@/components/style/ColorPicker';
@@ -61,8 +60,6 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'overrideSongImport', type: 'boolean', group: 'Behavior', label: 'Override on import' },
   { key: 'showDeleteFromDb', type: 'boolean', group: 'Behavior', label: 'Show delete from DB' },
   { key: 'touchDuration', type: 'number', group: 'Behavior', label: 'Long-press duration (ms)' },
-  // Keyboard — removed: keyboardNavigationSongs, keyboardNavigationBlocks, keyboardNavigationLines
-  // These are now controlled via the enabled toggle per keyboard action in KeyboardMappingEditor
   // Confirmations
   { key: 'confirmPageLeave', type: 'boolean', group: 'Confirmations', label: 'Confirm page leave' },
   { key: 'confirmShowDeletion', type: 'boolean', group: 'Confirmations', label: 'Confirm show deletion' },
@@ -92,16 +89,18 @@ const GROUP_ORDER = ['General', 'Behavior', 'Confirmations', 'Notifications', 'P
 export const Settings = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const settings = useAppSelector((state) => state.settings);
+
+  const settings = useGetSettings();
+  const updateSetting = useUpdateSetting();
+
   const { data: styles = [] } = useGetStylesQuery();
   const [filter, setFilter] = useState('');
   const [companionOpen, setCompanionOpen] = useState(false);
   const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
-  const themeMode = useAppSelector((state) => state.theme.mode);
   const themeIcon =
-    themeMode === 'dark' ? (
+    settings.themeMode === 'dark' ? (
       <DarkMode fontSize="small" />
-    ) : themeMode === 'light' ? (
+    ) : settings.themeMode === 'light' ? (
       <LightMode fontSize="small" />
     ) : (
       <SettingsBrightness fontSize="small" />
@@ -205,7 +204,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
           <Menu anchorEl={langAnchor} open={Boolean(langAnchor)} onClose={() => setLangAnchor(null)}>
             <MenuItem
               onClick={() => {
-                dispatch(updateSetting({ key: 'uiLanguage', value: 'en' }));
+                updateSetting('uiLanguage', 'en');
                 setLangAnchor(null);
               }}
               selected={settings.uiLanguage === 'en' || !settings.uiLanguage}
@@ -214,7 +213,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
             </MenuItem>
             <MenuItem
               onClick={() => {
-                dispatch(updateSetting({ key: 'uiLanguage', value: 'de' }));
+                updateSetting('uiLanguage', 'de');
                 setLangAnchor(null);
               }}
               selected={settings.uiLanguage === 'de'}
@@ -254,7 +253,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                           size="small"
                           fullWidth
                           value={settings.globalStyleId || 0}
-                          onChange={(e) => dispatch(updateSetting({ key: 'globalStyleId', value: Number(e.target.value) }))}
+                          onChange={(e) => updateSetting('globalStyleId', Number(e.target.value))}
                         >
                           <MenuItem value={0}>{LL.STYLE.NONE()}</MenuItem>
                           {styles.map((s) => (
@@ -267,7 +266,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                     </Stack>
                   )}
                   {groups[groupName].map((config) => (
-                    <SettingRow key={config.key} config={config} value={settings[config.key]} dispatch={dispatch} />
+                    <SettingRow key={config.key} config={config} value={settings[config.key] as string} />
                   ))}
                 </Stack>
               </AccordionDetails>
@@ -318,16 +317,9 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
 };
 
 /** Individual setting row */
-const SettingRow = ({
-  config,
-  value,
-  dispatch,
-}: {
-  config: SettingConfig;
-  value: unknown;
-  dispatch: ReturnType<typeof useAppDispatch>;
-}) => {
+const SettingRow = ({ config, value }: { config: SettingConfig; value: string | number }) => {
   const { LL } = useI18nContext();
+  const updateSetting = useUpdateSetting();
 
   const getLabel = (cfg: SettingConfig) => {
     switch (cfg.key) {
@@ -407,18 +399,9 @@ const SettingRow = ({
       </Tooltip>
       <Box sx={{ flex: 1 }}>
         {config.type === 'boolean' ? (
-          <Switch
-            size="small"
-            checked={Boolean(value)}
-            onChange={(e) => dispatch(updateSetting({ key: config.key, value: e.target.checked }))}
-          />
+          <Switch size="small" checked={Boolean(value)} onChange={(e) => updateSetting(config.key, e.target.checked)} />
         ) : config.type === 'select' && config.values ? (
-          <Select
-            size="small"
-            fullWidth
-            value={String(value)}
-            onChange={(e) => dispatch(updateSetting({ key: config.key, value: e.target.value }))}
-          >
+          <Select size="small" fullWidth value={String(value)} onChange={(e) => updateSetting(config.key, e.target.value)}>
             {config.values.map((v) => (
               <MenuItem key={v} value={v}>
                 {v}
@@ -426,17 +409,19 @@ const SettingRow = ({
             ))}
           </Select>
         ) : config.type === 'color' ? (
-          <ColorSwatchButton value={String(value) || '#000000'} onChange={(c) => dispatch(updateSetting({ key: config.key, value: c }))} />
+          <ColorSwatchButton value={String(value) || '#000000'} onChange={(c) => updateSetting(config.key, c)} />
         ) : config.key === 'mediaPath' ? (
           <Stack direction="row" spacing={1} alignItems="center">
-            <SettingInput value={value} type="string" onChange={(v) => dispatch(updateSetting({ key: config.key, value: v }))} />
+            <SettingInput value={value} type="string" onChange={(v) => updateSetting(config.key, v)} />
             {window.api?.pickDirectory && (
               <Tooltip title="Browse…">
                 <IconButton
                   size="small"
                   onClick={async () => {
                     const dir = await window.api.pickDirectory({ title: 'Select media folder' });
-                    if (dir) dispatch(updateSetting({ key: 'mediaPath', value: dir }));
+                    if (dir) {
+                      updateSetting('mediaPath', dir);
+                    }
                   }}
                 >
                   <FolderOpenIcon fontSize="small" />
@@ -448,7 +433,7 @@ const SettingRow = ({
           <SettingInput
             value={value}
             type={config.type === 'number' ? 'number' : 'string'}
-            onChange={(v) => dispatch(updateSetting({ key: config.key, value: v }))}
+            onChange={(v) => updateSetting(config.key, v)}
           />
         )}
       </Box>
@@ -457,8 +442,19 @@ const SettingRow = ({
 };
 
 /** Controlled input with local state for blur-to-save behavior */
-const SettingInput = ({ value, type, onChange }: { value: unknown; type: 'string' | 'number'; onChange: (v: unknown) => void }) => {
-  const [localValue, setLocalValue] = useState(String(value));
+const SettingInput = <T extends string | number = string>({
+  value,
+  type,
+  onChange,
+}: {
+  value: T;
+  type: T extends number ? 'number' : 'string';
+  onChange: (v: T) => void;
+}) => {
+  const [localValue, setLocalValue] = useState<string>(String(value));
+  useEffect(() => {
+    setLocalValue(String(value ?? ''));
+  }, [value]);
 
   return (
     <OutlinedInput
@@ -468,7 +464,7 @@ const SettingInput = ({ value, type, onChange }: { value: unknown; type: 'string
       type={type === 'number' ? 'number' : 'text'}
       onChange={(e) => setLocalValue(e.target.value)}
       onBlur={() => {
-        onChange(type === 'number' ? Number(localValue) : localValue);
+        onChange((type === 'number' ? Number(localValue) : localValue) as T);
       }}
     />
   );

@@ -37,9 +37,9 @@ import {
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { ColorPicker } from '@/components/style/ColorPicker';
-import { useAppSelector } from '@/store';
 import type { MediaSubType } from '@/api/shows.api';
-import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
+import { useGetSettings } from '@/store/settingsSlice';
+import { getMediaBaseUrl, isElectronApp } from '@/utils';
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
@@ -51,14 +51,6 @@ interface MediaFile {
   type: 'image' | 'video';
   thumbnailUrl?: string;
 }
-
-const isElectron = (): boolean => typeof window !== 'undefined' && !!window.api;
-
-const getMediaBaseUrl = (mediaPath: string): string | null => {
-  if (isElectron()) return MEDIA_SERVER_BASE;
-  if (mediaPath) return mediaPath.replace(/\/+$/, '');
-  return null;
-};
 
 interface MediaBrowserProps {
   open: boolean;
@@ -93,7 +85,8 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
   const [selectedFile, setSelectedFile] = useState<MediaFile | null>(null);
   const [hoveredVideo, setHoveredVideo] = useState<string | null>(null);
 
-  const mediaPath = useAppSelector((state) => state.settings.mediaPath);
+  const { mediaPath } = useGetSettings();
+
   const mediaBaseUrl = useMemo(() => getMediaBaseUrl(mediaPath), [mediaPath]);
 
   // Abort controller for in-flight fetches
@@ -230,7 +223,7 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
   // Start media server once when dialog opens
   useEffect(() => {
     if (!open) return;
-    if (isElectron() && window.api?.startMediaServer && mediaPath) {
+    if (isElectronApp() && window.api?.startMediaServer && mediaPath) {
       window.api.startMediaServer(mediaPath).catch(() => {
         /* already running */
       });

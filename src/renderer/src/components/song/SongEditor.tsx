@@ -22,7 +22,7 @@ import {
   Badge,
 } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector, useAppDispatch } from '@/store';
+import { useAppDispatch } from '@/store';
 import AddOrderDialog from './AddOrderDialog';
 import DeleteOrderDialog from './DeleteOrderDialog';
 import {
@@ -40,6 +40,7 @@ import type { PropsWithChildren, ReactNode } from 'react';
 import { useRef, useEffect, useState } from 'react';
 import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { addSongToStore, updateSongInStore } from '@/store/songsSlice';
+import { useGetSettings } from '@/store/settingsSlice';
 
 const StyledInput = styled(TextField)(({ theme }) => ({
   background: theme.palette.background.paper,
@@ -132,7 +133,7 @@ type Block = { name: string; lines: string[] };
 export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => void; song?: ISong }) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const defaultNewVerseName = useAppSelector((state) => state.settings.defaultNewVerseName);
+  const { defaultNewVerseName } = useGetSettings();
 
   const [createSongMutation] = useCreateSongMutation();
   const [updateSongMutation] = useUpdateSongMutation();

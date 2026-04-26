@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, useRef, ReactNode, type ElementType } from 'react';
+﻿import React, { useState, useEffect, useMemo, useCallback, useRef, ReactNode } from 'react';
 import {
   Accordion,
   AccordionDetails,
@@ -52,15 +52,6 @@ import {
   Videocam as VideoIcon,
   BrokenImage as BrokenImageIcon,
   CloudOff as CloudOffIcon,
-  NorthWest as NWIcon,
-  North as NIcon,
-  NorthEast as NEIcon,
-  West as WIcon,
-  OpenWith as CenterIcon,
-  East as EIcon,
-  SouthWest as SWIcon,
-  South as SIcon,
-  SouthEast as SEIcon,
   Code as CodeIcon,
   PlayArrow as PlayIcon,
   Pause as PauseIcon,
@@ -73,7 +64,6 @@ import {
   GTranslate as TranslateIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector } from '@/store';
 import {
   useGetStylesQuery,
   useCreateStyleMutation,
@@ -88,20 +78,12 @@ import { FontPicker } from '@/components/style/FontPicker';
 import { ColorSwatchButton } from '@/components/style/ColorPicker';
 import { MediaBrowser } from '@/components/media/MediaBrowser';
 import { CssUnitInput } from '@/components/style/CssUnitInput';
+import CompactPositionPicker from '@/components/common/CompactPositionPicker';
 import { WEB_SAFE_FONTS } from '@/utils/styleUtils';
 import { resolveMediaUrl, probeMediaUrl, type MediaProbeStatus, invalidateMediaProbe } from '@/utils/mediaUrl';
 import { useGetLanguageTagsQuery } from '@/api/songs.api';
-
-/** Format seconds as m:ss */
-const formatTime = (s: number): string => {
-  if (!isFinite(s) || s < 0) return '0:00';
-  const m = Math.floor(s / 60);
-  const sec = Math.floor(s % 60);
-  return `${m}:${sec.toString().padStart(2, '0')}`;
-};
-
-// (Background mode is now derived from independent image/video enable flags —
-// no longer a single mutually-exclusive enum.)
+import { useGetSettings } from '@/store/settingsSlice';
+import { formatTime } from '@/utils';
 
 /** Helper: toggle-enabled property row — compact layout: switch | label | children in one line. */
 const StylePropRow = ({
@@ -416,70 +398,6 @@ const MediaThumb = ({ url, type }: { url: string; type: 'image' | 'video' }) => 
       muted
       sx={{ width: 48, height: 28, objectFit: 'cover', borderRadius: 0.5, border: '1px solid', borderColor: 'divider', flexShrink: 0 }}
     />
-  );
-};
-
-/** Compact position picker — shows only the active direction icon; click opens a Popover with the full 3×3 grid. */
-const CompactPositionPicker = ({ value, onChange }: { value: string; onChange: (v: string) => void }) => {
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
-  const cells: { pos: string; Icon: ElementType }[] = [
-    { pos: 'top left', Icon: NWIcon },
-    { pos: 'top center', Icon: NIcon },
-    { pos: 'top right', Icon: NEIcon },
-    { pos: 'center left', Icon: WIcon },
-    { pos: 'center', Icon: CenterIcon },
-    { pos: 'center right', Icon: EIcon },
-    { pos: 'bottom left', Icon: SWIcon },
-    { pos: 'bottom center', Icon: SIcon },
-    { pos: 'bottom right', Icon: SEIcon },
-  ];
-  const current = cells.find((c) => c.pos === value) ?? cells[4];
-  const CurrentIcon = current.Icon;
-  return (
-    <>
-      <Tooltip title={value || 'center'}>
-        <IconButton
-          size="small"
-          onClick={(e) => setAnchorEl(e.currentTarget)}
-          sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 0.5, width: 40, height: 40 }}
-        >
-          <CurrentIcon sx={{ fontSize: 18 }} />
-        </IconButton>
-      </Tooltip>
-      <Popover
-        open={Boolean(anchorEl)}
-        anchorEl={anchorEl}
-        onClose={() => setAnchorEl(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
-        <Box sx={{ p: 0.5, display: 'grid', gridTemplateColumns: 'repeat(3, 28px)', gap: 0.3 }}>
-          {cells.map(({ pos, Icon }) => (
-            <Tooltip key={pos} title={pos}>
-              <Box
-                onClick={() => {
-                  onChange(pos);
-                  setAnchorEl(null);
-                }}
-                sx={{
-                  width: 28,
-                  height: 28,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: 0.5,
-                  cursor: 'pointer',
-                  bgcolor: value === pos ? 'primary.main' : 'action.hover',
-                  color: value === pos ? 'primary.contrastText' : 'text.secondary',
-                  '&:hover': { bgcolor: value === pos ? 'primary.dark' : 'action.selected' },
-                }}
-              >
-                <Icon sx={{ fontSize: 16 }} />
-              </Box>
-            </Tooltip>
-          ))}
-        </Box>
-      </Popover>
-    </>
   );
 };
 
@@ -866,7 +784,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   // changed the media path mid-session this kicks an updatePath. Mirrors the
   // pattern in MediaBrowser so previews of saved background images/videos work
   // immediately.
-  const mediaPath = useAppSelector((state) => state.settings.mediaPath);
+  const { mediaPath } = useGetSettings();
   useEffect(() => {
     if (!open) return;
     const api = (window as unknown as { api?: { startMediaServer?: (p: string) => Promise<unknown> } }).api;

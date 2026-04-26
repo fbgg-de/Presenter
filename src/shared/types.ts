@@ -86,6 +86,7 @@ export interface MusicianViewConfig {
   height?: number;
   positionX?: number;
   positionY?: number;
+  backendUrl?: string;
 }
 
 /**
@@ -144,6 +145,12 @@ export interface PresentationContentIPC {
   mediaSubType?: 'image' | 'video' | 'color';
   mediaPath?: string;
   mediaColor?: string;
+  mediaObjectFit?: 'cover' | 'contain' | 'fill';
+  mediaObjectPosition?: string;
+  mediaZoom?: number;
+  mediaBlur?: number;
+  mediaAutoplay?: boolean;
+  mediaLoop?: boolean;
   bibleRef?: string;
   bibleTranslation?: string;
   bibleCopyright?: string;

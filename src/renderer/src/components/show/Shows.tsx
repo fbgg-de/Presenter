@@ -32,7 +32,7 @@ import {
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetShowsQuery, useDeleteShowMutation, useSaveShowMutation } from '@/api/shows.api';
 import type { Show } from '@/api/shows.api';
-import { useAppSelector } from '@/store';
+import { useGetSettings } from '@/store/settingsSlice';
 
 interface ShowsProps {
   open: boolean;
@@ -71,7 +71,8 @@ const resolveShowTemplate = (template: string): string => {
 
 export const Shows = ({ open, onShowSelected, onClose, allowClose = false, currentShowTitle }: ShowsProps) => {
   const { LL } = useI18nContext();
-  const showTitleTemplate = useAppSelector((state) => state.settings.showSaveFormat);
+  const { showSaveFormat } = useGetSettings();
+
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [newShowTitle, setNewShowTitle] = useState('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -98,9 +99,9 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
   // Generate default show title from template when creating new show
   useEffect(() => {
     if (isCreatingNew && !newShowTitle) {
-      setNewShowTitle(resolveShowTemplate(showTitleTemplate));
+      setNewShowTitle(resolveShowTemplate(showSaveFormat));
     }
-  }, [isCreatingNew, showTitleTemplate]);
+  }, [isCreatingNew, showSaveFormat]);
 
   const handleSelectShow = (show: Show) => {
     setSelectedShow(show);
@@ -226,7 +227,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                   <Typography variant="h6" gutterBottom>
                     {LL.SHOWS.NO_SHOWS()}
                   </Typography>
-                  <Typography color="text.secondary" paragraph>
+                  <Typography color="text.secondary" component="p">
                     {LL.SHOWS.EMPTY_HELP()}
                   </Typography>
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsCreatingNew(true)}>

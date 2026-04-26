@@ -26,8 +26,7 @@ import {
   PictureAsPdf as PdfIcon,
   ListAlt as ListAltIcon,
 } from '@mui/icons-material';
-import { useAppDispatch } from '@/store';
-import { updateSetting } from '@/store/settingsSlice';
+import { useUpdateMusicianSetting } from '@/store/musicianSlice';
 import { useI18nContext } from '@/i18n/i18n-react';
 
 interface MusicianSettingsProps {
@@ -62,8 +61,9 @@ export const MusicianSettings = ({
   setPdfUploadOpen,
 }: MusicianSettingsProps) => {
   const { LL } = useI18nContext();
-  const dispatch = useAppDispatch();
   const autocompleteFilter = useMemo(() => createFilterOptions<string>(), []);
+
+  const updateMusicianSetting = useUpdateMusicianSetting();
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -82,7 +82,7 @@ export const MusicianSettings = ({
           <Switch
             size="small"
             checked={musicianTheme === 'dark'}
-            onChange={() => dispatch(updateSetting({ key: 'musicianTheme', value: musicianTheme === 'dark' ? 'light' : 'dark' }))}
+            onChange={() => updateMusicianSetting('musicianTheme', musicianTheme === 'dark' ? 'light' : 'dark')}
           />
         </Stack>
 
@@ -92,11 +92,7 @@ export const MusicianSettings = ({
           <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
             {LL.MUSICIAN.BLOCK_INDICATOR()}
           </Typography>
-          <Switch
-            size="small"
-            checked={blockIndicator}
-            onChange={() => dispatch(updateSetting({ key: 'musicianBlockIndicator', value: !blockIndicator }))}
-          />
+          <Switch size="small" checked={blockIndicator} onChange={() => updateMusicianSetting('musicianBlockIndicator', !blockIndicator)} />
         </Stack>
 
         {/* Show footer */}
@@ -105,11 +101,7 @@ export const MusicianSettings = ({
           <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
             {LL.MUSICIAN.SHOW_FOOTER()}
           </Typography>
-          <Switch
-            size="small"
-            checked={showFooter}
-            onChange={() => dispatch(updateSetting({ key: 'musicianShowFooter', value: !showFooter }))}
-          />
+          <Switch size="small" checked={showFooter} onChange={() => updateMusicianSetting('musicianShowFooter', !showFooter)} />
         </Stack>
         <Divider />
 
@@ -119,7 +111,7 @@ export const MusicianSettings = ({
           <Select
             value={defaultPageView}
             label={LL.MUSICIAN.DEFAULT_PAGE_MODE()}
-            onChange={(e) => dispatch(updateSetting({ key: 'musicianPageView', value: e.target.value as any }))}
+            onChange={(e) => updateMusicianSetting('musicianPageView', e.target.value as any)}
           >
             <MenuItem value="one-page">{LL.MUSICIAN.PAGE_ONE()}</MenuItem>
             <MenuItem value="two-page">{LL.MUSICIAN.PAGE_TWO()}</MenuItem>
@@ -135,9 +127,9 @@ export const MusicianSettings = ({
           options={musicianNames}
           onChange={(_e, newValue) => {
             if (typeof newValue === 'string') {
-              dispatch(updateSetting({ key: 'musicianName', value: newValue }));
+              updateMusicianSetting('musicianName', newValue);
             } else {
-              dispatch(updateSetting({ key: 'musicianName', value: newValue ?? '' }));
+              updateMusicianSetting('musicianName', newValue ?? '');
             }
           }}
           filterOptions={(options, params) => {
@@ -166,7 +158,7 @@ export const MusicianSettings = ({
           <Select
             value={musicianBand || 'Default'}
             label={LL.MUSICIAN.BAND_SELECT()}
-            onChange={(e) => dispatch(updateSetting({ key: 'musicianBand', value: e.target.value }))}
+            onChange={(e) => updateMusicianSetting('musicianBand', e.target.value as string)}
           >
             {availableBands.map((b) => (
               <MenuItem key={b} value={b}>
@@ -194,7 +186,7 @@ export const MusicianSettings = ({
               step={1}
               valueLabelDisplay="auto"
               valueLabelFormat={(v) => `${v}px`}
-              onChange={(_e, val) => dispatch(updateSetting({ key: 'musicianTextSize', value: val as number }))}
+              onChange={(_e, val) => updateMusicianSetting('musicianTextSize', val as number)}
               sx={{ flex: 1 }}
             />
             <TextFieldsIcon fontSize="small" sx={{ opacity: 0.5, fontSize: '1.3rem' }} />

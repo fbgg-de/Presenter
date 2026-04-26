@@ -1,6 +1,6 @@
 import { createTheme, type Theme } from '@mui/material';
 import darkScrollbar from '@mui/material/darkScrollbar';
-import type { ThemeMode } from '@/store/themeSlice';
+import type { ThemeMode } from './store/settingsSlice';
 
 const PRIMARY = {
   main: '#C44D58',

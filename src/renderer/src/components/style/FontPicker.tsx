@@ -2,9 +2,8 @@
  * Font Picker — searchable font dropdown with system font detection
  * and font fallback cascade editor (§14.6).
  */
-import { useState, useEffect, useCallback, HTMLAttributes } from 'react';
-import { Autocomplete, Button, Chip, IconButton, Stack, TextField, Typography } from '@mui/material';
-import { Add as AddIcon, Warning as WarningIcon } from '@mui/icons-material';
+import { useState, useEffect, HTMLAttributes } from 'react';
+import { Autocomplete, Stack, TextField, Typography } from '@mui/material';
 import { WEB_SAFE_FONTS } from '@/utils/styleUtils';
 import { useI18nContext } from '@/i18n/i18n-react';
 
@@ -200,111 +199,6 @@ export const FontPicker = ({ value, onChange, label = 'Font Family', size = 'sma
           );
         }}
       />
-    </Stack>
-  );
-};
-
-interface FontFallbackEditorProps {
-  fallbacks: string[];
-  onChange: (fallbacks: string[]) => void;
-}
-
-export const FontFallbackEditor = ({ fallbacks, onChange }: FontFallbackEditorProps) => {
-  const [newFont, setNewFont] = useState('');
-  const [fonts] = useState(() => detectSystemFonts().sort((a, b) => a.localeCompare(b)));
-  const { LL } = useI18nContext();
-
-  const handleAdd = useCallback(() => {
-    if (newFont.trim() && !fallbacks.includes(newFont.trim())) {
-      onChange([...fallbacks, newFont.trim()]);
-      setNewFont('');
-    }
-  }, [newFont, fallbacks, onChange]);
-
-  const handleRemove = useCallback(
-    (index: number) => {
-      onChange(fallbacks.filter((_, i) => i !== index));
-    },
-    [fallbacks, onChange],
-  );
-
-  const handleMoveUp = useCallback(
-    (index: number) => {
-      if (index === 0) return;
-      const arr = [...fallbacks];
-      [arr[index - 1], arr[index]] = [arr[index], arr[index - 1]];
-      onChange(arr);
-    },
-    [fallbacks, onChange],
-  );
-
-  const handleMoveDown = useCallback(
-    (index: number) => {
-      if (index >= fallbacks.length - 1) return;
-      const arr = [...fallbacks];
-      [arr[index], arr[index + 1]] = [arr[index + 1], arr[index]];
-      onChange(arr);
-    },
-    [fallbacks, onChange],
-  );
-
-  return (
-    <Stack spacing={1}>
-      <Typography variant="caption" color="text.secondary">
-        {LL.FONT.FALLBACK_CASCADE()}
-      </Typography>
-
-      {fallbacks.map((font, index) => {
-        const missing = !isFontAvailable(font);
-        return (
-          <Stack key={`${font}-${index}`} direction="row" alignItems="center" spacing={0.5}>
-            <Stack direction="column" spacing={0}>
-              <IconButton size="small" onClick={() => handleMoveUp(index)} disabled={index === 0} sx={{ p: 0, fontSize: '0.7rem' }}>
-                {LL.FONT.ARROW_UP()}
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={() => handleMoveDown(index)}
-                disabled={index >= fallbacks.length - 1}
-                sx={{ p: 0, fontSize: '0.7rem' }}
-              >
-                {LL.FONT.ARROW_DOWN()}
-              </IconButton>
-            </Stack>
-            <Chip
-              label={font}
-              size="small"
-              variant={missing ? 'outlined' : 'filled'}
-              color={missing ? 'warning' : 'default'}
-              icon={missing ? <WarningIcon fontSize="small" /> : undefined}
-              onDelete={() => handleRemove(index)}
-              sx={{ fontFamily: `"${font}", sans-serif` }}
-            />
-          </Stack>
-        );
-      })}
-
-      <Stack direction="row" spacing={0.5}>
-        <Autocomplete
-          value={newFont}
-          onChange={(_, val) => setNewFont(val || '')}
-          inputValue={newFont}
-          onInputChange={(_, val) => setNewFont(val)}
-          options={fonts.filter((f) => !fallbacks.includes(f))}
-          freeSolo
-          size="small"
-          sx={{ flex: 1 }}
-          renderInput={(params) => <TextField {...params} placeholder={LL.FONT.ADD_FALLBACK_PLACEHOLDER()} size="small" />}
-        />
-        <Button size="small" onClick={handleAdd} disabled={!newFont.trim()} startIcon={<AddIcon />}>
-          {LL.COMMON.ADD()}
-        </Button>
-      </Stack>
-
-      <Typography variant="caption" color="text.secondary" fontFamily="monospace">
-        {LL.FONT.FALLBACK_RESULT_PREFIX()} {fallbacks.length > 0 ? fallbacks.map((f) => `"${f}"`).join(', ') + ', ' : ''}
-        {LL.FONT.SANS_SERIF()}
-      </Typography>
     </Stack>
   );
 };

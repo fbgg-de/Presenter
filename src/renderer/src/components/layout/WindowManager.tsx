@@ -43,9 +43,9 @@ import {
   Opacity as TransparentIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { toggleFreezeWindow, toggleBlack, toggleIdentify } from '@/store/presentationSlice';
-import { updateSetting } from '@/store/settingsSlice';
+import { useAppDispatch } from '@/store';
+import { toggleFreezeWindow, toggleBlack, toggleIdentify, useGetPresentationSettings } from '@/store/presentationSlice';
+import { useGetWindows, useUpdateWindows, WindowConfig } from '@/store/windowSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
 import {
   openPresentationWindow,
@@ -57,7 +57,6 @@ import {
   getOpenWindowsSync,
   listScreens,
   updateWindowConfigInBridge,
-  type WindowConfig,
 } from '@/utils/presentationBridge';
 
 interface WindowManagerProps {
@@ -266,10 +265,10 @@ const WindowConfigForm = ({
 export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const isBlack = useAppSelector((state) => state.presentation.isBlack);
-  const isIdentifying = useAppSelector((state) => state.presentation.isIdentifying);
-  const frozenWindows = useAppSelector((state) => state.presentation.frozenWindows);
-  const savedConfigs = useAppSelector((state) => state.settings.windowConfigs) as Array<WindowConfig & { _runtimeId?: string }>;
+
+  const { windowConfigs: savedConfigs } = useGetWindows();
+  const updateWindowSetting = useUpdateWindows();
+  const { isBlack, isIdentifying, frozenWindows } = useGetPresentationSettings();
 
   const { data: styles = [] } = useGetStylesQuery();
 
@@ -381,12 +380,12 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
       styleId: newCfg.styleId || undefined,
       _runtimeId: id,
     };
-    dispatch(updateSetting({ key: 'windowConfigs', value: [...(savedConfigs || []), newConfig] }));
+    updateWindowSetting('windowConfigs', [...(savedConfigs || []), newConfig]);
     setCreateExpanded(false);
     getOpenWindows()
       .then(setOpenWindowsList)
       .catch(() => {});
-  }, [newCfg, screens, savedConfigs, dispatch]);
+  }, [newCfg, screens, savedConfigs, updateWindowSetting]);
 
   const handleApplyEdit = useCallback(
     async (windowId: string) => {
@@ -405,25 +404,25 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
       const idx = configs.findIndex((c) => c._runtimeId === windowId);
       if (idx >= 0) {
         configs[idx] = { ...configs[idx], ...patch };
-        dispatch(updateSetting({ key: 'windowConfigs', value: configs }));
+        updateWindowSetting('windowConfigs', configs);
       }
       setExpandedWindowId(null);
     },
-    [editConfigs, savedConfigs, dispatch],
+    [editConfigs, savedConfigs, updateWindowSetting],
   );
 
   const handleCloseWindow = useCallback(
     async (id: string) => {
       await closePresentationWindow(id);
       const configs = (savedConfigs || []).filter((c) => c._runtimeId !== id);
-      dispatch(updateSetting({ key: 'windowConfigs', value: configs }));
+      updateWindowSetting('windowConfigs', configs);
       setTimeout(() => {
         getOpenWindows()
           .then(setOpenWindowsList)
           .catch(() => {});
       }, 100);
     },
-    [savedConfigs, dispatch],
+    [savedConfigs, updateWindowSetting],
   );
 
   return (

@@ -2,9 +2,10 @@ import { useMemo, useRef, useEffect, memo, useCallback } from 'react';
 import { Card, CardContent, CardMedia, Stack, Typography, useTheme } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppSelector, useAppDispatch } from '@/store';
-import { setActiveBlockIndex, setActiveLineIndex } from '@/store/presentationSlice';
-import { selectCurrentSongOrder } from '@/store/songsSlice';
+import { setActiveBlockIndex, setActiveLineIndex, useGetPresentationSettings } from '@/store/presentationSlice';
+import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
+import { useGetSettings } from '@/store/settingsSlice';
 
 // Stable sx objects (module scope so identity never changes between renders)
 const containerSx = {
@@ -166,12 +167,12 @@ const ControlSong = () => {
   const dispatch = useAppDispatch();
   const { LL } = useI18nContext();
 
-  const verseClick = useAppSelector((state) => state.settings.verseClick);
-  const activeBlockIndex = useAppSelector((state) => state.presentation.activeBlockIndex);
-  const activeLineIndex = useAppSelector((state) => state.presentation.activeLineIndex);
+  const { verseClick } = useGetSettings();
+  const { activeBlockIndex, activeLineIndex, activeItemIndex } = useGetPresentationSettings();
+  const { songsOrder, songs } = useGetSongs();
 
-  const currentSongNumber = useAppSelector((state) => state.songs.songsOrder[state.presentation.activeItemIndex]);
-  const currentSong = useAppSelector((state) => (currentSongNumber ? state.songs.songs[currentSongNumber] : undefined));
+  const currentSongNumber = songsOrder[activeItemIndex];
+  const currentSong = currentSongNumber ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
   const selectedRef = useRef<HTMLDivElement | null>(null);

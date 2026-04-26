@@ -12,7 +12,8 @@ const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3.0;
 const ZOOM_DEFAULT = 1.0;
 
-const SONGS_STORAGE_KEY = 'presenter_musician_songs';
+const SONGS_STORAGE_KEY = 'presenter_musician';
+const SONGS_STORAGE_KEY_OLD = 'presenter_musician_songs'; // migration ToDo remove
 
 interface PageState {
   zoom?: number;
@@ -29,11 +30,24 @@ interface SongFileState {
 
 type SongsStorage = Record<string, Record<string, SongFileState>>;
 
+// ToDo move to redux slice
 const loadSongsStorage = (): SongsStorage => {
   try {
+    // Try new key first; pdf data lives under "pdfState" subkey
     const v = localStorage.getItem(SONGS_STORAGE_KEY);
-    if (!v) return {};
-    return JSON.parse(v);
+    if (v) {
+      const parsed = JSON.parse(v) as Record<string, unknown>;
+      return (parsed.pdfState as SongsStorage | undefined) ?? {};
+    }
+    // Migration: read old standalone key
+    const old = localStorage.getItem(SONGS_STORAGE_KEY_OLD);
+    if (old) {
+      const data = JSON.parse(old) as SongsStorage;
+      saveSongsStorage(data);
+      localStorage.removeItem(SONGS_STORAGE_KEY_OLD);
+      return data;
+    }
+    return {};
   } catch {
     return {};
   }
@@ -41,7 +55,10 @@ const loadSongsStorage = (): SongsStorage => {
 
 const saveSongsStorage = (data: SongsStorage): void => {
   try {
-    localStorage.setItem(SONGS_STORAGE_KEY, JSON.stringify(data));
+    const raw = localStorage.getItem(SONGS_STORAGE_KEY);
+    const current = raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+    current['pdfState'] = data;
+    localStorage.setItem(SONGS_STORAGE_KEY, JSON.stringify(current));
   } catch {}
 };
 

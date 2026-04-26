@@ -6,6 +6,7 @@ import { useState, useRef, useCallback, useMemo, MouseEvent } from 'react';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, Typography } from '@mui/material';
 import { CropFree as CropIcon, RestartAlt as ResetIcon } from '@mui/icons-material';
+import { clamp } from '@/utils';
 
 export interface VideoMask {
   x: number; // 0-100
@@ -36,8 +37,6 @@ export const VideoMaskEditor = ({ open, onClose, initialMask, onSave }: VideoMas
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const clamp = (val: number, min: number, max: number) => Math.max(min, Math.min(max, val));
 
   const updateField = useCallback((field: keyof VideoMask, value: number) => {
     setMask((prev) => ({

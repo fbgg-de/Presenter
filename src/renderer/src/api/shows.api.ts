@@ -13,6 +13,18 @@ export type ShowItem = {
   mediaPath?: string;
   mediaSubType?: MediaSubType;
   mediaColor?: string;
+  /** CSS objectFit for image/video: 'cover' | 'contain' | 'fill' */
+  mediaObjectFit?: 'cover' | 'contain' | 'fill';
+  /** CSS objectPosition e.g. 'center', 'top', 'bottom left' */
+  mediaObjectPosition?: string;
+  /** Zoom factor 100 = 1x */
+  mediaZoom?: number;
+  /** Blur in px */
+  mediaBlur?: number;
+  /** Video autoplay (default true) */
+  mediaAutoplay?: boolean;
+  /** Video loop (default true) */
+  mediaLoop?: boolean;
   bibleRef?: string;
   bibleTranslation?: string;
   bibleFormattedSegments?: { start: number; end: number; bold: boolean }[];

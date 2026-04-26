@@ -1,24 +1,28 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { presenterApi } from '@/api/base.api';
 import showReducer from './showSlice';
-import themeReducer from './themeSlice';
 import settingsReducer from './settingsSlice';
+import musicianReducer from './musicianSlice';
+import windowReducer from './windowSlice';
 import presentationReducer from './presentationSlice';
 import songsReducer from './songsSlice';
-import { useDispatch, useSelector } from 'react-redux';
 
-export type { ThemeState } from './themeSlice';
 export type { SettingsState } from './settingsSlice';
+export type { MusicianState } from './musicianSlice';
+export type { WindowState } from './windowSlice';
 export type { PresentationState } from './presentationSlice';
 export type { SongsState } from './songsSlice';
 export type { ShowState } from './showSlice';
+
+export { useAppDispatch, useAppSelector } from './hooks';
 
 export const store = configureStore({
   reducer: {
     [presenterApi.reducerPath]: presenterApi.reducer,
     show: showReducer,
-    theme: themeReducer,
     settings: settingsReducer,
+    musician: musicianReducer,
+    window: windowReducer,
     presentation: presentationReducer,
     songs: songsReducer,
   },
@@ -33,6 +37,3 @@ export const store = configureStore({
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-
-export const useAppDispatch = useDispatch.withTypes<AppDispatch>();
-export const useAppSelector = useSelector.withTypes<RootState>();

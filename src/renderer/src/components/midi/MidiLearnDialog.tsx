@@ -2,6 +2,7 @@
  * MIDI Learn Dialog — lets the user map MIDI buttons to navigation actions (§11.10).
  */
 import {
+  alpha,
   Box,
   Button,
   Chip,
@@ -11,18 +12,16 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  List,
-  ListItem,
-  ListItemText,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import {
-  Delete as DeleteIcon,
-  FiberManualRecord as RecordIcon,
+  Radar as RecordIcon,
   Stop as StopIcon,
   Bluetooth as BluetoothIcon,
   UsbOff as DisconnectedIcon,
+  Piano as PianoIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useMidi, type MidiAction, type MidiStatus } from '@/hooks/useMidi';
@@ -74,138 +73,164 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
     }
   };
 
+  /** Collect all midiKeys that map to the given action */
+  const mappingsForAction = (action: MidiAction): string[] =>
+    Object.entries(midi.midiMappings)
+      .filter(([, mappedAction]) => mappedAction === action)
+      .map(([midiKey]) => midiKey);
+
+  const isLearningThis = (action: MidiAction) => midi.isLearning && midi.learnAction === action;
+  const noDevices = midi.devices.length === 0;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Typography variant="h6">{LL.MIDI.SETTINGS()}</Typography>
+      {/* Header */}
+      <DialogTitle
+        sx={(theme) => ({
+          background: `linear-gradient(135deg, ${alpha(theme.palette.primary.main, 0.15)} 0%, ${alpha(theme.palette.secondary.main, 0.08)} 100%)`,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          pb: 1.5,
+        })}
+      >
+        <Stack direction="row" alignItems="center" spacing={1.5}>
+          <PianoIcon color="primary" />
+          <Typography variant="h6" fontWeight={700}>
+            {LL.MIDI.SETTINGS()}
+          </Typography>
+          <Box flexGrow={1} />
           <StatusChip status={midi.status} />
         </Stack>
-      </DialogTitle>
-      <DialogContent dividers>
-        {!midi.isSupported ? (
-          <Typography color="error">{LL.MIDI.NOT_SUPPORTED()}</Typography>
-        ) : (
-          <Stack spacing={2}>
-            {/* Connected Devices */}
-            <Typography variant="subtitle2" fontWeight={700}>
-              {LL.MIDI.DEVICES({ count: midi.devices.length })}
-            </Typography>
+
+        {/* Devices row */}
+        {midi.isSupported && (
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1.5, minHeight: 28 }}>
             {midi.devices.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
+              <Typography variant="caption" color="text.secondary">
                 {LL.MIDI.NO_DEVICES()}
               </Typography>
             ) : (
-              <Stack direction="row" spacing={1} flexWrap="wrap">
-                {midi.devices.map((d) => (
-                  <Chip
-                    key={d.id}
-                    label={d.name}
-                    color={d.connected ? 'success' : 'default'}
-                    variant={d.connected ? 'filled' : 'outlined'}
-                    size="small"
-                  />
-                ))}
-              </Stack>
+              midi.devices.map((d) => (
+                <Chip
+                  key={d.id}
+                  label={d.name}
+                  color={d.connected ? 'success' : 'default'}
+                  variant={d.connected ? 'filled' : 'outlined'}
+                  size="small"
+                />
+              ))
             )}
+          </Stack>
+        )}
+      </DialogTitle>
 
-            <Divider />
-
-            {/* MIDI Learn */}
-            <Typography variant="subtitle2" fontWeight={700}>
-              {LL.MIDI.LEARN()}
-            </Typography>
+      <DialogContent sx={{ px: 2, py: 2 }}>
+        {!midi.isSupported ? (
+          <Typography color="error" sx={{ p: 1 }}>
+            {LL.MIDI.NOT_SUPPORTED()}
+          </Typography>
+        ) : (
+          <Stack spacing={0.5}>
+            {/* "Learning" banner */}
             {midi.isLearning && (
               <Stack
                 direction="row"
                 alignItems="center"
                 spacing={1}
-                sx={{
-                  p: 1.5,
-                  bgcolor: 'warning.main',
-                  color: 'warning.contrastText',
-                  borderRadius: 1,
-                }}
+                sx={(theme) => ({
+                  px: 2,
+                  py: 1.25,
+                  mb: 0.5,
+                  bgcolor: alpha(theme.palette.warning.main, 0.15),
+                  border: `1px solid ${theme.palette.warning.main}`,
+                  borderRadius: 2,
+                })}
               >
-                <RecordIcon sx={{ animation: 'pulse 1s infinite' }} />
-                <Typography variant="body2" fontWeight={600}>
+                <RecordIcon color="warning" fontSize="small" sx={{ animation: 'pulse 1s infinite' }} />
+                <Typography variant="body2" fontWeight={600} color="warning.main" flexGrow={1}>
                   {LL.MIDI.PRESS_FOR({ action: actionLabel(midi.learnAction as MidiAction) })}
                 </Typography>
-                <Box flexGrow={1} />
-                <Button size="small" variant="outlined" color="inherit" startIcon={<StopIcon />} onClick={midi.cancelLearn}>
+                <Button size="small" color="warning" variant="outlined" startIcon={<StopIcon />} onClick={midi.cancelLearn}>
                   {LL.COMMON.CANCEL()}
                 </Button>
               </Stack>
             )}
 
-            <List dense disablePadding>
-              {MIDI_ACTION_KEYS.map((actKey) => (
-                <ListItem
-                  key={actKey}
-                  secondaryAction={
-                    <Button
-                      size="small"
-                      variant={midi.isLearning && midi.learnAction === actKey ? 'contained' : 'outlined'}
-                      color={midi.isLearning && midi.learnAction === actKey ? 'warning' : 'primary'}
-                      startIcon={<RecordIcon />}
-                      onClick={() => midi.startLearn(actKey)}
-                      disabled={midi.devices.length === 0}
-                    >
-                      {LL.MIDI.LEARN_BUTTON()}
-                    </Button>
-                  }
-                >
-                  <ListItemText primary={actionLabel(actKey as MidiAction)} />
-                </ListItem>
-              ))}
-            </List>
+            {/* Action rows */}
+            {MIDI_ACTION_KEYS.map((actKey, idx) => {
+              const mappings = mappingsForAction(actKey);
+              const learning = isLearningThis(actKey);
 
-            <Divider />
-
-            {/* Current Mappings */}
-            <Typography variant="subtitle2" fontWeight={700}>
-              {LL.MIDI.CURRENT_MAPPINGS()}
-            </Typography>
-            {Object.keys(midi.midiMappings).length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                {LL.MIDI.NO_MAPPINGS()}
-              </Typography>
-            ) : (
-              Object.entries(midi.midiMappings).map(([deviceName, mappings]) => (
-                <Box key={deviceName}>
-                  <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
-                    <Typography variant="body2" fontWeight={600}>
-                      {deviceName}
+              return (
+                <Box key={actKey}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={1.5}
+                    sx={(theme) => ({
+                      px: 1.5,
+                      py: 1,
+                      borderRadius: 2,
+                      transition: 'background 0.2s',
+                      bgcolor: learning ? alpha(theme.palette.warning.main, 0.1) : 'transparent',
+                      '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.6) },
+                    })}
+                  >
+                    {/* Action label */}
+                    <Typography variant="body2" fontWeight={600} sx={{ minWidth: 130 }}>
+                      {actionLabel(actKey)}
                     </Typography>
-                    <IconButton size="small" color="error" onClick={() => midi.clearMapping(deviceName)}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
+
+                    {/* Mapped key chips */}
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap flexGrow={1}>
+                      {mappings.length === 0 ? (
+                        <Typography variant="caption" color="text.disabled" sx={{ lineHeight: '24px' }}>
+                          {LL.MIDI.NO_MAPPING()}
+                        </Typography>
+                      ) : (
+                        mappings.map((midiKey) => (
+                          <Chip
+                            key={midiKey}
+                            label={midiKey}
+                            size="small"
+                            color="primary"
+                            variant="outlined"
+                            onDelete={() => midi.removeMapping(midiKey)}
+                            sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}
+                          />
+                        ))
+                      )}
+                    </Stack>
+
+                    {/* Learn button */}
+                    <Tooltip title={noDevices ? LL.MIDI.NO_DEVICES() : ''}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          color={learning ? 'warning' : 'primary'}
+                          disabled={noDevices}
+                          onClick={() => (learning ? midi.cancelLearn() : midi.startLearn(actKey))}
+                          sx={(theme) => ({
+                            border: `1px solid ${learning ? theme.palette.warning.main : theme.palette.primary.main}`,
+                            borderRadius: 1.5,
+                            '&:disabled': { borderColor: theme.palette.action.disabled },
+                          })}
+                        >
+                          {learning ? <StopIcon fontSize="small" /> : <RecordIcon fontSize="small" />}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
                   </Stack>
-                  <List dense disablePadding sx={{ pl: 2 }}>
-                    {Object.entries(mappings).map(([key, action]) => (
-                      <ListItem
-                        key={key}
-                        secondaryAction={
-                          <IconButton size="small" onClick={() => midi.removeMapping(deviceName, key)}>
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        }
-                      >
-                        <ListItemText
-                          primary={LL.MIDI.MAPPING_ENTRY({ key, action: actionLabel(action as MidiAction) })}
-                          slotProps={{ primary: { variant: 'body2', fontFamily: 'monospace' } }}
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
+
+                  {idx < MIDI_ACTION_KEYS.length - 1 && <Divider sx={{ mx: 1.5 }} />}
                 </Box>
-              ))
-            )}
+              );
+            })}
           </Stack>
         )}
       </DialogContent>
+
       <DialogActions>
-        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
+        <Button onClick={onClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>
     </Dialog>
   );

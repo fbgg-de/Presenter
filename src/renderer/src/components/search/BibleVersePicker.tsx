@@ -20,7 +20,7 @@ import {
 import { MenuBook as MenuBookIcon, Add as AddIcon, Close as CloseIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetBibleVersesQuery, useGetBibleTranslationsQuery } from '@/api/bible.api';
-import { useAppSelector } from '@/store';
+import { useGetSettings } from '@/store/settingsSlice';
 
 interface BibleVersePickerProps {
   open: boolean;
@@ -30,10 +30,11 @@ interface BibleVersePickerProps {
 
 export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps) => {
   const { LL } = useI18nContext();
-  const savedTranslation = useAppSelector((state) => state.settings.bibleTranslation);
+
+  const { bibleTranslation } = useGetSettings();
 
   const [reference, setReference] = useState('');
-  const [translation, setTranslation] = useState(savedTranslation || 'ESV');
+  const [translation, setTranslation] = useState(bibleTranslation);
   const [languageFilter, setLanguageFilter] = useState('');
   const [shouldFetch, setShouldFetch] = useState(false);
 

@@ -8,8 +8,8 @@ import { RequireAuth } from '@/routes/RequireAuth';
 import { Shows } from '@/components/show/Shows';
 import type { Show, ShowItem } from '@/api/shows.api';
 import { useSaveShowMutation } from '@/api/shows.api';
-import { useAppSelector, useAppDispatch } from '@/store';
-import { setCurrentShow, closeShowSelector } from '@/store/showSlice';
+import { useAppDispatch } from '@/store';
+import { setCurrentShow, closeShowSelector, useGetShow } from '@/store/showSlice';
 import { setSongsOrder as setSongsOrderAction, setSongOrders as setSongOrdersAction, loadShowSongs } from '@/store/songsSlice';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import PresentationSyncHost from '@/components/layout/PresentationSyncHost';
@@ -24,8 +24,7 @@ export const MainPage = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [mobileTab, setMobileTab] = useState(0); // 0 = show list / sidebar, 1 = control
 
-  const currentShow = useAppSelector((state) => state.show.currentShow);
-  const isShowSelectorOpen = useAppSelector((state) => state.show.isShowSelectorOpen);
+  const { currentShow, isShowSelectorOpen } = useGetShow();
   const [saveShowMutation] = useSaveShowMutation();
   const { trackEvent } = useMetrics();
   const initialLoadDone = useRef(false);
@@ -78,9 +77,9 @@ export const MainPage = () => {
     <RequireAuth>
       <Shows open={isShowSelectorOpen} onShowSelected={handleShowSelected} />
       <PresentationSyncHost />
-      <DesktopAppBanner />
       {!isShowSelectorOpen && (
         <Stack height="100vh">
+          <DesktopAppBanner />
           {isMobile ? (
             // ── Mobile layout ──────────────────────────────────────────────
             <>
