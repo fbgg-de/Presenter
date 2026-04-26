@@ -2119,7 +2119,24 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                             <IconButton
                               size="small"
                               sx={{ color: 'white', p: 0.25, flexShrink: 0 }}
-                              onClick={() => setPreviewVideoMuted((m) => !m)}
+                              onClick={() => {
+                                setPreviewVideoMuted((m) => {
+                                  const next = !m;
+                                  const vid = previewVideoRef.current;
+                                  if (next) {
+                                    // Muting: set volume to 0 so the slider reflects muted state
+                                    setPreviewVideoVolume(0);
+                                    if (vid) {
+                                      vid.volume = 0;
+                                      vid.muted = true;
+                                    }
+                                  } else {
+                                    // Unmuting: clear muted flag; do not change volume here
+                                    if (vid) vid.muted = false;
+                                  }
+                                  return next;
+                                });
+                              }}
                             >
                               {previewVideoMuted ? <VolumeOffIcon sx={{ fontSize: 16 }} /> : <VolumeUpIcon sx={{ fontSize: 16 }} />}
                             </IconButton>

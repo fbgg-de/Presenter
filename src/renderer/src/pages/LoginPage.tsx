@@ -4,25 +4,21 @@ import { Security as SecurityIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon } fr
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetAccountsQuery, useGetAdminOidcAuthUrlQuery, useGetOidcAuthUrlQuery } from '@/api/session.api';
-import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
+import { useUpdateSetting, useGetSettings, Account } from '@/store/settingsSlice';
 
 const useQueryParam = (name: string): string | null => {
   const { search } = useLocation();
   return useMemo(() => new URLSearchParams(search).get(name), [search, name]);
 };
 
-const LAST_SELECTED_ACCOUNT_KEY = 'presenter_last_account';
-
-type SelectedAccount = number | 'admin' | '';
-
 export const LoginPage = () => {
   const { LL } = useI18nContext();
   const navigate = useNavigate();
 
-  const { offlineMode } = useGetSettings();
-  const updateSetting = useUpdateSetting();
-
   const next = useQueryParam('next') ?? '/';
+
+  const { offlineMode, lastSelectedAccount } = useGetSettings();
+  const updateSetting = useUpdateSetting();
 
   // In offline mode, redirect immediately to the intended destination
   useEffect(() => {
@@ -34,17 +30,20 @@ export const LoginPage = () => {
       }
     }
   }, [offlineMode, navigate, next]);
+
   const licenseParam = useQueryParam('license');
 
   // License selection - load from localStorage on mount
   const { data: accounts, isLoading: accountsLoading, error: accountsError } = useGetAccountsQuery();
   // Start with '' so the MUI Select never gets an out-of-range value during first render.
   // The saved account is restored once the accounts list has loaded and the value is validated.
-  const [selectedLicense, setSelectedLicense] = useState<SelectedAccount>('');
+  const [selectedLicense, setSelectedLicense] = useState<Account>('');
 
   // Restore saved account after accounts have loaded and validated
   useEffect(() => {
-    if (accountsLoading || !accounts) return;
+    if (accountsLoading || !accounts) {
+      return;
+    }
 
     // URL-supplied license number takes priority over localStorage
     if (licenseParam !== null) {
@@ -60,19 +59,18 @@ export const LoginPage = () => {
     }
 
     try {
-      const saved = localStorage.getItem(LAST_SELECTED_ACCOUNT_KEY);
-      if (!saved) return;
-      const parsed = JSON.parse(saved);
-      if (parsed === 'admin') {
+      if (!lastSelectedAccount) {
+        return;
+      }
+      if (lastSelectedAccount === 'admin') {
         setSelectedLicense('admin');
-      } else if (typeof parsed === 'number' && accounts.some((a) => a.license === parsed)) {
-        setSelectedLicense(parsed);
+      } else if (typeof lastSelectedAccount === 'number' && accounts.some((a) => a.license === lastSelectedAccount)) {
+        setSelectedLicense(lastSelectedAccount);
       } else {
-        // Saved value is no longer valid — clean it up
-        localStorage.removeItem(LAST_SELECTED_ACCOUNT_KEY);
+        updateSetting('lastSelectedAccount', '');
       }
     } catch {
-      // ignore
+      console.log('Failed to restore last selected account from settings, ignoring');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountsLoading, licenseParam]);
@@ -111,19 +109,15 @@ export const LoginPage = () => {
 
   const [errorText, setErrorText] = useState<string | null>(null);
 
-  const onSelectLicense = (value: SelectedAccount) => {
+  const onSelectLicense = (value: Account) => {
     setSelectedLicense(value);
     setErrorText(null);
 
     // Save to localStorage
     try {
-      if (value === '' || value === null) {
-        localStorage.removeItem(LAST_SELECTED_ACCOUNT_KEY);
-      } else {
-        localStorage.setItem(LAST_SELECTED_ACCOUNT_KEY, JSON.stringify(value));
-      }
+      updateSetting('lastSelectedAccount', value);
     } catch (e) {
-      console.error('Failed to save last selected account:', e);
+      console.error('Failed to save last selected account to settings:', e);
     }
   };
 
@@ -154,7 +148,7 @@ export const LoginPage = () => {
                   onChange={(e) => {
                     const v = e.target.value;
                     if (v === 'admin' || v === '') {
-                      onSelectLicense(v as SelectedAccount);
+                      onSelectLicense(v);
                     } else {
                       onSelectLicense(Number(v));
                     }

@@ -3,6 +3,10 @@ export * from './CcliSong';
 
 export type TBlocks = { [key: string]: string[] };
 
+export const SONG_CUSTOM_NUMBER_LIMIT = 10000;
+export const SONG_BLOCK_SEPARATOR = '---';
+export const SONG_TRANSLATION_LINE_REGEX = /^\[(\w{2})] (.*)$/;
+
 export interface ISong {
   title: string;
   authors?: string;

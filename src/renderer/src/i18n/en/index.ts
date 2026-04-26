@@ -263,7 +263,7 @@ const en = {
   },
 
   CONTROL: {
-    NO_ITEM: 'Select an item from the sidebar',
+    NO_ITEM: 'Select an item from the sidebar.',
     MEDIA_PREVIEW: 'Media Preview',
     VIDEO_PLACEHOLDER: 'Video playback',
     TITLE: 'Control',
@@ -453,13 +453,13 @@ const en = {
   },
 
   HEADER: {
-    LANGUAGE_EN: 'English',
-    LANGUAGE_DE: 'Deutsch',
+    LANGUAGE_EN: '🇬🇧 English',
+    LANGUAGE_DE: '🇩🇪 Deutsch',
     SWITCH_LANGUAGE: 'Switch language',
     ACCOUNT_MENU: 'Account',
     ADMIN_DASHBOARD: 'Admin Dashboard',
     WINDOW_MANAGER: 'Window Manager',
-    OFFLINE_MODE_ON: 'Switch to Offline Mode (no backend calls)',
+    OFFLINE_MODE_ON: 'Switch to Offline Mode',
     OFFLINE_MODE_OFF: 'Switch to Online Mode',
     OFFLINE_MODE_LABEL_ON: 'Offline Mode',
     OFFLINE_MODE_LABEL_OFF: 'Online Mode',
@@ -694,7 +694,12 @@ const en = {
         TITLE: 'Video play/stop fade (ms)',
         DESCRIPTION: 'Duration of the volume fade-in when starting and fade-out when stopping/pausing videos (0 = instant)',
       },
+      SHOW_LICENSE_NUMBER: {
+        TITLE: 'Show license number',
+        DESCRIPTION: 'Show the song license/account number in the copyright area',
+      },
     },
+    THEME: 'Theme',
   },
 
   VIDEO: {

@@ -456,13 +456,13 @@ const de: Translation = {
   },
 
   HEADER: {
-    LANGUAGE_EN: 'English',
-    LANGUAGE_DE: 'Deutsch',
+    LANGUAGE_EN: '🇬🇧 English',
+    LANGUAGE_DE: '🇩🇪 Deutsch',
     SWITCH_LANGUAGE: 'Sprache wechseln',
     ACCOUNT_MENU: 'Konto',
     ADMIN_DASHBOARD: 'Admin-Bereich',
     WINDOW_MANAGER: 'Fensterverwaltung',
-    OFFLINE_MODE_ON: 'In Offline-Modus wechseln (keine Backend-Aufrufe)',
+    OFFLINE_MODE_ON: 'In Offline-Modus wechseln',
     OFFLINE_MODE_OFF: 'In Online-Modus wechseln',
     OFFLINE_MODE_LABEL_ON: 'Offline-Modus',
     OFFLINE_MODE_LABEL_OFF: 'Online-Modus',
@@ -480,7 +480,8 @@ const de: Translation = {
     SETTINGS_DOWNLOAD: 'Desktop-App-Installer herunterladen',
     OS_WINDOWS: 'Windows',
     MODAL_TITLE: 'Presenter Desktop-App herunterladen',
-    MODAL_BODY: 'Die Presenter Desktop-App schaltet Offline-Unterstützung, lokale Mediendateien, MIDI-Eingabe, Echtzeit-WebSocket-Sync und mehr frei.',
+    MODAL_BODY:
+      'Die Presenter Desktop-App schaltet Offline-Unterstützung, lokale Mediendateien, MIDI-Eingabe, Echtzeit-WebSocket-Sync und mehr frei.',
     MODAL_MORE_OPTIONS: 'Weitere Optionen…',
     MODAL_DETECT_HINT: 'Dein Betriebssystem: {os}',
     MODAL_UNAVAILABLE: 'Für dieses Betriebssystem noch nicht verfügbar. Schau später noch einmal vorbei.',
@@ -703,7 +704,12 @@ const de: Translation = {
         TITLE: 'Video-Einblenden/-Ausblenden (ms)',
         DESCRIPTION: 'Dauer des Lautstärke-Einblendens beim Starten und Ausblendens beim Stoppen/Pausieren von Videos (0 = sofort)',
       },
+      SHOW_LICENSE_NUMBER: {
+        TITLE: 'Lizenznummer anzeigen',
+        DESCRIPTION: 'Lizenz-/Kontonummer des Liedes im Copyright-Bereich anzeigen',
+      },
     },
+    THEME: 'Design',
   },
 
   VIDEO: {

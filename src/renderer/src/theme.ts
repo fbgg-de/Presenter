@@ -16,6 +16,29 @@ const SECONDARY = {
   contrastText: '#FFF',
 };
 
+export const DEFAULT_SONG_ITEM_COLOR = '#1976d2';
+export const DEFAULT_MEDIA_ITEM_COLOR = '#f9a825';
+export const DEFAULT_BIBLE_ITEM_COLOR = '#388e3c';
+
+export const ANNOTATION_COLORS = ['#ff0000', '#0000ff', '#00aa00', '#ffaa00', '#000000', '#ffffff', '#9c27b0'];
+
+export const BLOCK_COLORS = ['#2196f3', '#4caf50', '#ff9800', '#e91e63', '#9c27b0', '#00bcd4', '#ff5722', '#795548'];
+
+export const COLOR_PRESETS = [
+  { name: 'Black', value: '#000000' },
+  { name: 'White', value: '#FFFFFF' },
+  { name: 'Red', value: '#FF0000' },
+  { name: 'Green', value: '#00FF00' },
+  { name: 'Blue', value: '#0000FF' },
+  { name: 'Yellow', value: '#FFFF00' },
+  { name: 'Cyan', value: '#00FFFF' },
+  { name: 'Magenta', value: '#FF00FF' },
+  { name: 'Dark Gray', value: '#333333' },
+  { name: 'Light Gray', value: '#CCCCCC' },
+  { name: 'Navy', value: '#001F3F' },
+  { name: 'Teal', value: '#39CCCC' },
+];
+
 export const getTheme = (mode: 'dark' | 'light'): Theme =>
   createTheme({
     palette: {
@@ -50,6 +73,3 @@ export const resolveThemeMode = (mode: ThemeMode): 'dark' | 'light' => {
   }
   return mode;
 };
-
-// Keep a default export for backward compatibility
-export const theme = getTheme('dark');

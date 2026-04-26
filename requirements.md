@@ -1093,7 +1093,7 @@ Mappings are intentionally **device-independent**. The same MIDI message coming 
       "note_60": "next_page",
       "note_62": "prev_page",
       "note_64": "next_song",
-      "cc_64":   "next_block"
+      "cc_64": "next_block"
     }
   }
   ```
@@ -1658,51 +1658,51 @@ Some settings are stored **per account in the database** so they are shared acro
 > - `THEME` (boxed/list) -> renamed `CONTROL_LAYOUT`
 > - `SHOW_SAVE_FORMAT` -> moved to account-level `show_title_template`
 
-| Setting                              | Type    | Default                 | Description                                                                                       |
-| ------------------------------------ | ------- | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `presenter_backend_url`              | string  | `http://localhost:9000` | Backend API base URL                                                                              |
-| `presenter_theme_mode`               | enum    | `system`                | `dark`, `light`, or `system`                                                                      |
-| `presenter_ui_language`              | string  | (none)                  | App UI language override (typesafe-i18n locale, e.g., `en`, `de`). Falls back to account default. |
-| `presenter_language_override`        | string  | (none)                  | Local override for account default song lyrics language                                           |
-| `presenter_confirm_page_leave`       | boolean | `true`                  | Confirm before leaving page                                                                       |
-| `presenter_confirm_show_deletion`    | boolean | `true`                  | Confirm before deleting a show                                                                    |
-| `presenter_confirm_show_overwrite`   | boolean | `true`                  | Confirm before overwriting a show                                                                 |
-| `presenter_confirm_song_delete`      | boolean | `true`                  | Confirm before deleting a song                                                                    |
-| `presenter_default_new_verse_name`   | string  | `Outro`                 | Default name for new blocks                                                                       |
-| `presenter_default_verse_name`       | string  | `Vers 1`                | Default first block name                                                                          |
-| `presenter_notification_count`       | number  | `4`                     | Max visible notifications                                                                         |
-| `presenter_notification_time`        | number  | `3500`                  | Notification auto-dismiss (ms)                                                                    |
-| `presenter_override_song_import`     | boolean | `false`                 | Override existing songs on import                                                                 |
-| `presenter_reload_song_after_edit`   | boolean | `false`                 | Reload song from server after editing                                                             |
-| `presenter_reset_black_on_switch`    | boolean | `false`                 | Reset black screen when switching songs                                                           |
-| `presenter_show_limit`               | number  | `10`                    | Shows per page                                                                                    |
-| `presenter_next_line_preview`        | boolean | `true`                  | Show first line of next block as preview on presentation                                          |
-| `presenter_next_line_preview_color`  | string  | `#AAAAAA`               | Color for the next-block preview line (hex)                                                       |
-| `presenter_next_line_translation`    | boolean | `true`                  | Include all displayed languages in next-line preview                                              |
-| `presenter_show_delete_from_db`      | boolean | `false`                 | Show delete-from-database in library                                                              |
-| `presenter_upload_notifications`     | boolean | `true`                  | Notifications on song upload                                                                      |
-| `presenter_song_click`               | enum    | `double-click`          | `click` or `double-click` to select song                                                          |
-| `presenter_song_order`               | enum    | `lexicographic`         | `lexicographic` or `numeric` sorting                                                              |
-| `presenter_control_layout`           | enum    | `boxed`                 | `boxed` or `list` for control area                                                                |
-| `presenter_touch_duration`           | number  | `300`                   | Long-press duration (ms)                                                                          |
-| `presenter_verse_click`              | enum    | `double-click`          | `click` or `double-click` for verse/block                                                         |
-| `presenter_bible_translation`        | string  | `ESV`                   | Default bible translation                                                                         |
-| `presenter_keyboard_mapping`         | JSON    | (defaults)              | Custom keyboard shortcut mapping                                                                  |
-| `presenter_window_configs`           | JSON    | `[]`                    | Saved window layout configurations                                                                |
-| `presenter_window_presets`           | JSON    | `{}`                    | Named window layout presets                                                                       |
-| `presenter_window_footer_visible`    | boolean | `true`                  | Show/hide the window management footer bar                                                        |
-| `presenter_media_path`               | string  | (none)                  | Local media directory (Electron)                                                                  |
-| `presenter_ws_port`                  | number  | `9001`                  | WebSocket server port (Electron)                                                                  |
-| `presenter_auto_check_updates`       | boolean | `true`                  | Auto-check for updates on startup (Electron)                                                      |
-| `presenter_musician_name`            | string  | (none)                  | Active musician/instrument name for PDF resolution                                                |
-| `presenter_musician_band`            | string  | (none)                  | Active band / order name for musician view (PDF + order)                                          |
-| `presenter_musician_page_view`       | enum    | `single`                | `single`, `two-page`, or `continuous` PDF page view mode                                          |
-| `presenter_musician_block_indicator` | boolean | `true`                  | Show block selection indicator in musician view                                                   |
+| Setting                              | Type    | Default                 | Description                                                                                                   |
+| ------------------------------------ | ------- | ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `presenter_backend_url`              | string  | `http://localhost:9000` | Backend API base URL                                                                                          |
+| `presenter_theme_mode`               | enum    | `system`                | `dark`, `light`, or `system`                                                                                  |
+| `presenter_ui_language`              | string  | (none)                  | App UI language override (typesafe-i18n locale, e.g., `en`, `de`). Falls back to account default.             |
+| `presenter_language_override`        | string  | (none)                  | Local override for account default song lyrics language                                                       |
+| `presenter_confirm_page_leave`       | boolean | `true`                  | Confirm before leaving page                                                                                   |
+| `presenter_confirm_show_deletion`    | boolean | `true`                  | Confirm before deleting a show                                                                                |
+| `presenter_confirm_show_overwrite`   | boolean | `true`                  | Confirm before overwriting a show                                                                             |
+| `presenter_confirm_song_delete`      | boolean | `true`                  | Confirm before deleting a song                                                                                |
+| `presenter_default_new_verse_name`   | string  | `Outro`                 | Default name for new blocks                                                                                   |
+| `presenter_default_verse_name`       | string  | `Vers 1`                | Default first block name                                                                                      |
+| `presenter_notification_count`       | number  | `4`                     | Max visible notifications                                                                                     |
+| `presenter_notification_time`        | number  | `3500`                  | Notification auto-dismiss (ms)                                                                                |
+| `presenter_override_song_import`     | boolean | `false`                 | Override existing songs on import                                                                             |
+| `presenter_reload_song_after_edit`   | boolean | `false`                 | Reload song from server after editing                                                                         |
+| `presenter_reset_black_on_switch`    | boolean | `false`                 | Reset black screen when switching songs                                                                       |
+| `presenter_show_limit`               | number  | `10`                    | Shows per page                                                                                                |
+| `presenter_next_line_preview`        | boolean | `true`                  | Show first line of next block as preview on presentation                                                      |
+| `presenter_next_line_preview_color`  | string  | `#AAAAAA`               | Color for the next-block preview line (hex)                                                                   |
+| `presenter_next_line_translation`    | boolean | `true`                  | Include all displayed languages in next-line preview                                                          |
+| `presenter_show_delete_from_db`      | boolean | `false`                 | Show delete-from-database in library                                                                          |
+| `presenter_upload_notifications`     | boolean | `true`                  | Notifications on song upload                                                                                  |
+| `presenter_song_click`               | enum    | `double-click`          | `click` or `double-click` to select song                                                                      |
+| `presenter_song_order`               | enum    | `lexicographic`         | `lexicographic` or `numeric` sorting                                                                          |
+| `presenter_control_layout`           | enum    | `boxed`                 | `boxed` or `list` for control area                                                                            |
+| `presenter_touch_duration`           | number  | `300`                   | Long-press duration (ms)                                                                                      |
+| `presenter_verse_click`              | enum    | `double-click`          | `click` or `double-click` for verse/block                                                                     |
+| `presenter_bible_translation`        | string  | `ESV`                   | Default bible translation                                                                                     |
+| `presenter_keyboard_mapping`         | JSON    | (defaults)              | Custom keyboard shortcut mapping                                                                              |
+| `presenter_window_configs`           | JSON    | `[]`                    | Saved window layout configurations                                                                            |
+| `presenter_window_presets`           | JSON    | `{}`                    | Named window layout presets                                                                                   |
+| `presenter_window_footer_visible`    | boolean | `true`                  | Show/hide the window management footer bar                                                                    |
+| `presenter_media_path`               | string  | (none)                  | Local media directory (Electron)                                                                              |
+| `presenter_ws_port`                  | number  | `9001`                  | WebSocket server port (Electron)                                                                              |
+| `presenter_auto_check_updates`       | boolean | `true`                  | Auto-check for updates on startup (Electron)                                                                  |
+| `presenter_musician_name`            | string  | (none)                  | Active musician/instrument name for PDF resolution                                                            |
+| `presenter_musician_band`            | string  | (none)                  | Active band / order name for musician view (PDF + order)                                                      |
+| `presenter_musician_page_view`       | enum    | `single`                | `single`, `two-page`, or `continuous` PDF page view mode                                                      |
+| `presenter_musician_block_indicator` | boolean | `true`                  | Show block selection indicator in musician view                                                               |
 | `presenter_midi_mappings`            | JSON    | `{}`                    | Device-independent MIDI button-to-action mappings (key formats: `note_n`, `cc_n`, `pc_n`, `msg_status_value`) |
-| `presenter_midi_tracking_master`     | enum    | `operator`              | `operator` or `midi` — who controls musician view position                                        |
-| `presenter_offline_mode`             | boolean | `false`                 | Skip all backend API calls (offline/no-connectivity mode)                                         |
-| `presenter_cached_styles`            | JSON    | `[]`                    | Styles cached for offline use (populated when a show is loaded)                                   |
-| `presenter_desktop_app_dismissed`    | boolean | `false`                 | User dismissed the "Download Desktop App" banner; suppresses the banner for future sessions        |
+| `presenter_midi_tracking_master`     | enum    | `operator`              | `operator` or `midi` — who controls musician view position                                                    |
+| `presenter_offline_mode`             | boolean | `false`                 | Skip all backend API calls (offline/no-connectivity mode)                                                     |
+| `presenter_cached_styles`            | JSON    | `[]`                    | Styles cached for offline use (populated when a show is loaded)                                               |
+| `presenter_desktop_app_dismissed`    | boolean | `false`                 | User dismissed the "Download Desktop App" banner; suppresses the banner for future sessions                   |
 
 ### 21.4 Settings UI
 
@@ -1986,9 +1986,9 @@ The `build:deploy` script produces a self-contained `dist/` folder ready for dep
 
 The `app/` directory at the repository root is used to store pre-built Electron installer files for distribution via the web app:
 
-| File                          | Platform | Built by                        |
-| ----------------------------- | -------- | ------------------------------- |
-| `app/presenter-setup.exe`     | Windows  | `yarn package:win` → Electron Builder |
+| File                      | Platform | Built by                              |
+| ------------------------- | -------- | ------------------------------------- |
+| `app/presenter-setup.exe` | Windows  | `yarn package:win` → Electron Builder |
 
 - The `app/` folder is **included in the `build:deploy` output** so that the installer is served at `/app/presenter-setup.exe`.
 - The frontend detects the user's OS and offers a platform-specific download link in the **Desktop App banner** (main page, browser mode only) and the **Desktop App section** of the settings panel.

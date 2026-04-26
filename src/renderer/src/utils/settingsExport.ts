@@ -1,3 +1,4 @@
+import { isElectronApp } from '@/utils/index';
 /**
  * Settings export/import utilities for browser mode (§7.5).
  * In Electron mode, these are handled by IPC to main process.
@@ -30,7 +31,7 @@ export function getAllPresenterSettings(): Record<string, string> {
 /**
  * Compute the diff between imported settings and current settings.
  */
-export function diffSettings(imported: Record<string, string>, current: Record<string, string>): SettingsDiff {
+export const diffSettings = (imported: Record<string, string>, current: Record<string, string>): SettingsDiff => {
   const diff: SettingsDiff = {
     added: {},
     changed: {},
@@ -52,12 +53,12 @@ export function diffSettings(imported: Record<string, string>, current: Record<s
   }
 
   return diff;
-}
+};
 
 /**
  * Apply a settings diff to localStorage.
  */
-export function applySettings(diff: SettingsDiff): void {
+export const applySettings = (diff: SettingsDiff): void => {
   for (const [key, value] of Object.entries(diff.added)) {
     localStorage.setItem(key, value);
   }
@@ -65,12 +66,12 @@ export function applySettings(diff: SettingsDiff): void {
     localStorage.setItem(key, entry.new);
   }
   // Note: We don't remove settings during import for safety
-}
+};
 
 /**
  * Export settings as a JSON file download (browser mode).
  */
-export function exportSettingsBrowser(): void {
+export const exportSettingsBrowser = (): void => {
   const settings = getAllPresenterSettings();
   const json = JSON.stringify(settings, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
@@ -83,13 +84,13 @@ export function exportSettingsBrowser(): void {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
+};
 
 /**
  * Import settings from a JSON file (browser mode).
  * Returns a promise that resolves with the diff.
  */
-export function importSettingsBrowser(): Promise<SettingsDiff | null> {
+export const importSettingsBrowser = (): Promise<SettingsDiff | null> => {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
@@ -113,20 +114,13 @@ export function importSettingsBrowser(): Promise<SettingsDiff | null> {
     };
     input.click();
   });
-}
-
-/**
- * Check if Electron API is available for settings operations.
- */
-function isElectron(): boolean {
-  return !!(window as unknown as { api?: { exportSettings?: unknown } }).api?.exportSettings;
-}
+};
 
 /**
  * Export settings — uses Electron IPC if available, otherwise browser download.
  */
 export async function exportSettings(): Promise<string | null> {
-  if (isElectron()) {
+  if (isElectronApp()) {
     return window.api.exportSettings();
   }
   exportSettingsBrowser();
@@ -137,7 +131,7 @@ export async function exportSettings(): Promise<string | null> {
  * Import settings — uses Electron IPC if available, otherwise browser file picker.
  */
 export async function importSettings(): Promise<SettingsDiff | null> {
-  if (isElectron()) {
+  if (isElectronApp()) {
     return window.api.importSettings();
   }
   return importSettingsBrowser();
@@ -147,7 +141,7 @@ export async function importSettings(): Promise<SettingsDiff | null> {
  * Apply imported settings diff.
  */
 export async function applyImportedSettings(diff: SettingsDiff): Promise<void> {
-  if (isElectron()) {
+  if (isElectronApp()) {
     await window.api.applyImportedSettings(diff);
     return;
   }

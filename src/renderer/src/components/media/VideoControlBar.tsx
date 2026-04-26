@@ -51,7 +51,7 @@ const sendVideoCommand = (action: string, windowName?: string, value?: number, f
 };
 
 /** Extract filename from URL/path */
-function videoName(url: string): string {
+const videoName = (url: string): string => {
   try {
     const decoded = decodeURIComponent(url);
     const parts = decoded.replace(/\\/g, '/').split('/');
@@ -59,7 +59,7 @@ function videoName(url: string): string {
   } catch {
     return url;
   }
-}
+};
 
 const VideoControlBar = ({
   videoSources,

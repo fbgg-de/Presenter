@@ -1,5 +1,5 @@
 import type { PresentationContent } from '@/presentation/types';
-import { WindowConfig } from '@/store/settingsSlice';
+import { WindowConfig } from '@/store/windowSlice';
 
 interface PresentationWindowEntry {
   id: string;

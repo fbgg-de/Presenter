@@ -26,6 +26,7 @@ import {
   useGetPresentationSettings,
 } from '@/store/presentationSlice';
 import { useGetShow } from '@/store/showSlice';
+import { useI18nContext } from '@/i18n/i18n-react';
 
 /**
  * Parse song block lines to extract language tags.
@@ -50,9 +51,18 @@ const parseSongLines = (rawLines: string[]): PresentationLine[] => {
  * to all open presentation windows whenever relevant state changes.
  */
 export const usePresentationSync = (): void => {
+  const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const { nextLinePreview, nextLinePreviewColor, globalStyleId, transitionMode, transitionDuration, offlineMode, cachedStyles } =
-    useGetSettings();
+  const {
+    nextLinePreview,
+    nextLinePreviewColor,
+    globalStyleId,
+    transitionMode,
+    transitionDuration,
+    offlineMode,
+    cachedStyles,
+    showLicenseNumber,
+  } = useGetSettings();
   const { windowConfigs } = useGetWindows();
   const { currentShow } = useGetShow();
   const { songs } = useGetSongs();
@@ -104,7 +114,7 @@ export const usePresentationSync = (): void => {
 
   // ── Memoize expensive computations ──
   // These only recompute when content changes (song/show/styles), NOT on every index change.
-  const { contentType, blocks, style, title, copyright, authors } = useMemo(() => {
+  const { contentType, blocks, style, title, copyright, authors, licenseNumber } = useMemo(() => {
     let contentType: ContentType = 'empty';
     let blocks: PresentationBlock[] = [];
     let title: string | undefined;
@@ -171,7 +181,8 @@ export const usePresentationSync = (): void => {
       backgroundVideo: resolveMediaUrl(rawStyle.backgroundVideo),
     };
 
-    return { contentType, blocks, style, title, copyright, authors };
+    const licenseNumber = currentSong ? (currentSong.account ?? undefined) : undefined;
+    return { contentType, blocks, style, title, copyright, authors, licenseNumber };
   }, [currentSong, activeItem, orderName, allStyles, globalStyleId, currentShow?.styleId]);
 
   // Keep frequently-changing object refs accessible inside the broadcast effect
@@ -184,6 +195,7 @@ export const usePresentationSync = (): void => {
     title,
     copyright,
     authors,
+    licenseNumber,
     activeItem,
     currentShow,
     currentSongNumber,
@@ -200,6 +212,7 @@ export const usePresentationSync = (): void => {
     title,
     copyright,
     authors,
+    licenseNumber,
     activeItem,
     currentShow,
     currentSongNumber,
@@ -274,6 +287,8 @@ export const usePresentationSync = (): void => {
         songNumber: cb.currentSongNumber,
         copyright: cb.copyright,
         authors: cb.authors,
+        showLicenseNumber: showLicenseNumber,
+        license: `${LL.AUTH.LICENSE()}: #${cb.licenseNumber}`,
         showCopyright: cb.contentType === 'song' && !!cb.copyright && nav.activeBlockIndex >= cb.blocks.length,
         mediaSubType: cb.activeItem?.mediaSubType,
         mediaPath: resolveMediaUrl(cb.activeItem?.mediaPath),

@@ -7,6 +7,7 @@ import {
 } from '@mui/icons-material';
 import type { SvgIconComponent } from '@mui/icons-material';
 import type { ShowItemType, MediaSubType } from '@/api/shows.api';
+import { DEFAULT_BIBLE_ITEM_COLOR, DEFAULT_MEDIA_ITEM_COLOR, DEFAULT_SONG_ITEM_COLOR } from '@/theme';
 
 /** Map of MUI icon name strings to components */
 const ICON_MAP: Record<string, SvgIconComponent> = {
@@ -19,9 +20,9 @@ const ICON_MAP: Record<string, SvgIconComponent> = {
 
 /** Default colors per show item type */
 export const DEFAULT_ITEM_COLORS: Record<ShowItemType, string> = {
-  song: '#1976d2',
-  media: '#f9a825',
-  bible_verse: '#388e3c',
+  song: DEFAULT_SONG_ITEM_COLOR,
+  media: DEFAULT_MEDIA_ITEM_COLOR,
+  bible_verse: DEFAULT_BIBLE_ITEM_COLOR,
 };
 
 /** Default icon names per show item type */

@@ -3,21 +3,7 @@ import { Box, TextField, Stack, Typography, Paper, Popover, IconButton } from '@
 import { HexColorPicker } from 'react-colorful';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { normalizeHex } from '@/utils';
-
-const COLOR_PRESETS = [
-  { name: 'Black', value: '#000000' },
-  { name: 'White', value: '#FFFFFF' },
-  { name: 'Red', value: '#FF0000' },
-  { name: 'Green', value: '#00FF00' },
-  { name: 'Blue', value: '#0000FF' },
-  { name: 'Yellow', value: '#FFFF00' },
-  { name: 'Cyan', value: '#00FFFF' },
-  { name: 'Magenta', value: '#FF00FF' },
-  { name: 'Dark Gray', value: '#333333' },
-  { name: 'Light Gray', value: '#CCCCCC' },
-  { name: 'Navy', value: '#001F3F' },
-  { name: 'Teal', value: '#39CCCC' },
-];
+import { COLOR_PRESETS } from '@/theme';
 
 interface ColorPickerProps {
   value: string;

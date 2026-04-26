@@ -7,12 +7,12 @@ import windowReducer from './windowSlice';
 import presentationReducer from './presentationSlice';
 import songsReducer from './songsSlice';
 
-export type { SettingsState } from './settingsSlice';
 export type { MusicianState } from './musicianSlice';
-export type { WindowState } from './windowSlice';
 export type { PresentationState } from './presentationSlice';
-export type { SongsState } from './songsSlice';
+export type { SettingsState } from './settingsSlice';
 export type { ShowState } from './showSlice';
+export type { SongsState } from './songsSlice';
+export type { WindowState } from './windowSlice';
 
 export { useAppDispatch, useAppSelector } from './hooks';
 

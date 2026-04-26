@@ -22,6 +22,7 @@ import {
 import { Delete as DeleteIcon, Save as SaveIcon, PictureInPicture as CropIcon } from '@mui/icons-material';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { BLOCK_COLORS } from '@/theme';
 
 // Ensure pdf.js worker is configured
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
@@ -181,10 +182,9 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
 
   // Color for each block
   const blockColors = useMemo(() => {
-    const colors = ['#2196f3', '#4caf50', '#ff9800', '#e91e63', '#9c27b0', '#00bcd4', '#ff5722', '#795548'];
     const map: Record<string, string> = {};
     blockNames.forEach((name, i) => {
-      map[name] = colors[i % colors.length];
+      map[name] = BLOCK_COLORS[i % BLOCK_COLORS.length];
     });
     return map;
   }, [blockNames]);

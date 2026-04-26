@@ -42,6 +42,9 @@ interface BlockCardProps {
   songTitle?: string;
   songAuthors?: string;
   songCopyright?: string;
+  licenseNumber?: number;
+  showLicenseNumber?: boolean;
+  licenseLabel?: string;
   unknownLabel: string;
   onBlockClick: (i: number) => void;
   onBlockDoubleClick: (i: number) => void;
@@ -66,6 +69,9 @@ const BlockCard = memo(function BlockCard({
   songTitle,
   songAuthors,
   songCopyright,
+  licenseNumber,
+  showLicenseNumber,
+  licenseLabel,
   unknownLabel,
   onBlockClick,
   onBlockDoubleClick,
@@ -117,6 +123,9 @@ const BlockCard = memo(function BlockCard({
             </Typography>
             {songAuthors && <Typography>{songAuthors}</Typography>}
             {songCopyright && <Typography sx={{ fontStyle: 'italic' }}>{songCopyright}</Typography>}
+            {showLicenseNumber && licenseNumber && licenseLabel ? (
+              <Typography sx={{ fontStyle: 'italic' }}>{licenseLabel}</Typography>
+            ) : null}
           </Stack>
         ) : (
           rows.map((row) => {
@@ -167,7 +176,7 @@ const ControlSong = () => {
   const dispatch = useAppDispatch();
   const { LL } = useI18nContext();
 
-  const { verseClick } = useGetSettings();
+  const { verseClick, showLicenseNumber } = useGetSettings();
   const { activeBlockIndex, activeLineIndex, activeItemIndex } = useGetPresentationSettings();
   const { songsOrder, songs } = useGetSongs();
 
@@ -220,6 +229,7 @@ const ControlSong = () => {
     return null;
   }
 
+  const licenseLabel = showLicenseNumber && currentSong.account ? `${LL.AUTH.LICENSE_NUMBER()}: ${currentSong.account}` : undefined;
   const unknownLabel = LL.COMMON.TITLE_UNKNOWN();
 
   return (
@@ -243,6 +253,9 @@ const ControlSong = () => {
             songTitle={currentSong.title}
             songAuthors={currentSong.authors}
             songCopyright={currentSong.copyright}
+            licenseNumber={currentSong.account}
+            showLicenseNumber={showLicenseNumber}
+            licenseLabel={licenseLabel}
             unknownLabel={unknownLabel}
             onBlockClick={handleBlockClick}
             onBlockDoubleClick={handleBlockDoubleClick}

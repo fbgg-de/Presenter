@@ -1,19 +1,29 @@
+import { CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Presentation, type PresentationProps } from '@/presentation/Presentation';
-import type { PresentationContent } from '@/presentation/types';
+import type { PresentationContent, PresentationLine } from '@/presentation/types';
 import { EMPTY_CONTENT } from '@/presentation/types';
-
 import { getSetting } from '@/store/settingsSlice';
+import { playWithFade, pauseWithFade, stopWithFade } from '@/presentation/videoUtils';
+import { LanguageStyleEntry } from '@/api/styles.api';
+
+export * from '@/presentation/BibleVerseContent';
+export * from '@/presentation/CopyrightOverlay';
+export * from '@/presentation/IdentifyOverlay';
+export * from '@/presentation/MediaContent';
+export * from '@/presentation/NextBlockPreview';
+export * from '@/presentation/NormalMode';
+export * from '@/presentation/StreamMode';
 
 /**
  * Read the video fade duration from localStorage (set by the main renderer's settings).
  * Returns 0 if not set (instant cut).
  */
-function getVideoFadeDuration(): number {
+const getVideoFadeDuration = (): number => {
   const v = getSetting('videoFadeDuration');
   const n = v !== undefined && v !== null ? parseInt(String(v), 10) : 0;
   return isNaN(n) || n < 0 ? 0 : n;
-}
+};
 
 /**
  * Read the hide-transition duration from localStorage (set by the main renderer's
@@ -21,38 +31,127 @@ function getVideoFadeDuration(): number {
  * media-item video becomes active) fade smoothly instead of cutting abruptly.
  * Defaults to 400ms which is gentler than an instant cut.
  */
-function getHideTransitionDuration(): number {
+const getHideTransitionDuration = (): number => {
   const v = getSetting('hideTransitionDuration');
   const n = v !== undefined && v !== null ? parseInt(String(v), 10) : NaN;
   return isNaN(n) || n < 0 ? 400 : n;
-}
+};
 
 /**
- * Smoothly ramp a video element's volume from `from` to `to` over `durationMs`.
- * Calls `onDone` when finished.
+ * Build a CSS override object from a LanguageStyleEntry (only enabled properties).
  */
-function fadeVolume(video: HTMLVideoElement, from: number, to: number, durationMs: number, onDone?: () => void): void {
-  if (durationMs <= 0) {
-    video.volume = Math.max(0, Math.min(1, to));
-    onDone?.();
-    return;
+export const langEntryToCss = (entry: LanguageStyleEntry): CSSProperties => {
+  const css: CSSProperties = {};
+  if (entry.fontColorEnabled && entry.fontColor) css.color = entry.fontColor;
+  if (entry.fontSizeEnabled && entry.fontSize) css.fontSize = entry.fontSize;
+  if (entry.fontStyleEnabled) {
+    if (entry.fontBold) css.fontWeight = 'bold';
+    if (entry.fontItalic) css.fontStyle = 'italic';
+    if (entry.fontUnderline) css.textDecoration = 'underline';
   }
-  const steps = Math.max(1, Math.round(durationMs / 16)); // ~60fps
-  const stepDuration = durationMs / steps;
-  const delta = (to - from) / steps;
-  let step = 0;
-  const tick = () => {
-    step++;
-    video.volume = Math.max(0, Math.min(1, from + delta * step));
-    if (step < steps) {
-      setTimeout(tick, stepDuration);
+  if (entry.letterSpacingEnabled && entry.letterSpacing) css.letterSpacing = entry.letterSpacing;
+  if (entry.opacityEnabled && entry.opacity !== undefined) css.opacity = entry.opacity;
+  if (entry.textShadowEnabled && entry.textShadow) {
+    css.textShadow = `${entry.textShadow} ${entry.textShadowColor || 'rgba(0,0,0,0.5)'}`;
+  }
+  if (entry.textStrokeEnabled && entry.textStroke) {
+    (css as Record<string, unknown>)['-webkit-text-stroke'] = entry.textStroke;
+  }
+  return css;
+};
+
+/**
+ * Resolve per-language CSS for a given line's language tag.
+ * Returns default entry overrides plus language-specific overrides.
+ */
+export const resolveLineLangCss = (language: string | undefined, langStyles: LanguageStyleEntry[] | undefined): CSSProperties => {
+  if (!langStyles?.length) return {};
+  const defaultEntry = langStyles.find((e) => e.language === '');
+  const langEntry = language ? langStyles.find((e) => e.language === language.toLowerCase()) : undefined;
+  const css: CSSProperties = defaultEntry ? langEntryToCss(defaultEntry) : {};
+  if (langEntry) Object.assign(css, langEntryToCss(langEntry));
+  return css;
+};
+
+/**
+ * Generate a content identity key for detecting **meaningful** content changes
+ * (item-level only, not block switches, and NOT cosmetic display-only edits).
+ *
+ * Display-only props such as `mediaObjectFit`, `mediaObjectPosition`,
+ * `mediaZoom`, `mediaBlur`, `mediaAutoplay` and `mediaLoop` are deliberately
+ * EXCLUDED — they are pure CSS / DOM-attribute updates and should be applied
+ * in place. Including them would force the cross-fade machinery to capture a
+ * "previous" snapshot and remount the `<video>` element on every slider tick,
+ * causing the video to restart and a visible background flicker.
+ */
+export const contentIdentityKey = (c: PresentationContent): string =>
+  `${c.contentType}|${c.mediaPath ?? ''}|${c.bibleRef ?? ''}|${c.mediaColor ?? ''}|${c.style?.backgroundImage ?? ''}|${c.style?.backgroundVideo ?? ''}|${c.style?.backgroundColor ?? ''}`;
+
+/**
+ * Filter lines by allowed languages and optionally reorder within each semantic group.
+ *
+ * A "semantic group" is one primary line (no language tag) plus all translation lines
+ * immediately following it. When `languages` is provided:
+ *   - Lines whose language is not in the list are removed.
+ *   - Within each group the line order follows the `languages` array order.
+ *   - If the first entry of `languages` is a recognized language tag (not ''), the
+ *     translation for that language comes first, then the others.
+ *
+ * When no filter is provided all lines pass through unchanged.
+ */
+export const filterLinesByLanguage = (lines: PresentationLine[], languages?: string[]): PresentationLine[] => {
+  if (!languages || languages.length === 0) return lines;
+
+  // Split into semantic groups: [{primary?, translations[]}]
+  type Group = { primary?: PresentationLine; translations: PresentationLine[] };
+  const groups: Group[] = [];
+  let current: Group | null = null;
+
+  for (const line of lines) {
+    if (!line.language) {
+      // New primary line starts a new group
+      if (current) groups.push(current);
+      current = { primary: line, translations: [] };
     } else {
-      video.volume = Math.max(0, Math.min(1, to));
-      onDone?.();
+      // Translation — attach to current group or start an orphan group
+      if (!current) current = { translations: [] };
+      const langUp = line.language.toUpperCase();
+      if (languages.includes(langUp)) {
+        current.translations.push(line);
+      }
+      // else: language not in filter list — skip
     }
-  };
-  setTimeout(tick, stepDuration);
-}
+  }
+  if (current) groups.push(current);
+
+  // Re-emit each group with lines in `languages` order within the group
+  const result: PresentationLine[] = [];
+  for (const group of groups) {
+    // Build a map: lang -> line for quick lookup
+    const byLang = new Map<string, PresentationLine>();
+    if (group.primary) byLang.set('', group.primary);
+    for (const t of group.translations) {
+      if (t.language) byLang.set(t.language.toUpperCase(), t);
+    }
+
+    // Emit in the order specified by `languages`.
+    // '' (empty string / no-language tag) represents the primary/default line.
+    // If `languages` doesn't include '' we still emit the primary line first (it's the anchor).
+    const emitted = new Set<string>();
+    for (const lang of languages) {
+      const key = lang.toUpperCase();
+      const line = key === '' ? group.primary : byLang.get(key);
+      if (line) {
+        result.push(line);
+        emitted.add(key);
+      }
+    }
+    // Emit primary line if it wasn't covered by the languages list
+    if (group.primary && !emitted.has('')) result.push(group.primary);
+  }
+
+  return result;
+};
 
 // Parse URL query params for window configuration
 const params = new URLSearchParams(window.location.search);
@@ -157,7 +256,7 @@ function preloadVideo(url: string): Promise<void> {
 }
 
 /** Preload all heavy assets referenced by `content`. Resolves when all done. */
-function preloadHeavyAssets(content: PresentationContent): Promise<void> {
+const preloadHeavyAssets = async (content: PresentationContent): Promise<void> => {
   const tasks: Promise<void>[] = [];
   const styleBgImg = content.style?.backgroundImage;
   const styleBgVideo = content.style?.backgroundVideo;
@@ -168,8 +267,10 @@ function preloadHeavyAssets(content: PresentationContent): Promise<void> {
     else if (content.mediaSubType === 'video') tasks.push(preloadVideo(content.mediaPath));
   }
   if (tasks.length === 0) return Promise.resolve();
-  return Promise.all(tasks).then(() => undefined);
-}
+
+  await Promise.all(tasks);
+  return undefined;
+};
 
 export const updatePresentation = (props: PresentationProps) => {
   // Apply URL overrides if content is present
@@ -321,81 +422,20 @@ if (window.presentationApi) {
         videos.forEach((v) => {
           switch (action) {
             case 'play':
-              if (fadeDuration > 0) {
-                const targetVol = v.volume > 0 ? v.volume : 1;
-                v.muted = false;
-                v.volume = 0;
-                v.play().catch(() => {});
-                fadeVolume(v, 0, targetVol, fadeDuration);
-              } else {
-                v.play().catch(() => {});
-              }
+              playWithFade(v, fadeDuration);
               break;
             case 'pause':
-              if (fadeDuration > 0) {
-                const startVol = v.volume > 0 ? v.volume : v.muted ? 0 : 1;
-                if (startVol > 0) {
-                  v.volume = startVol;
-                  v.muted = false;
-                  fadeVolume(v, startVol, 0, fadeDuration, () => {
-                    v.pause();
-                    v.volume = startVol;
-                  });
-                } else {
-                  v.pause();
-                }
-              } else {
-                v.pause();
-              }
+              pauseWithFade(v, fadeDuration);
               break;
             case 'toggle':
               if (v.paused) {
-                if (fadeDuration > 0) {
-                  const targetVol = v.volume > 0 ? v.volume : 1;
-                  v.muted = false;
-                  v.volume = 0;
-                  v.play().catch(() => {});
-                  fadeVolume(v, 0, targetVol, fadeDuration);
-                } else {
-                  v.play().catch(() => {});
-                }
+                playWithFade(v, fadeDuration);
               } else {
-                if (fadeDuration > 0) {
-                  const startVol = v.volume > 0 ? v.volume : v.muted ? 0 : 1;
-                  if (startVol > 0) {
-                    v.volume = startVol;
-                    v.muted = false;
-                    fadeVolume(v, startVol, 0, fadeDuration, () => {
-                      v.pause();
-                      v.volume = startVol;
-                    });
-                  } else {
-                    v.pause();
-                  }
-                } else {
-                  v.pause();
-                }
+                pauseWithFade(v, fadeDuration);
               }
               break;
             case 'stop':
-              if (fadeDuration > 0) {
-                const startVol = v.volume > 0 ? v.volume : v.muted ? 0 : 1;
-                if (startVol > 0) {
-                  v.volume = startVol;
-                  v.muted = false;
-                  fadeVolume(v, startVol, 0, fadeDuration, () => {
-                    v.pause();
-                    v.currentTime = 0;
-                    v.volume = startVol;
-                  });
-                } else {
-                  v.pause();
-                  v.currentTime = 0;
-                }
-              } else {
-                v.pause();
-                v.currentTime = 0;
-              }
+              stopWithFade(v, fadeDuration);
               break;
             case 'mute':
               v.muted = true;

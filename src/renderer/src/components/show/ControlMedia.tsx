@@ -397,8 +397,15 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
   const handleMuteToggle = useCallback(() => {
     const v = videoRef.current;
     if (!v) return;
-    v.muted = !v.muted;
-    setMuted(v.muted);
+    if (!v.muted) {
+      v.muted = true;
+      v.volume = 0;
+      setMuted(true);
+      setVolume(0);
+    } else {
+      v.muted = false;
+      setMuted(false);
+    }
   }, []);
 
   const handleSeek = useCallback((value: number) => {

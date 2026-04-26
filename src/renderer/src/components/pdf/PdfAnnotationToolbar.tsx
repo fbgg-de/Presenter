@@ -77,6 +77,7 @@ import {
   type AnnotationData,
 } from '@/api/pdfAnnotations.api';
 import { useListPdfIconsQuery, useUploadPdfIconMutation, useDeletePdfIconMutation, type PdfIconDto } from '@/api/pdfIcons.api';
+import { ANNOTATION_COLORS } from '@/theme';
 
 export type AnnotationTool = 'draw' | 'text' | 'highlight' | 'icon' | 'eraser' | 'none';
 
@@ -110,10 +111,8 @@ export interface AnnotationEntry {
   iconSize?: number;
 }
 
-const COLORS = ['#ff0000', '#0000ff', '#00aa00', '#ffaa00', '#000000', '#ffffff', '#9c27b0'];
-
 /** Convert a DB AnnotationDto to a client AnnotationEntry for rendering */
-function dtoToEntry(dto: AnnotationDto): AnnotationEntry {
+const dtoToEntry = (dto: AnnotationDto): AnnotationEntry => {
   const data = dto.data ?? {};
   const entry: AnnotationEntry = {
     id: String(dto.id),
@@ -148,7 +147,20 @@ function dtoToEntry(dto: AnnotationDto): AnnotationEntry {
     }
   }
   return entry;
-}
+};
+
+// -- Geometry helpers (eraser hit-testing) --
+
+/** Distance from a point to a line segment (in percentage coordinates) */
+const pointToSegmentDist = (p: Point, a: Point, b: Point): number => {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+};
 
 interface PdfAnnotationToolbarProps {
   currentPage: number;
@@ -1632,7 +1644,7 @@ export const PdfAnnotationToolbar = ({
             <Divider orientation="vertical" flexItem />
 
             <Stack direction="row" spacing={0.25}>
-              {COLORS.map((c) => (
+              {ANNOTATION_COLORS.map((c) => (
                 <Box
                   key={c}
                   onClick={() => setColor(c)}
@@ -1704,16 +1716,3 @@ export const PdfAnnotationToolbar = ({
     </>
   );
 };
-
-// -- Geometry helpers (eraser hit-testing) --
-
-/** Distance from a point to a line segment (in percentage coordinates) */
-function pointToSegmentDist(p: Point, a: Point, b: Point): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lenSq = dx * dx + dy * dy;
-  if (lenSq === 0) return Math.hypot(p.x - a.x, p.y - a.y);
-  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
-  t = Math.max(0, Math.min(1, t));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-}

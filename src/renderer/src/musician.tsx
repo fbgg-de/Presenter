@@ -5,32 +5,27 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 import { StrictMode, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, CssBaseline } from '@mui/material';
-import { Provider, useSelector } from 'react-redux';
-import { store, type RootState } from '@/store';
+import { Provider } from 'react-redux';
+import { store } from '@/store';
 import { getTheme } from './theme';
 import { MusicianPage } from '@/musician/MusicianPage';
-import { detectLocale } from '@/i18n/i18n-util';
-import { navigatorDetector } from 'typesafe-i18n/detectors';
-import { loadLocale } from '@/i18n/i18n-util.sync';
+import { loadAllLocales } from '@/i18n/i18n-util.sync';
 import TypesafeI18n from '@/i18n/i18n-react';
+import { useGetMusicianSettings } from '@/store/musicianSlice';
+import { useGetSettings } from '@/store/settingsSlice';
 
-import { getSettings } from '@/store/settingsSlice';
-
-// Determine locale
-const detectedLocale = detectLocale(navigatorDetector);
-const savedLocale = getSettings('uiLanguage');
-const locale = (savedLocale || detectedLocale) as 'en' | 'de';
-loadLocale(locale);
+loadAllLocales();
 
 /** Wrapper that reads the musician-specific theme from Redux */
 const MusicianApp = () => {
-  const musicianTheme = useSelector((s: RootState) => s.musician.musicianTheme);
+  const { uiLanguage } = useGetSettings();
+  const { musicianTheme } = useGetMusicianSettings();
   const muiTheme = useMemo(() => getTheme(musicianTheme), [musicianTheme]);
 
   return (
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
-      <TypesafeI18n locale={locale}>
+      <TypesafeI18n locale={uiLanguage}>
         <MusicianPage />
       </TypesafeI18n>
     </ThemeProvider>

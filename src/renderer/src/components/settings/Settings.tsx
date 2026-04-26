@@ -77,6 +77,7 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'hideTransitionMode', type: 'select', values: ['cut', 'fade'], group: 'Presentation', label: 'Hide transition' },
   { key: 'hideTransitionDuration', type: 'number', group: 'Presentation', label: 'Hide transition duration (ms)' },
   { key: 'videoFadeDuration', type: 'number', group: 'Presentation', label: 'Video play/stop fade duration (ms)' },
+  { key: 'showLicenseNumber', type: 'boolean', group: 'Presentation', label: 'Show license number' },
   // Electron
   { key: 'mediaPath', type: 'string', group: 'Electron', label: 'Media directory path' },
   { key: 'wsPort', type: 'number', group: 'Electron', label: 'WebSocket port' },
@@ -191,7 +192,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
               <CableIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Tooltip title="Theme">
+          <Tooltip title={LL.SETTINGS.THEME()}>
             <IconButton size="small" onClick={() => dispatch(toggleTheme())}>
               {themeIcon}
             </IconButton>
@@ -209,7 +210,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
               }}
               selected={settings.uiLanguage === 'en' || !settings.uiLanguage}
             >
-              🇬🇧 English
+              {LL.HEADER.LANGUAGE_EN()}
             </MenuItem>
             <MenuItem
               onClick={() => {
@@ -218,7 +219,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
               }}
               selected={settings.uiLanguage === 'de'}
             >
-              🇩🇪 Deutsch
+              {LL.HEADER.LANGUAGE_DE()}
             </MenuItem>
           </Menu>
 
@@ -274,7 +275,9 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
           ))}
 
           {/* Keyboard Mapping */}
-          {(!filterLower || 'keyboard shortcut'.includes(filterLower)) && (
+          {(!filterLower ||
+            LL.KEYBOARD.MAPPING().toLowerCase().includes(filterLower) ||
+            LL.SETTINGS.GROUP_KEYBOARD().toLowerCase().includes(filterLower)) && (
             <Accordion defaultExpanded={false}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Typography fontWeight={600}>{LL.SETTINGS.GROUP_KEYBOARD()}</Typography>
@@ -375,6 +378,8 @@ const SettingRow = ({ config, value }: { config: SettingConfig; value: string | 
         return LL.SETTINGS.OPTIONS.HIDE_TRANSITION_DURATION.TITLE();
       case 'videoFadeDuration':
         return LL.SETTINGS.OPTIONS.VIDEO_FADE_DURATION.TITLE();
+      case 'showLicenseNumber':
+        return LL.SETTINGS.OPTIONS.SHOW_LICENSE_NUMBER.TITLE();
       case 'mediaPath':
         return LL.SETTINGS.OPTIONS.MEDIA_PATH.TITLE();
       case 'wsPort':
@@ -414,11 +419,11 @@ const SettingRow = ({ config, value }: { config: SettingConfig; value: string | 
           <Stack direction="row" spacing={1} alignItems="center">
             <SettingInput value={value} type="string" onChange={(v) => updateSetting(config.key, v)} />
             {window.api?.pickDirectory && (
-              <Tooltip title="Browse…">
+              <Tooltip title={LL.STYLE.BROWSE()}>
                 <IconButton
                   size="small"
                   onClick={async () => {
-                    const dir = await window.api.pickDirectory({ title: 'Select media folder' });
+                    const dir = await window.api.pickDirectory({ title: LL.SETTINGS.OPTIONS.MEDIA_PATH.DESCRIPTION() });
                     if (dir) {
                       updateSetting('mediaPath', dir);
                     }

@@ -172,19 +172,13 @@ const Footer = () => {
     [persistConfigs],
   );
 
-  // ── Restore saved windows on mount ──
-  // IMPORTANT: We do NOT use a `cancelled` flag here. With React StrictMode the
-  // effect mounts → cleanup → mounts again synchronously; previously the first
-  // pass would mark the module-level "restored" guard, kick off an async
-  // restore, then the cleanup would set cancelled=true so when the awaited
-  // getWindowStates resolved we'd bail without opening anything — and the
-  // remount would skip restore because the guard was already set. Net result:
-  // no windows ever restored. Solution: gate on a single shared Promise so
-  // multiple mounts await the SAME run, and let it always run to completion.
-  const savedConfigsInitRef = useRef(savedConfigs);
+  // ── Restore saved windows on mount/when saved configs become available ──
+  // Run once per renderer lifetime. Previously we ran only on mount and used
+  // the initial savedConfigs snapshot which could be empty when settings load
+  // asynchronously. That prevented restores when configs arrived later.
   useEffect(() => {
     if (getHasRestoredSavedWindows()) return;
-    const initial = savedConfigsInitRef.current as SavedWindowConfig[];
+    const initial = (savedConfigs as SavedWindowConfig[]) || [];
     if (!(windowFooterVisible || restoreWindowsOnStart) || initial.length === 0) return;
     markRestoredSavedWindows();
 
@@ -201,15 +195,28 @@ const Footer = () => {
         /* fall through — empty liveWindows means we'll open everything */
       }
       const liveByName = new Map<string, { id: string; name?: string }>();
+      const liveIds = new Set<string>();
       for (const lw of liveWindows) {
         if (lw.name) liveByName.set(lw.name, lw);
+        if (lw.id) liveIds.add(lw.id);
       }
       const adoptedIds = new Set<string>();
 
       const updated = [...initial];
       for (let i = 0; i < updated.length; i++) {
         const cfg = updated[i];
-        if (cfg._runtimeId) continue; // already has an id from this session
+        // If a runtime id is already present, check whether the corresponding
+        // window is still alive. On app restart the stored _runtimeId may be
+        // stale; in that case we should open a fresh window.
+        if (cfg._runtimeId) {
+          if (liveIds.has(cfg._runtimeId)) {
+            // Window with this id is alive — adopt it and skip opening.
+            adoptElectronWindow(cfg._runtimeId, cfg);
+            updated[i] = { ...cfg };
+            continue;
+          }
+          // Stale runtime id — fall through and open a fresh window.
+        }
 
         // 1) If a live window with the same name already exists, adopt it.
         const liveMatch = cfg.name ? liveByName.get(cfg.name) : undefined;
@@ -234,7 +241,7 @@ const Footer = () => {
         .catch(() => {});
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run only on mount
+  }, [savedConfigs, windowFooterVisible, restoreWindowsOnStart]);
 
   // Ref to avoid poll effect depending on savedConfigs (which changes on sync)
   const savedConfigsRef = useRef(savedConfigs);

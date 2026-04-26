@@ -6,9 +6,10 @@ import { useCallback } from 'react';
 const SETTINGS_KEY = 'presenter_settings';
 
 export type Languages = 'en' | 'de';
+export type ThemeMode = 'dark' | 'light' | 'system';
+export type Account = number | 'admin' | '';
 type ClickBehaviour = 'click' | 'double-click';
 type Transition = 'cut' | 'fade';
-type ThemeMode = 'dark' | 'light' | 'system';
 type Order = 'lexicographic' | 'numeric';
 type TrackingMaster = 'operator' | 'midi';
 
@@ -31,6 +32,7 @@ export interface SettingsState {
   keyboardNavigationBlocks: boolean;
   keyboardNavigationLines: boolean;
   keyboardNavigationSongs: boolean;
+  lastSelectedAccount?: Account;
   mediaPath: string;
   midiMappings: Partial<Record<MidiAction, string>>;
   midiTrackingMaster: TrackingMaster;
@@ -45,6 +47,7 @@ export interface SettingsState {
   resetBlackOnSwitch: boolean;
   restoreWindowsOnStart: boolean;
   showDeleteFromDb: boolean;
+  showLicenseNumber: boolean;
   showLimit: number;
   showSaveFormat: string;
   songClick: ClickBehaviour;
@@ -80,6 +83,7 @@ const defaultState: SettingsState = {
   keyboardNavigationBlocks: true,
   keyboardNavigationLines: true,
   keyboardNavigationSongs: true,
+  lastSelectedAccount: '',
   mediaPath: '',
   midiMappings: {},
   midiTrackingMaster: 'operator',
@@ -94,6 +98,7 @@ const defaultState: SettingsState = {
   resetBlackOnSwitch: false,
   restoreWindowsOnStart: true,
   showDeleteFromDb: false,
+  showLicenseNumber: true,
   showLimit: 10,
   showSaveFormat: 'Show {dd}.{MM}.{yyyy}',
   songClick: 'double-click',

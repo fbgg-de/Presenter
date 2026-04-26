@@ -1,5 +1,4 @@
 import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
-import { MUSICAL_KEYS } from '@/utils/orderKeyUtils';
 
 /** Returns true when running inside the Electron shell (window.api is injected by the preload). */
 export const isElectronApp = (): boolean => typeof window !== 'undefined' && !!(window as { api?: unknown }).api;

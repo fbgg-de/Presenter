@@ -162,6 +162,8 @@ export interface PresentationContentIPC {
   hideBackground?: boolean;
   windowName?: string;
   showIdentify?: boolean;
+  showLicenseNumber?: boolean;
+  licenseNumber?: number;
   transitionMode?: 'cut' | 'fade';
   transitionDuration?: number;
 }

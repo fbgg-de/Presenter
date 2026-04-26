@@ -137,6 +137,12 @@ export interface PresentationContent {
   /** Whether to show copyright overlay at the bottom */
   showCopyright?: boolean;
 
+  /** Whether to show the song's license/account number in the copyright area */
+  showLicenseNumber?: boolean;
+
+  /** License / account number associated with the song (if any) */
+  license?: string;
+
   /** Duration in ms before copyright auto-hides (default 3000) */
   copyrightDisplayDuration?: number;
 
