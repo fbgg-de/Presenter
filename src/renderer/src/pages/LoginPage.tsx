@@ -131,7 +131,11 @@ export const LoginPage = () => {
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 2 }}>
       <Card sx={{ width: 480, maxWidth: '100%' }}>
         <CardContent>
-          <Stack gap={2}>
+          <Stack
+            sx={{
+              gap: 2,
+            }}
+          >
             <Typography variant="h5">{LL.AUTH.LOGIN()}</Typography>
 
             {errorText && <Alert severity="error">{errorText}</Alert>}
@@ -165,13 +169,22 @@ export const LoginPage = () => {
                 </TextField>
 
                 {selectedLicense === '' && (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {LL.AUTH.SELECT_PROMPT()}
                   </Typography>
                 )}
 
                 {selectedLicense !== '' && (
-                  <Stack gap={1}>
+                  <Stack
+                    sx={{
+                      gap: 1,
+                    }}
+                  >
                     <Button
                       fullWidth
                       variant="contained"
@@ -214,7 +227,11 @@ export const LoginPage = () => {
             <Divider />
 
             {/* Offline mode toggle */}
-            <Stack gap={1}>
+            <Stack
+              sx={{
+                gap: 1,
+              }}
+            >
               {offlineMode && (
                 <Alert severity="info" icon={<WifiOffIcon fontSize="small" />}>
                   {LL.HEADER.OFFLINE_MODE_ON()}

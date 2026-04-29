@@ -2,7 +2,7 @@
 import { Stack, Box, useMediaQuery, useTheme, BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
 import { ViewList as ShowListIcon, TouchApp as ControlIcon } from '@mui/icons-material';
 import Footer from '@/components/layout/Footer';
-import Sidebar from '@/components/layout/Sidebar';
+import Sidebar, { type SidebarHandle } from '@/components/layout/Sidebar';
 import Control from '@/components/show/Control';
 import { RequireAuth } from '@/routes/RequireAuth';
 import { Shows } from '@/components/show/Shows';
@@ -16,6 +16,8 @@ import PresentationSyncHost from '@/components/layout/PresentationSyncHost';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
+import { useGetAccountSettingsQuery } from '@/api/session.api';
+import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 
 export const MainPage = () => {
   const dispatch = useAppDispatch();
@@ -28,6 +30,19 @@ export const MainPage = () => {
   const [saveShowMutation] = useSaveShowMutation();
   const { trackEvent } = useMetrics();
   const initialLoadDone = useRef(false);
+  const sidebarRef = useRef<SidebarHandle>(null);
+
+  // Sync server-side account settings (global style) into local Redux store.
+  // Skipped in offline mode — globalStyleId persists in localStorage from the
+  // last online session and is loaded into the Redux store on startup.
+  const { offlineMode } = useGetSettings();
+  const { data: accountSettings } = useGetAccountSettingsQuery(undefined, { skip: offlineMode });
+  const updateSetting = useUpdateSetting();
+  useEffect(() => {
+    if (accountSettings?.defaultStyleId !== undefined) {
+      updateSetting('globalStyleId', accountSettings.defaultStyleId ?? 0);
+    }
+  }, [accountSettings?.defaultStyleId]);
 
   // Keyboard navigation hook
   useKeyboardNavigation();
@@ -78,7 +93,11 @@ export const MainPage = () => {
       <Shows open={isShowSelectorOpen} onShowSelected={handleShowSelected} />
       <PresentationSyncHost />
       {!isShowSelectorOpen && (
-        <Stack height="100vh">
+        <Stack
+          sx={{
+            height: '100vh',
+          }}
+        >
           <DesktopAppBanner />
           {isMobile ? (
             // ── Mobile layout ──────────────────────────────────────────────
@@ -86,11 +105,15 @@ export const MainPage = () => {
               <Stack sx={{ flexGrow: 1, overflow: 'hidden' }}>
                 {/* Sidebar (show list) */}
                 <Box sx={{ display: mobileTab === 0 ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                  <Sidebar />
+                  <Sidebar ref={sidebarRef} />
                 </Box>
                 {/* Control (song/item control) */}
                 <Box sx={{ display: mobileTab === 1 ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                  <Control />
+                  <Control
+                    onOpenSearch={() => { setMobileTab(0); sidebarRef.current?.openSearch(); }}
+                    onOpenMediaBrowser={(subType) => { setMobileTab(0); sidebarRef.current?.openMediaBrowser(subType); }}
+                    onOpenBiblePicker={() => { setMobileTab(0); sidebarRef.current?.openBiblePicker(); }}
+                  />
                 </Box>
               </Stack>
               {/* Bottom navigation replacing the footer on mobile */}
@@ -105,8 +128,12 @@ export const MainPage = () => {
             // ── Desktop layout ─────────────────────────────────────────────
             <>
               <Stack direction="row" sx={{ flexGrow: 1, overflow: 'hidden' }}>
-                <Sidebar />
-                <Control />
+                <Sidebar ref={sidebarRef} />
+                <Control
+                  onOpenSearch={() => sidebarRef.current?.openSearch()}
+                  onOpenMediaBrowser={(subType) => sidebarRef.current?.openMediaBrowser(subType)}
+                  onOpenBiblePicker={() => sidebarRef.current?.openBiblePicker()}
+                />
               </Stack>
               <Footer />
             </>

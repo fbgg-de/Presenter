@@ -7,6 +7,7 @@ class Metrics extends RestController
     protected function get(Request &$req, Response &$res): never
     {
         $account = $req->account;
+        $isAdmin = isset($_SESSION['authType']) && $_SESSION['authType'] === 'oidc_admin';
 
         $from = $req->query->get('from', null, false);
         $to = $req->query->get('to', null, false);
@@ -15,9 +16,26 @@ class Metrics extends RestController
         $limit = $req->query->getAsInt('limit', 100);
         $offset = $req->query->getAsInt('offset', 0);
 
-        $conditions = ['`account` = ?'];
-        $types = 'i';
-        $values = [$account];
+        // Admins may pass an explicit account filter; without it they see all accounts.
+        $filterAccount = null;
+        if ($isAdmin) {
+            $accountRaw = $req->query->get('account', null, false);
+            if ($accountRaw !== null) {
+                $filterAccount = intval($accountRaw);
+            }
+        } else {
+            $filterAccount = $account;
+        }
+
+        $conditions = [];
+        $types = '';
+        $values = [];
+
+        if ($filterAccount !== null) {
+            $conditions[] = '`account` = ?';
+            $types .= 'i';
+            $values[] = $filterAccount;
+        }
 
         if ($from !== null) {
             $conditions[] = '`created_at` >= ?';
@@ -43,7 +61,7 @@ class Metrics extends RestController
             $values[] = $entityType;
         }
 
-        $where = implode(' AND ', $conditions);
+        $where = count($conditions) > 0 ? implode(' AND ', $conditions) : '1';
 
         // Get total count
         $countStmt = self::prepare("SELECT COUNT(*) AS total FROM `metrics` WHERE {$where}");

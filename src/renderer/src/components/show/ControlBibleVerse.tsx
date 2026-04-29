@@ -22,7 +22,14 @@ const ControlBibleVerse = ({ item }: ControlBibleVerseProps) => {
     >
       <Card sx={{ border: `1px solid #388e3c` }}>
         <CardMedia sx={{ background: '#388e3c' }}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={{ padding: '6px 12px' }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+              padding: '6px 12px',
+            }}
+          >
             <MenuBookIcon sx={{ color: '#fff' }} />
             <Typography variant="h6" sx={{ color: '#fff' }}>
               {item.bibleRef || LL.BIBLE.VERSE()}

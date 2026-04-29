@@ -67,17 +67,33 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <QrCodeIcon color="primary" />
           <Typography variant="h6">{LL.QR.SHARE_TITLE()}</Typography>
-          <Stack flexGrow={1} />
+          <Stack
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <IconButton size="small" onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </Stack>
       </DialogTitle>
       <DialogContent>
-        <Stack spacing={3} alignItems="center" sx={{ py: 2 }}>
+        <Stack
+          spacing={3}
+          sx={{
+            alignItems: 'center',
+            py: 2,
+          }}
+        >
           {/* QR Code */}
           <Stack
             sx={{
@@ -91,13 +107,25 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
             <QRCodeSVG value={qrPayload} size={240} level="M" marginSize={4} />
           </Stack>
 
-          <Typography variant="body2" color="text.secondary" textAlign="center">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              textAlign: 'center',
+            }}
+          >
             {LL.QR.SHARE_DESCRIPTION()}
           </Typography>
 
           {/* Musician View URL */}
           <Stack spacing={1} sx={{ width: '100%' }}>
-            <Typography variant="caption" fontWeight={600} color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 600,
+                color: 'text.secondary',
+              }}
+            >
               {LL.QR.SHARE_MUSICIAN_URL()}
             </Typography>
             <Stack direction="row" spacing={1}>
@@ -118,7 +146,13 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
 
           {/* WebSocket URL */}
           <Stack spacing={1} sx={{ width: '100%' }}>
-            <Typography variant="caption" fontWeight={600} color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 600,
+                color: 'text.secondary',
+              }}
+            >
               {LL.QR.SHARE_WS_URL()}
             </Typography>
             <TextField

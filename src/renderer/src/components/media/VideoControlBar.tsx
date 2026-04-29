@@ -199,9 +199,15 @@ const VideoControlBar = ({
     return (
       <Stack
         direction="row"
-        alignItems="center"
         spacing={1}
-        sx={{ px: 2, py: 0.5, borderTop: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}
+        sx={{
+          alignItems: 'center',
+          px: 2,
+          py: 0.5,
+          borderTop: 1,
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
+        }}
       >
         <Tooltip title={videoVisible ? LL.VIDEO.HIDE_ALL() : LL.VIDEO.SHOW_ALL()}>
           <IconButton size="small" onClick={handleToggleVisible} color={videoVisible ? 'default' : 'warning'}>
@@ -221,7 +227,15 @@ const VideoControlBar = ({
         {videoSources.length > 0 && (
           <Stack sx={{ minWidth: 0, ml: 'auto' }}>
             {videoSources.map((src, i) => (
-              <Typography key={i} variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem' }}>
+              <Typography
+                key={i}
+                variant="caption"
+                noWrap
+                sx={{
+                  color: 'text.secondary',
+                  fontSize: '0.7rem',
+                }}
+              >
                 {videoName(src)}
               </Typography>
             ))}
@@ -237,9 +251,15 @@ const VideoControlBar = ({
     return (
       <Stack
         direction="row"
-        alignItems="center"
         spacing={1}
-        sx={{ px: 2, py: 0.5, borderTop: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}
+        sx={{
+          alignItems: 'center',
+          px: 2,
+          py: 0.5,
+          borderTop: 1,
+          borderColor: 'divider',
+          backgroundColor: 'background.paper',
+        }}
       >
         <Chip
           icon={<ScreenIcon sx={{ fontSize: 16 }} />}
@@ -262,9 +282,15 @@ const VideoControlBar = ({
   return (
     <Stack
       direction="row"
-      alignItems="center"
       spacing={1}
-      sx={{ px: 2, py: 0.5, borderTop: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}
+      sx={{
+        alignItems: 'center',
+        px: 2,
+        py: 0.5,
+        borderTop: 1,
+        borderColor: 'divider',
+        backgroundColor: 'background.paper',
+      }}
     >
       <Chip
         icon={<ScreenIcon sx={{ fontSize: 16 }} />}
@@ -298,7 +324,14 @@ const VideoControlBar = ({
         </IconButton>
       </Tooltip>
       {/* Position (seek) — comes BEFORE the volume slider per request. */}
-      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', minWidth: 32 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'text.secondary',
+          fontSize: '0.7rem',
+          minWidth: 32,
+        }}
+      >
         {formatTime(displaySeek)}
       </Typography>
       <Slider
@@ -322,7 +355,14 @@ const VideoControlBar = ({
         }}
         sx={{ flex: 1, minWidth: 80 }}
       />
-      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', minWidth: 32 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'text.secondary',
+          fontSize: '0.7rem',
+          minWidth: 32,
+        }}
+      >
         {formatTime(effectiveStatus.duration)}
       </Typography>
       {!disableAudio && (
@@ -358,7 +398,16 @@ const VideoControlBar = ({
       {videoSources.length > 0 && (
         <Stack sx={{ minWidth: 0 }}>
           {videoSources.map((src, i) => (
-            <Typography key={i} variant="caption" color="text.secondary" noWrap sx={{ fontSize: '0.7rem', maxWidth: 140 }}>
+            <Typography
+              key={i}
+              variant="caption"
+              noWrap
+              sx={{
+                color: 'text.secondary',
+                fontSize: '0.7rem',
+                maxWidth: 140,
+              }}
+            >
               {videoName(src)}
             </Typography>
           ))}

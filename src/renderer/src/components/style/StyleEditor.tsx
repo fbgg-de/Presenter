@@ -97,7 +97,14 @@ const StylePropRow = ({
   onToggle: (enabled: boolean) => void;
   children: ReactNode;
 }) => (
-  <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 0.5 }}>
+  <Stack
+    direction="row"
+    spacing={1}
+    sx={{
+      alignItems: 'center',
+      py: 0.5,
+    }}
+  >
     <Switch size="small" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
     <Typography variant="body2" sx={{ minWidth: 130, fontWeight: 500, opacity: enabled ? 1 : 0.5 }}>
       {label}
@@ -124,7 +131,14 @@ const MediaPropRow = ({
   onBrowse: () => void;
   thumbType: 'image' | 'video';
 }) => (
-  <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 0.5 }}>
+  <Stack
+    direction="row"
+    spacing={1}
+    sx={{
+      alignItems: 'center',
+      py: 0.5,
+    }}
+  >
     <Switch size="small" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
     <Typography variant="body2" sx={{ minWidth: 130, fontWeight: 500, opacity: enabled ? 1 : 0.5 }}>
       {label}
@@ -161,7 +175,12 @@ const MediaPropRow = ({
 const Section = ({ title, defaultExpanded = true, children }: { title: string; defaultExpanded?: boolean; children: ReactNode }) => (
   <Accordion defaultExpanded={defaultExpanded} disableGutters elevation={0} sx={{ '&:before': { display: 'none' } }}>
     <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ background: (t) => t.palette.action.hover, borderRadius: 1 }}>
-      <Typography variant="subtitle2" fontWeight={700}>
+      <Typography
+        variant="subtitle2"
+        sx={{
+          fontWeight: 700,
+        }}
+      >
         {title}
       </Typography>
     </AccordionSummary>
@@ -238,12 +257,28 @@ const LanguageStyleEditor = ({
         enabled={entry.textShadowEnabled ?? false}
         onToggle={(e) => onChange({ textShadowEnabled: e })}
       >
-        <Stack direction="row" spacing={1} alignItems="flex-start">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'flex-start',
+          }}
+        >
           <CssUnitInput value={sx} onChange={(v) => onChange({ textShadow: `${v} ${sy} ${sb}` })} label={LL.STYLE.SHADOW_X()} />
           <CssUnitInput value={sy} onChange={(v) => onChange({ textShadow: `${sx} ${v} ${sb}` })} label={LL.STYLE.SHADOW_Y()} />
           <CssUnitInput value={sb} onChange={(v) => onChange({ textShadow: `${sx} ${sy} ${v}` })} label={LL.STYLE.SHADOW_BLUR()} />
-          <Stack alignItems="center">
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25 }}>
+          <Stack
+            sx={{
+              alignItems: 'center',
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                mb: 0.25,
+              }}
+            >
               {LL.STYLE.SHADOW_COLOR()}
             </Typography>
             <ColorSwatchButton value={entry.textShadowColor || '#000000'} onChange={(c) => onChange({ textShadowColor: c })} />
@@ -255,10 +290,26 @@ const LanguageStyleEditor = ({
         enabled={entry.textStrokeEnabled ?? false}
         onToggle={(e) => onChange({ textStrokeEnabled: e })}
       >
-        <Stack direction="row" spacing={1} alignItems="flex-start">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'flex-start',
+          }}
+        >
           <CssUnitInput value={sw} onChange={(v) => onChange({ textStroke: `${v} ${sc}` })} label={LL.STYLE.STROKE_WIDTH()} />
-          <Stack alignItems="center">
-            <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25 }}>
+          <Stack
+            sx={{
+              alignItems: 'center',
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                mb: 0.25,
+              }}
+            >
               {LL.STYLE.STROKE_COLOR()}
             </Typography>
             <ColorSwatchButton value={sc} onChange={(c) => onChange({ textStroke: `${sw} ${c}` })} />
@@ -281,15 +332,31 @@ const LanguageStyleEditor = ({
         enabled={entry.nextLinePreviewEnabled ?? false}
         onToggle={(e) => onChange({ nextLinePreviewEnabled: e })}
       >
-        <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <Switch
             size="small"
             checked={entry.nextLinePreview || false}
             onChange={(e2) => onChange({ nextLinePreview: e2.target.checked })}
           />
           <ColorSwatchButton value={entry.nextLinePreviewColor || '#AAAAAA'} onChange={(c) => onChange({ nextLinePreviewColor: c })} />
-          <Stack alignItems="center" spacing={0}>
-            <Typography variant="caption" color="text.secondary">
+          <Stack
+            spacing={0}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.STYLE.NEXT_LINE_OPACITY()}
             </Typography>
             <Slider
@@ -426,7 +493,13 @@ const FontFamilyEditor = ({
     <Stack spacing={0.75}>
       <FontPicker value={primary} onChange={onPrimaryChange} />
       {fallbacks.length > 0 && (
-        <Stack direction="row" flexWrap="wrap" gap={0.5}>
+        <Stack
+          direction="row"
+          sx={{
+            flexWrap: 'wrap',
+            gap: 0.5,
+          }}
+        >
           {fallbacks.map((f, i) => (
             <Chip
               key={`${f}-${i}`}
@@ -602,9 +675,16 @@ const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew?: bool
         />
       )}
       <Stack
-        alignItems="center"
-        justifyContent={resolved.verticalAlign === 'top' ? 'flex-start' : resolved.verticalAlign === 'bottom' ? 'flex-end' : 'center'}
-        sx={{ width: '100%', height: '100%', position: 'relative', zIndex: 2, p: '6%', boxSizing: 'border-box' }}
+        sx={{
+          alignItems: 'center',
+          justifyContent: resolved.verticalAlign === 'top' ? 'flex-start' : resolved.verticalAlign === 'bottom' ? 'flex-end' : 'center',
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          zIndex: 2,
+          p: '6%',
+          boxSizing: 'border-box',
+        }}
       >
         {isNew ? (
           <AddIcon sx={{ color: 'text.secondary', fontSize: 20 }} />
@@ -918,7 +998,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   const getProp = <T,>(key: keyof StyleData): { enabled: boolean; value: T } => {
     const prop = styleData[key];
     if (prop && typeof prop === 'object' && 'enabled' in prop) return prop as { enabled: boolean; value: T };
-    return { enabled: false, value: '' as unknown as T };
+    return { enabled: false, value: undefined as unknown as T };
   };
 
   // Derive image/video enable flags independently — image and video may now
@@ -1016,13 +1096,26 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
       <Drawer open={open} anchor="right" onClose={onClose}>
         <Stack sx={{ width: 'min(98vw, 900px)', height: '100%' }}>
           {/* Header */}
-          <Stack direction="row" alignItems="center" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }} spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+              p: 2,
+              borderBottom: 1,
+              borderColor: 'divider',
+            }}
+          >
             <Typography variant="h5" sx={{ fontWeight: 700 }}>
               {LL.STYLE.EDITOR()}
             </Typography>
             {isDirty && <Chip label={LL.STYLE.UNSAVED()} size="small" color="warning" />}
             {statusMessage && <Chip label={statusMessage} size="small" color="success" />}
-            <Box flexGrow={1} />
+            <Box
+              sx={{
+                flexGrow: 1,
+              }}
+            />
             <IconButton onClick={onClose}>
               <CloseIcon />
             </IconButton>
@@ -1032,7 +1125,14 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           <Box sx={{ px: 2, pt: 1.5, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
             <StyleGallery styles={styles} selectedId={selectedStyleId} onSelect={handleStyleSelect} LL={LL} />
             {/* Style name with inline actions */}
-            <Stack direction="row" spacing={0.5} alignItems="center" sx={{ mt: 1 }}>
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+                mt: 1,
+              }}
+            >
               {selectedStyleId === 'new' ? (
                 <TextField
                   size="small"
@@ -1047,7 +1147,14 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   sx={{ flex: 1 }}
                 />
               ) : (
-                <Typography variant="subtitle2" fontWeight={700} noWrap sx={{ flex: 1 }}>
+                <Typography
+                  variant="subtitle2"
+                  noWrap
+                  sx={{
+                    fontWeight: 700,
+                    flex: 1,
+                  }}
+                >
                   {styleName}
                 </Typography>
               )}
@@ -1124,7 +1231,13 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                 enabled={getProp<string>('backgroundColor').enabled}
                 onToggle={(e) => togglePropEnabled('backgroundColor', e)}
               >
-                <Stack direction="row" spacing={1} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <ColorSwatchButton
                     value={getProp<string>('backgroundColor').value || '#000000'}
                     onChange={(c) => updateProp('backgroundColor', { enabled: true, value: c })}
@@ -1161,12 +1274,26 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   setIsDirty(true);
                 }}
               >
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   Overrides inherited image
                 </Typography>
               </StylePropRow>
               {bgImageEnabled && (
-                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" sx={{ pl: '184px', py: 0.5 }}>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    pl: '184px',
+                    py: 0.5,
+                  }}
+                >
                   <Select
                     size="small"
                     value={getProp<string>('backgroundSize').value || 'cover'}
@@ -1183,8 +1310,18 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                     value={getProp<string>('backgroundPosition').value || 'center'}
                     onChange={(v) => updateProp('backgroundPosition', { enabled: true, value: v })}
                   />
-                  <Stack alignItems="center" spacing={0}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Stack
+                    spacing={0}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {LL.STYLE.BG_ZOOM()}
                     </Typography>
                     <Slider
@@ -1199,8 +1336,18 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                       sx={{ width: 80 }}
                     />
                   </Stack>
-                  <Stack alignItems="center" spacing={0}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Stack
+                    spacing={0}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {LL.STYLE.BG_BLUR()}
                     </Typography>
                     <Slider
@@ -1239,12 +1386,26 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   setIsDirty(true);
                 }}
               >
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   Overrides inherited video
                 </Typography>
               </StylePropRow>
               {bgVideoEnabled && (
-                <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" sx={{ pl: '184px', py: 0.5 }}>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  sx={{
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    pl: '184px',
+                    py: 0.5,
+                  }}
+                >
                   <Select
                     size="small"
                     value={getProp<string>('backgroundVideoSize').value || 'cover'}
@@ -1261,8 +1422,18 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                     value={getProp<string>('backgroundVideoPosition').value || 'center'}
                     onChange={(v) => updateProp('backgroundVideoPosition', { enabled: true, value: v })}
                   />
-                  <Stack alignItems="center" spacing={0}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Stack
+                    spacing={0}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {LL.STYLE.BG_ZOOM()}
                     </Typography>
                     <Slider
@@ -1277,8 +1448,18 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                       sx={{ width: 80 }}
                     />
                   </Stack>
-                  <Stack alignItems="center" spacing={0}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Stack
+                    spacing={0}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {LL.STYLE.BG_BLUR()}
                     </Typography>
                     <Slider
@@ -1293,8 +1474,18 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                       sx={{ width: 80 }}
                     />
                   </Stack>
-                  <Stack alignItems="center" spacing={0}>
-                    <Typography variant="caption" color="text.secondary">
+                  <Stack
+                    spacing={0}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {LL.VIDEO.VOLUME()}
                     </Typography>
                     <Slider
@@ -1385,7 +1576,13 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   togglePropEnabled('verticalAlign', e);
                 }}
               >
-                <Stack direction="row" spacing={1.5} alignItems="center">
+                <Stack
+                  direction="row"
+                  spacing={1.5}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <ToggleButtonGroup
                     size="small"
                     exclusive
@@ -1469,7 +1666,13 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   const pV = parts[0] || '5%';
                   const pH = parts[1] || parts[0] || '10%';
                   return (
-                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: 'flex-start',
+                      }}
+                    >
                       <CssUnitInput
                         value={pV}
                         onChange={(v) => updateProp('padding', { enabled: true, value: `${v} ${pH}` })}
@@ -1484,7 +1687,14 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   );
                 })()}
               </StylePropRow>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 0.5 }}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                  py: 0.5,
+                }}
+              >
                 <Switch
                   size="small"
                   checked={styleData.hideText || false}
@@ -1580,10 +1790,24 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                           expandIcon={<ExpandMoreIcon />}
                           sx={{ bgcolor: isDefault ? 'action.hover' : 'background.paper', borderRadius: 1 }}
                         >
-                          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flex: 1, mr: 1 }}>
+                          <Stack
+                            direction="row"
+                            spacing={0.5}
+                            sx={{
+                              alignItems: 'center',
+                              flex: 1,
+                              mr: 1,
+                            }}
+                          >
                             <DragHandleIcon fontSize="small" sx={{ color: 'action.active', cursor: 'grab', mr: 0.5 }} />
                             <TranslateIcon fontSize="small" color={isDefault ? 'primary' : 'action'} />
-                            <Typography variant="body2" fontWeight={600} sx={{ flexGrow: 1 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontWeight: 600,
+                                flexGrow: 1,
+                              }}
+                            >
                               {isDefault ? LL.STYLE.LANG_DEFAULT() : entry.language.toUpperCase()}
                             </Typography>
                             {entry.fontColor && (
@@ -1631,7 +1855,14 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                     );
                   })}
                   {/* Add language row + show other languages */}
-                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 1 }}>
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: 'center',
+                      mt: 1,
+                    }}
+                  >
                     <Autocomplete
                       freeSolo
                       options={knownLanguageTags.filter((t) => !entries.some((e) => e.language === t.toLowerCase()))}
@@ -1699,7 +1930,13 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   const pV = parts[0] || '2vh';
                   const pH = parts[1] || parts[0] || '4vw';
                   return (
-                    <Stack direction="row" spacing={1} alignItems="flex-start">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: 'flex-start',
+                      }}
+                    >
                       <CssUnitInput
                         value={pV}
                         onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${v} ${pH}` })}
@@ -1903,10 +2140,20 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
             <Section title={LL.STYLE.SECTION_CUSTOM_CSS()} defaultExpanded={false}>
               {' '}
-              <Stack direction="row" alignItems="center" spacing={1}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <Switch checked={showRawCss} onChange={(e) => setShowRawCss(e.target.checked)} size="small" />
                 <Typography variant="body2">{LL.STYLE.CUSTOM_CSS()}</Typography>
-                <Box flexGrow={1} />
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                  }}
+                />
                 <Tooltip title="Insert current style settings as CSS">
                   <Button
                     size="small"
@@ -1945,12 +2192,23 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
             {/* Header row — not a button itself, so icon buttons won't be nested inside a button */}
             <Stack
               direction="row"
-              alignItems="center"
               spacing={0.5}
-              sx={{ px: 2, py: 1, cursor: 'pointer', userSelect: 'none' }}
               onClick={() => setPreviewOpen((v) => !v)}
+              sx={{
+                alignItems: 'center',
+                px: 2,
+                py: 1,
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
             >
-              <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 700,
+                  flex: 1,
+                }}
+              >
                 Preview — {styleName}
               </Typography>
               {resolvedPreview.backgroundImage && (
@@ -2062,8 +2320,8 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                           <Stack
                             direction="row"
                             spacing={0.5}
-                            alignItems="center"
                             sx={{
+                              alignItems: 'center',
                               position: 'absolute',
                               bottom: 4,
                               left: 4,
@@ -2164,15 +2422,16 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                       );
                     })()}
                   <Stack
-                    alignItems="center"
-                    justifyContent={
-                      resolvedPreview.verticalAlign === 'top'
-                        ? 'flex-start'
-                        : resolvedPreview.verticalAlign === 'bottom'
-                          ? 'flex-end'
-                          : 'center'
-                    }
                     sx={{
+                      alignItems: 'center',
+
+                      justifyContent:
+                        resolvedPreview.verticalAlign === 'top'
+                          ? 'flex-start'
+                          : resolvedPreview.verticalAlign === 'bottom'
+                            ? 'flex-end'
+                            : 'center',
+
                       width: '100%',
                       height: '100%',
                       position: 'relative',
@@ -2211,7 +2470,11 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
             >
               {LL.STYLE.SAVE_AND_APPLY()}
             </Button>
-            <Box flexGrow={1} />
+            <Box
+              sx={{
+                flexGrow: 1,
+              }}
+            />
             <Button variant="outlined" onClick={onClose}>
               {LL.COMMON.CANCEL()}
             </Button>

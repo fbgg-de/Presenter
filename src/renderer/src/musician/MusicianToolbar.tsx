@@ -261,11 +261,23 @@ export const MusicianToolbar = ({
   return (
     <Stack
       spacing={0.75}
-      alignItems="flex-end"
-      sx={{ position: 'absolute', top: 10, right: NAV_MARGIN, zIndex: 10, pointerEvents: 'none' }}
+      sx={{
+        alignItems: 'flex-end',
+        position: 'absolute',
+        top: 10,
+        right: NAV_MARGIN,
+        zIndex: 10,
+        pointerEvents: 'none',
+      }}
     >
       {/* Row 1: Sync (left) + Toggle Toolbar (right) — always visible */}
-      <Stack direction="row" spacing={0.75} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={0.75}
+        sx={{
+          alignItems: 'center',
+        }}
+      >
         <SpeedDial
           ariaLabel="Sync mode"
           sx={speedDialCompactSx}
@@ -280,13 +292,14 @@ export const MusicianToolbar = ({
             <SpeedDialAction
               key={mode}
               icon={syncModeIcon[mode]}
-              tooltipTitle={syncModeLabel[mode]}
-              tooltipPlacement="bottom"
+              slotProps={{
+                tooltip: { title: syncModeLabel[mode], placement: 'bottom' },
+                fab: { sx: activeActionFabSx(syncMode === mode) },
+              }}
               onClick={() => {
                 onSetSyncMode(mode);
                 setSyncDialOpen(false);
               }}
-              FabProps={{ sx: activeActionFabSx(syncMode === mode) }}
             />
           ))}
         </SpeedDial>
@@ -296,7 +309,6 @@ export const MusicianToolbar = ({
           onClick={toggleExpanded}
         />
       </Stack>
-
       {/* Expandable toolbar column */}
       {musicianToolbarExpanded && (
         <>
@@ -339,23 +351,25 @@ export const MusicianToolbar = ({
           >
             <SpeedDialAction
               icon={<OnePageIcon fontSize="small" />}
-              tooltipTitle={LL.MUSICIAN.PAGE_ONE()}
-              tooltipPlacement="bottom"
+              slotProps={{
+                tooltip: { title: LL.MUSICIAN.PAGE_ONE(), placement: 'bottom' },
+                fab: { sx: activeActionFabSx(pageView === 'one-page') },
+              }}
               onClick={() => {
                 onSetPageView('one-page');
                 setPageCountOpen(false);
               }}
-              FabProps={{ sx: activeActionFabSx(pageView === 'one-page') }}
             />
             <SpeedDialAction
               icon={<LooksTwoIcon fontSize="small" />}
-              tooltipTitle={LL.MUSICIAN.PAGE_TWO()}
-              tooltipPlacement="bottom"
+              slotProps={{
+                tooltip: { title: LL.MUSICIAN.PAGE_TWO(), placement: 'bottom' },
+                fab: { sx: activeActionFabSx(pageView === 'two-page') },
+              }}
               onClick={() => {
                 onSetPageView('two-page');
                 setPageCountOpen(false);
               }}
-              FabProps={{ sx: activeActionFabSx(pageView === 'two-page') }}
             />
           </SpeedDial>
 
@@ -397,7 +411,14 @@ export const MusicianToolbar = ({
               onClose={() => setZoomDialOpen(false)}
               direction="left"
               icon={
-                <Stack alignItems="center" justifyContent="center" sx={{ width: '100%', height: '100%' }}>
+                <Stack
+                  sx={{
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: '100%',
+                  }}
+                >
                   <ZoomInIcon sx={{ fontSize: '1.1rem' }} />
                   <Typography sx={{ fontSize: '0.5rem', lineHeight: 1, fontWeight: 700, mt: '-2px' }}>{zoomPercent}%</Typography>
                 </Stack>
@@ -406,30 +427,28 @@ export const MusicianToolbar = ({
             >
               <SpeedDialAction
                 icon={<ZoomInIcon fontSize="small" />}
-                tooltipTitle={LL.MUSICIAN.ZOOM_IN()}
-                tooltipPlacement="bottom"
+                slotProps={{ tooltip: { title: LL.MUSICIAN.ZOOM_IN(), placement: 'bottom' } }}
                 onClick={() => onZoomIn()}
               />
               <SpeedDialAction
                 icon={<ZoomOutIcon fontSize="small" />}
-                tooltipTitle={LL.MUSICIAN.ZOOM_OUT()}
-                tooltipPlacement="bottom"
+                slotProps={{ tooltip: { title: LL.MUSICIAN.ZOOM_OUT(), placement: 'bottom' } }}
                 onClick={() => onZoomOut()}
               />
               <SpeedDialAction
                 icon={<Zoom100Icon fontSize="small" />}
-                tooltipTitle={LL.MUSICIAN.ZOOM_100()}
-                tooltipPlacement="bottom"
+                slotProps={{
+                  tooltip: { title: LL.MUSICIAN.ZOOM_100(), placement: 'bottom' },
+                  fab: { sx: activeActionFabSx(zoomPercent === 100) },
+                }}
                 onClick={() => {
                   onZoomReset();
                   setZoomDialOpen(false);
                 }}
-                FabProps={{ sx: activeActionFabSx(zoomPercent === 100) }}
               />
               <SpeedDialAction
                 icon={<FitWidthIcon fontSize="small" />}
-                tooltipTitle={LL.MUSICIAN.ZOOM_FIT_WIDTH()}
-                tooltipPlacement="bottom"
+                slotProps={{ tooltip: { title: LL.MUSICIAN.ZOOM_FIT_WIDTH(), placement: 'bottom' } }}
                 onClick={() => {
                   onZoomFitWidth();
                   setZoomDialOpen(false);

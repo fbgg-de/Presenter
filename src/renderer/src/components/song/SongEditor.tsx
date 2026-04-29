@@ -297,7 +297,6 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
           markDirty();
         }}
       />
-
       <DeleteOrderDialog
         open={openDeleteOrderDialog}
         onClose={() => setOpenDeleteOrderDialog(false)}
@@ -313,12 +312,26 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
           markDirty();
         }}
       />
-
-      <Stack sx={{ width: 'calc(100vw - 400px)', padding: '20px 25px' }} gap={2}>
-        <Stack direction="row" alignItems="center">
+      <Stack
+        sx={{
+          gap: 2,
+          width: 'calc(100vw - 400px)',
+          padding: '20px 25px',
+        }}
+      >
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <Typography variant="h4">{LL.SONG_EDITOR.TITLE()}</Typography>
           {isDirty && <Chip label="Unsaved" size="small" color="warning" sx={{ ml: 2 }} />}
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <IconButton
             onClick={() => {
               setOpen(false);
@@ -329,7 +342,14 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
           </IconButton>
         </Stack>
 
-        <Stack gap={2} padding="10px 15px" minHeight={350} sx={{ bgcolor: 'background.paper' }}>
+        <Stack
+          sx={{
+            gap: 2,
+            padding: '10px 15px',
+            minHeight: 350,
+            bgcolor: 'background.paper',
+          }}
+        >
           <Tabs value={tab} onChange={(_, tab) => setTab(tab)} variant="scrollable" scrollButtons="auto">
             <Tab icon={<InfoIcon />} sx={{ minWidth: '50px' }} />
             {blocks.map(({ name }) => (
@@ -339,7 +359,11 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
           </Tabs>
 
           {tab < 1 ? (
-            <Stack gap={1}>
+            <Stack
+              sx={{
+                gap: 1,
+              }}
+            >
               <Input
                 value={title}
                 onChange={({ target }) => {
@@ -367,7 +391,12 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
               />
             </Stack>
           ) : tab <= blocks.length ? (
-            <Stack direction="row" gap={2}>
+            <Stack
+              direction="row"
+              sx={{
+                gap: 2,
+              }}
+            >
               <TextField
                 multiline
                 rows={10}
@@ -385,7 +414,11 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                   markDirty();
                 }}
               />
-              <Stack gap={1}>
+              <Stack
+                sx={{
+                  gap: 1,
+                }}
+              >
                 <IconButton
                   title={LL.COMMON.DELETE()}
                   onClick={(e) => {
@@ -398,7 +431,11 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
                 >
                   <DeleteIcon />
                 </IconButton>
-                <Box flexGrow={1} />
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                  }}
+                />
                 <SpeedDialTranslate
                   title={LL.COMMON.LANGUAGE()}
                   ariaLabel="translation"
@@ -451,7 +488,11 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
               </Stack>
             </Stack>
           ) : (
-            <Stack gap={1}>
+            <Stack
+              sx={{
+                gap: 1,
+              }}
+            >
               <TextField value={newBlock} onChange={({ target }) => setNewBlock(target.value)} />
               <Button
                 variant="contained"
@@ -467,9 +508,27 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
           )}
         </Stack>
 
-        <Stack gap={1} sx={{ padding: '10px 15px', bgcolor: 'background.paper' }}>
-          <Stack direction="row" gap={1} alignItems="center" sx={{ mb: 1 }}>
-            <Typography variant="subtitle2" color="text.secondary">
+        <Stack
+          sx={{
+            gap: 1,
+            padding: '10px 15px',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Stack
+            direction="row"
+            sx={{
+              gap: 1,
+              alignItems: 'center',
+              mb: 1,
+            }}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               Order:
             </Typography>
             <FormControl size="small" sx={{ minWidth: 150 }}>
@@ -501,7 +560,13 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
             )}
           </Stack>
 
-          <Stack direction="row" gap={1} flexWrap="wrap">
+          <Stack
+            direction="row"
+            sx={{
+              gap: 1,
+              flexWrap: 'wrap',
+            }}
+          >
             <AddBlock
               index={0}
               order={blocksOrder}
@@ -538,7 +603,12 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
           </Stack>
         </Stack>
 
-        <Stack direction="row" gap={2}>
+        <Stack
+          direction="row"
+          sx={{
+            gap: 2,
+          }}
+        >
           <Badge variant="dot" color="warning" invisible={!isDirty}>
             <Button variant="outlined" color="success" onClick={saveSong} startIcon={<SaveIcon />}>
               {LL.COMMON.APPLY()}

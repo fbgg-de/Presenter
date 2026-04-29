@@ -50,6 +50,8 @@ import {
 } from 'recharts';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetMetricsQuery, type MetricEvent } from '@/api/metrics.api';
+import { useGetAdminAccountsQuery } from '@/api/admin.api';
+import { useGetSessionQuery } from '@/api/session.api';
 
 const CHART_COLORS = [
   '#1976d2',
@@ -152,6 +154,11 @@ export const MetricsDashboard = () => {
   const [dateTo, setDateTo] = useState(defaultRange.to);
   const [eventFilter, setEventFilter] = useState('');
   const [granularity, setGranularity] = useState<Granularity>('day');
+  const [accountFilter, setAccountFilter] = useState<number | ''>('');
+
+  const { data: session } = useGetSessionQuery();
+  const isAdmin = session?.authType === 'oidc_admin';
+  const { data: adminAccounts = [] } = useGetAdminAccountsQuery(undefined, { skip: !isAdmin });
 
   const { data, isLoading, isFetching, refetch } = useGetMetricsQuery({
     from: dateFrom ? `${dateFrom} 00:00:00` : undefined,
@@ -159,6 +166,7 @@ export const MetricsDashboard = () => {
     event: eventFilter || undefined,
     limit: 10000,
     offset: 0,
+    account: isAdmin && accountFilter !== '' ? (accountFilter as number) : undefined,
   });
 
   const metrics = data?.metrics ?? [];
@@ -213,7 +221,13 @@ export const MetricsDashboard = () => {
 
   if (isLoading) {
     return (
-      <Box display="flex" justifyContent="center" p={4}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          p: 4,
+        }}
+      >
         <CircularProgress />
       </Box>
     );
@@ -223,7 +237,15 @@ export const MetricsDashboard = () => {
     <Stack spacing={3}>
       {/* Filters */}
       <Paper sx={{ p: 2 }}>
-        <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={2}
+          useFlexGap
+          sx={{
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <TextField
             type="date"
             label={LL.METRICS.DATE_FROM()}
@@ -251,6 +273,23 @@ export const MetricsDashboard = () => {
               ))}
             </Select>
           </FormControl>
+          {isAdmin && adminAccounts.length > 0 && (
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <InputLabel>{LL.COMMON.ACCOUNT()}</InputLabel>
+              <Select
+                value={accountFilter}
+                label={LL.COMMON.ACCOUNT()}
+                onChange={(e) => setAccountFilter(e.target.value as number | '')}
+              >
+                <MenuItem value="">{LL.UNIFIED_SEARCH.ALL()}</MenuItem>
+                {adminAccounts.map((a) => (
+                  <MenuItem key={a.license} value={a.license}>
+                    {a.name ? `${a.name} (#${a.license})` : `#${a.license}`}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>{LL.METRICS.GRANULARITY()}</InputLabel>
             <Select value={granularity} label={LL.METRICS.GRANULARITY()} onChange={(e) => setGranularity(e.target.value as Granularity)}>
@@ -262,24 +301,39 @@ export const MetricsDashboard = () => {
           <Button startIcon={<RefreshIcon />} onClick={() => refetch()} disabled={isFetching}>
             {LL.METRICS.REFRESH()}
           </Button>
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <Tooltip title={LL.METRICS.EXPORT_CSV()}>
             <IconButton onClick={handleExportAll} disabled={metrics.length === 0}>
               <DownloadIcon />
             </IconButton>
           </Tooltip>
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {LL.METRICS.TOTAL_EVENTS({ count: data?.total ?? 0 })}
           </Typography>
         </Stack>
       </Paper>
-
       {metrics.length === 0 ? (
         <Alert severity="info">{LL.METRICS.NO_DATA()}</Alert>
       ) : (
         <>
           {/* Summary Cards */}
-          <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+          <Stack
+            direction="row"
+            spacing={2}
+            useFlexGap
+            sx={{
+              flexWrap: 'wrap',
+            }}
+          >
             <SummaryCard
               icon={<BarChartIcon />}
               label={LL.METRICS.TOTAL_EVENTS({ count: metrics.length })}
@@ -403,7 +457,14 @@ export const MetricsDashboard = () => {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <Card sx={{ flex: 1 }}>
               <CardContent>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1,
+                  }}
+                >
                   <Typography variant="h6">{LL.METRICS.TOP_SONGS()}</Typography>
                   <Tooltip title={LL.METRICS.EXPORT_CSV()}>
                     <IconButton size="small" onClick={() => exportToCsv(topSongs, 'top_songs.csv')} disabled={topSongs.length === 0}>
@@ -412,7 +473,12 @@ export const MetricsDashboard = () => {
                   </Tooltip>
                 </Stack>
                 {topSongs.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {LL.METRICS.NO_DATA()}
                   </Typography>
                 ) : (
@@ -453,7 +519,14 @@ export const MetricsDashboard = () => {
 
             <Card sx={{ flex: 1 }}>
               <CardContent>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1,
+                  }}
+                >
                   <Typography variant="h6">{LL.METRICS.TOP_SHOWS()}</Typography>
                   <Tooltip title={LL.METRICS.EXPORT_CSV()}>
                     <IconButton size="small" onClick={() => exportToCsv(topShows, 'top_shows.csv')} disabled={topShows.length === 0}>
@@ -462,7 +535,12 @@ export const MetricsDashboard = () => {
                   </Tooltip>
                 </Stack>
                 {topShows.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {LL.METRICS.NO_DATA()}
                   </Typography>
                 ) : (
@@ -505,7 +583,14 @@ export const MetricsDashboard = () => {
           {/* Recent Events Table */}
           <Card>
             <CardContent>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mb={1}>
+              <Stack
+                direction="row"
+                sx={{
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mb: 1,
+                }}
+              >
                 <Typography variant="h6">{LL.METRICS.RECENT_EVENTS()}</Typography>
                 <Tooltip title={LL.METRICS.EXPORT_CSV()}>
                   <IconButton
@@ -568,13 +653,29 @@ const SummaryCard = ({ icon, label, value, color }: { icon: ReactNode; label: st
   return (
     <Card sx={{ minWidth: 180, flex: 1 }}>
       <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-        <Stack direction="row" spacing={1.5} alignItems="center">
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <Box sx={{ color, display: 'flex' }}>{icon}</Box>
           <Box>
-            <Typography variant="h5" fontWeight={700}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 700,
+              }}
+            >
               {value}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {label}
             </Typography>
           </Box>

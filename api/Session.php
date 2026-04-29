@@ -48,6 +48,9 @@ class Session extends RestController
                               'mail' => $_SESSION['mail'] ?? '',
                               'isAuthenticated' => isset($_SESSION['authType']) && !empty($_SESSION['authType']),
                               'authType' => $_SESSION['authType'] ?? null,
+                              'settings' => [
+                                'bibleEnabled' => defined('BIBLE_API') && is_array(BIBLE_API) && !empty(BIBLE_API['enabled']) && BIBLE_API['enabled'],
+                              ],
                           ]);
         }
     }

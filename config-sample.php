@@ -45,6 +45,7 @@ const OIDC_CLIENT_SCOPES = ['openid', 'email', 'profile', 'groups'];
 // Only JSON-based APIs are supported. The translation is user-selectable at runtime.
 // See requirements.md §10.2 for details.
 const BIBLE_API = [
+  'enabled' => false,
   'name' => 'API.Bible',
   'base_url' => 'https://api.scripture.api.bible/v1',
   'api_key' => 'your-api-key-here',       // optional, leave empty if not required

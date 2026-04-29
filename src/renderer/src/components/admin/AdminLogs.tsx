@@ -131,7 +131,14 @@ export const AdminLogs = () => {
 
   return (
     <Box>
-      <Stack direction="row" spacing={2} mb={2} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          mb: 2,
+          alignItems: 'center',
+        }}
+      >
         <FormControl size="small" sx={{ minWidth: 150 }}>
           <InputLabel>{LL.ADMIN_LOGS.SEVERITY_LABEL()}</InputLabel>
           <Select value={severity} label={LL.ADMIN_LOGS.SEVERITY_LABEL()} onChange={(e) => setSeverity(e.target.value)}>
@@ -155,17 +162,31 @@ export const AdminLogs = () => {
           {LL.ADMIN_LOGS.CLEAR_LOGS()}
         </Button>
 
-        <Box flexGrow={1} />
+        <Box
+          sx={{
+            flexGrow: 1,
+          }}
+        />
 
         {data && (
-          <Typography variant="body2" color="text.secondary">
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {LL.ADMIN_LOGS.SHOWING({ shown: allLogs.length, total: data.total })}
           </Typography>
         )}
       </Stack>
-
       {isLoading && offset === 0 ? (
-        <Box display="flex" justifyContent="center" p={4}>
+        <Box
+          sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            p: 4,
+          }}
+        >
           <CircularProgress />
         </Box>
       ) : allLogs.length === 0 ? (
@@ -212,7 +233,6 @@ export const AdminLogs = () => {
           </Table>
         </TableContainer>
       )}
-
       {/* Clear confirmation dialog */}
       <Dialog open={confirmClear} onClose={() => setConfirmClear(false)}>
         <DialogTitle>{LL.ADMIN_LOGS.CLEAR_TITLE()}</DialogTitle>

@@ -211,7 +211,12 @@ export const UnifiedSearch = ({
         <>
           {!hasSearchResults && !searchFetching && (
             <Box sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {LL.UNIFIED_SEARCH.NO_RESULTS()}
               </Typography>
             </Box>
@@ -267,7 +272,12 @@ export const UnifiedSearch = ({
         <List dense disablePadding>
           {allSongs.length === 0 ? (
             <Box sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {LL.UNIFIED_SEARCH.NO_RESULTS()}
               </Typography>
             </Box>
@@ -303,9 +313,22 @@ export const UnifiedSearch = ({
 
   return (
     <ClickAwayListener onClickAway={onClose}>
-      <Stack ref={anchorRef} sx={{ width: '100%', position: 'relative' }} gap={0.5}>
+      <Stack
+        ref={anchorRef}
+        sx={{
+          gap: 0.5,
+          width: '100%',
+          position: 'relative',
+        }}
+      >
         {/* Search input */}
-        <Stack direction="row" alignItems="center" gap={0.5}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: 'center',
+            gap: 0.5,
+          }}
+        >
           <TextField
             key={mountKey}
             inputRef={inputRef}

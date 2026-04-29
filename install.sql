@@ -222,3 +222,11 @@ CREATE TABLE IF NOT EXISTS `schema_version` (
 INSERT INTO `schema_version` (`version`, `description`) VALUES (13, 'Fresh install — all migrations included');
 
 COMMIT;
+
+/*
+ * Database migrations are managed through the Admin Panel UI in the "Database" tab.
+ *
+ * The migration logic lives in api/AdminMigrations.php and is exposed via:
+ *   GET  /rest/AdminMigrations → view status
+ *   POST /rest/AdminMigrations → run pending migrations
+ */

@@ -87,9 +87,20 @@ const PreviewFrame = ({ children, bgcolor = '#000' }: { children: ReactNode; bgc
 /** Empty-state placeholder shown when no media path is available. */
 const MediaPlaceholder = ({ icon, label }: { icon: ReactNode; label: string }) => (
   <PreviewFrame>
-    <Stack alignItems="center" spacing={1} sx={{ opacity: 0.5 }}>
+    <Stack
+      spacing={1}
+      sx={{
+        alignItems: 'center',
+        opacity: 0.5,
+      }}
+    >
       <Box sx={{ fontSize: 48 }}>{icon}</Box>
-      <Typography variant="caption" color="text.secondary">
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         {label}
       </Typography>
     </Stack>
@@ -160,8 +171,20 @@ const VideoControls = ({
   return (
     <Box sx={{ px: 1.5, pt: 0.5, pb: 1 }}>
       {/* Row 1: seek bar */}
-      <Stack direction="row" alignItems="center" spacing={1}>
-        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 36 }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+            minWidth: 36,
+          }}
+        >
           {formatTime(displayTime)}
         </Typography>
         <Slider
@@ -185,13 +208,25 @@ const VideoControls = ({
           }}
           sx={{ flex: 1 }}
         />
-        <Typography variant="caption" color="text.secondary" sx={{ minWidth: 36, textAlign: 'right' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+            minWidth: 36,
+            textAlign: 'right',
+          }}
+        >
           {formatTime(duration)}
         </Typography>
       </Stack>
-
       {/* Row 2: transport + visibility + loop + audio + filename */}
-      <Stack direction="row" alignItems="center" spacing={0.5}>
+      <Stack
+        direction="row"
+        spacing={0.5}
+        sx={{
+          alignItems: 'center',
+        }}
+      >
         <Tooltip title={playing ? LL.VIDEO.PAUSE() : LL.VIDEO.PLAY()}>
           <IconButton size="small" onClick={onToggle}>
             {playing ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
@@ -237,9 +272,20 @@ const VideoControls = ({
           }}
           sx={{ width: 80 }}
         />
-        <Box flex={1} />
+        <Box
+          sx={{
+            flex: 1,
+          }}
+        />
         {mediaPath && (
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 180 }}>
+          <Typography
+            variant="caption"
+            noWrap
+            sx={{
+              color: 'text.secondary',
+              maxWidth: 180,
+            }}
+          >
             {mediaPath.replace(/.*[/\\]/, '')}
           </Typography>
         )}
@@ -271,13 +317,36 @@ const DisplayOptions = ({ item, patch }: DisplayOptionsProps) => {
     <>
       <Divider />
       <CardContent sx={{ pt: 1.5, pb: '12px !important' }}>
-        <Stack direction="row" alignItems="center" spacing={0.5} sx={{ mb: 1.5 }}>
+        <Stack
+          direction="row"
+          spacing={0.5}
+          sx={{
+            alignItems: 'center',
+            mb: 1.5,
+          }}
+        >
           <TuneIcon fontSize="small" color="action" />
-          <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 700,
+              color: 'text.secondary',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+            }}
+          >
             {LL.MEDIA.DISPLAY_OPTIONS()}
           </Typography>
         </Stack>
-        <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" useFlexGap>
+        <Stack
+          direction="row"
+          spacing={2}
+          useFlexGap
+          sx={{
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <FormControl size="small" sx={{ minWidth: 110 }}>
             <InputLabel>Fit</InputLabel>
             <Select label="Fit" value={objectFit} onChange={(e) => patch({ mediaObjectFit: e.target.value as ShowItem['mediaObjectFit'] })}>
@@ -288,7 +357,13 @@ const DisplayOptions = ({ item, patch }: DisplayOptionsProps) => {
           </FormControl>
           {/* Position picker — reuses the compact 3×3 grid from the style editor */}
           <CompactPositionPicker value={objectPosition} onChange={(v) => patch({ mediaObjectPosition: v })} tooltip={LL.MEDIA.POSITION()} />
-          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {LL.MEDIA.ZOOM()} {zoom}%
           </Typography>
           <Slider
@@ -315,7 +390,13 @@ const DisplayOptions = ({ item, patch }: DisplayOptionsProps) => {
               <ResetIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-          <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              whiteSpace: 'nowrap',
+            }}
+          >
             {LL.MEDIA.BLUR()} {blur}px
           </Typography>
           <Slider
@@ -464,7 +545,12 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
       case 'color':
         return (
           <PreviewFrame bgcolor={item.mediaColor || '#000000'}>
-            <Stack alignItems="center" spacing={0.5}>
+            <Stack
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <PaletteIcon sx={{ fontSize: 32, filter: 'drop-shadow(0 0 4px rgba(0,0,0,.6))', color: '#fff' }} />
               <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#fff', textShadow: '0 1px 3px #000' }}>
                 {item.mediaColor || '#000000'}

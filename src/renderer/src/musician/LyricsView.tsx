@@ -43,7 +43,15 @@ export const LyricsView = ({
         bgcolor: 'background.paper',
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2, flexWrap: 'wrap' }}>
+      <Stack
+        direction="row"
+        spacing={2}
+        sx={{
+          alignItems: 'center',
+          mb: 2,
+          flexWrap: 'wrap',
+        }}
+      >
         <Typography variant="h6" sx={{ fontSize: textSize * 1.4 }} noWrap>
           {activeSong?.title}
         </Typography>
@@ -95,7 +103,15 @@ export const LyricsView = ({
                 transition: 'border-color 0.2s',
               }}
             >
-              <Typography variant="caption" color="text.secondary" fontWeight={600} sx={{ fontSize: textSize * 0.75, display: 'block' }}>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  fontWeight: 600,
+                  fontSize: textSize * 0.75,
+                  display: 'block',
+                }}
+              >
                 {block.name}
               </Typography>
               {block.lines.map((line: string, li: number) => (

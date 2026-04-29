@@ -357,14 +357,19 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
                   {seg}
                 </Link>
               ) : (
-                <Typography key={i} color="text.primary" fontSize="0.85rem">
+                <Typography
+                  key={i}
+                  sx={{
+                    color: 'text.primary',
+                    fontSize: '0.85rem',
+                  }}
+                >
                   {seg}
                 </Typography>
               ),
             )}
           </Breadcrumbs>
         )}
-
         {/* Search bar */}
         <Stack direction="row" spacing={1}>
           <TextField
@@ -387,7 +392,6 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
             URL
           </Button>
         </Stack>
-
         {/* URL input */}
         {showUrlInput && (
           <Stack direction="row" spacing={1}>
@@ -401,7 +405,11 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
                 input: {
                   startAdornment: (
                     <InputAdornment position="start">
-                      <LinkIcon fontSize="small" />
+                      <LinkIcon
+                        sx={{
+                          fontSize: 'small',
+                        }}
+                      />
                     </InputAdornment>
                   ),
                 },
@@ -412,7 +420,6 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
             </Button>
           </Stack>
         )}
-
         {/* Grid: folders + files */}
         {hasContent ? (
           <>
@@ -526,9 +533,21 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
             ) : (
               <FileIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
             )}
-            <Typography color="text.secondary">{LL.MEDIA.NO_FILES()}</Typography>
+            <Typography
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
+              {LL.MEDIA.NO_FILES()}
+            </Typography>
             {!mediaBaseUrl && (
-              <Typography variant="caption" color="text.secondary" textAlign="center">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                  textAlign: 'center',
+                }}
+              >
                 {LL.MEDIA.CONFIGURE_PATH()}
               </Typography>
             )}
@@ -544,10 +563,20 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xl" fullWidth>
       <DialogTitle>
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <ImageIcon color="warning" />
           <Typography variant="h6">{LL.MEDIA.BROWSER()}</Typography>
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <IconButton size="small" onClick={onClose}>
             <CloseIcon />
           </IconButton>
@@ -573,7 +602,12 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
         {activeTab === (showImageTab ? 1 : 0) && showVideoTab && renderFileGrid('video')}
         {activeTab === (showImageTab && showVideoTab ? 2 : showImageTab || showVideoTab ? 1 : 0) && showColorTab && (
           <Stack spacing={2} sx={{ maxWidth: 400, mx: 'auto' }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.MEDIA.SELECT_COLOR()}
             </Typography>
             <ColorPicker value={selectedColor} onChange={setSelectedColor} />

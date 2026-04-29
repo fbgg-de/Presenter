@@ -194,7 +194,13 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
       <DialogTitle>
-        <Stack direction="row" alignItems="center" spacing={2}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <CropIcon />
           <Typography variant="h6">{LL.PDF.AREA_MAPPING_TITLE()}</Typography>
         </Stack>
@@ -204,7 +210,14 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
           {/* PDF View with overlay */}
           <Box sx={{ flex: 2, overflow: 'auto', position: 'relative' }}>
             {/* Page navigation */}
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 1 }}>
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{
+                alignItems: 'center',
+                mb: 1,
+              }}
+            >
               <Button size="small" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => p - 1)}>
                 {LL.PDF.PAGE_PREV()}
               </Button>
@@ -290,13 +303,24 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
 
           {/* Right panel: block selector + mappings list */}
           <Stack sx={{ flex: 1, minWidth: 220 }} spacing={2}>
-            <Typography variant="subtitle2" fontWeight={700}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 700,
+              }}
+            >
               {LL.PDF.SELECT_BLOCK_TO_MAP()}
             </Typography>
             <Select value={selectedBlock} onChange={(e) => setSelectedBlock(e.target.value)} size="small" fullWidth>
               {blockNames.map((name) => (
                 <MenuItem key={name} value={name}>
-                  <Stack direction="row" spacing={1} alignItems="center">
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    sx={{
+                      alignItems: 'center',
+                    }}
+                  >
                     <Box
                       sx={{
                         width: 12,
@@ -311,11 +335,22 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
               ))}
             </Select>
 
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.PDF.DRAW_RECTANGLE_HELP()}
             </Typography>
 
-            <Typography variant="subtitle2" fontWeight={700} sx={{ mt: 2 }}>
+            <Typography
+              variant="subtitle2"
+              sx={{
+                fontWeight: 700,
+                mt: 2,
+              }}
+            >
               {LL.PDF.MAPPINGS_TITLE({ count: mappings.length })}
             </Typography>
             <List dense disablePadding sx={{ flex: 1, overflow: 'auto' }}>
@@ -330,7 +365,13 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
                 >
                   <ListItemText
                     primary={
-                      <Stack direction="row" spacing={0.5} alignItems="center">
+                      <Stack
+                        direction="row"
+                        spacing={0.5}
+                        sx={{
+                          alignItems: 'center',
+                        }}
+                      >
                         <Box
                           sx={{
                             width: 10,
@@ -359,7 +400,13 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
             </List>
 
             {mappings.length === 0 && (
-              <Typography variant="body2" color="text.secondary" textAlign="center">
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  textAlign: 'center',
+                }}
+              >
                 {LL.PDF.NO_MAPPINGS_YET()}
               </Typography>
             )}

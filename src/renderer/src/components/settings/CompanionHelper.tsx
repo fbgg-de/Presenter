@@ -96,8 +96,20 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <CableIcon />
             <Typography variant="h6">{LL.COMPANION.HELPER_TITLE()}</Typography>
           </Stack>
@@ -111,8 +123,19 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
           {/* Connection Info */}
           <Card variant="outlined">
             <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Typography variant="body2" fontWeight={600}>
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                  }}
+                >
                   {LL.COMPANION.WS_URL()}:
                 </Typography>
                 <Chip label={wsUrl} variant="outlined" size="small" sx={{ fontFamily: 'monospace' }} />
@@ -131,7 +154,13 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
           </Card>
 
           {/* Target Window Selector */}
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <InputLabel>{LL.COMPANION.TARGET_WINDOW()}</InputLabel>
               <Select value={targetWindow} label={LL.COMPANION.TARGET_WINDOW()} onChange={(e) => setTargetWindow(e.target.value)}>

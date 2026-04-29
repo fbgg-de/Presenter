@@ -188,9 +188,28 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
 
   return (
     <>
-      <Dialog open={open} maxWidth="sm" fullWidth onClose={allowClose ? onClose : undefined} disableEscapeKeyDown={!allowClose}>
+      <Dialog
+        open={open}
+        maxWidth="sm"
+        fullWidth
+        onClose={
+          allowClose
+            ? onClose
+            : (_event, reason) => {
+                if (reason !== 'escapeKeyDown') {
+                  onClose?.();
+                }
+              }
+        }
+      >
         <DialogTitle>
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <EventIcon />
             <Typography variant="h6">{isCreatingNew ? LL.SHOWS.NEW() : LL.SHOWS.TITLE()}</Typography>
           </Stack>
@@ -218,7 +237,13 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
           ) : (
             <Stack spacing={2}>
               {isLoading ? (
-                <Box display="flex" justifyContent="center" p={4}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    p: 4,
+                  }}
+                >
                   <CircularProgress />
                 </Box>
               ) : shows.length === 0 ? (
@@ -227,7 +252,12 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                   <Typography variant="h6" gutterBottom>
                     {LL.SHOWS.NO_SHOWS()}
                   </Typography>
-                  <Typography color="text.secondary" component="p">
+                  <Typography
+                    component="p"
+                    sx={{
+                      color: 'text.secondary',
+                    }}
+                  >
                     {LL.SHOWS.EMPTY_HELP()}
                   </Typography>
                   <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsCreatingNew(true)}>
@@ -236,7 +266,13 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                 </Paper>
               ) : (
                 <>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      mb: 1,
+                    }}
+                  >
                     {LL.SHOWS.SELECT_PROMPT()}
                   </Typography>
                   <Paper variant="outlined">
@@ -304,29 +340,48 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                             >
                               <ListItemText
                                 primary={
-                                  <Stack direction="row" spacing={1} alignItems="center">
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    sx={{
+                                      alignItems: 'center',
+                                    }}
+                                  >
                                     <Typography variant="body1">{show.title}</Typography>
                                     {isCurrentShow && (
                                       <Chip label={LL.SHOWS.CURRENT()} size="small" color="success" icon={<CheckCircleIcon />} />
                                     )}
                                   </Stack>
                                 }
-                                secondaryTypographyProps={{ component: 'div' } as object}
                                 secondary={
-                                  <Stack direction="row" spacing={1} alignItems="center">
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    sx={{
+                                      alignItems: 'center',
+                                    }}
+                                  >
                                     <Typography variant="caption">
                                       {`${(show.order ?? []).length} ${(show.order ?? []).length === 1 ? (LL as any).SONG() : (LL as any).SONGS()}`}
                                     </Typography>
                                     {show.date && (
                                       <>
                                         <Typography variant="caption">•</Typography>
-                                        <Typography variant="caption" color="text.secondary">
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            color: 'text.secondary',
+                                          }}
+                                        >
                                           {new Date(show.date).toLocaleString()}
                                         </Typography>
                                       </>
                                     )}
                                   </Stack>
                                 }
+                                slotProps={{
+                                  secondary: { component: 'div' } as object,
+                                }}
                               />
                             </ListItemButton>
                           </ListItem>
@@ -362,7 +417,11 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                   {LL.SHOWS.NEW()}
                 </Button>
               )}
-              <Box flexGrow={1} />
+              <Box
+                sx={{
+                  flexGrow: 1,
+                }}
+              />
               {allowClose && <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>}
               <Button onClick={handleConfirmSelection} variant="contained" disabled={!selectedShow}>
                 {LL.COMMON.CONFIRM()}
@@ -371,7 +430,6 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
           )}
         </DialogActions>
       </Dialog>
-
       {/* Delete confirmation dialog */}
       <Dialog open={!!showToDelete} onClose={() => setShowToDelete(null)} maxWidth="xs">
         <DialogTitle>{LL.ADMIN.CONFIRM_DELETE()}</DialogTitle>
@@ -380,7 +438,13 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
             {LL.SHOWS.DELETE_CONFIRMATION_START()}
             <strong>"{showToDelete}"</strong>?
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              mt: 1,
+            }}
+          >
             {LL.ADMIN.ACTION_CANNOT_BE_UNDONE()}
           </Typography>
         </DialogContent>
@@ -391,7 +455,6 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Override confirmation dialog */}
       <Dialog open={!!confirmOverride} onClose={() => setConfirmOverride(null)} maxWidth="xs">
         <DialogTitle>{LL.SHOWS.SAVE_OVERRIDE_TITLE()}</DialogTitle>
@@ -416,7 +479,13 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
             </strong>
             {LL.SHOWS.SAVE_OVERRIDE_DESCRIPTION_END()}
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'text.secondary',
+              mt: 1,
+            }}
+          >
             {LL.ADMIN.ACTION_CANNOT_BE_UNDONE()}
           </Typography>
         </DialogContent>
@@ -427,7 +496,6 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
           </Button>
         </DialogActions>
       </Dialog>
-
       {/* Rename dialog */}
       <Dialog open={!!showToRename} onClose={() => setShowToRename(null)} maxWidth="xs" fullWidth>
         <DialogTitle>{LL.SHOWS.RENAME_DIALOG_TITLE()}</DialogTitle>

@@ -52,12 +52,31 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
     return (
       <Paper elevation={2} square sx={{ bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider', px: 2, py: 1, mt: 2 }}>
         {copyright && (
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1, display: 'block' }}>
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+              mb: 1,
+              display: 'block',
+            }}
+          >
             {copyright}
           </Typography>
         )}
-        <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap' }}>
-          <Typography variant="caption" color="text.secondary">
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {LL.PDF.NO_PDF_AVAILABLE()}
           </Typography>
           <Chip
@@ -98,7 +117,15 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
 
   return (
     <Paper elevation={2} square sx={{ bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider', px: 2, py: 1, width: '100%' }}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ flexWrap: 'wrap', justifyContent: 'center' }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          justifyContent: 'center',
+        }}
+      >
         {/* Zoom controls: [−] percentage [+] then 100%, fit-width */}
         {onZoomOut && (
           <Tooltip title={LL.MUSICIAN.ZOOM_OUT()}>
@@ -142,7 +169,12 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
         )}
 
         {numPages > 0 && (
-          <Typography variant="caption" color="text.secondary">
+          <Typography
+            variant="caption"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {LL.MUSICIAN.PAGE_COUNT({ count: numPages })}
           </Typography>
         )}
@@ -168,7 +200,14 @@ export const MusicianFooter = (props: MusicianFooterProps) => {
             ))}
           </Select>
         ) : resolvedFilename ? (
-          <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 200 }}>
+          <Typography
+            variant="caption"
+            noWrap
+            sx={{
+              color: 'text.secondary',
+              maxWidth: 200,
+            }}
+          >
             {resolvedFilename}
           </Typography>
         ) : null}

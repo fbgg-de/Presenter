@@ -278,10 +278,8 @@ export const MusicianPage = () => {
         onClose={() => dispatch(closeShowSelector())}
         currentShowTitle={currentShow?.title}
       />
-
       {/* QR sharing dialog */}
       <QrCodeShare open={qrOpen} onClose={() => setQrOpen(false)} />
-
       {/* PDF Upload dialog — always available for song items */}
       {activeSongNumber != null && (
         <PdfUploadModal
@@ -294,7 +292,6 @@ export const MusicianPage = () => {
           onOpenAreaMapping={() => setAreaMappingOpen(true)}
         />
       )}
-
       {/* PDF Area Mapping editor */}
       {pdfViewer.pdfUrl && (
         <PdfAreaMappingEditor
@@ -306,10 +303,8 @@ export const MusicianPage = () => {
           onSave={pdfViewer.handleSaveAreaMappings}
         />
       )}
-
       {/* MIDI mapping dialog */}
       <MidiLearnDialog open={midiOpen} onClose={() => setMidiOpen(false)} onAction={handleMidiAction} />
-
       {/* Settings drawer */}
       <MusicianSettings
         open={settingsOpen}
@@ -326,7 +321,6 @@ export const MusicianPage = () => {
         setQrOpen={setQrOpen}
         setPdfUploadOpen={setPdfUploadOpen}
       />
-
       {/* Main layout */}
       <Stack direction="row" sx={{ height: '100dvh', overflow: 'hidden', position: 'relative' }}>
         {/* Sidebar */}
@@ -377,8 +371,21 @@ export const MusicianPage = () => {
 
           {/* Main content */}
           {!currentShow ? (
-            <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, p: 4 }}>
-              <Typography variant="h6" color="text.secondary" sx={{ mb: 2 }}>
+            <Stack
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1,
+                p: 4,
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  color: 'text.secondary',
+                  mb: 2,
+                }}
+              >
                 {LL.MUSICIAN.NO_SHOW()}
               </Typography>
               <Button variant="contained" onClick={() => dispatch(closeShowSelector())}>
@@ -386,7 +393,14 @@ export const MusicianPage = () => {
               </Button>
             </Stack>
           ) : !activeItem ? (
-            <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, p: 4 }}>
+            <Stack
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1,
+                p: 4,
+              }}
+            >
               <CircularProgress />
             </Stack>
           ) : isSongItem && hasPdfs ? (
@@ -434,8 +448,21 @@ export const MusicianPage = () => {
             />
           ) : (
             /* Non-song items — placeholder */
-            <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, p: 4, opacity: 0.5 }}>
-              <Typography variant="body1" color="text.secondary">
+            <Stack
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 1,
+                p: 4,
+                opacity: 0.5,
+              }}
+            >
+              <Typography
+                variant="body1"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {activeItem.label || activeItem.bibleRef || 'Media'}
               </Typography>
             </Stack>

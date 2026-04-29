@@ -235,7 +235,6 @@ export const PdfLayerViewer = ({
           </IconButton>
         </Tooltip>
       )}
-
       <Popover
         open={open}
         onClose={handleClose}
@@ -261,10 +260,11 @@ export const PdfLayerViewer = ({
                 />
                 <ListItemText
                   primary={LL.ANNOTATION.LAYER_SHOW_LAYERS()}
-                  primaryTypographyProps={{
-                    variant: 'body2',
-                    fontWeight: 600,
-                    sx: { opacity: showAnnotations ? 1 : 0.5 },
+                  slotProps={{
+                    primary: {
+                      variant: 'body2',
+                      sx: { fontWeight: 600, opacity: showAnnotations ? 1 : 0.5 },
+                    },
                   }}
                 />
               </ListItem>
@@ -274,11 +274,23 @@ export const PdfLayerViewer = ({
 
           {/* ── Per-layer list ── */}
           {loading ? (
-            <Stack alignItems="center" sx={{ py: 2 }}>
+            <Stack
+              sx={{
+                alignItems: 'center',
+                py: 2,
+              }}
+            >
               <CircularProgress size={24} />
             </Stack>
           ) : layerNames.length === 0 ? (
-            <Typography variant="body2" color="text.secondary" sx={{ px: 0.5, py: 1 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+                px: 0.5,
+                py: 1,
+              }}
+            >
               {LL.ANNOTATION.NO_LAYERS()}
             </Typography>
           ) : (
@@ -303,7 +315,6 @@ export const PdfLayerViewer = ({
                         </IconButton>
                       </Tooltip>
                     )}
-
                     {/* ② Visibility eye icon */}
                     {!isBeingRenamed && showVisibilityToggle && (
                       <Tooltip title={isVisible ? LL.ANNOTATION.HIDE_LAYER() : LL.ANNOTATION.SHOW_LAYER()}>
@@ -312,7 +323,6 @@ export const PdfLayerViewer = ({
                         </IconButton>
                       </Tooltip>
                     )}
-
                     {/* ③ Name — inline rename input OR clickable label */}
                     {isBeingRenamed ? (
                       <TextField
@@ -329,23 +339,25 @@ export const PdfLayerViewer = ({
                         autoFocus
                         disabled={isRenaming}
                         sx={{ flex: 1, mx: 0.5, '& .MuiInputBase-input': { py: 0.4, fontSize: '0.75rem' } }}
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end" sx={{ gap: 0.25 }}>
-                              <IconButton size="small" onClick={() => handleRename(layer)} disabled={!renameValue.trim() || isRenaming}>
-                                <CheckIcon sx={{ fontSize: 14 }} />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                onClick={() => {
-                                  setRenamingLayer(null);
-                                  setRenameValue('');
-                                }}
-                              >
-                                <CloseIcon sx={{ fontSize: 14 }} />
-                              </IconButton>
-                            </InputAdornment>
-                          ),
+                        slotProps={{
+                          input: {
+                            endAdornment: (
+                              <InputAdornment position="end" sx={{ gap: 0.25 }}>
+                                <IconButton size="small" onClick={() => handleRename(layer)} disabled={!renameValue.trim() || isRenaming}>
+                                  <CheckIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setRenamingLayer(null);
+                                    setRenameValue('');
+                                  }}
+                                >
+                                  <CloseIcon sx={{ fontSize: 14 }} />
+                                </IconButton>
+                              </InputAdornment>
+                            ),
+                          },
                         }}
                       />
                     ) : showDelete ? (
@@ -357,11 +369,12 @@ export const PdfLayerViewer = ({
                       >
                         <ListItemText
                           primary={layer}
-                          primaryTypographyProps={{
-                            variant: 'body2',
-                            noWrap: true,
-                            fontWeight: isActive ? 700 : 400,
-                            sx: { opacity: isVisible ? 1 : 0.5 },
+                          slotProps={{
+                            primary: {
+                              variant: 'body2',
+                              noWrap: true,
+                              sx: { fontWeight: isActive ? 700 : 400, opacity: isVisible ? 1 : 0.5 },
+                            },
                           }}
                         />
                       </ListItemButton>
@@ -374,16 +387,16 @@ export const PdfLayerViewer = ({
                       >
                         <ListItemText
                           primary={layer}
-                          primaryTypographyProps={{
-                            variant: 'body2',
-                            noWrap: true,
-                            fontWeight: isActive ? 700 : 400,
-                            sx: { opacity: isVisible ? 1 : 0.5 },
+                          slotProps={{
+                            primary: {
+                              variant: 'body2',
+                              noWrap: true,
+                              sx: { fontWeight: isActive ? 700 : 400, opacity: isVisible ? 1 : 0.5 },
+                            },
                           }}
                         />
                       </ListItemButton>
                     )}
-
                     {/* ④ Edit + delete (edit mode only) */}
                     {showDelete && !isBeingRenamed && (
                       <Stack direction="row" spacing={0} sx={{ flexShrink: 0 }}>
@@ -410,7 +423,14 @@ export const PdfLayerViewer = ({
             <>
               <Divider sx={{ my: 0.5 }} />
               {showNewInput ? (
-                <Stack direction="row" spacing={0.5} alignItems="center" sx={{ pt: 0.5 }}>
+                <Stack
+                  direction="row"
+                  spacing={0.5}
+                  sx={{
+                    alignItems: 'center',
+                    pt: 0.5,
+                  }}
+                >
                   <TextField
                     size="small"
                     placeholder={LL.ANNOTATION.NEW_LAYER_PLACEHOLDER()}
@@ -440,11 +460,25 @@ export const PdfLayerViewer = ({
                   </IconButton>
                 </Stack>
               ) : (
-                <Stack direction="row" alignItems="center" sx={{ pt: 0.25, cursor: 'pointer' }} onClick={() => setShowNewInput(true)}>
+                <Stack
+                  direction="row"
+                  onClick={() => setShowNewInput(true)}
+                  sx={{
+                    alignItems: 'center',
+                    pt: 0.25,
+                    cursor: 'pointer',
+                  }}
+                >
                   <IconButton size="small">
                     <AddIcon sx={{ fontSize: 16 }} />
                   </IconButton>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: 'text.secondary',
+                      fontSize: '0.75rem',
+                    }}
+                  >
                     {LL.ANNOTATION.NEW_LAYER()}
                   </Typography>
                 </Stack>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type DragEvent, MouseEvent } from 'react';
+﻿import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type DragEvent, MouseEvent } from 'react';
 import {
   Box,
   Chip,
@@ -35,6 +35,7 @@ import {
   MoreVert as MoreVertIcon,
   ChevronRight as ChevronRightIcon,
   FolderOpen as FolderOpenIcon,
+  FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import DraggableList from '@/components/show/DraggableList';
@@ -74,8 +75,17 @@ import { WindowManager } from '@/components/layout/WindowManager';
 import { MUSICAL_KEYS, parseOrderKey } from '@/utils/orderKeyUtils';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useGetWindows } from '@/store/windowSlice';
+import { DEFAULT_SONG_ITEM_COLOR, DEFAULT_MEDIA_ITEM_COLOR, DEFAULT_BIBLE_ITEM_COLOR } from '@/theme';
 
-const Sidebar = () => {
+export interface SidebarHandle {
+  openShowSwitcher: () => void;
+  openSearch: () => void;
+  openAddMenu: (anchor: HTMLElement) => void;
+  openMediaBrowser: (subType?: 'image' | 'video') => void;
+  openBiblePicker: () => void;
+}
+
+const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const { palette } = useTheme();
   const navigate = useNavigate();
 
@@ -98,18 +108,31 @@ const Sidebar = () => {
   const [openSongLibrary, _setOpenSongLibrary] = useState(false);
   const [openBiblePicker, _setOpenBiblePicker] = useState(false);
   const [openMediaBrowser, _setOpenMediaBrowser] = useState(false);
+  const [mediaBrowserPickType, setMediaBrowserPickType] = useState<'image' | 'video' | 'any'>('any');
   const [songToEdit, _setSongToEdit] = useState<ISong>();
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
   const [windowManagerOpen, setWindowManagerOpen] = useState(false);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<null | HTMLElement>(null);
 
   const { data: session } = useGetSessionQuery();
+  const bibleEnabled = session?.settings?.bibleEnabled ?? false;
   const [logout] = useLogoutMutation();
   const [fetchSong] = useLazyGetSongQuery();
 
   // Add menu
   const [addMenuAnchor, setAddMenuAnchor] = useState<null | HTMLElement>(null);
   const addMenuOpen = Boolean(addMenuAnchor);
+
+  useImperativeHandle(ref, () => ({
+    openShowSwitcher: () => setOpenShowSwitcher(true),
+    openSearch: () => setOpenSongSearch(true),
+    openAddMenu: (anchor: HTMLElement) => setAddMenuAnchor(anchor),
+    openMediaBrowser: (subType?: 'image' | 'video') => {
+      setMediaBrowserPickType(subType ?? 'any');
+      setOpenMediaBrowser(true);
+    },
+    openBiblePicker: () => setOpenBiblePicker(true),
+  }));
 
   const [saveShowMutation] = useSaveShowMutation();
   const { data: availableStyles = [] } = useGetStylesQuery();
@@ -324,6 +347,27 @@ const Sidebar = () => {
   // Show items from the current show
   const showItems = currentShow?.order ?? [];
 
+  // Ref for the hidden file-input used by the drop-zone click handler
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = [...(e.target.files ?? [])].filter((f) => f.type === 'text/plain' && f.name.endsWith('.txt'));
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          const importedSong = CCLISong(file.name, ev.target.result.toString());
+          dispatch(addSongToStore(importedSong));
+          dispatch(addToSongsOrder(importedSong.songNumber));
+          dispatch(addShowItem({ type: 'song', songNumber: importedSong.songNumber, order: 'Default' }));
+        }
+      };
+      reader.readAsText(file);
+    });
+    // Reset so the same file can be re-selected
+    e.target.value = '';
+  };
+
   // Get display info for a show item
   const getItemLabel = (item: ShowItem, index: number): string => {
     switch (item.type) {
@@ -413,7 +457,15 @@ const Sidebar = () => {
   const menuItemOrders = menuItemSong?.order ? Object.keys(menuItemSong.order) : [];
 
   return (
-    <Stack width={400} minWidth={400} sx={{ background: palette.background.default }} onDragOver={onDragOver} onDrop={onDrop}>
+    <Stack
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      sx={{
+        width: 400,
+        minWidth: 400,
+        background: palette.background.default,
+      }}
+    >
       <Settings open={openSettings} setOpen={setOpenSettings} />
       <SongEditor open={openSongEditor} setOpen={setOpenSongEditor} song={songToEdit} />
       <SongLibrary
@@ -432,17 +484,23 @@ const Sidebar = () => {
         currentShowTitle={currentShow?.title}
       />
       <BibleVersePicker open={openBiblePicker} onClose={() => setOpenBiblePicker(false)} onAdd={handleBibleVerseAdd} />
-      <MediaBrowser open={openMediaBrowser} onClose={() => setOpenMediaBrowser(false)} onAdd={handleMediaAdd} />
-
+      <MediaBrowser
+        open={openMediaBrowser}
+        onClose={() => setOpenMediaBrowser(false)}
+        onAdd={handleMediaAdd}
+        pickType={mediaBrowserPickType}
+      />
       <StyleEditor open={styleEditorOpen} onClose={() => setStyleEditorOpen(false)} />
-
       <WindowManager open={windowManagerOpen} onClose={() => setWindowManagerOpen(false)} />
-
       <Stack
         direction="row"
-        p={openSongSearch ? 0 : 1}
-        sx={{ background: palette.background.paper, minHeight: '56px', flexWrap: 'wrap' }}
-        alignItems="center"
+        sx={{
+          p: openSongSearch ? 0 : 1,
+          alignItems: 'center',
+          background: palette.background.paper,
+          minHeight: '56px',
+          flexWrap: 'wrap',
+        }}
       >
         {openSongSearch ? (
           <Box sx={{ width: '100%', p: 0.5 }}>
@@ -487,7 +545,7 @@ const Sidebar = () => {
                 }}
               >
                 <ListItemIcon>
-                  <MusicNoteIcon fontSize="small" sx={{ color: '#1976d2' }} />
+                  <MusicNoteIcon fontSize="small" sx={{ color: DEFAULT_SONG_ITEM_COLOR }} />
                 </ListItemIcon>
                 <ListItemText>{LL.SONGS.ADD()}</ListItemText>
               </MenuItem>
@@ -498,21 +556,23 @@ const Sidebar = () => {
                 }}
               >
                 <ListItemIcon>
-                  <ImageIcon fontSize="small" sx={{ color: '#f9a825' }} />
+                  <ImageIcon fontSize="small" sx={{ color: DEFAULT_MEDIA_ITEM_COLOR }} />
                 </ListItemIcon>
                 <ListItemText>{LL.SHOW_ITEMS.ADD_MEDIA()}</ListItemText>
               </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  setAddMenuAnchor(null);
-                  setOpenBiblePicker(true);
-                }}
-              >
-                <ListItemIcon>
-                  <MenuBookIcon fontSize="small" sx={{ color: '#388e3c' }} />
-                </ListItemIcon>
-                <ListItemText>{LL.SHOW_ITEMS.ADD_BIBLE_VERSE()}</ListItemText>
-              </MenuItem>
+              {bibleEnabled && (
+                <MenuItem
+                  onClick={() => {
+                    setAddMenuAnchor(null);
+                    setOpenBiblePicker(true);
+                  }}
+                >
+                  <ListItemIcon>
+                    <MenuBookIcon fontSize="small" sx={{ color: DEFAULT_BIBLE_ITEM_COLOR }} />
+                  </ListItemIcon>
+                  <ListItemText>{LL.SHOW_ITEMS.ADD_BIBLE_VERSE()}</ListItemText>
+                </MenuItem>
+              )}
             </Menu>
 
             {isDirty && (
@@ -531,7 +591,11 @@ const Sidebar = () => {
               </IconButton>
             </Tooltip>
 
-            <Box flexGrow={1} />
+            <Box
+              sx={{
+                flexGrow: 1,
+              }}
+            />
 
             {/* Musician View */}
             <Tooltip title={LL.MUSICIAN.OPEN()}>
@@ -556,10 +620,20 @@ const Sidebar = () => {
               {session?.mail && (
                 <MenuItem disabled>
                   <ListItemText>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {LL.AUTH.LOGGED_IN_AS()}
                     </Typography>
-                    <Typography variant="body2" fontWeight={600}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                      }}
+                    >
                       {session.mail}
                     </Typography>
                   </ListItemText>
@@ -597,7 +671,6 @@ const Sidebar = () => {
           </>
         )}
       </Stack>
-
       {/* ── Item context menu ── */}
       <Menu
         anchorEl={itemMenuAnchor}
@@ -654,7 +727,6 @@ const Sidebar = () => {
           <ListItemText sx={{ color: 'error.main' }}>{LL.MUSICIAN.ITEM_DELETE()}</ListItemText>
         </MenuItem>
       </Menu>
-
       {/* Key submenu */}
       <Menu
         anchorEl={keySubmenuAnchor}
@@ -672,7 +744,6 @@ const Sidebar = () => {
           </MenuItem>
         ))}
       </Menu>
-
       {/* Order submenu */}
       <Menu
         anchorEl={orderSubmenuAnchor}
@@ -692,7 +763,6 @@ const Sidebar = () => {
           </MenuItem>
         ))}
       </Menu>
-
       {/* Item-style: window list submenu */}
       <Menu
         anchorEl={itemStyleWinAnchor}
@@ -715,7 +785,6 @@ const Sidebar = () => {
           </MenuItem>
         ))}
       </Menu>
-
       {/* Item-style: style list submenu (for the chosen window) */}
       <Menu
         anchorEl={itemStyleStyleAnchor}
@@ -742,7 +811,6 @@ const Sidebar = () => {
           </MenuItem>
         ))}
       </Menu>
-
       <DraggableList
         sx={{ overflow: 'auto' }}
         onItemsChanged={(source, destination) => {
@@ -758,6 +826,81 @@ const Sidebar = () => {
           }
         }}
       >
+        {showItems.length === 0 && (
+          <Stack
+            spacing={1.5}
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexGrow: 1,
+              p: 3,
+              textAlign: 'center',
+            }}
+          >
+            <FileUploadIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
+            <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+              {LL.SHOW_ITEMS.EMPTY_HINT_TITLE()}
+            </Typography>
+
+            {/* Interactive hint line */}
+            <Typography variant="body2" color="text.disabled" component="div" sx={{ lineHeight: 2 }}>
+              {/* "Load a show" */}
+              <Box
+                component="span"
+                onClick={() => setOpenShowSwitcher(true)}
+                sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline', '&:hover': { opacity: 0.8 } }}
+              >
+                {LL.SHOW_ITEMS.EMPTY_HINT_LOAD_SHOW()}
+              </Box>
+              {', '}
+              {/* "search for songs" */}
+              <Box
+                component="span"
+                onClick={() => setOpenSongSearch(true)}
+                sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline', '&:hover': { opacity: 0.8 } }}
+              >
+                {LL.SHOW_ITEMS.EMPTY_HINT_SEARCH()}
+              </Box>
+              {', '}
+              {LL.SHOW_ITEMS.EMPTY_HINT_OR()} {/* "add items" with the + icon */}
+              <Box
+                component="span"
+                onClick={(e: React.MouseEvent<HTMLSpanElement>) => setAddMenuAnchor(e.currentTarget)}
+                sx={{
+                  color: 'primary.main',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  '&:hover': { opacity: 0.8 },
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                <AddIcon sx={{ fontSize: 14, verticalAlign: 'middle', mb: '2px' }} /> {LL.SHOW_ITEMS.EMPTY_HINT_ADD()}
+              </Box>{' '}
+              {LL.SHOW_ITEMS.EMPTY_HINT_CCLI()}
+            </Typography>
+
+            <Box
+              component="label"
+              sx={{
+                mt: 1,
+                border: '2px dashed',
+                borderColor: 'divider',
+                borderRadius: 2,
+                px: 3,
+                py: 1.5,
+                cursor: 'pointer',
+                display: 'block',
+                '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+              }}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Typography variant="caption" color="text.disabled">
+                {LL.SHOW_ITEMS.EMPTY_HINT_DROP()}
+              </Typography>
+              <input ref={fileInputRef} type="file" accept=".txt" multiple hidden onChange={handleFileInputChange} />
+            </Box>
+          </Stack>
+        )}
         {showItems.map((item, i) => {
           const ItemIcon = getShowItemIcon(item.type, item.mediaSubType);
           const itemColor = getShowItemColor(item.type);
@@ -779,7 +922,13 @@ const Sidebar = () => {
                 if (songClick === 'double-click') dispatch(setActiveItemIndex(i));
               }}
               secondaryAction={
-                <Stack direction="row" gap={0.5} alignItems="center">
+                <Stack
+                  direction="row"
+                  sx={{
+                    gap: 0.5,
+                    alignItems: 'center',
+                  }}
+                >
                   {/* Read-only chips */}
                   {isSong && itemOrder && itemOrder !== 'Default' && (
                     <Chip
@@ -843,6 +992,8 @@ const Sidebar = () => {
       </DraggableList>
     </Stack>
   );
-};
+});
+
+Sidebar.displayName = 'Sidebar';
 
 export default Sidebar;

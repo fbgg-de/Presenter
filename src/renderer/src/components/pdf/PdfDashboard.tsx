@@ -98,8 +98,20 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <PdfIcon />
             <Typography variant="h6">
               {LL.PDF.DASHBOARD()} — {LL.PDF.SONG_NUMBER({ number: String(songNumber) })}
@@ -110,7 +122,6 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
           </IconButton>
         </Stack>
       </DialogTitle>
-
       <DialogContent>
         <Stack spacing={2}>
           {/* Search */}
@@ -148,7 +159,12 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
             onClick={() => fileInputRef.current?.click()}
           >
             <UploadIcon sx={{ fontSize: 40, color: 'text.secondary', mb: 1 }} />
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.PDF.DRAG_DROP()}
             </Typography>
             {isUploading && <CircularProgress size={24} sx={{ mt: 1 }} />}
@@ -159,7 +175,13 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
 
           {/* File list */}
           {isLoading ? (
-            <Box display="flex" justifyContent="center" p={2}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                p: 2,
+              }}
+            >
               <CircularProgress />
             </Box>
           ) : filteredPdfs.length === 0 ? (
@@ -185,7 +207,12 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
                     secondary={
                       <Stack direction="row" spacing={1} component="span">
                         <Chip label={formatFileSize(pdf.size)} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.7rem' }} />
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.secondary',
+                          }}
+                        >
                           {new Date(pdf.modified * 1000).toLocaleDateString()}
                         </Typography>
                       </Stack>
@@ -197,13 +224,17 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
           )}
 
           {isFetching && !isLoading && (
-            <Box display="flex" justifyContent="center">
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
               <CircularProgress size={20} />
             </Box>
           )}
         </Stack>
       </DialogContent>
-
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
         <DialogTitle>{LL.PDF.DELETE()}</DialogTitle>

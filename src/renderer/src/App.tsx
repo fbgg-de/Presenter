@@ -75,6 +75,7 @@ const App = () => {
             <Route path="/a/:licenseNumber" element={<AccountLoginRedirect />} />
             <Route path="/unauthorized" element={<UnauthorizedPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/admin/:tab" element={<AdminPage />} />
             <Route path="/notes" element={<MusicianThemeWrapper />} />
             <Route path="/*" element={<MainPage />} />
           </Routes>

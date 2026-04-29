@@ -70,7 +70,12 @@ export const UnauthorizedPage = () => {
             </Typography>
             {requiredGroup && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.AUTH.REQUIRED_GROUP()}
                 </Typography>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
@@ -80,7 +85,12 @@ export const UnauthorizedPage = () => {
             )}
             {userGroups && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.AUTH.YOUR_GROUPS()}
                 </Typography>
                 <List dense sx={{ bgcolor: 'action.hover', borderRadius: 1, mt: 0.5 }}>
@@ -90,7 +100,12 @@ export const UnauthorizedPage = () => {
                     .filter((g) => g.length > 0)
                     .map((group, idx) => (
                       <ListItem key={idx}>
-                        <ListItemText primary={group} primaryTypographyProps={{ variant: 'body2', fontFamily: 'monospace' }} />
+                        <ListItemText
+                          primary={group}
+                          slotProps={{
+                            primary: { variant: 'body2', sx: { fontFamily: 'monospace' } },
+                          }}
+                        />
                       </ListItem>
                     ))}
                 </List>
@@ -120,7 +135,13 @@ define('OIDC_REDIRECT_URI', '...');
 define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
               </Typography>
             </Alert>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+                mt: 2,
+              }}
+            >
               {LL.ERRORS.ADMIN_OIDC_CONFIG_CONTACT()}
             </Typography>
           </>
@@ -134,7 +155,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
             </Typography>
             {requiredGroup && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.AUTH.REQUIRED_GROUP()}
                 </Typography>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
@@ -144,7 +170,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
             )}
             {userGroups && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.AUTH.YOUR_GROUPS()}
                 </Typography>
                 <List dense sx={{ bgcolor: 'action.hover', borderRadius: 1, mt: 0.5 }}>
@@ -154,7 +185,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
                     .filter((g) => g.length > 0)
                     .map((group, idx) => (
                       <ListItem key={idx}>
-                        <ListItemText primary={group} primaryTypographyProps={{ variant: 'body2', fontFamily: 'monospace' }} />
+                        <ListItemText
+                          primary={group}
+                          slotProps={{
+                            primary: { variant: 'body2', sx: { fontFamily: 'monospace' } },
+                          }}
+                        />
                       </ListItem>
                     ))}
                 </List>
@@ -174,7 +210,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
             </Typography>
             {sub && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.AUTH.USER_ID()}
                 </Typography>
                 <Typography variant="body2" sx={{ fontFamily: 'monospace', bgcolor: 'action.hover', p: 1, borderRadius: 1 }}>
@@ -241,7 +282,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
             </Typography>
             {details && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.AUTH.TECHNICAL_DETAILS()}
                 </Typography>
                 <Typography
@@ -266,7 +312,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
             </Typography>
             {details && (
               <Box sx={{ mt: 2 }}>
-                <Typography variant="subtitle2" color="text.secondary">
+                <Typography
+                  variant="subtitle2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.AUTH.ERROR_CODE()}
                 </Typography>
                 <Typography
@@ -286,8 +337,18 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
     <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 2, bgcolor: 'background.default' }}>
       <Card sx={{ width: 720, maxWidth: '100%' }}>
         <CardContent>
-          <Stack gap={3}>
-            <Stack direction="row" alignItems="center" gap={2}>
+          <Stack
+            sx={{
+              gap: 3,
+            }}
+          >
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
               <ErrorIcon color="error" sx={{ fontSize: 48 }} />
               <Typography variant="h4" color="error">
                 {getErrorTitle()}
@@ -296,7 +357,12 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
 
             <Box>{getErrorMessage()}</Box>
 
-            <Stack direction="row" gap={2}>
+            <Stack
+              direction="row"
+              sx={{
+                gap: 2,
+              }}
+            >
               <Button variant="contained" startIcon={<BackIcon />} onClick={() => navigate('/login')} fullWidth>
                 {LL.AUTH.BACK_TO_LOGIN()}
               </Button>

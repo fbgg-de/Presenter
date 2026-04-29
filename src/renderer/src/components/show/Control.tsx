@@ -1,9 +1,11 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { Stack, Typography } from '@mui/material';
+import { Stack, Typography, IconButton, Tooltip } from '@mui/material';
+import { MusicNote as MusicNoteIcon, Image as ImageIcon, Videocam as VideocamIcon, MenuBook as MenuBookIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import ControlSong from '@/components/show/ControlSong';
 import ControlBibleVerse from '@/components/show/ControlBibleVerse';
 import ControlMedia from '@/components/show/ControlMedia';
+import { useGetSessionQuery } from '@/api/session.api';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { resolveStyleCascade, mergeStyles, DEFAULT_STYLE } from '@/utils/styleUtils';
 import VideoControlBar from '@/components/media/VideoControlBar';
@@ -13,9 +15,21 @@ import { useGetSettings } from '@/store/settingsSlice';
 import { useGetPresentationSettings } from '@/store/presentationSlice';
 import { WindowConfig } from '@/store/windowSlice';
 import { useGetShow } from '@/store/showSlice';
+import { DEFAULT_SONG_ITEM_COLOR, DEFAULT_MEDIA_ITEM_COLOR, DEFAULT_BIBLE_ITEM_COLOR } from '@/theme';
 
-const Control = () => {
+const Control = ({
+  onOpenSearch,
+  onOpenMediaBrowser,
+  onOpenBiblePicker,
+}: {
+  onOpenSearch?: () => void;
+  onOpenMediaBrowser?: (subType?: 'image' | 'video') => void;
+  onOpenBiblePicker?: () => void;
+} = {}) => {
   const { LL } = useI18nContext();
+
+  const { data: session } = useGetSessionQuery();
+  const bibleEnabled = session?.settings?.bibleEnabled ?? false;
 
   const { globalStyleId } = useGetSettings();
   const { activeItemIndex } = useGetPresentationSettings();
@@ -76,24 +90,6 @@ const Control = () => {
 
   const perWindowRows = useMemo(() => openWindows.filter((w) => w.config.name), [openWindows]);
 
-  // No show loaded or no items
-  if (!currentShow || !currentShow.order || currentShow.order.length === 0) {
-    return (
-      <Stack sx={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Typography color="text.secondary">{LL.CONTROL.NO_ITEM()}</Typography>
-      </Stack>
-    );
-  }
-
-  // No active item selected
-  if (!activeItem) {
-    return (
-      <Stack sx={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Typography color="text.secondary">{LL.CONTROL.NO_ITEM()}</Typography>
-      </Stack>
-    );
-  }
-
   const renderControl = useMemo(() => {
     if (!activeItem) return null;
     switch (activeItem.type) {
@@ -121,6 +117,57 @@ const Control = () => {
     activeItem?.mediaLoop,
     activeItem?.mediaColor,
   ]);
+
+  // No show loaded or no items
+  if (!currentShow || !currentShow.order || currentShow.order.length === 0) {
+    return (
+      <Stack sx={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 2, p: 3 }}>
+        <Typography color="text.secondary">{LL.CONTROL.NO_ITEM()}</Typography>
+        <Typography variant="body2" color="text.disabled" sx={{ textAlign: 'center', maxWidth: 320 }}>
+          {LL.CONTROL.EMPTY_HINT()}
+        </Typography>
+        <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+          <Tooltip title={LL.SONGS.SEARCH()}>
+            <IconButton onClick={() => onOpenSearch?.()} sx={{ color: DEFAULT_SONG_ITEM_COLOR }}>
+              <MusicNoteIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={LL.MEDIA.IMAGE()}>
+            <IconButton onClick={() => onOpenMediaBrowser?.('image')} sx={{ color: DEFAULT_MEDIA_ITEM_COLOR }}>
+              <ImageIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={LL.MEDIA.VIDEO()}>
+            <IconButton onClick={() => onOpenMediaBrowser?.('video')} sx={{ color: DEFAULT_MEDIA_ITEM_COLOR }}>
+              <VideocamIcon />
+            </IconButton>
+          </Tooltip>
+          {bibleEnabled && (
+            <Tooltip title={LL.BIBLE.VERSE()}>
+              <IconButton onClick={() => onOpenBiblePicker?.()} sx={{ color: DEFAULT_BIBLE_ITEM_COLOR }}>
+                <MenuBookIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Stack>
+      </Stack>
+    );
+  }
+
+  // No active item selected
+  if (!activeItem) {
+    return (
+      <Stack sx={{ flexGrow: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Typography
+          sx={{
+            color: 'text.secondary',
+          }}
+        >
+          {LL.CONTROL.NO_ITEM()}
+        </Typography>
+      </Stack>
+    );
+  }
 
   return (
     <Stack sx={{ flexGrow: 1, overflow: 'hidden' }}>

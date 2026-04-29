@@ -34,10 +34,12 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
 import { useUpdateSetting, type SettingsState, useGetSettings, toggleTheme } from '@/store/settingsSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
+import { useGetAccountSettingsQuery, useUpdateAccountSettingsMutation } from '@/api/session.api';
 import { KeyboardMappingEditor } from '@/components/settings/KeyboardMappingEditor';
 import { ColorSwatchButton } from '@/components/style/ColorPicker';
 import { exportSettings, importSettings, applyImportedSettings } from '@/utils/settingsExport';
 import { CompanionHelper } from '@/components/settings/CompanionHelper';
+import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
 
 type SettingConfig = {
   key: keyof SettingsState;
@@ -95,9 +97,13 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
   const updateSetting = useUpdateSetting();
 
   const { data: styles = [] } = useGetStylesQuery();
+  const { data: accountSettings } = useGetAccountSettingsQuery(undefined, { skip: settings.offlineMode });
+  const [updateAccountSettings] = useUpdateAccountSettingsMutation();
   const [filter, setFilter] = useState('');
   const [companionOpen, setCompanionOpen] = useState(false);
+  const [desktopAppModalOpen, setDesktopAppModalOpen] = useState(false);
   const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
+
   const themeIcon =
     settings.themeMode === 'dark' ? (
       <DarkMode fontSize="small" />
@@ -146,9 +152,18 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
   return (
     <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right">
       <CompanionHelper open={companionOpen} onClose={() => setCompanionOpen(false)} />
+      <DesktopAppDownloadModal open={desktopAppModalOpen} onClose={() => setDesktopAppModalOpen(false)} />
       <Stack sx={{ width: 'min(90vw, 600px)', height: '100%' }}>
         {/* Header */}
-        <Stack direction="row" alignItems="center" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: 'center',
+            p: 2,
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        >
           <Typography variant="h5" sx={{ fontWeight: 700, mr: 2 }}>
             {LL.SETTINGS.SETTINGS()}
           </Typography>
@@ -223,7 +238,11 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
             </MenuItem>
           </Menu>
 
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <IconButton onClick={() => props.setOpen(false)}>
             <CloseIcon />
           </IconButton>
@@ -239,22 +258,43 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
           {GROUP_ORDER.filter((g) => groups[g] && groups[g].length > 0).map((groupName) => (
             <Accordion key={groupName} defaultExpanded={false}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight={600}>{getGroupLabel(groupName)}</Typography>
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                  }}
+                >
+                  {getGroupLabel(groupName)}
+                </Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <Stack spacing={1}>
                   {/* Global Style selector — inside General group */}
                   {groupName === 'General' && (
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 0.5 }}>
-                      <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-                        {LL.SETTINGS.GLOBAL_STYLE()}
-                      </Typography>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: 'center',
+                        py: 0.5,
+                      }}
+                    >
+                      <Tooltip title={LL.SETTINGS.GLOBAL_STYLE_HINT()}>
+                        <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+                          {LL.SETTINGS.GLOBAL_STYLE()}
+                        </Typography>
+                      </Tooltip>
                       <Box sx={{ flex: 1 }}>
                         <Select
                           size="small"
                           fullWidth
-                          value={settings.globalStyleId || 0}
-                          onChange={(e) => updateSetting('globalStyleId', Number(e.target.value))}
+                          value={accountSettings?.defaultStyleId ?? settings.globalStyleId ?? 0}
+                          onChange={(e) => {
+                            const id = Number(e.target.value);
+                            updateSetting('globalStyleId', id);
+                            if (!settings.offlineMode) {
+                              updateAccountSettings({ defaultStyleId: id || null });
+                            }
+                          }}
                         >
                           <MenuItem value={0}>{LL.STYLE.NONE()}</MenuItem>
                           {styles.map((s) => (
@@ -280,7 +320,13 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
             LL.SETTINGS.GROUP_KEYBOARD().toLowerCase().includes(filterLower)) && (
             <Accordion defaultExpanded={false}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography fontWeight={600}>{LL.SETTINGS.GROUP_KEYBOARD()}</Typography>
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                  }}
+                >
+                  {LL.SETTINGS.GROUP_KEYBOARD()}
+                </Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <KeyboardMappingEditor />
@@ -293,21 +339,18 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
             !(typeof window !== 'undefined' && !!(window as { api?: unknown }).api) && (
               <Accordion defaultExpanded={false}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography fontWeight={600}>{LL.DESKTOP_APP.SETTINGS_SECTION()}</Typography>
+                  <Typography
+                    sx={{
+                      fontWeight: 600,
+                    }}
+                  >
+                    {LL.DESKTOP_APP.SETTINGS_SECTION()}
+                  </Typography>
                 </AccordionSummary>
                 <AccordionDetails>
                   <Stack spacing={1}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<DownloadIcon />}
-                      onClick={() => {
-                        const a = document.createElement('a');
-                        a.href = '/app/presenter-setup.exe';
-                        a.download = '';
-                        a.click();
-                      }}
-                    >
-                      {LL.DESKTOP_APP.SETTINGS_DOWNLOAD()} — {LL.DESKTOP_APP.OS_WINDOWS()}
+                    <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => setDesktopAppModalOpen(true)}>
+                      {LL.DESKTOP_APP.SETTINGS_DOWNLOAD()}
                     </Button>
                   </Stack>
                 </AccordionDetails>
@@ -396,7 +439,14 @@ const SettingRow = ({ config, value }: { config: SettingConfig; value: string | 
   const label = getLabel(config);
 
   return (
-    <Stack direction="row" alignItems="center" spacing={1} sx={{ py: 0.5 }}>
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: 'center',
+        py: 0.5,
+      }}
+    >
       <Tooltip title={config.description || label}>
         <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
           {label}
@@ -416,7 +466,13 @@ const SettingRow = ({ config, value }: { config: SettingConfig; value: string | 
         ) : config.type === 'color' ? (
           <ColorSwatchButton value={String(value) || '#000000'} onChange={(c) => updateSetting(config.key, c)} />
         ) : config.key === 'mediaPath' ? (
-          <Stack direction="row" spacing={1} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <SettingInput value={value} type="string" onChange={(v) => updateSetting(config.key, v)} />
             {window.api?.pickDirectory && (
               <Tooltip title={LL.STYLE.BROWSE()}>

@@ -175,7 +175,13 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <Typography variant="h6">{LL.STYLE.INSPECTOR()}</Typography>
           {windowName && <Chip label={LL.STYLE.INSPECTOR_WINDOW({ name: windowName })} size="small" variant="outlined" />}
         </Stack>
@@ -184,19 +190,34 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
         {/* Style level summary */}
         <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.STYLE.GLOBAL()}
             </Typography>
             <Typography variant="body2">{globalStyle?.name || `(${LL.STYLE.NONE()})`}</Typography>
           </Box>
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.STYLE.SHOW()}
             </Typography>
             <Typography variant="body2">{showStyle?.name || `(${LL.STYLE.NONE()})`}</Typography>
           </Box>
           <Box>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.STYLE.ITEM()}
             </Typography>
             <Typography variant="body2">{itemStyle?.name || `(${LL.STYLE.NONE()})`}</Typography>
@@ -225,12 +246,24 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
               {inspectedProperties.map((prop) => (
                 <TableRow key={prop.name} hover>
                   <TableCell>
-                    <Typography variant="body2" fontFamily="monospace" fontSize="0.8rem">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: 'monospace',
+                        fontSize: '0.8rem',
+                      }}
+                    >
                       {prop.name}
                     </Typography>
                   </TableCell>
                   <TableCell>
-                    <Stack direction="row" spacing={1} alignItems="center">
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: 'center',
+                      }}
+                    >
                       {/* Color swatch for color properties */}
                       {(prop.name.toLowerCase().includes('color') || prop.name === 'backgroundColor') && prop.value.startsWith('#') && (
                         <Box
@@ -245,7 +278,12 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
                           }}
                         />
                       )}
-                      <Typography variant="body2" fontSize="0.85rem">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontSize: '0.85rem',
+                        }}
+                      >
                         {prop.value}
                       </Typography>
                     </Stack>
@@ -267,7 +305,12 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
                     />
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" fontSize="0.85rem">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: '0.85rem',
+                      }}
+                    >
                       {prop.sourceStyleName}
                     </Typography>
                   </TableCell>
@@ -293,7 +336,11 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
             {LL.COMMON.EDIT()} {LL.STYLE.ITEM()}
           </Button>
         )}
-        <Box flexGrow={1} />
+        <Box
+          sx={{
+            flexGrow: 1,
+          }}
+        />
         <Button onClick={onClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>
     </Dialog>

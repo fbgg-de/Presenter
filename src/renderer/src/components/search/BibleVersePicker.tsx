@@ -74,10 +74,20 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <MenuBookIcon color="success" />
           <Typography variant="h6">{LL.BIBLE.VERSE()}</Typography>
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <IconButton size="small" onClick={onClose}>
             <CloseIcon />
           </IconButton>
@@ -140,12 +150,23 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
           <Divider />
 
           {/* Preview */}
-          <Typography variant="subtitle2" color="text.secondary">
+          <Typography
+            variant="subtitle2"
+            sx={{
+              color: 'text.secondary',
+            }}
+          >
             {LL.BIBLE.PREVIEW()}
           </Typography>
 
           {verseFetching && (
-            <Box display="flex" justifyContent="center" py={3}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                py: 3,
+              }}
+            >
               <CircularProgress />
               <Typography sx={{ ml: 2 }}>{LL.BIBLE.LOADING()}</Typography>
             </Box>
@@ -166,8 +187,13 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
                       <Typography
                         component="span"
                         variant="body2"
-                        color="text.secondary"
-                        sx={{ mr: 0.5, fontWeight: 700, verticalAlign: 'super', fontSize: '0.7em' }}
+                        sx={{
+                          color: 'text.secondary',
+                          mr: 0.5,
+                          fontWeight: 700,
+                          verticalAlign: 'super',
+                          fontSize: '0.7em',
+                        }}
                       >
                         {verse.number}
                       </Typography>
@@ -179,7 +205,14 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
                 <Typography variant="body1">{verseResult.text}</Typography>
               )}
               {verseResult.copyright && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                    mt: 2,
+                    display: 'block',
+                  }}
+                >
                   {verseResult.copyright}
                 </Typography>
               )}

@@ -543,7 +543,6 @@ const Footer = () => {
           setWindowManagerOpenWithNew(false);
         }}
       />
-
       {/* Rename window dialog */}
       <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>{LL.WINDOW.RENAME()}</DialogTitle>
@@ -599,7 +598,14 @@ const Footer = () => {
                 const mainIcon = isStream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />;
                 const chipIcon =
                   statusIcons.length > 0 ? (
-                    <Stack direction="row" spacing={0.25} alignItems="center" sx={{ pl: 0.5 }}>
+                    <Stack
+                      direction="row"
+                      spacing={0.25}
+                      sx={{
+                        alignItems: 'center',
+                        pl: 0.5,
+                      }}
+                    >
                       {mainIcon}
                       {statusIcons}
                     </Stack>
@@ -862,7 +868,13 @@ const Footer = () => {
                     <ListItemText>
                       {screen.label}
                       {screen.isPrimary ? ` (${LL.WINDOW.PRIMARY_SCREEN()})` : ''}{' '}
-                      <Typography component="span" variant="caption" color="text.secondary">
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         {screen.bounds.width}×{screen.bounds.height}
                       </Typography>
                     </ListItemText>
@@ -881,7 +893,13 @@ const Footer = () => {
                 </IconButton>
               </Tooltip>
 
-              <Stack direction="row" sx={{ ml: 'auto' }} gap={0.5}>
+              <Stack
+                direction="row"
+                sx={{
+                  gap: 0.5,
+                  ml: 'auto',
+                }}
+              >
                 <Tooltip title={isTextHidden ? LL.FOOTER.SHOW_TEXT() : LL.FOOTER.HIDE_TEXT()}>
                   <IconButton size="small" onClick={() => dispatch(toggleTextHidden())} color={isTextHidden ? 'warning' : 'default'}>
                     <HideTextIcon fontSize="small" />
@@ -907,7 +925,14 @@ const Footer = () => {
               </Stack>
             </>
           ) : (
-            <Stack direction="row" alignItems="center" sx={{ width: '100%' }} gap={0.5}>
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: 'center',
+                gap: 0.5,
+                width: '100%',
+              }}
+            >
               <Tooltip title={LL.WINDOW.OPEN()}>
                 <IconButton
                   size="small"
@@ -919,10 +944,22 @@ const Footer = () => {
                   <AddIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
-              <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, textAlign: 'center' }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: 'text.secondary',
+                  flexGrow: 1,
+                  textAlign: 'center',
+                }}
+              >
                 {LL.FOOTER.NO_WINDOWS()}
               </Typography>
-              <Stack direction="row" gap={0.5}>
+              <Stack
+                direction="row"
+                sx={{
+                  gap: 0.5,
+                }}
+              >
                 <Tooltip title={LL.STYLE.EDITOR()}>
                   <IconButton size="small" onClick={() => setStyleEditorOpen(true)}>
                     <StyleIcon fontSize="small" />

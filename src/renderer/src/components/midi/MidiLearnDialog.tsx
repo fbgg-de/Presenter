@@ -92,20 +92,49 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
           pb: 1.5,
         })}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack
+          direction="row"
+          spacing={1.5}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <PianoIcon color="primary" />
-          <Typography variant="h6" fontWeight={700}>
+          <Typography
+            variant="h6"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {LL.MIDI.SETTINGS()}
           </Typography>
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <StatusChip status={midi.status} />
         </Stack>
 
         {/* Devices row */}
         {midi.isSupported && (
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ mt: 1.5, minHeight: 28 }}>
+          <Stack
+            direction="row"
+            spacing={1}
+            useFlexGap
+            sx={{
+              flexWrap: 'wrap',
+              mt: 1.5,
+              minHeight: 28,
+            }}
+          >
             {midi.devices.length === 0 ? (
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {LL.MIDI.NO_DEVICES()}
               </Typography>
             ) : (
@@ -122,7 +151,6 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
           </Stack>
         )}
       </DialogTitle>
-
       <DialogContent sx={{ px: 2, py: 2 }}>
         {!midi.isSupported ? (
           <Typography color="error" sx={{ p: 1 }}>
@@ -134,19 +162,30 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
             {midi.isLearning && (
               <Stack
                 direction="row"
-                alignItems="center"
                 spacing={1}
-                sx={(theme) => ({
-                  px: 2,
-                  py: 1.25,
-                  mb: 0.5,
-                  bgcolor: alpha(theme.palette.warning.main, 0.15),
-                  border: `1px solid ${theme.palette.warning.main}`,
-                  borderRadius: 2,
-                })}
+                sx={[
+                  {
+                    alignItems: 'center',
+                  },
+                  (theme) => ({
+                    px: 2,
+                    py: 1.25,
+                    mb: 0.5,
+                    bgcolor: alpha(theme.palette.warning.main, 0.15),
+                    border: `1px solid ${theme.palette.warning.main}`,
+                    borderRadius: 2,
+                  }),
+                ]}
               >
                 <RecordIcon color="warning" fontSize="small" sx={{ animation: 'pulse 1s infinite' }} />
-                <Typography variant="body2" fontWeight={600} color="warning.main" flexGrow={1}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 600,
+                    color: 'warning.main',
+                    flexGrow: 1,
+                  }}
+                >
                   {LL.MIDI.PRESS_FOR({ action: actionLabel(midi.learnAction as MidiAction) })}
                 </Typography>
                 <Button size="small" color="warning" variant="outlined" startIcon={<StopIcon />} onClick={midi.cancelLearn}>
@@ -164,26 +203,50 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
                 <Box key={actKey}>
                   <Stack
                     direction="row"
-                    alignItems="center"
                     spacing={1.5}
-                    sx={(theme) => ({
-                      px: 1.5,
-                      py: 1,
-                      borderRadius: 2,
-                      transition: 'background 0.2s',
-                      bgcolor: learning ? alpha(theme.palette.warning.main, 0.1) : 'transparent',
-                      '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.6) },
-                    })}
+                    sx={[
+                      {
+                        alignItems: 'center',
+                      },
+                      (theme) => ({
+                        px: 1.5,
+                        py: 1,
+                        borderRadius: 2,
+                        transition: 'background 0.2s',
+                        bgcolor: learning ? alpha(theme.palette.warning.main, 0.1) : 'transparent',
+                        '&:hover': { bgcolor: alpha(theme.palette.action.hover, 0.6) },
+                      }),
+                    ]}
                   >
                     {/* Action label */}
-                    <Typography variant="body2" fontWeight={600} sx={{ minWidth: 130 }}>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontWeight: 600,
+                        minWidth: 130,
+                      }}
+                    >
                       {actionLabel(actKey)}
                     </Typography>
 
                     {/* Mapped key chips */}
-                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap flexGrow={1}>
+                    <Stack
+                      direction="row"
+                      spacing={0.5}
+                      useFlexGap
+                      sx={{
+                        flexWrap: 'wrap',
+                        flexGrow: 1,
+                      }}
+                    >
                       {mappings.length === 0 ? (
-                        <Typography variant="caption" color="text.disabled" sx={{ lineHeight: '24px' }}>
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            color: 'text.disabled',
+                            lineHeight: '24px',
+                          }}
+                        >
                           {LL.MIDI.NO_MAPPING()}
                         </Typography>
                       ) : (
@@ -220,7 +283,6 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
                       </span>
                     </Tooltip>
                   </Stack>
-
                   {idx < MIDI_ACTION_KEYS.length - 1 && <Divider sx={{ mx: 1.5 }} />}
                 </Box>
               );
@@ -228,7 +290,6 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
           </Stack>
         )}
       </DialogContent>
-
       <DialogActions>
         <Button onClick={onClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>

@@ -42,12 +42,10 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
           backgroundColor: value,
         }}
       />
-
       {/* react-colorful HSV picker */}
       <Box sx={{ '& .react-colorful': { width: '100%', height: 180 } }}>
         <HexColorPicker color={normalizeHex(value)} onChange={(c) => onChange(c.toUpperCase())} />
       </Box>
-
       {/* Hex input */}
       <TextField
         label={LL.MEDIA.HEX_INPUT()}
@@ -57,9 +55,13 @@ export const ColorPicker = ({ value, onChange }: ColorPickerProps) => {
         fullWidth
         placeholder="#000000"
       />
-
       {/* Preset swatches */}
-      <Typography variant="caption" color="text.secondary">
+      <Typography
+        variant="caption"
+        sx={{
+          color: 'text.secondary',
+        }}
+      >
         {LL.MEDIA.COLOR_PRESETS()}
       </Typography>
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -101,7 +103,13 @@ interface ColorSwatchButtonProps {
 export const ColorSwatchButton = ({ value, onChange, onClear, ariaLabel, size = 32 }: ColorSwatchButtonProps) => {
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   return (
-    <Stack direction="row" spacing={1} alignItems="center">
+    <Stack
+      direction="row"
+      spacing={1}
+      sx={{
+        alignItems: 'center',
+      }}
+    >
       <Box
         component="button"
         type="button"

@@ -144,7 +144,13 @@ export const ConnectivityChecker = () => {
           variant="filled"
           sx={{ width: '100%', alignItems: 'center' }}
           action={
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <Tooltip title={LL.CONNECTIVITY.SNACK_CHANGE_BUTTON()}>
                 <IconButton size="small" color="inherit" onClick={() => setDialogOpen(true)}>
                   <SettingsIcon fontSize="small" />
@@ -161,14 +167,18 @@ export const ConnectivityChecker = () => {
           {LL.CONNECTIVITY.SNACK_MESSAGE()}
         </Alert>
       </Snackbar>
-
       {/* ── Backend URL dialog ── */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>{LL.CONNECTIVITY.TITLE()}</DialogTitle>
 
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1 }}>
-            <Typography variant="body2" color="text.secondary">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.CONNECTIVITY.MESSAGE()}
             </Typography>
 
@@ -193,7 +203,13 @@ export const ConnectivityChecker = () => {
 
             <Divider />
 
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
+            <Stack
+              direction="row"
+              sx={{
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
               <Typography variant="body2">{offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}</Typography>
               <Button
                 variant={offlineMode ? 'contained' : 'outlined'}

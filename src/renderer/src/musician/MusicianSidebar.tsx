@@ -229,7 +229,6 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
           <ListItemText sx={{ color: 'error.main' }}>{LL.MUSICIAN.ITEM_DELETE()}</ListItemText>
         </MenuItem>
       </Menu>
-
       {/* Key submenu */}
       <Menu
         anchorEl={keySubmenuAnchor}
@@ -247,7 +246,6 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
           </MenuItem>
         ))}
       </Menu>
-
       {/* Order submenu */}
       <Menu
         anchorEl={orderSubmenuAnchor}
@@ -267,7 +265,6 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
           </MenuItem>
         ))}
       </Menu>
-
       <Drawer
         variant="persistent"
         open={open}
@@ -287,9 +284,13 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
           {/* Toolbar header — matches main operator sidebar */}
           <Stack
             direction="row"
-            p={searchOpen ? 0.5 : 1}
-            sx={{ background: palette.background.paper, minHeight: '48px', flexWrap: 'wrap' }}
-            alignItems="center"
+            sx={{
+              p: searchOpen ? 0.5 : 1,
+              alignItems: 'center',
+              background: palette.background.paper,
+              minHeight: '48px',
+              flexWrap: 'wrap',
+            }}
           >
             {searchOpen ? (
               <Box sx={{ width: '100%' }}>
@@ -321,9 +322,21 @@ export const MusicianSidebar = ({ open, activeItemIndex, operatorActiveIndex, on
                     </IconButton>
                   </Tooltip>
                 )}
-                <Box flexGrow={1} />
+                <Box
+                  sx={{
+                    flexGrow: 1,
+                  }}
+                />
                 {currentShow && (
-                  <Typography variant="caption" color="text.secondary" noWrap sx={{ maxWidth: 180, mr: 1 }}>
+                  <Typography
+                    variant="caption"
+                    noWrap
+                    sx={{
+                      color: 'text.secondary',
+                      maxWidth: 180,
+                      mr: 1,
+                    }}
+                  >
                     {currentShow.title}
                   </Typography>
                 )}

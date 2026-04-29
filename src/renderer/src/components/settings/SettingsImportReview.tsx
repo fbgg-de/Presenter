@@ -45,7 +45,13 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
   return (
     <Dialog open={open} onClose={onCancel} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Stack direction="row" alignItems="center" spacing={2}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <Typography variant="h6">{LL.SETTINGS.IMPORT_REVIEW_TITLE()}</Typography>
           <Stack direction="row" spacing={0.5}>
             {addedCount > 0 && (
@@ -67,7 +73,13 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
       </DialogTitle>
       <DialogContent dividers>
         {totalChanges === 0 ? (
-          <Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
+          <Typography
+            sx={{
+              color: 'text.secondary',
+              py: 2,
+              textAlign: 'center',
+            }}
+          >
             {LL.SETTINGS.IMPORT_NO_CHANGES()}
           </Typography>
         ) : (
@@ -85,7 +97,13 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
                 {Object.entries(diff.added).map(([key, value]) => (
                   <TableRow key={key}>
                     <TableCell>
-                      <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                        }}
+                      >
                         {key}
                       </Typography>
                     </TableCell>
@@ -93,12 +111,22 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
                       <Chip label={LL.SETTINGS.IMPORT_TAG_NEW()} size="small" color="success" sx={{ height: 20, fontSize: '0.65rem' }} />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="caption" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'text.secondary',
+                        }}
+                      >
                         —
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="caption" fontFamily="monospace">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                        }}
+                      >
                         {truncate(value)}
                       </Typography>
                     </TableCell>
@@ -107,7 +135,13 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
                 {Object.entries(diff.changed).map(([key, entry]) => (
                   <TableRow key={key}>
                     <TableCell>
-                      <Typography variant="body2" fontFamily="monospace" fontSize="0.75rem">
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: 'monospace',
+                          fontSize: '0.75rem',
+                        }}
+                      >
                         {key}
                       </Typography>
                     </TableCell>
@@ -120,12 +154,23 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
                       />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="caption" fontFamily="monospace" color="text.secondary">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                          color: 'text.secondary',
+                        }}
+                      >
                         {truncate(entry.old)}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="caption" fontFamily="monospace">
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          fontFamily: 'monospace',
+                        }}
+                      >
                         {truncate(entry.new)}
                       </Typography>
                     </TableCell>
@@ -139,7 +184,12 @@ export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: Settin
         {removedCount > 0 && (
           <>
             <Divider sx={{ my: 1 }} />
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.SETTINGS.IMPORT_REMOVED_NOTICE({ count: removedCount })}
             </Typography>
           </>

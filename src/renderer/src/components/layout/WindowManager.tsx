@@ -111,13 +111,25 @@ const WindowConfigForm = ({
         sx={{ flex: 1 }}
       >
         <MenuItem value="normal">
-          <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <NormalIcon fontSize="small" />
             <span>{LL.FOOTER.NORMAL_MODE()}</span>
           </Stack>
         </MenuItem>
         <MenuItem value="stream">
-          <Stack direction="row" alignItems="center" spacing={0.5}>
+          <Stack
+            direction="row"
+            spacing={0.5}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <StreamIcon fontSize="small" />
             <span>{LL.FOOTER.STREAM_MODE()}</span>
           </Stack>
@@ -183,7 +195,13 @@ const WindowConfigForm = ({
         <FormControlLabel
           control={<Switch checked={cfg.fullscreen || false} onChange={(e) => onChange({ fullscreen: e.target.checked })} size="small" />}
           label={
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <FullscreenIcon sx={{ fontSize: 16 }} />
               <Typography variant="body2">{LL.WINDOW.FULLSCREEN()}</Typography>
             </Stack>
@@ -194,7 +212,13 @@ const WindowConfigForm = ({
         <FormControlLabel
           control={<Switch checked={cfg.frameless !== false} onChange={(e) => onChange({ frameless: e.target.checked })} size="small" />}
           label={
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <FramelessIcon sx={{ fontSize: 16 }} />
               <Typography variant="body2">{LL.WINDOW.FRAMELESS()}</Typography>
             </Stack>
@@ -205,7 +229,13 @@ const WindowConfigForm = ({
         <FormControlLabel
           control={<Switch checked={cfg.alwaysOnTop || false} onChange={(e) => onChange({ alwaysOnTop: e.target.checked })} size="small" />}
           label={
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <OnTopIcon sx={{ fontSize: 16 }} />
               <Typography variant="body2">{LL.WINDOW.ALWAYS_ON_TOP()}</Typography>
             </Stack>
@@ -216,7 +246,13 @@ const WindowConfigForm = ({
         <FormControlLabel
           control={<Switch checked={cfg.hideMouse || false} onChange={(e) => onChange({ hideMouse: e.target.checked })} size="small" />}
           label={
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <MouseIcon sx={{ fontSize: 16 }} />
               <Typography variant="body2">{LL.FOOTER.HIDE_MOUSE()}</Typography>
             </Stack>
@@ -227,7 +263,13 @@ const WindowConfigForm = ({
         <FormControlLabel
           control={<Switch checked={cfg.transparent || false} onChange={(e) => onChange({ transparent: e.target.checked })} size="small" />}
           label={
-            <Stack direction="row" spacing={0.5} alignItems="center">
+            <Stack
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+              }}
+            >
               <TransparentIcon sx={{ fontSize: 16 }} />
               <Typography variant="body2">{LL.WINDOW.TRANSPARENT()}</Typography>
             </Stack>
@@ -236,7 +278,13 @@ const WindowConfigForm = ({
       </Grid>
     </Grid>
     {styles.length > 0 && (
-      <Stack direction="row" spacing={1} alignItems="center">
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{
+          alignItems: 'center',
+        }}
+      >
         <StyleIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
         <Select
           size="small"
@@ -429,11 +477,23 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
     <Drawer open={open} anchor="right" onClose={onClose}>
       <Stack sx={{ width: 'min(90vw, 600px)', height: '100%' }}>
         {/* Header */}
-        <Stack direction="row" alignItems="center" sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: 'center',
+            p: 2,
+            borderBottom: 1,
+            borderColor: 'divider',
+          }}
+        >
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
             {LL.WINDOW.PANEL_TITLE()}
           </Typography>
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <IconButton onClick={onClose}>
             <CloseIcon />
           </IconButton>
@@ -487,12 +547,22 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
           <Divider />
 
           {/* Window list */}
-          <Typography variant="subtitle2" fontWeight={700}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 700,
+            }}
+          >
             {LL.WINDOW.OPEN()} ({activeWindows.length})
           </Typography>
 
           {activeWindows.length === 0 ? (
-            <Typography color="text.secondary" variant="body2">
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+              }}
+            >
               {LL.WINDOW.NO_OPEN()}
             </Typography>
           ) : (
@@ -508,7 +578,15 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
                 return (
                   <ListItem key={entry.id} disablePadding sx={{ borderBottom: 1, borderColor: 'divider', display: 'block' }}>
                     {/* Summary row */}
-                    <Stack direction="row" alignItems="center" spacing={1} sx={{ px: 1, py: 0.75 }}>
+                    <Stack
+                      direction="row"
+                      spacing={1}
+                      sx={{
+                        alignItems: 'center',
+                        px: 1,
+                        py: 0.75,
+                      }}
+                    >
                       {isStream ? <StreamIcon fontSize="small" color="action" /> : <NormalIcon fontSize="small" color="action" />}
 
                       <Chip
@@ -517,7 +595,13 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
                         variant="outlined"
                         sx={{ height: 18, fontSize: '0.62rem' }}
                       />
-                      <Typography variant="body2" fontWeight={600} noWrap>
+                      <Typography
+                        variant="body2"
+                        noWrap
+                        sx={{
+                          fontWeight: 600,
+                        }}
+                      >
                         {name}
                       </Typography>
 
@@ -561,7 +645,6 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
                         </IconButton>
                       </Tooltip>
                     </Stack>
-
                     {/* Expandable edit form — animated with Collapse */}
                     <Collapse in={isEditExpanded} unmountOnExit>
                       <Box sx={{ px: 2, pb: 2, pt: 1, bgcolor: 'action.hover', borderTop: 1, borderColor: 'divider' }}>
@@ -610,9 +693,21 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
             sx={{ '&:before': { display: 'none' } }}
           >
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Stack direction="row" alignItems="center" spacing={1}>
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
                 <AddIcon fontSize="small" />
-                <Typography fontWeight={600}>{LL.WINDOW.CREATE()}</Typography>
+                <Typography
+                  sx={{
+                    fontWeight: 600,
+                  }}
+                >
+                  {LL.WINDOW.CREATE()}
+                </Typography>
               </Stack>
             </AccordionSummary>
             <AccordionDetails>

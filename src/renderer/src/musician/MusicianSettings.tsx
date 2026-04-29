@@ -68,15 +68,32 @@ export const MusicianSettings = ({
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
       <Stack sx={{ width: 320, p: 2, height: '100%' }} spacing={2.5}>
-        <Typography variant="h6" fontWeight={700}>
+        <Typography
+          variant="h6"
+          sx={{
+            fontWeight: 700,
+          }}
+        >
           {LL.MUSICIAN.SETTINGS()}
         </Typography>
         <Divider />
 
         {/* Dark / Light mode */}
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           {musicianTheme === 'dark' ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
-          <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              flex: 1,
+            }}
+          >
             {musicianTheme === 'dark' ? LL.MUSICIAN.DARK_MODE() : LL.MUSICIAN.LIGHT_MODE()}
           </Typography>
           <Switch
@@ -87,18 +104,42 @@ export const MusicianSettings = ({
         </Stack>
 
         {/* Block indicator */}
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <VisibilityIcon fontSize="small" />
-          <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              flex: 1,
+            }}
+          >
             {LL.MUSICIAN.BLOCK_INDICATOR()}
           </Typography>
           <Switch size="small" checked={blockIndicator} onChange={() => updateMusicianSetting('musicianBlockIndicator', !blockIndicator)} />
         </Stack>
 
         {/* Show footer */}
-        <Stack direction="row" alignItems="center" spacing={1}>
+        <Stack
+          direction="row"
+          spacing={1}
+          sx={{
+            alignItems: 'center',
+          }}
+        >
           <ListAltIcon fontSize="small" />
-          <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
+          <Typography
+            variant="body2"
+            sx={{
+              fontWeight: 600,
+              flex: 1,
+            }}
+          >
             {LL.MUSICIAN.SHOW_FOOTER()}
           </Typography>
           <Switch size="small" checked={showFooter} onChange={() => updateMusicianSetting('musicianShowFooter', !showFooter)} />
@@ -171,13 +212,30 @@ export const MusicianSettings = ({
 
         {/* Text size */}
         <Stack spacing={1}>
-          <Stack direction="row" alignItems="center" spacing={1}>
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <FormatSizeIcon fontSize="small" color="action" />
-            <Typography variant="body2" fontWeight={600}>
+            <Typography
+              variant="body2"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {LL.MUSICIAN.TEXT_SIZE()}
             </Typography>
           </Stack>
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <TextFieldsIcon fontSize="small" sx={{ opacity: 0.5, fontSize: '0.9rem' }} />
             <Slider
               value={textSize}

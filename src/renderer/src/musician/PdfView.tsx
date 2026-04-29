@@ -383,9 +383,9 @@ export const PdfView = ({
             {/* Loading overlay — shown during PDF reload to prevent visual flash */}
             {pdfLoading && (
               <Stack
-                alignItems="center"
-                justifyContent="center"
                 sx={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
                   position: 'absolute',
                   inset: 0,
                   zIndex: 20,
@@ -405,7 +405,15 @@ export const PdfView = ({
               className={pageView === 'two-page' ? 'pdf-doc-two-page' : undefined}
             >
               {pageView === 'two-page' ? (
-                <Stack direction="row" spacing={1} justifyContent="center" sx={{ width: '100%', height: '100%' }}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    justifyContent: 'center',
+                    width: '100%',
+                    height: '100%',
+                  }}
+                >
                   {currentPage > 0 && (
                     <Box
                       ref={leftPanelRef}
@@ -445,7 +453,13 @@ export const PdfView = ({
                 // When the PDF is wider than the viewport the wrapper overflows, enabling
                 // full left-edge scroll access without clipping the content.
                 <Box sx={{ display: 'flex', justifyContent: 'center', minWidth: '100%', py: 1 }}>
-                  <Stack spacing={2} alignItems="center" sx={{ minWidth: 'max-content' }}>
+                  <Stack
+                    spacing={2}
+                    sx={{
+                      alignItems: 'center',
+                      minWidth: 'max-content',
+                    }}
+                  >
                     {Array.from({ length: Math.max(0, numPages || 0) }, (_, i) => i + 1).map((pageNum) => (
                       <Box key={pageNum} sx={{ boxShadow: 3 }}>
                         <Page
@@ -464,12 +478,18 @@ export const PdfView = ({
             </Document>
           </>
         ) : (
-          <Stack alignItems="center" justifyContent="center" sx={{ height: '100%', p: 4 }}>
+          <Stack
+            sx={{
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: '100%',
+              p: 4,
+            }}
+          >
             <CircularProgress />
           </Stack>
         )}
       </Box>
-
       {/* ── Annotation toolbar overlay — always mounted so canvas overlays retain state.
            Positioned absolute relative to outer column Box (position:relative).
            When not in edit mode: pointerEvents:none and height:0/overflow:visible so
@@ -512,7 +532,6 @@ export const PdfView = ({
           </Box>
         </Box>
       )}
-
       {/* Footer */}
       {showFooter && activeSongNumber != null && resolvedFilename && (
         <MusicianFooter

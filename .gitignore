@@ -1,9 +1,9 @@
 .vscode
 .idea
 
-app
 node_modules
 dist
+dist-app
 out
 .DS_Store
 .eslintcache

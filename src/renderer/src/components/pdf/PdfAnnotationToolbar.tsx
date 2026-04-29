@@ -1360,10 +1360,14 @@ export const PdfAnnotationToolbar = ({
           wrapper,
         ),
       )}
-
       {/* -- Toolbar UI � only visible in edit mode -- */}
       {editMode && (
-        <Stack alignItems="center" sx={{ display: 'inline-flex' }}>
+        <Stack
+          sx={{
+            alignItems: 'center',
+            display: 'inline-flex',
+          }}
+        >
           {/* -- Tool-specific options (secondary bar � above main toolbar) -- */}
           {tool === 'draw' && (
             <Paper elevation={1} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, mb: 0.5, borderRadius: 1 }}>
@@ -1485,7 +1489,12 @@ export const PdfAnnotationToolbar = ({
               </Typography>
 
               {icons.length === 0 ? (
-                <Typography variant="caption" color="text.secondary">
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.ANNOTATION.ICON_NONE()}
                 </Typography>
               ) : (
@@ -1530,12 +1539,24 @@ export const PdfAnnotationToolbar = ({
                 <Stack sx={{ p: 1.5, minWidth: 200, maxWidth: 300 }} spacing={1}>
                   <Typography variant="subtitle2">{LL.ANNOTATION.ICON_MANAGE()}</Typography>
                   {icons.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
                       {LL.ANNOTATION.ICON_NONE()}
                     </Typography>
                   ) : (
                     icons.map((icon) => (
-                      <Stack key={icon.filename} direction="row" alignItems="center" spacing={1}>
+                      <Stack
+                        key={icon.filename}
+                        direction="row"
+                        spacing={1}
+                        sx={{
+                          alignItems: 'center',
+                        }}
+                      >
                         <Box sx={{ bgcolor: isDark ? 'grey.800' : 'grey.50', borderRadius: 0.5, p: 0.25, display: 'flex' }}>
                           <img src={icon.url} alt={icon.name} style={iconPreviewStyle} />
                         </Box>
@@ -1595,7 +1616,12 @@ export const PdfAnnotationToolbar = ({
 
           {tool === 'eraser' && (
             <Paper elevation={1} sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1, py: 0.5, mb: 0.5, borderRadius: 1 }}>
-              <Typography variant="caption" color="text.secondary">
+              <Typography
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
                 {LL.ANNOTATION.ERASER_HINT()}
               </Typography>
             </Paper>
@@ -1699,7 +1725,6 @@ export const PdfAnnotationToolbar = ({
           </Paper>
         </Stack>
       )}
-
       {/* -- Clear confirmation dialog -- */}
       <Dialog open={clearConfirmOpen} onClose={() => setClearConfirmOpen(false)}>
         <DialogTitle>{LL.ANNOTATION.CLEAR_LAYER()}</DialogTitle>

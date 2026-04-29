@@ -78,7 +78,11 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           {LL.SONGS.LIBRARY()}
           {filteredSongs && <Chip label={filteredSongs.length} size="small" variant="outlined" />}
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <ToggleButtonGroup value={sortOrder} exclusive onChange={(_e, val) => val && setSortOrder(val)} size="small" sx={{ mr: 1 }}>
             <ToggleButton value="lexicographic">
               <Tooltip title={LL.SONGS.SORT_BY_NAME()}>
@@ -116,7 +120,13 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
           />
 
           {isLoading ? (
-            <Box display="flex" justifyContent="center" py={4}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                py: 4,
+              }}
+            >
               <CircularProgress />
             </Box>
           ) : filteredSongs && filteredSongs.length > 0 ? (
@@ -153,12 +163,34 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
                     />
                     <ListItemText
                       primary={
-                        <Stack direction="row" spacing={1} alignItems="center">
-                          <Typography variant="body2" fontWeight={500} noWrap sx={{ flexShrink: 1, minWidth: 0 }}>
+                        <Stack
+                          direction="row"
+                          spacing={1}
+                          sx={{
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            noWrap
+                            sx={{
+                              fontWeight: 500,
+                              flexShrink: 1,
+                              minWidth: 0,
+                            }}
+                          >
                             {song.title}
                           </Typography>
                           {song.authors && song.authors !== 'Unknown' && (
-                            <Typography variant="caption" color="text.secondary" noWrap sx={{ flexShrink: 1, minWidth: 0 }}>
+                            <Typography
+                              variant="caption"
+                              noWrap
+                              sx={{
+                                color: 'text.secondary',
+                                flexShrink: 1,
+                                minWidth: 0,
+                              }}
+                            >
                               {song.authors}
                             </Typography>
                           )}
@@ -181,13 +213,24 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
               ))}
             </List>
           ) : (
-            <Box display="flex" justifyContent="center" py={4}>
-              <Typography color="text.secondary">{LL.SONGS.NO_FOUND()}</Typography>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                py: 4,
+              }}
+            >
+              <Typography
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
+                {LL.SONGS.NO_FOUND()}
+              </Typography>
             </Box>
           )}
         </DialogContent>
       </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onClose={() => !isDeleting && setDeleteConfirmOpen(false)}>
         <DialogTitle>{LL.SONGS.CONFIRM_DELETE()}</DialogTitle>

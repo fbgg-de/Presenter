@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, ReactNode, type SyntheticEvent } from 'react';
 import {
   Box,
   Button,
@@ -9,6 +9,7 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  GlobalStyles,
   IconButton,
   Paper,
   Stack,
@@ -30,6 +31,12 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  Divider,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -38,8 +45,11 @@ import {
   Logout as LogoutIcon,
   Link as LinkIcon,
   CheckCircle as CheckCircleIcon,
+  RadioButtonUnchecked as PendingIcon,
+  Storage as StorageIcon,
+  Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import {
   useGetAdminAccountsQuery,
@@ -52,6 +62,9 @@ import {
   useDeleteAdminProviderMutation,
   useAssignProviderToAccountMutation,
   useUnassignProviderFromAccountMutation,
+  useGetAdminMigrationsQuery,
+  useRunAdminMigrationsMutation,
+  useGetAdminConfigQuery,
   type AdminAccount,
   type OidcProvider,
   type CreateAccountRequest,
@@ -63,10 +76,20 @@ import { useLogoutMutation, useGetSessionQuery } from '@/api/session.api';
 import { AdminLogs } from '@/components/admin/AdminLogs';
 import { MetricsDashboard } from '@/components/admin/MetricsDashboard';
 
+const TAB_SLUGS = ['accounts', 'providers', 'metrics', 'logs', 'database', 'config'] as const;
+type TabSlug = (typeof TAB_SLUGS)[number];
+
 export const AdminPage = () => {
   const { LL } = useI18nContext();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState(0);
+  const { tab: tabParam } = useParams<{ tab?: string }>();
+
+  // Derive active tab index from URL param, defaulting to 0
+  const activeTab = Math.max(0, TAB_SLUGS.indexOf((tabParam ?? 'accounts') as TabSlug));
+
+  const handleTabChange = (_: SyntheticEvent, newValue: number) => {
+    navigate(`/admin/${TAB_SLUGS[newValue]}`, { replace: true });
+  };
 
   // Check if user is admin
   const { data: session } = useGetSessionQuery();
@@ -91,6 +114,14 @@ export const AdminPage = () => {
   const [assignProvider] = useAssignProviderToAccountMutation();
   const [unassignProvider] = useUnassignProviderFromAccountMutation();
   const [logout] = useLogoutMutation();
+
+  // Migrations
+  const { data: migrationStatus, isLoading: migrationsLoading } = useGetAdminMigrationsQuery();
+  const [runMigrations, { isLoading: migrationsRunning, data: migrationResult, reset: resetMigrationResult }] =
+    useRunAdminMigrationsMutation();
+
+  // Config
+  const { data: adminConfig, isLoading: configLoading } = useGetAdminConfigQuery();
 
   // Dialog state
   const [accountDialog, setAccountDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
@@ -182,11 +213,23 @@ export const AdminPage = () => {
 
   return (
     <Box sx={{ minHeight: '100vh', p: 3, bgcolor: 'background.default' }}>
-      <Card>
-        <CardContent>
-          <Stack gap={3}>
+      {/* Override the global overflow:hidden set by main.css so this page can scroll */}
+      <GlobalStyles styles={{ 'html, body': { overflow: 'auto !important', height: 'auto !important' } }} />
+      <Card sx={{ mb: 3 }}>
+        <CardContent sx={{ overflow: 'visible' }}>
+          <Stack
+            sx={{
+              gap: 3,
+            }}
+          >
             {/* Header */}
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
+            <Stack
+              direction="row"
+              sx={{
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
               <Typography variant="h4">{LL.ADMIN.PANEL()}</Typography>
               <Button variant="outlined" color="error" startIcon={<LogoutIcon />} onClick={handleLogout}>
                 {LL.AUTH.LOGOUT()}
@@ -194,17 +237,50 @@ export const AdminPage = () => {
             </Stack>
 
             {/* Tabs */}
-            <Tabs value={activeTab} onChange={(_, v) => setActiveTab(v)}>
-              <Tab label={LL.ADMIN.ACCOUNTS()} />
-              <Tab label={LL.ADMIN.OIDC_PROVIDERS()} />
-              <Tab label={LL.METRICS.METRICS()} />
-              <Tab label={LL.ADMIN_LOGS.NAV_TITLE()} />
-            </Tabs>
+            <Box
+              sx={{
+                position: 'sticky',
+                top: 0,
+                zIndex: 10,
+                bgcolor: 'background.paper',
+                mx: -3,
+                px: 3,
+                borderBottom: 1,
+                borderColor: 'divider',
+              }}
+            >
+              <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+                <Tab label={LL.ADMIN.ACCOUNTS()} />
+                <Tab label={LL.ADMIN.OIDC_PROVIDERS()} />
+                <Tab label={LL.METRICS.METRICS()} />
+                <Tab label={LL.ADMIN_LOGS.NAV_TITLE()} />
+                <Tab
+                  label={LL.ADMIN.DATABASE()}
+                  icon={
+                    migrationStatus && migrationStatus.pendingCount > 0 ? (
+                      <Chip label={migrationStatus.pendingCount} color="warning" size="small" />
+                    ) : undefined
+                  }
+                  iconPosition="end"
+                />
+                <Tab label={LL.ADMIN.CONFIG()} />
+              </Tabs>
+            </Box>
 
             {/* Accounts Tab */}
             {activeTab === 0 && (
-              <Stack gap={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack
+                sx={{
+                  gap: 2,
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <Typography variant="h6">
                     {LL.ADMIN.ACCOUNTS()} ({accounts.length})
                   </Typography>
@@ -244,7 +320,13 @@ export const AdminPage = () => {
                               />
                             </TableCell>
                             <TableCell>
-                              <Stack direction="row" gap={1} flexWrap="wrap">
+                              <Stack
+                                direction="row"
+                                sx={{
+                                  gap: 1,
+                                  flexWrap: 'wrap',
+                                }}
+                              >
                                 {account.providers.map((p) => (
                                   <Chip
                                     key={p.provider_id}
@@ -256,13 +338,22 @@ export const AdminPage = () => {
                                 ))}
                                 <Tooltip title={LL.ADMIN.ASSIGN_PROVIDER()}>
                                   <IconButton size="small" onClick={() => setAssignDialog({ open: true, license: account.license })}>
-                                    <LinkIcon fontSize="small" />
+                                    <LinkIcon
+                                      sx={{
+                                        fontSize: 'small',
+                                      }}
+                                    />
                                   </IconButton>
                                 </Tooltip>
                               </Stack>
                             </TableCell>
                             <TableCell>
-                              <Stack direction="row" gap={1}>
+                              <Stack
+                                direction="row"
+                                sx={{
+                                  gap: 1,
+                                }}
+                              >
                                 <IconButton size="small" onClick={() => setAccountDialog({ open: true, account })}>
                                   <EditIcon fontSize="small" />
                                 </IconButton>
@@ -293,8 +384,18 @@ export const AdminPage = () => {
 
             {/* Providers Tab */}
             {activeTab === 1 && (
-              <Stack gap={2}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack
+                sx={{
+                  gap: 2,
+                }}
+              >
+                <Stack
+                  direction="row"
+                  sx={{
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
+                >
                   <Typography variant="h6">
                     {LL.ADMIN.OIDC_PROVIDERS()} ({providers.length})
                   </Typography>
@@ -335,7 +436,12 @@ export const AdminPage = () => {
                               />
                             </TableCell>
                             <TableCell>
-                              <Stack direction="row" gap={1}>
+                              <Stack
+                                direction="row"
+                                sx={{
+                                  gap: 1,
+                                }}
+                              >
                                 <IconButton size="small" onClick={() => setProviderDialog({ open: true, provider })}>
                                   <EditIcon fontSize="small" />
                                 </IconButton>
@@ -366,7 +472,11 @@ export const AdminPage = () => {
 
             {/* Logs Tab */}
             {activeTab === 3 && (
-              <Stack gap={2}>
+              <Stack
+                sx={{
+                  gap: 2,
+                }}
+              >
                 <Typography variant="h6">{LL.ADMIN_LOGS.TITLE()}</Typography>
                 <AdminLogs />
               </Stack>
@@ -374,15 +484,235 @@ export const AdminPage = () => {
 
             {/* Metrics Tab */}
             {activeTab === 2 && (
-              <Stack gap={2}>
+              <Stack
+                sx={{
+                  gap: 2,
+                }}
+              >
                 <Typography variant="h6">{LL.METRICS.DASHBOARD()}</Typography>
                 <MetricsDashboard />
+              </Stack>
+            )}
+
+            {/* Database / Migrations Tab */}
+            {activeTab === 4 && (
+              <Stack sx={{ gap: 2 }}>
+                <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                    <StorageIcon />
+                    <Typography variant="h6">{LL.ADMIN.MIGRATIONS_TITLE()}</Typography>
+                  </Stack>
+                  {migrationStatus && (
+                    <Chip
+                      label={
+                        migrationStatus.pendingCount === 0
+                          ? LL.ADMIN.MIGRATIONS_UP_TO_DATE()
+                          : LL.ADMIN.MIGRATIONS_PENDING({ count: migrationStatus.pendingCount })
+                      }
+                      color={migrationStatus.pendingCount === 0 ? 'success' : 'warning'}
+                      size="small"
+                    />
+                  )}
+                </Stack>
+
+                {migrationStatus && (
+                  <Typography variant="body2" color="text.secondary">
+                    {LL.ADMIN.MIGRATIONS_CURRENT_VERSION({ version: migrationStatus.currentVersion })}
+                    {' · '}
+                    {LL.ADMIN.MIGRATIONS_VERSION({ version: migrationStatus.latestVersion })} latest
+                  </Typography>
+                )}
+
+                {/* Run button */}
+                {migrationStatus && migrationStatus.pendingCount > 0 && (
+                  <Box>
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      disabled={migrationsRunning}
+                      onClick={async () => {
+                        resetMigrationResult();
+                        await runMigrations();
+                      }}
+                    >
+                      {migrationsRunning ? LL.ADMIN.MIGRATIONS_RUNNING() : LL.ADMIN.MIGRATIONS_RUN()}
+                    </Button>
+                  </Box>
+                )}
+
+                {migrationsRunning && <LinearProgress />}
+
+                {/* Last run result */}
+                {migrationResult && (
+                  <Stack spacing={1}>
+                    {migrationResult.errors?.length > 0 ? (
+                      migrationResult.errors.map((e) => (
+                        <Alert key={e.version} severity="error">
+                          {LL.ADMIN.MIGRATIONS_ERROR({ version: e.version, error: e.error })}
+                        </Alert>
+                      ))
+                    ) : (
+                      <Alert severity="success">{LL.ADMIN.MIGRATIONS_SUCCESS({ count: migrationResult.applied?.length ?? 0 })}</Alert>
+                    )}
+                    {migrationResult.applied
+                      ?.map((a) => a.output)
+                      .filter(Boolean)
+                      .map((out, i) => (
+                        <Paper key={i} variant="outlined" sx={{ p: 1 }}>
+                          <Typography variant="caption" sx={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
+                            {out}
+                          </Typography>
+                        </Paper>
+                      ))}
+                  </Stack>
+                )}
+
+                {/* Migration list */}
+                {migrationsLoading ? (
+                  <LinearProgress />
+                ) : migrationStatus ? (
+                  <Paper variant="outlined">
+                    <List dense disablePadding>
+                      {migrationStatus.migrations.map((m, idx) => (
+                        <ListItem key={m.version} divider={idx < migrationStatus.migrations.length - 1} sx={{ gap: 1 }}>
+                          <ListItemIcon sx={{ minWidth: 32 }}>
+                            {m.applied ? (
+                              <CheckCircleIcon fontSize="small" color="success" />
+                            ) : (
+                              <PendingIcon fontSize="small" color="warning" />
+                            )}
+                          </ListItemIcon>
+                          <ListItemText
+                            primary={
+                              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', fontWeight: 600, minWidth: 28 }}>
+                                  v{m.version}
+                                </Typography>
+                                <Typography variant="body2">{m.description}</Typography>
+                              </Stack>
+                            }
+                            secondary={
+                              m.applied && m.appliedAt
+                                ? LL.ADMIN.MIGRATIONS_APPLIED_AT({
+                                    date: new Date(m.appliedAt).toLocaleString(),
+                                  })
+                                : LL.ADMIN.MIGRATIONS_PENDING_BADGE()
+                            }
+                          />
+                          <Chip
+                            label={m.applied ? LL.ADMIN.MIGRATIONS_APPLIED_BADGE() : LL.ADMIN.MIGRATIONS_PENDING_BADGE()}
+                            color={m.applied ? 'success' : 'warning'}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </ListItem>
+                      ))}
+                    </List>
+                  </Paper>
+                ) : null}
+              </Stack>
+            )}
+            {/* Config Tab */}
+            {activeTab === 5 && (
+              <Stack sx={{ gap: 2 }}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <SettingsIcon />
+                  <Typography variant="h6">{LL.ADMIN.CONFIG()}</Typography>
+                </Stack>
+
+                <Alert severity="info" icon={false}>
+                  {LL.ADMIN.CONFIG_SENSITIVE_OMITTED()}
+                </Alert>
+
+                {configLoading && <LinearProgress />}
+
+                {adminConfig && (
+                  <Stack spacing={2}>
+                    {/* Server */}
+                    <ConfigSection title={LL.ADMIN.CONFIG_SECTION_SERVER()}>
+                      <ConfigRow label="PHP Version" value={adminConfig.server.phpVersion} />
+                      <ConfigRow label="PHP SAPI" value={adminConfig.server.phpSapi} />
+                      <ConfigRow label="Web Server" value={adminConfig.server.serverSoftware} />
+                      <ConfigRow label="MySQL Version" value={adminConfig.server.mysqlVersion} />
+                    </ConfigSection>
+
+                    {/* Application */}
+                    <ConfigSection title={LL.ADMIN.CONFIG_SECTION_APP()}>
+                      <ConfigRow label="Domain" value={adminConfig.app.domain} />
+                      <ConfigRow label="Base URL" value={adminConfig.app.baseUrl} mono />
+                      <ConfigRow
+                        label={LL.ADMIN.CONFIG_DEV_MODE()}
+                        value={
+                          <Chip
+                            label={adminConfig.app.development ? LL.ADMIN.CONFIG_ENABLED() : LL.ADMIN.CONFIG_DISABLED()}
+                            color={adminConfig.app.development ? 'warning' : 'success'}
+                            size="small"
+                          />
+                        }
+                      />
+                      <ConfigRow label="Default Language" value={adminConfig.app.defaultLanguage} />
+                      <ConfigRow label="Search Result Limit" value={adminConfig.app.searchResultLimit} />
+                      <ConfigRow label="Custom Number Limit" value={adminConfig.app.customNumberLimit} />
+                    </ConfigSection>
+
+                    {/* Database */}
+                    <ConfigSection title={LL.ADMIN.CONFIG_SECTION_DATABASE()}>
+                      <ConfigRow label="Host" value={adminConfig.database.host} mono />
+                      <ConfigRow label="Database" value={adminConfig.database.database} mono />
+                      <ConfigRow label="User" value={adminConfig.database.user} mono />
+                    </ConfigSection>
+
+                    {/* CORS */}
+                    <ConfigSection title={LL.ADMIN.CONFIG_SECTION_CORS()}>
+                      {adminConfig.cors.allowedOrigins.length === 0 ? (
+                        <Typography variant="body2" color="text.secondary">
+                          —
+                        </Typography>
+                      ) : (
+                        <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                          {adminConfig.cors.allowedOrigins.map((origin) => (
+                            <Chip key={origin} label={origin} size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
+                          ))}
+                        </Stack>
+                      )}
+                    </ConfigSection>
+
+                    {/* OIDC */}
+                    <ConfigSection title={LL.ADMIN.CONFIG_SECTION_OIDC()}>
+                      <ConfigRow label="Discovery URL" value={adminConfig.oidc.discoveryUrl} mono />
+                      <ConfigRow label="Client ID" value={adminConfig.oidc.clientId} mono />
+                      <ConfigRow label="Redirect URI" value={adminConfig.oidc.redirectUri} mono />
+                      <ConfigRow label="Admin Group" value={adminConfig.oidc.adminGroup} />
+                      <ConfigRow label="Required Group" value={adminConfig.oidc.requiredGroup || '—'} />
+                      <ConfigRow label="Scopes" value={adminConfig.oidc.scopes.join(' ')} mono />
+                    </ConfigSection>
+
+                    {/* Bible */}
+                    <ConfigSection title={LL.ADMIN.CONFIG_SECTION_BIBLE()}>
+                      <ConfigRow
+                        label={LL.ADMIN.CONFIG_ENABLED()}
+                        value={
+                          <Chip
+                            label={adminConfig.bible.enabled ? LL.ADMIN.CONFIG_ENABLED() : LL.ADMIN.CONFIG_DISABLED()}
+                            color={adminConfig.bible.enabled ? 'success' : 'default'}
+                            size="small"
+                          />
+                        }
+                      />
+                      {adminConfig.bible.enabled && (
+                        <>
+                          <ConfigRow label="Name" value={adminConfig.bible.name} />
+                          <ConfigRow label="Base URL" value={adminConfig.bible.baseUrl} mono />
+                        </>
+                      )}
+                    </ConfigSection>
+                  </Stack>
+                )}
               </Stack>
             )}
           </Stack>
         </CardContent>
       </Card>
-
       {/* Dialogs */}
       <AccountDialog
         open={accountDialog.open}
@@ -390,14 +720,12 @@ export const AdminPage = () => {
         onClose={() => setAccountDialog({ open: false })}
         onSave={handleSaveAccount}
       />
-
       <ProviderDialog
         open={providerDialog.open}
         provider={providerDialog.provider}
         onClose={() => setProviderDialog({ open: false })}
         onSave={handleSaveProvider}
       />
-
       <AssignProviderDialog
         open={assignDialog.open}
         license={assignDialog.license}
@@ -406,7 +734,6 @@ export const AdminPage = () => {
         onClose={() => setAssignDialog({ open: false })}
         onAssign={handleAssignProvider}
       />
-
       <DeleteConfirmDialog
         open={deleteDialog.open}
         type={deleteDialog.type}
@@ -422,7 +749,42 @@ export const AdminPage = () => {
   );
 };
 
-// Account Dialog Component
+// ── Config helper components ──────────────────────────────────────────────────
+
+const ConfigSection = ({ title, children }: { title: string; children: ReactNode }) => (
+  <Paper variant="outlined">
+    <Box sx={{ px: 2, py: 1, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+        {title}
+      </Typography>
+    </Box>
+    <Stack divider={<Divider />}>{children}</Stack>
+  </Paper>
+);
+
+const ConfigRow = ({ label, value, mono = false }: { label: string; value: ReactNode; mono?: boolean }) => (
+  <Stack direction="row" sx={{ px: 2, py: 0.75, alignItems: 'center', gap: 2, minHeight: 36 }}>
+    <Typography variant="body2" color="text.secondary" sx={{ minWidth: 160, flexShrink: 0 }}>
+      {label}
+    </Typography>
+    {typeof value === 'string' || typeof value === 'number' || value === null || value === undefined ? (
+      <Typography
+        variant="body2"
+        sx={{
+          fontFamily: mono ? 'monospace' : undefined,
+          wordBreak: 'break-all',
+          color: value == null ? 'text.disabled' : 'text.primary',
+        }}
+      >
+        {value ?? '—'}
+      </Typography>
+    ) : (
+      value
+    )}
+  </Stack>
+);
+
+// ── Account Dialog Component ───────────────────────────────────────────────────
 const AccountDialog = ({
   open,
   account,
@@ -466,7 +828,12 @@ const AccountDialog = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{account ? LL.ADMIN.EDIT_ACCOUNT() : LL.ADMIN.CREATE_ACCOUNT()}</DialogTitle>
       <DialogContent>
-        <Stack gap={2} sx={{ mt: 1 }}>
+        <Stack
+          sx={{
+            gap: 2,
+            mt: 1,
+          }}
+        >
           <TextField
             label={LL.AUTH.LICENSE_NUMBER()}
             type="number"
@@ -557,7 +924,12 @@ const ProviderDialog = ({
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>{provider ? LL.ADMIN.EDIT_PROVIDER() : LL.ADMIN.CREATE_PROVIDER()}</DialogTitle>
       <DialogContent>
-        <Stack gap={2} sx={{ mt: 1 }}>
+        <Stack
+          sx={{
+            gap: 2,
+            mt: 1,
+          }}
+        >
           <TextField
             label={LL.ADMIN.PROVIDER_NAME()}
             value={formData.name}
@@ -648,7 +1020,12 @@ const AssignProviderDialog = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{LL.ADMIN.ASSIGN_PROVIDER_TO_ACCOUNT({ license: license?.toString() || '' })}</DialogTitle>
       <DialogContent>
-        <Stack gap={2} sx={{ mt: 1 }}>
+        <Stack
+          sx={{
+            gap: 2,
+            mt: 1,
+          }}
+        >
           <FormControl fullWidth>
             <InputLabel>{LL.ADMIN.PROVIDER()}</InputLabel>
             <Select value={selectedProvider} onChange={(e) => setSelectedProvider(e.target.value as number)} label={LL.ADMIN.PROVIDER()}>

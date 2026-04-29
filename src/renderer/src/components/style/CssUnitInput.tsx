@@ -112,9 +112,24 @@ export const CssUnitInput = ({
   const range = { min: overrides.min ?? defaults.min, max: overrides.max ?? defaults.max, step: overrides.step ?? defaults.step };
 
   return (
-    <Stack alignItems="center" spacing={0} sx={{ width, display: 'inline-flex' }}>
+    <Stack
+      spacing={0}
+      sx={{
+        alignItems: 'center',
+        width,
+        display: 'inline-flex',
+      }}
+    >
       {label && (
-        <Typography variant="caption" color="text.secondary" sx={{ mb: 0.25, display: 'block', textAlign: 'center' }}>
+        <Typography
+          variant="caption"
+          sx={{
+            color: 'text.secondary',
+            mb: 0.25,
+            display: 'block',
+            textAlign: 'center',
+          }}
+        >
           {label}
         </Typography>
       )}
@@ -170,7 +185,12 @@ export const CssUnitInput = ({
             '& .MuiOutlinedInput-notchedOutline': { borderLeft: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0 },
           }}
           renderValue={(v) => (
-            <Typography variant="caption" fontWeight={600}>
+            <Typography
+              variant="caption"
+              sx={{
+                fontWeight: 600,
+              }}
+            >
               {v}
             </Typography>
           )}

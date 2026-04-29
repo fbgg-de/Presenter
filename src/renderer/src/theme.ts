@@ -1,5 +1,4 @@
 import { createTheme, type Theme } from '@mui/material';
-import darkScrollbar from '@mui/material/darkScrollbar';
 import type { ThemeMode } from './store/settingsSlice';
 
 const PRIMARY = {
@@ -60,7 +59,19 @@ export const getTheme = (mode: 'dark' | 'light'): Theme =>
     components: {
       MuiCssBaseline: {
         styleOverrides: (themeParam) => ({
-          body: themeParam.palette.mode === 'dark' ? darkScrollbar() : null,
+          body:
+            themeParam.palette.mode === 'dark'
+              ? {
+                  scrollbarColor: '#6b6b6b #2b2b2b',
+                  '&::-webkit-scrollbar, &::-webkit-scrollbar *': {
+                    backgroundColor: '#2b2b2b',
+                  },
+                  '&::-webkit-scrollbar-thumb, &::-webkit-scrollbar-thumb *': {
+                    backgroundColor: '#6b6b6b',
+                    borderRadius: 8,
+                  },
+                }
+              : null,
         }),
       },
     },

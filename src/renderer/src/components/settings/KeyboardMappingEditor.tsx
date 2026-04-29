@@ -328,30 +328,61 @@ export const KeyboardMappingEditor = () => {
           })}
         </TableBody>
       </Table>
-
       <Button variant="outlined" size="small" startIcon={<ResetIcon />} onClick={handleReset}>
         {LL.KEYBOARD.MAPPING_RESET()}
       </Button>
-
       {/* Key capture dialog — does NOT auto-close. The user must click Apply
           (or Cancel/Escape). Modifier-only presses no longer commit. */}
       <Dialog open={!!captureAction} onClose={() => setCaptureAction(null)} maxWidth="xs" fullWidth>
         <DialogTitle>{LL.KEYBOARD.MAPPING()}</DialogTitle>
         <DialogContent>
-          <Stack alignItems="center" spacing={2} sx={{ py: 2, px: 2 }}>
+          <Stack
+            spacing={2}
+            sx={{
+              alignItems: 'center',
+              py: 2,
+              px: 2,
+            }}
+          >
             <Typography variant="body1">{captureAction && getActionLabel(captureAction)}</Typography>
-            <Typography variant="caption" color="text.secondary" textAlign="center">
+            <Typography
+              variant="caption"
+              sx={{
+                color: 'text.secondary',
+                textAlign: 'center',
+              }}
+            >
               {LL.KEYBOARD.MAPPING_PRESS_HINT()}
             </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <Stack alignItems="center" spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">
+              <Stack
+                spacing={0.5}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.KEYBOARD.MAPPING_CURRENT()}
                 </Typography>
                 <Chip label={currentCombo || '—'} size="small" variant="outlined" sx={{ fontFamily: 'monospace' }} />
               </Stack>
-              <Stack alignItems="center" spacing={0.5}>
-                <Typography variant="caption" color="text.secondary">
+              <Stack
+                spacing={0.5}
+                sx={{
+                  alignItems: 'center',
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.KEYBOARD.MAPPING_NEW()}
                 </Typography>
                 <Chip
@@ -373,7 +404,11 @@ export const KeyboardMappingEditor = () => {
           >
             {LL.KEYBOARD.MAPPING_RESET_ROW()}
           </Button>
-          <Box flexGrow={1} />
+          <Box
+            sx={{
+              flexGrow: 1,
+            }}
+          />
           <Button onClick={() => setCaptureAction(null)}>{LL.COMMON.CANCEL()}</Button>
           <Button onClick={handleApplyCapture} disabled={!pending.mainKey} variant="contained">
             {LL.KEYBOARD.MAPPING_APPLY()}

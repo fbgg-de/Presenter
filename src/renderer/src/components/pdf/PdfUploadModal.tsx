@@ -205,8 +205,20 @@ export const PdfUploadModal = ({
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
-        <Stack direction="row" justifyContent="space-between" alignItems="center">
-          <Stack direction="row" spacing={1} alignItems="center">
+        <Stack
+          direction="row"
+          sx={{
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{
+              alignItems: 'center',
+            }}
+          >
             <PdfIcon />
             <Typography variant="h6">{LL.PDF.MANAGE_TITLE()}</Typography>
             <Chip label={`#${songNumber}`} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
@@ -216,7 +228,6 @@ export const PdfUploadModal = ({
           </IconButton>
         </Stack>
       </DialogTitle>
-
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           {/* Search filter */}
@@ -237,7 +248,13 @@ export const PdfUploadModal = ({
 
           {/* File list */}
           {isLoading ? (
-            <Box display="flex" justifyContent="center" p={2}>
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                p: 2,
+              }}
+            >
               <CircularProgress />
             </Box>
           ) : filteredPdfs.length === 0 && !filter ? (
@@ -329,8 +346,19 @@ export const PdfUploadModal = ({
                     </ListItemIcon>
                     <ListItemText
                       primary={
-                        <Stack direction="row" spacing={0.5} alignItems="center">
-                          <Typography variant="body2" fontWeight={isActive ? 700 : 400}>
+                        <Stack
+                          direction="row"
+                          spacing={0.5}
+                          sx={{
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: isActive ? 700 : 400,
+                            }}
+                          >
                             {pdf.filename}
                           </Typography>
                           {isDefault && (
@@ -349,7 +377,12 @@ export const PdfUploadModal = ({
                       secondary={
                         <Stack direction="row" spacing={1} component="span">
                           <Chip label={formatFileSize(pdf.size)} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.7rem' }} />
-                          <Typography variant="caption" color="text.secondary">
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: 'text.secondary',
+                            }}
+                          >
                             {formatDateTime(pdf.modified)}
                           </Typography>
                         </Stack>
@@ -385,17 +418,41 @@ export const PdfUploadModal = ({
             }}
           >
             {!pendingFile ? (
-              <Stack direction="row" alignItems="center" spacing={1} justifyContent="center">
+              <Stack
+                direction="row"
+                spacing={1}
+                sx={{
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
                 <UploadIcon sx={{ fontSize: 20, color: 'text.secondary' }} />
-                <Typography variant="body2" color="text.secondary">
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: 'text.secondary',
+                  }}
+                >
                   {LL.PDF.DRAG_DROP()}
                 </Typography>
               </Stack>
             ) : (
               <Stack spacing={1.5}>
-                <Stack direction="row" alignItems="center" spacing={1}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <FileIcon color="error" fontSize="small" />
-                  <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontWeight: 600,
+                      flex: 1,
+                    }}
+                  >
                     {pendingFile.name}
                   </Typography>
                   <Chip label={formatFileSize(pendingFile.size)} size="small" variant="outlined" />
@@ -463,7 +520,13 @@ export const PdfUploadModal = ({
                 </Stack>
 
                 {/* Target filename + upload */}
-                <Stack direction="row" alignItems="center" spacing={1}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  sx={{
+                    alignItems: 'center',
+                  }}
+                >
                   <Chip label={targetFilename} size="small" variant="outlined" sx={{ flex: 1 }} />
                   <Button
                     onClick={handleUpload}
@@ -487,11 +550,9 @@ export const PdfUploadModal = ({
           </Paper>
         </Stack>
       </DialogContent>
-
       <DialogActions>
         <Button onClick={handleClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>
-
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
         <DialogTitle>{LL.PDF.DELETE()}</DialogTitle>

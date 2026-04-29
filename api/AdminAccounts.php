@@ -27,7 +27,7 @@ class AdminAccounts extends RestController
 				FROM account a
 				LEFT JOIN account_oidc_providers aop ON a.license = aop.license
 				LEFT JOIN oidc_providers p ON aop.provider_id = p.id
-				GROUP BY a.license
+				GROUP BY a.license, a.name
 				ORDER BY a.name, a.license
 			');
 
