@@ -46,6 +46,7 @@ import {
   useRenameAnnotationLayerMutation,
   type AnnotationDto,
 } from '@/api/pdfAnnotations.api';
+import { useMetrics } from '@/hooks/useMetrics';
 
 interface PdfLayerViewerProps {
   songNumber: number;
@@ -102,6 +103,7 @@ export const PdfLayerViewer = ({
   triggerLabel,
 }: PdfLayerViewerProps) => {
   const { LL } = useI18nContext();
+  const { trackEvent } = useMetrics();
   const [open, setOpen] = useState(false);
   const [anchorPos, setAnchorPos] = useState<{ top: number; left: number } | undefined>(undefined);
 
@@ -159,21 +161,32 @@ export const PdfLayerViewer = ({
   /** "Show layers" global toggle */
   const handleShowAnnotationsChange = useCallback(
     (visible: boolean) => {
+      trackEvent('musician_layer_action', undefined, undefined, { action: visible ? 'show_all' : 'hide_all' });
       onShowAnnotationsChange?.(visible);
     },
-    [onShowAnnotationsChange],
+    [onShowAnnotationsChange, trackEvent],
+  );
+
+  const handleToggleLayerVisibility = useCallback(
+    (layer: string) => {
+      const willBeHidden = !hiddenLayers.has(layer);
+      trackEvent('musician_layer_action', undefined, undefined, { action: willBeHidden ? 'hide' : 'show', layer });
+      onToggleLayerVisibility(layer);
+    },
+    [hiddenLayers, onToggleLayerVisibility, trackEvent],
   );
 
   const handleDelete = useCallback(
     async (name: string) => {
       try {
         await clearLayerMutation({ songNumber, filename, layer: name }).unwrap();
+        trackEvent('musician_layer_action', undefined, undefined, { action: 'delete', layer: name });
         onLayerDeleted?.(name);
       } catch (err) {
         console.error('[PdfLayerViewer] delete failed:', err);
       }
     },
-    [songNumber, filename, clearLayerMutation, onLayerDeleted],
+    [songNumber, filename, clearLayerMutation, onLayerDeleted, trackEvent],
   );
 
   const handleCreateLayer = useCallback(async () => {
@@ -184,11 +197,12 @@ export const PdfLayerViewer = ({
       setLocalLayers((prev) => (prev.includes(name) ? prev : [...prev, name]));
       setNewLayerName('');
       setShowNewInput(false);
+      trackEvent('musician_layer_action', undefined, undefined, { action: 'create', layer: name });
       onLayerCreated?.(name);
     } catch (err) {
       console.error('[PdfLayerViewer] create failed:', err);
     }
-  }, [newLayerName, onLayerCreated]);
+  }, [newLayerName, onLayerCreated, trackEvent]);
 
   const handleStartRename = useCallback((name: string) => {
     setRenamingLayer(name);
@@ -318,7 +332,7 @@ export const PdfLayerViewer = ({
                     {/* ② Visibility eye icon */}
                     {!isBeingRenamed && showVisibilityToggle && (
                       <Tooltip title={isVisible ? LL.ANNOTATION.HIDE_LAYER() : LL.ANNOTATION.SHOW_LAYER()}>
-                        <IconButton size="small" onClick={() => onToggleLayerVisibility(layer)} sx={{ flexShrink: 0, p: 0.25 }}>
+                        <IconButton size="small" onClick={() => handleToggleLayerVisibility(layer)} sx={{ flexShrink: 0, p: 0.25 }}>
                           {isVisible ? <VisibilityIcon sx={{ fontSize: 16 }} /> : <VisibilityOffIcon sx={{ fontSize: 16 }} />}
                         </IconButton>
                       </Tooltip>
@@ -381,7 +395,7 @@ export const PdfLayerViewer = ({
                     ) : (
                       /* Footer / read-only: clicking name toggles visibility */
                       <ListItemButton
-                        onClick={() => onToggleLayerVisibility(layer)}
+                        onClick={() => handleToggleLayerVisibility(layer)}
                         dense
                         sx={{ flex: 1, minWidth: 0, mx: 0.25, py: 0, borderRadius: 0.5 }}
                       >

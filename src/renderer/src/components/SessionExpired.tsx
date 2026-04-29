@@ -9,7 +9,9 @@ const SessionExpired = () => {
   const [open, setOpen] = useState(false);
   const handleRelogin = useCallback(() => {
     setOpen(false);
-    window.location.href = '/login';
+    // Pass the current page as `next` so after re-login the user lands back here
+    const next = encodeURIComponent(window.location.pathname + window.location.search);
+    window.location.href = '/login?next=' + next;
   }, []);
 
   useEffect(() => {

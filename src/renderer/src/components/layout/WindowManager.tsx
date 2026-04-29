@@ -47,6 +47,7 @@ import { useAppDispatch } from '@/store';
 import { toggleFreezeWindow, toggleBlack, toggleIdentify, useGetPresentationSettings } from '@/store/presentationSlice';
 import { useGetWindows, useUpdateWindows, WindowConfig } from '@/store/windowSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
+import { useMetrics } from '@/hooks/useMetrics';
 import {
   openPresentationWindow,
   closePresentationWindow,
@@ -313,6 +314,7 @@ const WindowConfigForm = ({
 export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
+  const { trackEvent } = useMetrics();
 
   const { windowConfigs: savedConfigs } = useGetWindows();
   const updateWindowSetting = useUpdateWindows();
@@ -429,6 +431,13 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
       _runtimeId: id,
     };
     updateWindowSetting('windowConfigs', [...(savedConfigs || []), newConfig]);
+    trackEvent('window_opened', 'window', id, {
+      name: newCfg.name,
+      displayMode: newCfg.displayMode,
+      width: newCfg.width,
+      height: newCfg.height,
+      fullscreen: newCfg.fullscreen,
+    });
     setCreateExpanded(false);
     getOpenWindows()
       .then(setOpenWindowsList)

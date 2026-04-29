@@ -417,11 +417,9 @@ export class PresentationWindowManager {
     });
 
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-      win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/index.html#/notes`);
+      win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/musician.html`);
     } else {
-      win.loadFile(join(__dirname, '../renderer/index.html'), {
-        hash: '/notes',
-      });
+      win.loadFile(join(__dirname, '../renderer/musician.html'));
     }
 
     win.on('closed', () => {

@@ -1,5 +1,9 @@
 import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
 
+export const redirectToLogin = (next?: string) => {
+  window.location.replace('/login?next=' + encodeURIComponent(next ?? '/'));
+};
+
 /** Returns true when running inside the Electron shell (window.api is injected by the preload). */
 export const isElectronApp = (): boolean => typeof window !== 'undefined' && !!(window as { api?: unknown }).api;
 

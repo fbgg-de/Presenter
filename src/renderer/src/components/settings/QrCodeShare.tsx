@@ -26,7 +26,7 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
   const { wsPort } = useGetSettings();
   const [copied, setCopied] = useState(false);
 
-  // Build the musician view URL
+  // Build the musician view URL — points directly to the separate musician.html bundle
   const musicianUrl = useMemo(() => {
     const base = window.location.origin;
     return `${base}/notes`;

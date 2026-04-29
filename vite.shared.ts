@@ -12,9 +12,11 @@ export const rendererAliases: Record<string, string> = {
 
 /** Renderer rollup input entries (shared between Electron and standalone builds). */
 export const rendererInputs: Record<string, string> = {
+  admin: resolve(__dirname, 'src/renderer/admin.html'),
+  login: resolve(__dirname, 'src/renderer/login.html'),
   main: resolve(__dirname, 'src/renderer/index.html'),
-  presentation: resolve(__dirname, 'src/renderer/presentation.html'),
   musician: resolve(__dirname, 'src/renderer/musician.html'),
+  presentation: resolve(__dirname, 'src/renderer/presentation.html'),
 };
 
 /** Shared dev-server config. */

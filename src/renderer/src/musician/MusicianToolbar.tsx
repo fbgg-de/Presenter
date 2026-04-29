@@ -26,6 +26,7 @@ import {
 import { alpha, type Palette } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useUpdateMusicianSetting, useGetMusicianSettings } from '@/store/musicianSlice';
+import { useMetrics } from '@/hooks/useMetrics';
 
 const FAB_SIZE = 44;
 const NAV_MARGIN = 36;
@@ -163,6 +164,7 @@ export const MusicianToolbar = ({
   const { LL } = useI18nContext();
   const { palette } = useTheme();
   const isDark = palette.mode === 'dark';
+  const { trackEvent } = useMetrics();
 
   const { musicianToolbarExpanded } = useGetMusicianSettings();
   const updateMusicianSetting = useUpdateMusicianSetting();
@@ -241,7 +243,10 @@ export const MusicianToolbar = ({
     'midi-ws': 'MIDI over WebSocket',
   };
 
-  const toggleExpanded = () => updateMusicianSetting('musicianToolbarExpanded', !musicianToolbarExpanded);
+  const toggleExpanded = () => {
+    trackEvent('musician_button_clicked', undefined, undefined, { button: 'toolbar_toggle' });
+    updateMusicianSetting('musicianToolbarExpanded', !musicianToolbarExpanded);
+  };
 
   const zoomPercent = Math.round(zoomLevel * 100);
 
@@ -299,6 +304,7 @@ export const MusicianToolbar = ({
               onClick={() => {
                 onSetSyncMode(mode);
                 setSyncDialOpen(false);
+                trackEvent('musician_button_clicked', undefined, undefined, { button: 'sync_mode', value: mode });
               }}
             />
           ))}
@@ -316,7 +322,7 @@ export const MusicianToolbar = ({
           <FloatingButton
             icon={<MenuIcon fontSize="small" />}
             tooltip={LL.MUSICIAN.SIDEBAR_TOGGLE()}
-            onClick={onToggleSidebar}
+            onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: 'sidebar_toggle' }); onToggleSidebar(); }}
             active={sidebarOpen}
           />
 
@@ -324,7 +330,7 @@ export const MusicianToolbar = ({
           <FloatingButton
             icon={isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
             tooltip={isFullscreen ? LL.MUSICIAN.EXIT_FULLSCREEN() : LL.MUSICIAN.FULLSCREEN()}
-            onClick={toggleFullscreen}
+            onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: isFullscreen ? 'exit_fullscreen' : 'fullscreen' }); toggleFullscreen(); }}
             active={isFullscreen}
           />
 
@@ -333,7 +339,7 @@ export const MusicianToolbar = ({
             <FloatingButton
               icon={wakeLock ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
               tooltip={wakeLock ? LL.MUSICIAN.WAKE_LOCK_OFF() : LL.MUSICIAN.WAKE_LOCK_ON()}
-              onClick={toggleWakeLock}
+              onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: wakeLock ? 'wake_lock_off' : 'wake_lock_on' }); toggleWakeLock(); }}
               active={!!wakeLock}
             />
           )}
@@ -358,6 +364,7 @@ export const MusicianToolbar = ({
               onClick={() => {
                 onSetPageView('one-page');
                 setPageCountOpen(false);
+                trackEvent('musician_button_clicked', undefined, undefined, { button: 'page_view', value: 'one-page' });
               }}
             />
             <SpeedDialAction
@@ -369,6 +376,7 @@ export const MusicianToolbar = ({
               onClick={() => {
                 onSetPageView('two-page');
                 setPageCountOpen(false);
+                trackEvent('musician_button_clicked', undefined, undefined, { button: 'page_view', value: 'two-page' });
               }}
             />
           </SpeedDial>
@@ -378,7 +386,7 @@ export const MusicianToolbar = ({
             <FloatingButton
               icon={<PdfIcon fontSize="small" />}
               tooltip={hasPdfs ? LL.PDF.MANAGE_TITLE() : LL.PDF.IMPORT_TITLE()}
-              onClick={onOpenPdfModal}
+              onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: hasPdfs ? 'pdf_manage' : 'pdf_import' }); onOpenPdfModal(); }}
             />
           )}
 
@@ -387,7 +395,7 @@ export const MusicianToolbar = ({
             <FloatingButton
               icon={<AnnotateIcon fontSize="small" />}
               tooltip={LL.MUSICIAN.ANNOTATE()}
-              onClick={onToggleAnnotate}
+              onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: 'annotate_toggle' }); onToggleAnnotate(); }}
               active={annotateMode}
             />
           )}
@@ -397,7 +405,7 @@ export const MusicianToolbar = ({
             <FloatingButton
               icon={<RefetchAnnotationsIcon fontSize="small" />}
               tooltip={LL.ANNOTATION.REFETCH()}
-              onClick={onRefetchAnnotations}
+              onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: 'refetch_annotations' }); onRefetchAnnotations(); }}
             />
           )}
 
@@ -428,12 +436,12 @@ export const MusicianToolbar = ({
               <SpeedDialAction
                 icon={<ZoomInIcon fontSize="small" />}
                 slotProps={{ tooltip: { title: LL.MUSICIAN.ZOOM_IN(), placement: 'bottom' } }}
-                onClick={() => onZoomIn()}
+                onClick={() => { onZoomIn(); trackEvent('musician_button_clicked', undefined, undefined, { button: 'zoom_in' }); }}
               />
               <SpeedDialAction
                 icon={<ZoomOutIcon fontSize="small" />}
                 slotProps={{ tooltip: { title: LL.MUSICIAN.ZOOM_OUT(), placement: 'bottom' } }}
-                onClick={() => onZoomOut()}
+                onClick={() => { onZoomOut(); trackEvent('musician_button_clicked', undefined, undefined, { button: 'zoom_out' }); }}
               />
               <SpeedDialAction
                 icon={<Zoom100Icon fontSize="small" />}
@@ -444,6 +452,7 @@ export const MusicianToolbar = ({
                 onClick={() => {
                   onZoomReset();
                   setZoomDialOpen(false);
+                  trackEvent('musician_button_clicked', undefined, undefined, { button: 'zoom_reset' });
                 }}
               />
               <SpeedDialAction
@@ -452,16 +461,17 @@ export const MusicianToolbar = ({
                 onClick={() => {
                   onZoomFitWidth();
                   setZoomDialOpen(false);
+                  trackEvent('musician_button_clicked', undefined, undefined, { button: 'zoom_fit_width' });
                 }}
               />
             </SpeedDial>
           )}
 
           {/* 7. MIDI Mapping */}
-          {onOpenMidi && <FloatingButton icon={<MidiIcon fontSize="small" />} tooltip={LL.MIDI.SETTINGS()} onClick={onOpenMidi} />}
+          {onOpenMidi && <FloatingButton icon={<MidiIcon fontSize="small" />} tooltip={LL.MIDI.SETTINGS()} onClick={() => { trackEvent('musician_mapping_used', undefined, undefined, { type: 'midi' }); onOpenMidi(); }} />}
 
           {/* 8. Settings */}
-          <FloatingButton icon={<SettingsIcon fontSize="small" />} tooltip={LL.MUSICIAN.SETTINGS()} onClick={onOpenSettings} />
+          <FloatingButton icon={<SettingsIcon fontSize="small" />} tooltip={LL.MUSICIAN.SETTINGS()} onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: 'settings' }); onOpenSettings(); }} />
         </>
       )}
     </Stack>

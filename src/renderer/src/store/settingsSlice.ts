@@ -3,7 +3,7 @@ import { useAppSelector, useAppDispatch } from './hooks';
 import type { MidiAction } from '@/hooks/useMidi';
 import { useCallback } from 'react';
 
-const SETTINGS_KEY = 'presenter_settings';
+export const SETTINGS_KEY = 'presenter_settings';
 
 export type Languages = 'en' | 'de';
 export type ThemeMode = 'dark' | 'light' | 'system';
@@ -25,6 +25,7 @@ export interface SettingsState {
   defaultNewVerseName: string;
   defaultVerseName: string;
   desktopAppDismissed: boolean;
+  deviceId: string;
   globalStyleId: number;
   hideTransitionDuration: number;
   hideTransitionMode: Transition;
@@ -34,6 +35,7 @@ export interface SettingsState {
   keyboardNavigationSongs: boolean;
   lastSelectedAccount?: Account;
   mediaPath: string;
+  metricsEnabled: boolean;
   midiMappings: Partial<Record<MidiAction, string>>;
   midiTrackingMaster: TrackingMaster;
   nextLinePreview: boolean;
@@ -58,6 +60,7 @@ export interface SettingsState {
   transitionMode: Transition;
   uiLanguage: Languages;
   uploadNotifications: boolean;
+  errorBoundaryNotification: boolean;
   verseClick: ClickBehaviour;
   videoFadeDuration: number;
   windowFooterVisible: boolean;
@@ -76,6 +79,7 @@ const defaultState: SettingsState = {
   defaultNewVerseName: 'Outro',
   defaultVerseName: 'Vers 1',
   desktopAppDismissed: false,
+  deviceId: crypto.randomUUID(),
   globalStyleId: 0,
   hideTransitionDuration: 300,
   hideTransitionMode: 'cut',
@@ -85,6 +89,7 @@ const defaultState: SettingsState = {
   keyboardNavigationSongs: true,
   lastSelectedAccount: '',
   mediaPath: '',
+  metricsEnabled: true,
   midiMappings: {},
   midiTrackingMaster: 'operator',
   nextLinePreview: true,
@@ -109,6 +114,7 @@ const defaultState: SettingsState = {
   transitionMode: 'cut',
   uiLanguage: 'en',
   uploadNotifications: true,
+  errorBoundaryNotification: true,
   verseClick: 'double-click',
   videoFadeDuration: 0,
   windowFooterVisible: true,
@@ -119,7 +125,16 @@ let initialState: SettingsState = { ...defaultState };
 try {
   const settings = localStorage.getItem(SETTINGS_KEY);
   if (settings) {
-    initialState = { ...defaultState, ...JSON.parse(settings) };
+    const parsed = JSON.parse(settings);
+    // Migrate old standalone device_id key if not yet in settings
+    if (!parsed.deviceId) {
+      const legacyId = localStorage.getItem('presenter_device_id');
+      if (legacyId) {
+        parsed.deviceId = legacyId;
+        localStorage.removeItem('presenter_device_id');
+      }
+    }
+    initialState = { ...defaultState, ...parsed };
   }
 } catch {
   console.log('Failed to load settings from localStorage, using defaults');

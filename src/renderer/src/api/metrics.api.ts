@@ -22,7 +22,7 @@ const metricsApi = presenterApi.injectEndpoints({
   endpoints: (build) => ({
     getMetrics: build.query<
       ApiSuccess<MetricsResponse>,
-      { from?: string; to?: string; event?: string; entity_type?: string; limit?: number; offset?: number; account?: number } | void
+      { from?: string; to?: string; event?: string; entity_type?: string; device_id?: string; limit?: number; offset?: number; account?: number } | void
     >({
       query: (arg) => ({
         url: 'rest/Metrics',

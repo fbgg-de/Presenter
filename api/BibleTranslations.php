@@ -1,10 +1,13 @@
 <?php
 
-require_once(__DIR__ . '/RestController.php');
 require_once(__DIR__ . '/../config.php');
+require_once(__DIR__ . '/RestController.php');
+require_once(__DIR__ . '/../classes/BibleApi.php');
 
 class BibleTranslations extends RestController
 {
+    use BibleApi;
+
     protected function get(Request &$req, Response &$res): never
     {
         if (!defined('BIBLE_API') || empty(BIBLE_API['base_url'])) {
@@ -19,28 +22,9 @@ class BibleTranslations extends RestController
             $url .= '?language=' . urlencode($lang);
         }
 
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 10);
-
-        $headers = ['Accept: application/json'];
-        if (!empty($config['api_key'])) {
-            $headers[] = 'api-key: ' . $config['api_key'];
-        }
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        if ($httpCode !== 200 || !$response) {
-            $res->error(502, 'Failed to fetch bible translations from API');
-        }
-
-        $json = json_decode($response, true);
+        $json = $this->makeApiRequest($url, $config);
         if (!$json) {
-            $res->error(502, 'Invalid response from Bible API');
+            $res->error(502, 'Failed to fetch bible translations from API');
         }
 
         // Extract translations using configured path
@@ -66,18 +50,5 @@ class BibleTranslations extends RestController
         }
 
         $res->success($result);
-    }
-
-    private function extractByPath(mixed $data, string $path): mixed
-    {
-        $keys = explode('.', $path);
-        $current = $data;
-        foreach ($keys as $key) {
-            if (!is_array($current) || !isset($current[$key])) {
-                return null;
-            }
-            $current = $current[$key];
-        }
-        return $current;
     }
 }

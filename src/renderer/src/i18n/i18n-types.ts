@@ -398,6 +398,14 @@ type RootTranslation = {
 		 */
 		PANEL: string
 		/**
+		 * A​c​c​e​s​s​ ​D​e​n​i​e​d
+		 */
+		ACCESS_DENIED: string
+		/**
+		 * Y​o​u​ ​d​o​ ​n​o​t​ ​h​a​v​e​ ​p​e​r​m​i​s​s​i​o​n​ ​t​o​ ​a​c​c​e​s​s​ ​t​h​e​ ​a​d​m​i​n​ ​p​a​n​e​l​.​ ​P​l​e​a​s​e​ ​c​o​n​t​a​c​t​ ​y​o​u​r​ ​s​y​s​t​e​m​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​.
+		 */
+		ACCESS_DENIED_MESSAGE: string
+		/**
 		 * A​c​c​o​u​n​t​s
 		 */
 		ACCOUNTS: string
@@ -2179,6 +2187,10 @@ type RootTranslation = {
 		 */
 		GROUP_NOTIFICATIONS: string
 		/**
+		 * P​r​i​v​a​c​y
+		 */
+		GROUP_PRIVACY: string
+		/**
 		 * P​r​e​s​e​n​t​a​t​i​o​n
 		 */
 		GROUP_PRESENTATION: string
@@ -2517,6 +2529,26 @@ type RootTranslation = {
 				TITLE: string
 				/**
 				 * S​h​o​w​ ​n​o​t​i​f​i​c​a​t​i​o​n​s​ ​w​h​e​n​ ​s​o​n​g​s​ ​a​r​e​ ​i​m​p​o​r​t​e​d​ ​o​r​ ​u​p​l​o​a​d​e​d
+				 */
+				DESCRIPTION: string
+			}
+			ERROR_BOUNDARY_NOTIFICATION: {
+				/**
+				 * S​h​o​w​ ​u​n​c​a​u​g​h​t​ ​e​r​r​o​r​ ​n​o​t​i​f​i​c​a​t​i​o​n​s
+				 */
+				TITLE: string
+				/**
+				 * D​i​s​p​l​a​y​ ​a​ ​n​o​t​i​f​i​c​a​t​i​o​n​ ​w​h​e​n​ ​a​n​ ​u​n​e​x​p​e​c​t​e​d​ ​a​p​p​l​i​c​a​t​i​o​n​ ​e​r​r​o​r​ ​o​c​c​u​r​s
+				 */
+				DESCRIPTION: string
+			}
+			METRICS_ENABLED: {
+				/**
+				 * S​e​n​d​ ​u​s​a​g​e​ ​m​e​t​r​i​c​s
+				 */
+				TITLE: string
+				/**
+				 * A​l​l​o​w​ ​t​h​e​ ​a​p​p​ ​t​o​ ​c​o​l​l​e​c​t​ ​a​n​o​n​y​m​o​u​s​ ​u​s​a​g​e​ ​d​a​t​a​ ​t​o​ ​i​m​p​r​o​v​e​ ​t​h​e​ ​p​r​o​d​u​c​t​.​ ​O​n​e​ ​f​i​n​a​l​ ​e​v​e​n​t​ ​i​s​ ​s​e​n​t​ ​o​n​ ​o​p​t​-​o​u​t​.
 				 */
 				DESCRIPTION: string
 			}
@@ -2997,6 +3029,10 @@ type RootTranslation = {
 		 */
 		ENTITY_ID: string
 		/**
+		 * D​e​v​i​c​e​ ​I​D
+		 */
+		DEVICE_ID: string
+		/**
 		 * U​s​e​r
 		 */
 		USER: string
@@ -3004,6 +3040,138 @@ type RootTranslation = {
 		 * E​v​e​n​t​s
 		 */
 		EVENTS: string
+		/**
+		 * U​n​i​q​u​e​ ​D​e​v​i​c​e​s
+		 */
+		UNIQUE_DEVICES: string
+		/**
+		 * U​n​i​q​u​e​ ​D​e​v​i​c​e​s​ ​O​v​e​r​ ​T​i​m​e
+		 */
+		UNIQUE_DEVICES_OVER_TIME: string
+		/**
+		 * M​u​s​i​c​i​a​n​ ​B​u​t​t​o​n​ ​U​s​a​g​e
+		 */
+		MUSICIAN_BUTTON_USAGE: string
+		/**
+		 * O​p​e​n​e​d​ ​M​o​d​a​l​s
+		 */
+		MODAL_OPENED: string
+		/**
+		 * L​a​y​e​r​ ​A​c​t​i​o​n​s
+		 */
+		LAYER_ACTIONS: string
+		/**
+		 * S​y​n​c​ ​M​o​d​e​ ​U​s​a​g​e
+		 */
+		SYNC_MODE_USAGE: string
+		/**
+		 * S​o​n​g​s​ ​I​m​p​o​r​t​e​d
+		 */
+		SONGS_IMPORTED: string
+		/**
+		 * S​o​n​g​s​ ​D​e​l​e​t​e​d
+		 */
+		SONGS_DELETED: string
+		/**
+		 * S​o​n​g​s​ ​I​m​p​o​r​t​e​d​ ​O​v​e​r​ ​T​i​m​e
+		 */
+		SONGS_IMPORTED_OVER_TIME: string
+		/**
+		 * S​o​n​g​ ​A​c​t​i​v​i​t​y
+		 */
+		SONG_ACTIVITY: string
+		/**
+		 * S​o​n​g​ ​S​e​l​e​c​t​e​d
+		 */
+		SONG_SELECTED: string
+		/**
+		 * S​h​o​w​s​ ​C​r​e​a​t​e​d
+		 */
+		SHOWS_CREATED: string
+		/**
+		 * S​h​o​w​s​ ​C​r​e​a​t​e​d​ ​O​v​e​r​ ​T​i​m​e
+		 */
+		SHOWS_CREATED_OVER_TIME: string
+		/**
+		 * S​h​o​w​ ​A​c​t​i​v​i​t​y
+		 */
+		SHOW_ACTIVITY: string
+		/**
+		 * P​D​F​ ​/​ ​M​e​d​i​a​ ​/​ ​B​i​b​l​e​ ​A​c​t​i​v​i​t​y
+		 */
+		CONTENT_ACTIVITY: string
+		/**
+		 * S​e​a​r​c​h​e​s​ ​O​v​e​r​ ​T​i​m​e
+		 */
+		SEARCHES_OVER_TIME: string
+		/**
+		 * S​e​a​r​c​h​ ​C​o​u​n​t
+		 */
+		SEARCH_COUNT: string
+		/**
+		 * P​r​e​s​e​n​t​a​t​i​o​n​ ​A​c​t​i​v​i​t​y
+		 */
+		PRESENTATION_ACTIVITY: string
+		/**
+		 * W​i​n​d​o​w​s​ ​O​p​e​n​e​d
+		 */
+		WINDOWS_OPENED: string
+		/**
+		 * S​e​t​t​i​n​g​s​ ​C​h​a​n​g​e​d
+		 */
+		SETTINGS_CHANGED: string
+		/**
+		 * S​y​s​t​e​m​ ​E​v​e​n​t​s
+		 */
+		SYSTEM_EVENTS: string
+		/**
+		 * E​r​r​o​r​ ​S​o​u​r​c​e​s
+		 */
+		ERROR_SOURCES: string
+		/**
+		 * E​r​r​o​r​s
+		 */
+		ERRORS: string
+		/**
+		 * O​v​e​r​v​i​e​w
+		 */
+		SECTION_OVERVIEW: string
+		/**
+		 * D​e​v​i​c​e​s
+		 */
+		SECTION_DEVICES: string
+		/**
+		 * S​o​n​g​s
+		 */
+		SECTION_SONGS: string
+		/**
+		 * S​h​o​w​s
+		 */
+		SECTION_SHOWS: string
+		/**
+		 * C​o​n​t​e​n​t
+		 */
+		SECTION_CONTENT: string
+		/**
+		 * S​e​a​r​c​h
+		 */
+		SECTION_SEARCH: string
+		/**
+		 * P​r​e​s​e​n​t​a​t​i​o​n
+		 */
+		SECTION_PRESENTATION: string
+		/**
+		 * M​u​s​i​c​i​a​n​ ​P​a​g​e
+		 */
+		SECTION_MUSICIAN: string
+		/**
+		 * S​e​t​t​i​n​g​s
+		 */
+		SECTION_SETTINGS: string
+		/**
+		 * S​y​s​t​e​m​ ​&​ ​A​u​t​h
+		 */
+		SECTION_SYSTEM: string
 	}
 	COMPANION: {
 		/**
@@ -4118,6 +4286,14 @@ export type TranslationFunctions = {
 		 * Admin Panel
 		 */
 		PANEL: () => LocalizedString
+		/**
+		 * Access Denied
+		 */
+		ACCESS_DENIED: () => LocalizedString
+		/**
+		 * You do not have permission to access the admin panel. Please contact your system administrator.
+		 */
+		ACCESS_DENIED_MESSAGE: () => LocalizedString
 		/**
 		 * Accounts
 		 */
@@ -5881,6 +6057,10 @@ export type TranslationFunctions = {
 		 */
 		GROUP_NOTIFICATIONS: () => LocalizedString
 		/**
+		 * Privacy
+		 */
+		GROUP_PRIVACY: () => LocalizedString
+		/**
 		 * Presentation
 		 */
 		GROUP_PRESENTATION: () => LocalizedString
@@ -6206,6 +6386,26 @@ export type TranslationFunctions = {
 				TITLE: () => LocalizedString
 				/**
 				 * Show notifications when songs are imported or uploaded
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			ERROR_BOUNDARY_NOTIFICATION: {
+				/**
+				 * Show uncaught error notifications
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Display a notification when an unexpected application error occurs
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			METRICS_ENABLED: {
+				/**
+				 * Send usage metrics
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Allow the app to collect anonymous usage data to improve the product. One final event is sent on opt-out.
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
@@ -6685,6 +6885,10 @@ export type TranslationFunctions = {
 		 */
 		ENTITY_ID: () => LocalizedString
 		/**
+		 * Device ID
+		 */
+		DEVICE_ID: () => LocalizedString
+		/**
 		 * User
 		 */
 		USER: () => LocalizedString
@@ -6692,6 +6896,138 @@ export type TranslationFunctions = {
 		 * Events
 		 */
 		EVENTS: () => LocalizedString
+		/**
+		 * Unique Devices
+		 */
+		UNIQUE_DEVICES: () => LocalizedString
+		/**
+		 * Unique Devices Over Time
+		 */
+		UNIQUE_DEVICES_OVER_TIME: () => LocalizedString
+		/**
+		 * Musician Button Usage
+		 */
+		MUSICIAN_BUTTON_USAGE: () => LocalizedString
+		/**
+		 * Opened Modals
+		 */
+		MODAL_OPENED: () => LocalizedString
+		/**
+		 * Layer Actions
+		 */
+		LAYER_ACTIONS: () => LocalizedString
+		/**
+		 * Sync Mode Usage
+		 */
+		SYNC_MODE_USAGE: () => LocalizedString
+		/**
+		 * Songs Imported
+		 */
+		SONGS_IMPORTED: () => LocalizedString
+		/**
+		 * Songs Deleted
+		 */
+		SONGS_DELETED: () => LocalizedString
+		/**
+		 * Songs Imported Over Time
+		 */
+		SONGS_IMPORTED_OVER_TIME: () => LocalizedString
+		/**
+		 * Song Activity
+		 */
+		SONG_ACTIVITY: () => LocalizedString
+		/**
+		 * Song Selected
+		 */
+		SONG_SELECTED: () => LocalizedString
+		/**
+		 * Shows Created
+		 */
+		SHOWS_CREATED: () => LocalizedString
+		/**
+		 * Shows Created Over Time
+		 */
+		SHOWS_CREATED_OVER_TIME: () => LocalizedString
+		/**
+		 * Show Activity
+		 */
+		SHOW_ACTIVITY: () => LocalizedString
+		/**
+		 * PDF / Media / Bible Activity
+		 */
+		CONTENT_ACTIVITY: () => LocalizedString
+		/**
+		 * Searches Over Time
+		 */
+		SEARCHES_OVER_TIME: () => LocalizedString
+		/**
+		 * Search Count
+		 */
+		SEARCH_COUNT: () => LocalizedString
+		/**
+		 * Presentation Activity
+		 */
+		PRESENTATION_ACTIVITY: () => LocalizedString
+		/**
+		 * Windows Opened
+		 */
+		WINDOWS_OPENED: () => LocalizedString
+		/**
+		 * Settings Changed
+		 */
+		SETTINGS_CHANGED: () => LocalizedString
+		/**
+		 * System Events
+		 */
+		SYSTEM_EVENTS: () => LocalizedString
+		/**
+		 * Error Sources
+		 */
+		ERROR_SOURCES: () => LocalizedString
+		/**
+		 * Errors
+		 */
+		ERRORS: () => LocalizedString
+		/**
+		 * Overview
+		 */
+		SECTION_OVERVIEW: () => LocalizedString
+		/**
+		 * Devices
+		 */
+		SECTION_DEVICES: () => LocalizedString
+		/**
+		 * Songs
+		 */
+		SECTION_SONGS: () => LocalizedString
+		/**
+		 * Shows
+		 */
+		SECTION_SHOWS: () => LocalizedString
+		/**
+		 * Content
+		 */
+		SECTION_CONTENT: () => LocalizedString
+		/**
+		 * Search
+		 */
+		SECTION_SEARCH: () => LocalizedString
+		/**
+		 * Presentation
+		 */
+		SECTION_PRESENTATION: () => LocalizedString
+		/**
+		 * Musician Page
+		 */
+		SECTION_MUSICIAN: () => LocalizedString
+		/**
+		 * Settings
+		 */
+		SECTION_SETTINGS: () => LocalizedString
+		/**
+		 * System & Auth
+		 */
+		SECTION_SYSTEM: () => LocalizedString
 	}
 	COMPANION: {
 		/**

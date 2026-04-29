@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState, useRef, type ErrorInfo } from 'react';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { getTheme, resolveThemeMode } from './theme';
 import { detectLocale } from '@/i18n/i18n-util';
@@ -7,30 +7,19 @@ import { loadAllLocales } from '@/i18n/i18n-util.sync';
 import TypesafeI18n from '@/i18n/i18n-react';
 import SessionExpired from '@/components/SessionExpired';
 import { BrowserRouter, Route, Routes, Navigate, useParams } from 'react-router-dom';
-import { LoginPage } from '@/pages/LoginPage';
 import { MainPage } from '@/pages/MainPage';
-import { AdminPage } from '@/pages/AdminPage';
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage';
-import { MusicianPage } from '@/musician/MusicianPage';
 import ConnectivityChecker from '@/components/settings/ConnectivityChecker';
-import { useGetSettings } from '@/store/settingsSlice';
-import { useGetMusicianSettings } from '@/store/musicianSlice';
+import { SETTINGS_KEY, useGetSettings } from '@/store/settingsSlice';
+import { useMetricSync } from '@/hooks/useMetricSync';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { GlobalErrorHandler } from '@/components/common/GlobalErrorHandler';
+import { useMetrics } from '@/hooks/useMetrics';
+import { useGetSessionQuery } from '@/api/session.api';
+import { redirectToLogin } from '@/utils';
 
 // Load all locales upfront so switching is instant
 loadAllLocales();
-
-/** Wrapper providing the musician-specific theme */
-const MusicianThemeWrapper = () => {
-  const { musicianTheme } = useGetMusicianSettings();
-
-  const muiTheme = useMemo(() => getTheme(musicianTheme), [musicianTheme]);
-  return (
-    <ThemeProvider theme={muiTheme}>
-      <CssBaseline />
-      <MusicianPage />
-    </ThemeProvider>
-  );
-};
 
 /** Redirect /a/:licenseNumber → /login?license=... so the account is pre-selected */
 const AccountLoginRedirect = () => {
@@ -38,8 +27,48 @@ const AccountLoginRedirect = () => {
   return <Navigate to={`/login?license=${encodeURIComponent(licenseNumber ?? '')}`} replace />;
 };
 
+/**
+ * Hard-navigation redirect to a separate HTML entry point.
+ * Passes the current path/search through as a query param so the target app
+ * can optionally restore state (e.g. deep-linking into a tab).
+ */
+const HardRedirect = ({ to }: { to: string }) => {
+  useEffect(() => {
+    window.location.replace(to);
+  }, [to]);
+  return null;
+};
+
 const App = () => {
+  useMetricSync();
+
   const { themeMode, uiLanguage, offlineMode } = useGetSettings();
+  const { trackEvent } = useMetrics();
+  const [boundaryError, setBoundaryError] = useState<Error | null>(null);
+  const freshStartTracked = useRef(false);
+
+  // Track fresh start — fired when no settings exist yet in localStorage
+  useEffect(() => {
+    if (freshStartTracked.current) return;
+    freshStartTracked.current = true;
+    const hasSettings = !!localStorage.getItem(SETTINGS_KEY);
+    if (!hasSettings) {
+      trackEvent('fresh_start', undefined, undefined, {
+        language: navigator.language,
+      });
+    }
+  }, [trackEvent]);
+
+  // Check authentication — skip in offline mode
+  const { data: session, isLoading: sessionLoading } = useGetSessionQuery(undefined, { skip: offlineMode });
+
+  // Redirect to dedicated login page when unauthenticated (online mode only)
+  useEffect(() => {
+    if (offlineMode || sessionLoading) return;
+    if (session && !session.isAuthenticated) {
+      redirectToLogin();
+    }
+  }, [offlineMode, session, sessionLoading]);
 
   // Resolve system theme and listen for OS preference changes
   const [resolvedMode, setResolvedMode] = useState(resolveThemeMode(themeMode));
@@ -66,20 +95,23 @@ const App = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <TypesafeI18n key={locale} locale={locale}>
-        <ConnectivityChecker />
-        {!offlineMode && <SessionExpired />}
+        <ErrorBoundary onError={(err: Error, _info: ErrorInfo) => setBoundaryError(err)}>
+          <GlobalErrorHandler boundaryError={boundaryError} />
+          <ConnectivityChecker />
+          {!offlineMode && <SessionExpired />}
 
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/a/:licenseNumber" element={<AccountLoginRedirect />} />
-            <Route path="/unauthorized" element={<UnauthorizedPage />} />
-            <Route path="/admin" element={<AdminPage />} />
-            <Route path="/admin/:tab" element={<AdminPage />} />
-            <Route path="/notes" element={<MusicianThemeWrapper />} />
-            <Route path="/*" element={<MainPage />} />
-          </Routes>
-        </BrowserRouter>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<HardRedirect to="/login" />} />
+              <Route path="/a/:licenseNumber" element={<AccountLoginRedirect />} />
+              <Route path="/unauthorized" element={<UnauthorizedPage />} />
+              <Route path="/admin" element={<HardRedirect to="/admin" />} />
+              <Route path="/admin/*" element={<HardRedirect to="/admin" />} />
+              <Route path="/notes" element={<HardRedirect to="/notes" />} />
+              <Route path="/*" element={<MainPage />} />
+            </Routes>
+          </BrowserRouter>
+        </ErrorBoundary>
       </TypesafeI18n>
     </ThemeProvider>
   );

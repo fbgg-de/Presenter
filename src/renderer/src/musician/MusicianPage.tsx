@@ -28,6 +28,7 @@ import { loadShowSongs } from '@/store/songsSlice';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import type { Show, ShowItem } from '@/api/shows.api';
 import { useGetPresentationSettings } from '@/store/presentationSlice';
+import { useMetrics } from '@/hooks/useMetrics';
 
 /**
  * Top-level page component for the Musician View.
@@ -62,6 +63,7 @@ export const MusicianPage = () => {
   const updateMusicianSetting = useUpdateMusicianSetting();
 
   const dispatch = useAppDispatch();
+  const { trackEvent } = useMetrics();
 
   // ── Local UI state ───────────────────────────────────────────────
   const [activeItemIndex, setActiveItemIndex] = useState(persistedLastItemIndex);
@@ -279,8 +281,7 @@ export const MusicianPage = () => {
         currentShowTitle={currentShow?.title}
       />
       {/* QR sharing dialog */}
-      <QrCodeShare open={qrOpen} onClose={() => setQrOpen(false)} />
-      {/* PDF Upload dialog — always available for song items */}
+      <QrCodeShare open={qrOpen} onClose={() => setQrOpen(false)} />      {/* PDF Upload dialog — always available for song items */}
       {activeSongNumber != null && (
         <PdfUploadModal
           songNumber={activeSongNumber}
@@ -289,7 +290,7 @@ export const MusicianPage = () => {
           musicianNames={musicianNames}
           selectedPdf={pdfOverrideFilename || pdfViewer.resolvedFilename}
           onSelectPdf={(f) => setPdfOverrideFilename(f)}
-          onOpenAreaMapping={() => setAreaMappingOpen(true)}
+          onOpenAreaMapping={() => { trackEvent('musician_mapping_used', undefined, undefined, { type: 'area' }); trackEvent('modal_opened', undefined, undefined, { modal: 'area_mapping' }); setAreaMappingOpen(true); }}
         />
       )}
       {/* PDF Area Mapping editor */}
@@ -318,7 +319,7 @@ export const MusicianPage = () => {
         showFooter={showFooter}
         musicianNames={musicianNames}
         availableBands={availableBands}
-        setQrOpen={setQrOpen}
+        setQrOpen={(open) => { if (open) trackEvent('modal_opened', undefined, undefined, { modal: 'qr_share' }); setQrOpen(open); }}
         setPdfUploadOpen={setPdfUploadOpen}
       />
       {/* Main layout */}
@@ -329,7 +330,7 @@ export const MusicianPage = () => {
           activeItemIndex={activeItemIndex}
           operatorActiveIndex={operatorItemIndex}
           onSelectItem={handleSelectItem}
-          onOpenPdfModal={() => setPdfUploadOpen(true)}
+          onOpenPdfModal={() => { trackEvent('modal_opened', undefined, undefined, { modal: 'pdf_manage' }); setPdfUploadOpen(true); }}
         />
 
         {/* Content area */}
@@ -351,8 +352,8 @@ export const MusicianPage = () => {
             onToggleSidebar={handleToggleSidebar}
             syncMode={syncMode}
             onSetSyncMode={handleSetSyncMode}
-            onOpenSettings={() => setSettingsOpen(true)}
-            onOpenPdfModal={() => setPdfUploadOpen(true)}
+            onOpenSettings={() => { trackEvent('modal_opened', undefined, undefined, { modal: 'musician_settings' }); setSettingsOpen(true); }}
+            onOpenPdfModal={() => { trackEvent('modal_opened', undefined, undefined, { modal: 'pdf_manage' }); setPdfUploadOpen(true); }}
             isSongItem={isSongItem}
             activeSongNumber={activeSongNumber}
             pageView={pdfViewer.pageView}
@@ -366,7 +367,7 @@ export const MusicianPage = () => {
             onToggleAnnotate={() => setAnnotateMode((a) => !a)}
             hasPdfs={hasPdfs}
             onRefetchAnnotations={() => annotationRefetchRef.current?.()}
-            onOpenMidi={() => setMidiOpen(true)}
+            onOpenMidi={() => { trackEvent('modal_opened', undefined, undefined, { modal: 'midi_learn' }); setMidiOpen(true); }}
           />
 
           {/* Main content */}

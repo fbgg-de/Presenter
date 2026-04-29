@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, Card, CardContent, Divider, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { Security as SecurityIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon } from '@mui/icons-material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetAccountsQuery, useGetAdminOidcAuthUrlQuery, useGetOidcAuthUrlQuery } from '@/api/session.api';
 import { useUpdateSetting, useGetSettings, Account } from '@/store/settingsSlice';
@@ -13,7 +13,6 @@ const useQueryParam = (name: string): string | null => {
 
 export const LoginPage = () => {
   const { LL } = useI18nContext();
-  const navigate = useNavigate();
 
   const next = useQueryParam('next') ?? '/';
 
@@ -24,12 +23,12 @@ export const LoginPage = () => {
   useEffect(() => {
     if (offlineMode) {
       try {
-        navigate(decodeURIComponent(next), { replace: true });
+        window.location.replace(decodeURIComponent(next));
       } catch {
-        navigate('/', { replace: true });
+        window.location.replace('/');
       }
     }
-  }, [offlineMode, navigate, next]);
+  }, [offlineMode, next]);
 
   const licenseParam = useQueryParam('license');
 

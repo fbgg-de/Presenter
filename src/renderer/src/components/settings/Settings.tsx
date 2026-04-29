@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import {
   Accordion,
   AccordionDetails,
@@ -37,6 +37,7 @@ import { useGetStylesQuery } from '@/api/styles.api';
 import { useGetAccountSettingsQuery, useUpdateAccountSettingsMutation } from '@/api/session.api';
 import { KeyboardMappingEditor } from '@/components/settings/KeyboardMappingEditor';
 import { ColorSwatchButton } from '@/components/style/ColorPicker';
+import { useMetrics } from '@/hooks/useMetrics';
 import { exportSettings, importSettings, applyImportedSettings } from '@/utils/settingsExport';
 import { CompanionHelper } from '@/components/settings/CompanionHelper';
 import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
@@ -71,6 +72,9 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'notificationCount', type: 'number', group: 'Notifications', label: 'Max visible' },
   { key: 'notificationTime', type: 'number', group: 'Notifications', label: 'Auto-dismiss (ms)' },
   { key: 'uploadNotifications', type: 'boolean', group: 'Notifications', label: 'Song upload notifications' },
+  { key: 'errorBoundaryNotification', type: 'boolean', group: 'Notifications', label: 'Show uncaught error notifications' },
+  // Privacy
+  { key: 'metricsEnabled', type: 'boolean', group: 'Privacy', label: 'Send usage metrics' },
   // Presentation
   { key: 'bibleTranslation', type: 'string', group: 'Presentation', label: 'Default Bible translation' },
   { key: 'windowFooterVisible', type: 'boolean', group: 'Presentation', label: 'Show window footer bar' },
@@ -87,14 +91,27 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'restoreWindowsOnStart', type: 'boolean', group: 'Electron', label: 'Restore windows on start' },
 ];
 
-const GROUP_ORDER = ['General', 'Behavior', 'Confirmations', 'Notifications', 'Presentation', 'Electron'];
+const GROUP_ORDER = ['General', 'Behavior', 'Confirmations', 'Notifications', 'Privacy', 'Presentation', 'Electron'];
 
 export const Settings = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
 
   const settings = useGetSettings();
-  const updateSetting = useUpdateSetting();
+  const _updateSetting = useUpdateSetting();
+  const { trackEvent } = useMetrics();
+
+  const updateSetting = useCallback(
+    <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
+      // When the user opts out of metrics, fire a final event before disabling
+      if (key === 'metricsEnabled' && value === false) {
+        trackEvent('metrics_disabled');
+      }
+      _updateSetting(key, value);
+      trackEvent('setting_changed', 'setting', key, { value: String(value) });
+    },
+    [_updateSetting, trackEvent],
+  );
 
   const { data: styles = [] } = useGetStylesQuery();
   const { data: accountSettings } = useGetAccountSettingsQuery(undefined, { skip: settings.offlineMode });
@@ -291,6 +308,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                           onChange={(e) => {
                             const id = Number(e.target.value);
                             updateSetting('globalStyleId', id);
+                            trackEvent('style_changed', 'style', String(id), { scope: 'global' });
                             if (!settings.offlineMode) {
                               updateAccountSettings({ defaultStyleId: id || null });
                             }
@@ -365,7 +383,15 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
 /** Individual setting row */
 const SettingRow = ({ config, value }: { config: SettingConfig; value: string | number }) => {
   const { LL } = useI18nContext();
-  const updateSetting = useUpdateSetting();
+  const _updateSetting = useUpdateSetting();
+  const { trackEvent } = useMetrics();
+  const updateSetting = useCallback(
+    <K extends keyof SettingsState>(key: K, val: SettingsState[K]) => {
+      _updateSetting(key, val);
+      trackEvent('setting_changed', 'setting', key, { value: String(val) });
+    },
+    [_updateSetting, trackEvent],
+  );
 
   const getLabel = (cfg: SettingConfig) => {
     switch (cfg.key) {

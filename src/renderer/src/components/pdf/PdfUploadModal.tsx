@@ -43,6 +43,7 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import { useListPdfsQuery, useUploadPdfMutation, useDeletePdfMutation, useRenamePdfMutation, type PdfFileInfo } from '@/api/pdfs.api';
 import { MUSICAL_KEYS } from '@/utils/orderKeyUtils';
 import { formatDateTime, formatFileSize } from '@/utils';
+import { useMetrics } from '@/hooks/useMetrics';
 
 /**
  * Try to detect a musical key from a filename.
@@ -78,6 +79,7 @@ export const PdfUploadModal = ({
   onOpenAreaMapping,
 }: PdfUploadModalProps) => {
   const { LL } = useI18nContext();
+  const { trackEvent } = useMetrics();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Import form state
@@ -145,6 +147,7 @@ export const PdfUploadModal = ({
     formData.append('files[]', new File([pendingFile], targetFilename, { type: pendingFile.type }));
     try {
       await uploadPdf({ songNumber, formData }).unwrap();
+      trackEvent('pdf_uploaded', 'pdf', targetFilename, { songNumber, filename: targetFilename });
       setPendingFile(null);
       setDetectedKey('');
       setSelectedKey('');
@@ -159,6 +162,7 @@ export const PdfUploadModal = ({
     if (!deleteTarget) return;
     try {
       await deletePdf({ songNumber, filename: deleteTarget }).unwrap();
+      trackEvent('pdf_deleted', 'pdf', deleteTarget, { songNumber });
       setDeleteTarget(null);
     } catch (err) {
       console.error('Failed to delete PDF:', err);
@@ -287,6 +291,7 @@ export const PdfUploadModal = ({
                               color="primary"
                               onClick={(e) => {
                                 e.stopPropagation();
+                                trackEvent('pdf_viewed', 'pdf', pdf.filename, { songNumber });
                                 onSelectPdf?.(pdf.filename);
                               }}
                             >
