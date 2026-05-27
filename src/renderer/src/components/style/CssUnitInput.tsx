@@ -18,16 +18,16 @@ const CSS_UNITS = ['px', 'pt', 'em', 'rem', 'vh', 'vw', 'vmin', 'vmax', '%'] as 
 type CssUnit = (typeof CSS_UNITS)[number];
 
 /** Parse a CSS value like "4vh" into { num: 4, unit: 'vh' }. */
-function parseCssValue(value: string): { num: number; unit: CssUnit } {
+const parseCssValue: (value: string) => { num: number; unit: CssUnit } = (value) => {
   const match = value.match(/^(-?\d*\.?\d+)\s*(px|pt|em|rem|vh|vw|vmin|vmax|%)$/i);
   if (match) return { num: parseFloat(match[1]), unit: match[2].toLowerCase() as CssUnit };
   const num = parseFloat(value);
   if (!isNaN(num)) return { num, unit: 'px' };
   return { num: 0, unit: 'px' };
-}
+};
 
 /** Default slider range per unit. */
-function getDefaultRange(unit: CssUnit): { min: number; max: number; step: number } {
+const getDefaultRange: (unit: CssUnit) => { min: number; max: number; step: number } = (unit) => {
   switch (unit) {
     case 'px':
       return { min: 0, max: 200, step: 1 };
@@ -47,7 +47,7 @@ function getDefaultRange(unit: CssUnit): { min: number; max: number; step: numbe
     default:
       return { min: 0, max: 200, step: 1 };
   }
-}
+};
 
 interface CssUnitInputProps {
   value: string;

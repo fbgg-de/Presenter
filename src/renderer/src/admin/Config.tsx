@@ -88,10 +88,36 @@ export const Config = () => {
                 />
               }
             />
-            {adminConfig.bible.enabled && (
+            <ConfigRow label="Name" value={adminConfig.bible.name} />
+            <ConfigRow label="Base URL" value={adminConfig.bible.baseUrl} mono />
+            <ConfigRow label="Translations Endpoint" value={adminConfig.bible.translationsEndpoint} mono />
+            <ConfigRow label="Verse Endpoint" value={adminConfig.bible.verseEndpoint} mono />
+          </ConfigSection>
+
+          <ConfigSection title={LL.ADMIN.WS_HOST_SECTION()}>
+            {!adminConfig.wsHost ? (
+              <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1 }}>
+                {LL.ADMIN.WS_HOST_NOT_CONFIGURED()}
+              </Typography>
+            ) : (
               <>
-                <ConfigRow label="Name" value={adminConfig.bible.name} />
-                <ConfigRow label="Base URL" value={adminConfig.bible.baseUrl} mono />
+                <ConfigRow
+                  label="Protocol"
+                  value={
+                    <Chip
+                      label={adminConfig.wsHost.wss ? 'wss://' : 'ws://'}
+                      size="small"
+                      color={adminConfig.wsHost.wss ? 'success' : 'warning'}
+                      variant="outlined"
+                      sx={{ fontFamily: 'monospace' }}
+                    />
+                  }
+                />
+                <ConfigRow label="Host" value={adminConfig.wsHost.host} mono />
+                <ConfigRow label="Port" value={adminConfig.wsHost.port} />
+                {adminConfig.wsHost.path && adminConfig.wsHost.path !== '/' && (
+                  <ConfigRow label="Path" value={adminConfig.wsHost.path} mono />
+                )}
               </>
             )}
           </ConfigSection>

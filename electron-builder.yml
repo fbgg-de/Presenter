@@ -1,5 +1,5 @@
 appId: com.electron.app
-productName: presenter
+productName: Presenter
 directories:
   buildResources: build
   output: dist-app

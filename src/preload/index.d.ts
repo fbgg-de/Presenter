@@ -11,6 +11,8 @@ import type {
 } from '../shared/types';
 
 export interface FrontendAPI {
+  // ── Renderer path (for building correct file:// URLs inside asar) ──
+  rendererDir: string;
   // ── Basic window controls ──
   minimize: () => Promise<void>;
   close: () => Promise<void>;
@@ -66,21 +68,31 @@ export interface FrontendAPI {
   importSettings: () => Promise<SettingsDiff | null>;
   applyImportedSettings: (diff: SettingsDiff) => Promise<void>;
 
-  // ── WebSocket broadcast ──
-  wsBroadcast: (action: string, data?: Record<string, unknown>) => void;
+  // ── WebSocket network scan ──
+  scanWsHosts: (url: string) => Promise<string[]>;
+
+  // ── Auto-updater ──
+  installUpdate: () => Promise<void>;
+  onUpdaterUpdateAvailable: (callback: (info: { version: string; releaseDate: string }) => void) => (() => void) | void;
+  onUpdaterUpdateNotAvailable: (callback: () => void) => (() => void) | void;
+  onUpdaterDownloadProgress: (callback: (progress: { percent: number; transferred: number; total: number }) => void) => (() => void) | void;
+  onUpdaterUpdateDownloaded: (callback: (info: { version: string; releaseDate: string }) => void) => (() => void) | void;
+  onUpdaterError: (callback: (info: { message: string }) => void) => (() => void) | void;
+
+  // ── Backend origin (for OIDC callback detection) ──
+  setBackendOrigin: (origin: string) => void;
+
+  // ── Musician IPC sync ──
+  musicianSyncToOperator: (data: unknown) => void;
+  onMusicianSyncFromIpc: (callback: (data: unknown) => void) => (() => void) | void;
 
   // ── Video status from presentation windows ──
   onVideoStatus: (callback: (status: VideoStatus) => void) => (() => void) | void;
 
   // ── IPC event listeners (main -> renderer) ──
-  onWsNavigationAction: (callback: (data: unknown) => void) => (() => void) | void;
-  onWsVideoAction: (callback: (data: unknown) => void) => (() => void) | void;
-  onWsGetState: (callback: (data: unknown) => void) => (() => void) | void;
-  sendWsStateResponse: (data: unknown) => void;
   onPresentationWindowBoundsChanged: (
     callback: (data: { id: string; bounds: { x: number; y: number; width: number; height: number } }) => void,
   ) => (() => void) | void;
-  removeAllWsListeners: () => void;
 }
 
 export interface VideoStatus {

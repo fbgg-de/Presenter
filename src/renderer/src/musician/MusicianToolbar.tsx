@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, ReactNode } from 'react';
-import { IconButton, SpeedDial, SpeedDialAction, Stack, Tooltip, Typography, useTheme } from '@mui/material';
+import { IconButton, SpeedDial, SpeedDialAction, Stack, Tooltip, Typography, useTheme, Badge } from '@mui/material';
 import {
   Settings as SettingsIcon,
   LooksOne as OnePageIcon,
@@ -17,21 +17,22 @@ import {
   Menu as MenuIcon,
   Sync as SyncIcon,
   SyncDisabled as SyncDisabledIcon,
-  SettingsInputAntenna as MidiIcon,
-  Wifi as WifiIcon,
+  Cable as MidiIcon,
   Lock as LockIcon,
   LockOpen as LockOpenIcon,
   RotateLeft as RefetchAnnotationsIcon,
+  MultipleStop as OrderIcon,
 } from '@mui/icons-material';
 import { alpha, type Palette } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useUpdateMusicianSetting, useGetMusicianSettings } from '@/store/musicianSlice';
 import { useMetrics } from '@/hooks/useMetrics';
+import type { WsSyncStatus } from '@/hooks/useWsSync';
 
 const FAB_SIZE = 44;
 const NAV_MARGIN = 36;
 
-export type SyncMode = 'off' | 'operator' | 'midi' | 'midi-ws';
+export type SyncMode = 'off' | 'operator' | 'midi';
 
 /** Shared base floating button style using theme palette tokens */
 export const floatingBtnSx = (palette: Palette, isActive = false) => {
@@ -120,6 +121,7 @@ interface MusicianToolbarProps {
   onToggleSidebar: () => void;
   syncMode: SyncMode;
   onSetSyncMode: (mode: SyncMode) => void;
+  wsStatus?: WsSyncStatus;
   onOpenSettings: () => void;
   onOpenPdfModal: () => void;
   isSongItem: boolean;
@@ -136,7 +138,8 @@ interface MusicianToolbarProps {
   hasPdfs: boolean;
   /** Triggers an immediate annotation reload from the server. Only available when a PDF is shown. */
   onRefetchAnnotations?: () => void;
-  onOpenMidi?: () => void;
+  orderEditorOpen?: boolean;
+  onToggleOrderEditor?: () => void;
 }
 
 export const MusicianToolbar = ({
@@ -144,6 +147,7 @@ export const MusicianToolbar = ({
   onToggleSidebar,
   syncMode,
   onSetSyncMode,
+  wsStatus,
   onOpenSettings,
   onOpenPdfModal,
   isSongItem,
@@ -159,7 +163,8 @@ export const MusicianToolbar = ({
   onToggleAnnotate,
   hasPdfs,
   onRefetchAnnotations,
-  onOpenMidi,
+  orderEditorOpen,
+  onToggleOrderEditor,
 }: MusicianToolbarProps) => {
   const { LL } = useI18nContext();
   const { palette } = useTheme();
@@ -234,13 +239,11 @@ export const MusicianToolbar = ({
     off: <SyncDisabledIcon fontSize="small" />,
     operator: <SyncIcon fontSize="small" />,
     midi: <MidiIcon fontSize="small" />,
-    'midi-ws': <WifiIcon fontSize="small" />,
   };
   const syncModeLabel: Record<SyncMode, string> = {
     off: 'Sync Off',
     operator: 'Operator Sync',
     midi: 'MIDI Sync',
-    'midi-ws': 'MIDI over WebSocket',
   };
 
   const toggleExpanded = () => {
@@ -275,7 +278,7 @@ export const MusicianToolbar = ({
         pointerEvents: 'none',
       }}
     >
-      {/* Row 1: Sync (left) + Toggle Toolbar (right) — always visible */}
+      {/* Row 1: Sync (left) + Wake Lock + Toggle Toolbar (right) — always visible */}
       <Stack
         direction="row"
         spacing={0.75}
@@ -290,10 +293,25 @@ export const MusicianToolbar = ({
           onOpen={() => setSyncDialOpen(true)}
           onClose={() => setSyncDialOpen(false)}
           direction="left"
-          icon={syncModeIcon[syncMode]}
-          FabProps={{ size: 'small', sx: makeSpeedDialFabSx(palette, syncMode !== 'off') }}
+          icon={
+            syncMode === 'operator' || syncMode === 'midi' ? (
+              <Badge
+                variant="dot"
+                color={wsStatus === 'connected' ? 'success' : wsStatus === 'error' ? 'error' : 'warning'}
+                overlap="circular"
+              >
+                {syncModeIcon[syncMode]}
+              </Badge>
+            ) : (
+              syncModeIcon[syncMode]
+            )
+          }
+          FabProps={{
+            size: 'small',
+            sx: makeSpeedDialFabSx(palette, syncMode !== 'off'),
+          }}
         >
-          {(['off', 'operator', 'midi', 'midi-ws'] as SyncMode[]).map((mode) => (
+          {(['off', 'operator', 'midi'] as SyncMode[]).map((mode) => (
             <SpeedDialAction
               key={mode}
               icon={syncModeIcon[mode]}
@@ -309,6 +327,18 @@ export const MusicianToolbar = ({
             />
           ))}
         </SpeedDial>
+        {/* Wake lock — always visible so users can quickly keep the screen on */}
+        {supportsWakeLock && (
+          <FloatingButton
+            icon={wakeLock ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
+            tooltip={wakeLock ? LL.MUSICIAN.WAKE_LOCK_OFF() : LL.MUSICIAN.WAKE_LOCK_ON()}
+            onClick={() => {
+              trackEvent('musician_button_clicked', undefined, undefined, { button: wakeLock ? 'wake_lock_off' : 'wake_lock_on' });
+              toggleWakeLock();
+            }}
+            active={!!wakeLock}
+          />
+        )}
         <FloatingButton
           icon={musicianToolbarExpanded ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
           tooltip={LL.MUSICIAN.TOOLBAR_TOGGLE()}
@@ -322,7 +352,10 @@ export const MusicianToolbar = ({
           <FloatingButton
             icon={<MenuIcon fontSize="small" />}
             tooltip={LL.MUSICIAN.SIDEBAR_TOGGLE()}
-            onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: 'sidebar_toggle' }); onToggleSidebar(); }}
+            onClick={() => {
+              trackEvent('musician_button_clicked', undefined, undefined, { button: 'sidebar_toggle' });
+              onToggleSidebar();
+            }}
             active={sidebarOpen}
           />
 
@@ -330,19 +363,12 @@ export const MusicianToolbar = ({
           <FloatingButton
             icon={isFullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
             tooltip={isFullscreen ? LL.MUSICIAN.EXIT_FULLSCREEN() : LL.MUSICIAN.FULLSCREEN()}
-            onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: isFullscreen ? 'exit_fullscreen' : 'fullscreen' }); toggleFullscreen(); }}
+            onClick={() => {
+              trackEvent('musician_button_clicked', undefined, undefined, { button: isFullscreen ? 'exit_fullscreen' : 'fullscreen' });
+              toggleFullscreen();
+            }}
             active={isFullscreen}
           />
-
-          {/* Keep screen awake */}
-          {supportsWakeLock && (
-            <FloatingButton
-              icon={wakeLock ? <LockIcon fontSize="small" /> : <LockOpenIcon fontSize="small" />}
-              tooltip={wakeLock ? LL.MUSICIAN.WAKE_LOCK_OFF() : LL.MUSICIAN.WAKE_LOCK_ON()}
-              onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: wakeLock ? 'wake_lock_off' : 'wake_lock_on' }); toggleWakeLock(); }}
-              active={!!wakeLock}
-            />
-          )}
 
           {/* 3. Page spread (per-PDF) */}
           <SpeedDial
@@ -386,7 +412,10 @@ export const MusicianToolbar = ({
             <FloatingButton
               icon={<PdfIcon fontSize="small" />}
               tooltip={hasPdfs ? LL.PDF.MANAGE_TITLE() : LL.PDF.IMPORT_TITLE()}
-              onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: hasPdfs ? 'pdf_manage' : 'pdf_import' }); onOpenPdfModal(); }}
+              onClick={() => {
+                trackEvent('musician_button_clicked', undefined, undefined, { button: hasPdfs ? 'pdf_manage' : 'pdf_import' });
+                onOpenPdfModal();
+              }}
             />
           )}
 
@@ -395,8 +424,24 @@ export const MusicianToolbar = ({
             <FloatingButton
               icon={<AnnotateIcon fontSize="small" />}
               tooltip={LL.MUSICIAN.ANNOTATE()}
-              onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: 'annotate_toggle' }); onToggleAnnotate(); }}
+              onClick={() => {
+                trackEvent('musician_button_clicked', undefined, undefined, { button: 'annotate_toggle' });
+                onToggleAnnotate();
+              }}
               active={annotateMode}
+            />
+          )}
+
+          {/* 5a. Order editor toggle — song items only */}
+          {isSongItem && onToggleOrderEditor && (
+            <FloatingButton
+              icon={<OrderIcon fontSize="small" />}
+              tooltip={LL.MUSICIAN.ITEM_EDIT_ORDER()}
+              onClick={() => {
+                trackEvent('musician_button_clicked', undefined, undefined, { button: 'order_editor_toggle' });
+                onToggleOrderEditor();
+              }}
+              active={!!orderEditorOpen}
             />
           )}
 
@@ -405,7 +450,10 @@ export const MusicianToolbar = ({
             <FloatingButton
               icon={<RefetchAnnotationsIcon fontSize="small" />}
               tooltip={LL.ANNOTATION.REFETCH()}
-              onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: 'refetch_annotations' }); onRefetchAnnotations(); }}
+              onClick={() => {
+                trackEvent('musician_button_clicked', undefined, undefined, { button: 'refetch_annotations' });
+                onRefetchAnnotations();
+              }}
             />
           )}
 
@@ -436,12 +484,18 @@ export const MusicianToolbar = ({
               <SpeedDialAction
                 icon={<ZoomInIcon fontSize="small" />}
                 slotProps={{ tooltip: { title: LL.MUSICIAN.ZOOM_IN(), placement: 'bottom' } }}
-                onClick={() => { onZoomIn(); trackEvent('musician_button_clicked', undefined, undefined, { button: 'zoom_in' }); }}
+                onClick={() => {
+                  onZoomIn();
+                  trackEvent('musician_button_clicked', undefined, undefined, { button: 'zoom_in' });
+                }}
               />
               <SpeedDialAction
                 icon={<ZoomOutIcon fontSize="small" />}
                 slotProps={{ tooltip: { title: LL.MUSICIAN.ZOOM_OUT(), placement: 'bottom' } }}
-                onClick={() => { onZoomOut(); trackEvent('musician_button_clicked', undefined, undefined, { button: 'zoom_out' }); }}
+                onClick={() => {
+                  onZoomOut();
+                  trackEvent('musician_button_clicked', undefined, undefined, { button: 'zoom_out' });
+                }}
               />
               <SpeedDialAction
                 icon={<Zoom100Icon fontSize="small" />}
@@ -467,11 +521,15 @@ export const MusicianToolbar = ({
             </SpeedDial>
           )}
 
-          {/* 7. MIDI Mapping */}
-          {onOpenMidi && <FloatingButton icon={<MidiIcon fontSize="small" />} tooltip={LL.MIDI.SETTINGS()} onClick={() => { trackEvent('musician_mapping_used', undefined, undefined, { type: 'midi' }); onOpenMidi(); }} />}
-
-          {/* 8. Settings */}
-          <FloatingButton icon={<SettingsIcon fontSize="small" />} tooltip={LL.MUSICIAN.SETTINGS()} onClick={() => { trackEvent('musician_button_clicked', undefined, undefined, { button: 'settings' }); onOpenSettings(); }} />
+          {/* 7. Settings */}
+          <FloatingButton
+            icon={<SettingsIcon fontSize="small" />}
+            tooltip={LL.MUSICIAN.SETTINGS()}
+            onClick={() => {
+              trackEvent('musician_button_clicked', undefined, undefined, { button: 'settings' });
+              onOpenSettings();
+            }}
+          />
         </>
       )}
     </Stack>

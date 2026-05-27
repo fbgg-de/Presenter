@@ -161,6 +161,8 @@ const en = {
     CONFIG_DEV_MODE: 'Development Mode',
     CONFIG_ENABLED: 'Enabled',
     CONFIG_DISABLED: 'Disabled',
+    WS_HOST_SECTION: 'WebSocket Host',
+    WS_HOST_NOT_CONFIGURED: 'No WebSocket host configured in config.php.',
   },
 
   ADMIN_LOGS: {
@@ -237,6 +239,10 @@ const en = {
     UPDATE: 'Update show',
     DELETE: 'Delete show',
     CURRENT: 'Current',
+    REFETCH: 'Reload shows',
+    UPDATE_AVAILABLE: 'Show updated on server',
+    UPDATE_AVAILABLE_ACTION: 'Reload',
+    CCLI_REPORT: 'CCLI report',
   },
 
   SHOW_ITEMS: {
@@ -545,6 +551,8 @@ const en = {
     BRING_TO_FRONT: 'Bring to Front',
     HIDE_TEXT: 'Hide Text on all Windows',
     SHOW_TEXT: 'Show Text on all Windows',
+    WS_CLIENTS: '{count:number} musician{{s}} connected',
+    WS_NOT_CONNECTED: 'WebSocket relay not connected',
   },
 
   UNIFIED_SEARCH: {
@@ -711,7 +719,7 @@ const en = {
       },
       MIDI_TRACKING_MASTER: { TITLE: 'Tracking master', DESCRIPTION: 'Who controls musician view navigation: the operator or MIDI device' },
       MEDIA_PATH: { TITLE: 'Media directory path', DESCRIPTION: 'Local directory for media files (Electron only)' },
-      WS_PORT: { TITLE: 'WebSocket port', DESCRIPTION: 'Port for the built-in WebSocket server (Electron only)' },
+      WS_URL: { TITLE: 'WebSocket Server URL', DESCRIPTION: 'URL of the standalone WebSocket relay server (e.g. wss://ws.example.com). All accounts connect to the same server; messages are isolated per account.' },
       AUTO_CHECK_UPDATES: {
         TITLE: 'Auto-check updates',
         DESCRIPTION: 'Automatically check for application updates on startup (Electron only)',
@@ -719,6 +727,17 @@ const en = {
       RESTORE_WINDOWS_ON_START: {
         TITLE: 'Restore windows on start',
         DESCRIPTION: 'Automatically reopen presentation windows that were open when the app was last closed (Electron only)',
+      },
+      WS_HOSTS: {
+        TITLE: 'WebSocket Hosts',
+        DESCRIPTION: 'Configure the WebSocket hosts that clients will auto-connect to. These are saved to the server and delivered to connected devices automatically.',
+        NO_HOSTS: 'No hosts configured. Clients will need to set up the connection manually.',
+        LABEL_LABEL: 'Label (optional)',
+        HOST_LABEL: 'Host / IP',
+        PORT_LABEL: 'Port',
+        ADD_HOST: 'Add Host',
+        WSS_LABEL: 'Secure (wss://)',
+        MIXED_CONTENT_WARNING: 'This host uses ws:// but the app is served over HTTPS. The browser will block this connection. Enable "Secure (wss://)" or use a WSS-capable server.',
       },
       TRANSITION_MODE: {
         TITLE: 'Transition mode',
@@ -867,6 +886,10 @@ const en = {
     DESCRIPTION: 'Description',
     TARGET: 'Target',
     EXAMPLES: 'Examples',
+    SCAN_NETWORK: 'Scan Network',
+    SCAN_RUNNING: 'Scanning...',
+    SCAN_NO_RESULTS: 'No WebSocket servers found on the local network.',
+    SCAN_FOUND: 'Found {count} host(s) on port:',
   },
 
   MUSICIAN: {
@@ -898,9 +921,14 @@ const en = {
     CCLI_NUMBER: 'CCLI #{number}',
     KEY_LABEL: 'Key: {key}',
     ITEM_EDIT: 'Edit Song',
+    ITEM_EDIT_ORDER: 'Edit order',
     ITEM_DELETE: 'Remove from Show',
     ITEM_SELECT_KEY: 'Key',
     ITEM_SELECT_ORDER: 'Order',
+    ORDER_SEQUENCE: 'Order sequence',
+    ORDER_SEQUENCE_HINT: 'Use commas, e.g. Verse, Chorus, Chorus',
+    ORDER_INVALID_BLOCKS: 'Unknown blocks: {blocks}',
+    ORDER_AVAILABLE_BLOCKS: 'Available blocks',
     MANAGE_PDFS: 'Manage PDFs',
     SHOW_FOOTER: 'Show Footer',
     TOOLBAR_TOGGLE: 'Toggle Toolbar',
@@ -915,11 +943,28 @@ const en = {
     NEXT_SONG: 'Next Song',
     PREV_PAGE: 'Previous Page',
     NEXT_PAGE: 'Next Page',
+    PREV_BLOCK: 'Previous Block',
+    NEXT_BLOCK: 'Next Block',
     PAGE_COUNT: '{count:number} page{{s}}',
     FULLSCREEN: 'Fullscreen',
     EXIT_FULLSCREEN: 'Exit Fullscreen',
     WAKE_LOCK_ON: 'Keep Screen Awake',
     WAKE_LOCK_OFF: 'Allow Screen Sleep',
+    WS_SYNC_TITLE: 'WebSocket Sync Setup',
+    WS_SYNC_DESC: 'Enter the WebSocket address of the Presenter operator on this network.',
+    WS_SYNC_HOST_LABEL: 'Host / IP Address',
+    WS_SYNC_WS_PORT_LABEL: 'WS Port',
+    WS_SYNC_CONNECT: 'Connect',
+    WS_SYNC_CONNECTED: 'Connected',
+    WS_SYNC_DISCONNECTED: 'Disconnected',
+    WS_SYNC_ERROR: 'Connection failed',
+    WS_SYNC_STEP_CONFIGURE: 'Configure',
+    WS_SYNC_STEP_CONNECT: 'Connect',
+    WS_SYNC_CONNECTING: 'Connecting to {url}…',
+    WS_SYNC_SUCCESS_TITLE: 'Connected!',
+    WS_SYNC_SUCCESS_DESC: 'The musician view is now synced with the operator at {url}.',
+    WS_SYNC_CHANGE: 'Change',
+    SHOW_MISMATCH_WARNING: 'Different show loaded (Operator: {operatorShow}, This device: {currentShow}).',
   },
 
   QR: {
@@ -1035,6 +1080,8 @@ const en = {
     NEXT_BLOCK: 'Next Block',
     PREV_BLOCK: 'Previous Block',
     TOGGLE_TRACKING: 'Toggle Tracking Master',
+    SYNC_ACTIVE: 'Musician sync active — click to follow',
+    FOLLOW_MIDI_ACTIVE: 'Following MIDI musician — click to stop',
   },
 
   CONNECTIVITY: {
@@ -1046,6 +1093,21 @@ const en = {
     SNACK_MESSAGE: 'Backend is not reachable',
     SNACK_CHANGE_BUTTON: 'Change backend settings',
     SNACK_DISMISS: 'Dismiss',
+  },
+
+  UPDATER: {
+    TITLE: 'Application Updates',
+    CHECK_NOW: 'Check for updates',
+    CHECK_AGAIN: 'Check again',
+    CHECKING: 'Checking for updates…',
+    UP_TO_DATE: 'The application is up to date.',
+    UPDATE_AVAILABLE: 'Update {version} is available and will be downloaded automatically.',
+    DOWNLOADING: 'Downloading update… {percent}%',
+    DOWNLOADING_SOON: 'Downloading automatically in the background.',
+    READY_TO_INSTALL: 'Update {version} is ready to install.',
+    INSTALL_AND_RESTART: 'Install & Restart',
+    CHECK_FAILED: 'Failed to check for updates. Please try again later.',
+    ERROR: 'An error occurred during the update process.',
   },
 } satisfies BaseTranslation;
 

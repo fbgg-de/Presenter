@@ -48,11 +48,21 @@ class AdminConfig extends RestController
                 'scopes'         => defined('OIDC_CLIENT_SCOPES')  ? OIDC_CLIENT_SCOPES  : [],
             ],
             'bible' => [
-                'enabled'      => defined('BIBLE_API') && is_array(BIBLE_API) && (bool) (BIBLE_API['enabled'] ?? false),
-                'name'         => defined('BIBLE_API') && is_array(BIBLE_API) ? (BIBLE_API['name'] ?? null) : null,
-                'baseUrl'      => defined('BIBLE_API') && is_array(BIBLE_API) ? (BIBLE_API['base_url'] ?? null) : null,
+                'enabled'             => defined('BIBLE_API') && is_array(BIBLE_API) && (bool) (BIBLE_API['enabled'] ?? false),
+                'name'                => defined('BIBLE_API') && is_array(BIBLE_API) ? (BIBLE_API['name'] ?? null) : null,
+                'baseUrl'             => defined('BIBLE_API') && is_array(BIBLE_API) ? (BIBLE_API['base_url'] ?? null) : null,
+                'translationsEndpoint'=> defined('BIBLE_API') && is_array(BIBLE_API) ? (BIBLE_API['translations_endpoint'] ?? null) : null,
+                'verseEndpoint'       => defined('BIBLE_API') && is_array(BIBLE_API) ? (BIBLE_API['verse_endpoint'] ?? null) : null,
                 // api_key intentionally omitted
             ],
+            'wsHost' => defined('WS_HOST') && is_array(WS_HOST) && !empty(WS_HOST['host'])
+                ? [
+                  'wss'  => !empty(WS_HOST['wss']),
+                  'host' => WS_HOST['host'],
+                  'port' => (int)(WS_HOST['port'] ?? 443),
+                  'path' => WS_HOST['path'] ?? '/',
+                  ]
+                : null,
         ]);
     }
 

@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS `schema_version` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO `schema_version` (`version`, `description`) VALUES (13, 'Fresh install — all migrations included');
+INSERT INTO `schema_version` (`version`, `description`) VALUES (14, 'Fresh install — all migrations included');
 
 COMMIT;
 

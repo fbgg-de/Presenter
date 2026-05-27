@@ -88,8 +88,8 @@ try {
 
     $license = $_SESSION['oidc_license'] ?? null;
     $providerId = $_SESSION['oidc_provider_id'] ?? null;
-    unset($_SESSION['oidc_license']);
-    unset($_SESSION['oidc_provider_id']);
+    unset($_SESSION['oidc_license']); // only needed during the redirect round-trip
+    // Keep oidc_provider_id in session so the token refresh can reconstruct the correct OidcClient
 
     if ($isAdminLogin || $license === null) {
         $oidc = OidcClient::fromGlobalConfig();
@@ -180,6 +180,11 @@ try {
 
         // Update last activity
         Auth::updateLastActivity($license);
+
+        // Keep oidc_provider_id so token refresh can reconstruct the correct OidcClient
+        if ($providerId) {
+            $_SESSION['oidc_provider_id'] = (int)$providerId;
+        }
     }
 
     $_SESSION['oidc_tokens'] = [

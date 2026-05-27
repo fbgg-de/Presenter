@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import {
-  Box,
   Drawer,
   Stack,
   Typography,
@@ -13,7 +12,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Chip,
 } from '@mui/material';
 import { createFilterOptions } from '@mui/material/Autocomplete';
 import {
@@ -25,9 +23,41 @@ import {
   QrCode2 as QrCodeIcon,
   PictureAsPdf as PdfIcon,
   ListAlt as ListAltIcon,
+  Cable as MidiIcon,
 } from '@mui/icons-material';
 import { useUpdateMusicianSetting } from '@/store/musicianSlice';
 import { useI18nContext } from '@/i18n/i18n-react';
+
+type SettingRowProps = {
+  icon: any;
+  label: any;
+  onClick?: () => void;
+  switchChecked?: boolean;
+  onSwitchChange?: (checked: boolean) => void;
+};
+
+const Setting = ({ icon, label, onClick, switchChecked, onSwitchChange }: SettingRowProps) => (
+  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', cursor: onClick ? 'pointer' : 'default' }} onClick={onClick}>
+    {icon}
+    <Typography
+      variant="body2"
+      sx={{
+        fontWeight: 600,
+        flex: 1,
+      }}
+    >
+      {label}
+    </Typography>
+    {onSwitchChange && (
+      <Switch
+        size="small"
+        checked={!!switchChecked}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => onSwitchChange?.((e.target as HTMLInputElement).checked)}
+      />
+    )}
+  </Stack>
+);
 
 interface MusicianSettingsProps {
   open: boolean;
@@ -43,6 +73,7 @@ interface MusicianSettingsProps {
   availableBands: string[];
   setQrOpen: (open: boolean) => void;
   setPdfUploadOpen: (open: boolean) => void;
+  onOpenMidiSettings: () => void;
 }
 
 export const MusicianSettings = ({
@@ -59,6 +90,7 @@ export const MusicianSettings = ({
   availableBands,
   setQrOpen,
   setPdfUploadOpen,
+  onOpenMidiSettings,
 }: MusicianSettingsProps) => {
   const { LL } = useI18nContext();
   const autocompleteFilter = useMemo(() => createFilterOptions<string>(), []);
@@ -78,72 +110,27 @@ export const MusicianSettings = ({
         </Typography>
         <Divider />
 
-        {/* Dark / Light mode */}
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            alignItems: 'center',
-          }}
-        >
-          {musicianTheme === 'dark' ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: 600,
-              flex: 1,
-            }}
-          >
-            {musicianTheme === 'dark' ? LL.MUSICIAN.DARK_MODE() : LL.MUSICIAN.LIGHT_MODE()}
-          </Typography>
-          <Switch
-            size="small"
-            checked={musicianTheme === 'dark'}
-            onChange={() => updateMusicianSetting('musicianTheme', musicianTheme === 'dark' ? 'light' : 'dark')}
-          />
-        </Stack>
+        <Setting
+          icon={musicianTheme === 'dark' ? <DarkModeIcon fontSize="small" /> : <LightModeIcon fontSize="small" />}
+          label={musicianTheme === 'dark' ? LL.MUSICIAN.DARK_MODE() : LL.MUSICIAN.LIGHT_MODE()}
+          switchChecked={musicianTheme === 'dark'}
+          onSwitchChange={(checked) => updateMusicianSetting('musicianTheme', checked ? 'dark' : 'light')}
+        />
 
-        {/* Block indicator */}
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            alignItems: 'center',
-          }}
-        >
-          <VisibilityIcon fontSize="small" />
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: 600,
-              flex: 1,
-            }}
-          >
-            {LL.MUSICIAN.BLOCK_INDICATOR()}
-          </Typography>
-          <Switch size="small" checked={blockIndicator} onChange={() => updateMusicianSetting('musicianBlockIndicator', !blockIndicator)} />
-        </Stack>
+        <Setting
+          icon={<VisibilityIcon fontSize="small" />}
+          label={LL.MUSICIAN.BLOCK_INDICATOR()}
+          switchChecked={blockIndicator}
+          onSwitchChange={(checked) => updateMusicianSetting('musicianBlockIndicator', checked)}
+        />
 
-        {/* Show footer */}
-        <Stack
-          direction="row"
-          spacing={1}
-          sx={{
-            alignItems: 'center',
-          }}
-        >
-          <ListAltIcon fontSize="small" />
-          <Typography
-            variant="body2"
-            sx={{
-              fontWeight: 600,
-              flex: 1,
-            }}
-          >
-            {LL.MUSICIAN.SHOW_FOOTER()}
-          </Typography>
-          <Switch size="small" checked={showFooter} onChange={() => updateMusicianSetting('musicianShowFooter', !showFooter)} />
-        </Stack>
+        <Setting
+          icon={<ListAltIcon fontSize="small" />}
+          label={LL.MUSICIAN.SHOW_FOOTER()}
+          switchChecked={showFooter}
+          onSwitchChange={(checked) => updateMusicianSetting('musicianShowFooter', checked)}
+        />
+
         <Divider />
 
         {/* Default page view */}
@@ -250,34 +237,35 @@ export const MusicianSettings = ({
             <TextFieldsIcon fontSize="small" sx={{ opacity: 0.5, fontSize: '1.3rem' }} />
           </Stack>
         </Stack>
+
         <Divider />
 
-        <Box sx={{ flex: 1 }} />
-        <Divider />
-        <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
-          <Chip
-            icon={<QrCodeIcon />}
-            label={LL.QR.SHARE_TITLE()}
-            onClick={() => {
-              setQrOpen(true);
-              onClose();
-            }}
-            clickable
-            variant="outlined"
-            size="small"
-          />
-          <Chip
-            icon={<PdfIcon />}
-            label={LL.PDF.MANAGE_TITLE()}
-            onClick={() => {
-              setPdfUploadOpen(true);
-              onClose();
-            }}
-            clickable
-            variant="outlined"
-            size="small"
-          />
-        </Stack>
+        <Setting
+          icon={<MidiIcon fontSize="small" />}
+          label={LL.MIDI.SETTINGS()}
+          onClick={() => {
+            onOpenMidiSettings();
+            onClose();
+          }}
+        />
+
+        <Setting
+          icon={<PdfIcon fontSize="small" />}
+          label={LL.PDF.MANAGE_TITLE()}
+          onClick={() => {
+            setPdfUploadOpen(true);
+            onClose();
+          }}
+        />
+
+        <Setting
+          icon={<QrCodeIcon fontSize="small" />}
+          label={LL.QR.SHARE_TITLE()}
+          onClick={() => {
+            setQrOpen(true);
+            onClose();
+          }}
+        />
       </Stack>
     </Drawer>
   );

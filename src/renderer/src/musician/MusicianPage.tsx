@@ -1,17 +1,20 @@
 ﻿import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Box, Stack, Typography, Button, CircularProgress, IconButton, Tooltip } from '@mui/material';
+import { Box, Stack, Typography, Button, CircularProgress, IconButton, Tooltip, Snackbar, Alert } from '@mui/material';
 import {
   KeyboardArrowUp as PrevSongIcon,
   KeyboardArrowDown as NextSongIcon,
   KeyboardArrowLeft as PrevPageIcon,
   KeyboardArrowRight as NextPageIcon,
+  SkipPrevious as PrevBlockIcon,
+  SkipNext as NextBlockIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
-import { setCurrentShow, closeShowSelector, useGetShow } from '@/store/showSlice';
-import { setSongsOrder, setSongOrders, useGetSongs } from '@/store/songsSlice';
+import { setCurrentShow, closeShowSelector, updateShowItem, setDirty, useGetShow } from '@/store/showSlice';
+import { setSongsOrder, setSongOrders, setCurrentSongOrder, updateSongInStore, useGetSongs } from '@/store/songsSlice';
 import { useGetMusicianSettings, useUpdateMusicianSetting } from '@/store/musicianSlice';
+import { useGetSettings } from '@/store/settingsSlice';
 import { Shows } from '@/components/show/Shows';
 import { QrCodeShare } from '@/components/settings/QrCodeShare';
 import { MusicianSidebar } from './MusicianSidebar';
@@ -26,9 +29,21 @@ import { MidiLearnDialog } from '@/components/midi/MidiLearnDialog';
 import { useMidi, type MidiAction } from '@/hooks/useMidi';
 import { loadShowSongs } from '@/store/songsSlice';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
+import { Song } from '@/song';
 import type { Show, ShowItem } from '@/api/shows.api';
-import { useGetPresentationSettings } from '@/store/presentationSlice';
+import {
+  useGetPresentationSettings,
+  setActiveItemIndex as setPresentationItemIndex,
+  setActiveBlockIndex as setPresentationBlockIndex,
+} from '@/store/presentationSlice';
+import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
+import { useWsSync } from '@/hooks/useWsSync';
+import { useWsOperator } from '@/hooks/useWsOperator';
 import { useMetrics } from '@/hooks/useMetrics';
+import { useGetSessionQuery } from '@/api/session.api';
+import { useUpdateSongMutation } from '@/api/songs.api';
+import { useSaveShowMutation, useGetShowsQuery } from '@/api/shows.api';
+import { SongOrderEditor } from '@/components/song/SongOrderEditor';
 
 /**
  * Top-level page component for the Musician View.
@@ -76,9 +91,107 @@ export const MusicianPage = () => {
   const [pdfOverrideFilename, setPdfOverrideFilename] = useState<string | null>(null);
   const [midiOpen, setMidiOpen] = useState(false);
   const [syncMode, setSyncMode] = useState<SyncMode>(syncModeSetting);
+  const [orderEditorOpen, setOrderEditorOpen] = useState(false);
+  const [orderEditorOrders, setOrderEditorOrders] = useState<Record<string, string[]>>({ Default: [] });
+  const [orderEditorName, setOrderEditorName] = useState('Default');
+  const [orderEditor, setOrderEditor] = useState<string[]>([]);
+  const [orderEditorDirty, setOrderEditorDirty] = useState(false);
+  const [orderEditorSaving, setOrderEditorSaving] = useState(false);
+
+  // Fetch session to get the authenticated account number
+  const { offlineMode } = useGetSettings();
+  const { data: sessionData } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const [updateSongMutation] = useUpdateSongMutation();
+  const [saveShowMutation] = useSaveShowMutation();
+
+  // Derive wsUrl from global session ws_hosts
+  const wsUrl = useMemo(() => {
+    const h = sessionData?.settings?.wsHost;
+    if (h?.host && h?.port) {
+      const path = h.path && h.path !== '/' ? h.path : '';
+      return `${h.wss ? 'wss' : 'ws'}://${h.host}:${h.port}${path}`;
+    }
+    return '';
+  }, [sessionData?.settings?.wsHost]);
+
+  // The account number to use for WS authentication
+  const wsAccount = useMemo(() => {
+    const acc = sessionData?.account;
+    return typeof acc === 'number' ? acc : null;
+  }, [sessionData?.account]);
+  const [showUpdateAvailable, setShowUpdateAvailable] = useState(false);
+  const [operatorWsShowTitle, setOperatorWsShowTitle] = useState<string | undefined>(undefined);
+  const [dismissedMismatchShowTitle, setDismissedMismatchShowTitle] = useState<string | null>(null);
   const initialLoadDone = useRef(false);
   /** Holds the latest annotation refetch function registered by PdfAnnotationToolbar */
   const annotationRefetchRef = useRef<(() => void) | null>(null);
+
+  // ── Show update polling ──────────────────────────────────────────────
+  const { updateAvailable: showUpdateAvailable2, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
+  const { data: availableShows } = useGetShowsQuery({ limit: 9999, page: 0 });
+  // Keep the snackbar driven by the hook
+  useEffect(() => {
+    if (showUpdateAvailable2) setShowUpdateAvailable(true);
+  }, [showUpdateAvailable2]);
+
+  // ── WebSocket sync (browser + Electron) ─────────────────────────────
+  // Active for 'operator' (follow operator item+block) and 'midi'
+  // (MIDI input controls navigation, while WS keeps peers in sync).
+  const handleSelectItemRef = useRef<((index: number) => void) | null>(null);
+  // Holds the latest state received via WS so it can be re-applied after songs load.
+  const pendingWsStateRef = useRef<{ activeItemIndex?: number; activeBlockIndex?: number } | null>(null);
+  // Track operator's current song number from WS so we only apply block indicators when songs match.
+  const [operatorWsSongNumber, setOperatorWsSongNumber] = useState<number | undefined>(undefined);
+  // Ref to current musician's active item for use inside WS callback (avoids stale closure).
+  const activeItemIndexRef = useRef(persistedLastItemIndex);
+  const showItemsRef = useRef<ShowItem[]>([]);
+
+  const wsEnabled = (syncMode === 'operator' || syncMode === 'midi') && !!wsUrl && wsAccount !== null;
+  const { status: wsStatus } = useWsSync({
+    url: wsUrl,
+    account: wsAccount,
+    enabled: wsEnabled,
+    onStateUpdate: useCallback(
+      (state) => {
+        // Always persist the latest state so we can re-apply after songs load.
+        pendingWsStateRef.current = {
+          activeItemIndex: typeof state.activeItemIndex === 'number' ? state.activeItemIndex : undefined,
+          activeBlockIndex: typeof state.activeBlockIndex === 'number' ? state.activeBlockIndex : undefined,
+        };
+        // Track which song the operator is currently on for song-matching guard.
+        if (typeof state.songNumber === 'number') {
+          setOperatorWsSongNumber(state.songNumber);
+        }
+        if (typeof state.showTitle === 'string') {
+          setOperatorWsShowTitle(state.showTitle);
+        }
+        if (typeof state.activeItemIndex === 'number') {
+          if (syncMode !== 'midi') {
+            // In operator mode: follow the operator's song selection too.
+            handleSelectItemRef.current?.(state.activeItemIndex);
+          }
+          // Always keep the Redux operator index in sync so block indicators work.
+          dispatch(setPresentationItemIndex(state.activeItemIndex));
+        }
+        if (typeof state.activeBlockIndex === 'number') {
+          // Only update block index when the operator is on the same song — prevents
+          // highlighting bleeding from a different song the operator is viewing.
+          const currentItem = showItemsRef.current[activeItemIndexRef.current] as (ShowItem & { songNumber?: number }) | undefined;
+          const matchesSong = typeof state.songNumber !== 'number' || state.songNumber === currentItem?.songNumber;
+          if (matchesSong) {
+            dispatch(setPresentationBlockIndex(state.activeBlockIndex));
+          }
+        }
+      },
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      [dispatch, syncMode],
+    ),
+  });
+
+  // Musician-side WS operator for broadcasting MIDI actions in midi mode.
+  // Only enabled when syncMode === 'midi' and WS is configured.
+  const midiWsBroadcastEnabled = syncMode === 'midi' && !!wsUrl && wsAccount !== null;
+  const { broadcast: midiWsBroadcast } = useWsOperator(midiWsBroadcastEnabled ? wsUrl : '', midiWsBroadcastEnabled ? wsAccount : null);
   const handleRegisterRefetch = useCallback((fn: () => void) => {
     annotationRefetchRef.current = fn;
   }, []);
@@ -91,6 +204,9 @@ export const MusicianPage = () => {
 
   // ── Active item derivation ───────────────────────────────────────
   const showItems: ShowItem[] = currentShow?.order ?? [];
+  // Keep refs in sync for use inside WS callbacks (avoid stale closures)
+  activeItemIndexRef.current = activeItemIndex;
+  showItemsRef.current = showItems;
 
   // Clamp persisted item index to valid range when show items load
   useEffect(() => {
@@ -120,6 +236,28 @@ export const MusicianPage = () => {
     } catch {
       return [];
     }
+  }, [activeSong, activeSongOrder]);
+
+  useEffect(() => {
+    if (!activeSong) {
+      setOrderEditorOpen(false);
+      setOrderEditorOrders({ Default: [] });
+      setOrderEditorName('Default');
+      setOrderEditor([]);
+      setOrderEditorDirty(false);
+      return;
+    }
+    const sourceOrders =
+      activeSong.order && Object.keys(activeSong.order).length > 0
+        ? activeSong.order
+        : {
+            Default: activeSong.initialOrder ?? [],
+          };
+    const selectedOrderName = sourceOrders[activeSongOrder] ? activeSongOrder : (Object.keys(sourceOrders)[0] ?? 'Default');
+    setOrderEditorOrders(sourceOrders);
+    setOrderEditorName(selectedOrderName);
+    setOrderEditor(sourceOrders[selectedOrderName] ?? []);
+    setOrderEditorDirty(false);
   }, [activeSong, activeSongOrder]);
 
   // Collect unique musician names from song orders for the settings picker
@@ -152,8 +290,23 @@ export const MusicianPage = () => {
     return Array.from(bands).sort();
   }, [songs]);
 
-  // Block names for area mapping editor (exclude copyright pseudo-block)
-  const activeSongBlocks = useMemo(() => lyricsBlocks.filter((b) => !b.copyright).map((b) => b.name), [lyricsBlocks]);
+  // Unique block names for area mapping editor — use the ordered sequence (deduplicated)
+  // so the dropdown reflects the current order, including custom-ordered blocks.
+  const activeSongBlocks = useMemo(() => {
+    const seen = new Set<string>();
+    const result: string[] = [];
+    for (const block of lyricsBlocks) {
+      if (!seen.has(block.name)) {
+        seen.add(block.name);
+        result.push(block.name);
+      }
+    }
+    // Fallback: if no ordered blocks available, use all block keys
+    if (result.length === 0 && activeSong) {
+      return Object.keys(activeSong.blocks ?? {});
+    }
+    return result;
+  }, [lyricsBlocks, activeSong]);
 
   // ── PDF viewer hook ──────────────────────────────────────────────
   const pdfViewer = usePdfViewer({
@@ -167,6 +320,24 @@ export const MusicianPage = () => {
     blockIndicator,
     pdfOverrideFilename,
   });
+
+  // Active block area mapping for the visual indicator overlay in PdfView
+  const activeBlockAreaMapping = useMemo(() => {
+    if (!pdfViewer.areaMappings || operatorActiveBlockIndex == null || operatorActiveBlockIndex < 0) return undefined;
+    const activeBlock = lyricsBlocks[operatorActiveBlockIndex];
+    if (!activeBlock) return undefined;
+    return pdfViewer.areaMappings.find((m) => m.blockName === activeBlock.name && m.region);
+  }, [pdfViewer.areaMappings, operatorActiveBlockIndex, lyricsBlocks]);
+
+  // Next block area mapping for the grey hint overlay.
+  // If the immediately next block has the same name as the current one, show nothing.
+  const nextBlockAreaMapping = useMemo(() => {
+    if (!pdfViewer.areaMappings || operatorActiveBlockIndex == null) return undefined;
+    const activeBlock = lyricsBlocks[operatorActiveBlockIndex];
+    const nextBlock = lyricsBlocks[operatorActiveBlockIndex + 1];
+    if (!nextBlock || nextBlock.name === activeBlock?.name) return undefined;
+    return pdfViewer.areaMappings.find((m) => m.blockName === nextBlock.name && m.region);
+  }, [pdfViewer.areaMappings, operatorActiveBlockIndex, lyricsBlocks]);
 
   const hasPdfs = pdfViewer.totalPdfCount > 0;
   const isSongItem = activeItem?.type === 'song';
@@ -183,10 +354,34 @@ export const MusicianPage = () => {
     }
   }, [currentShow, isShowSelectorOpen, dispatch]);
 
+  // Re-apply pending WS state once songs have loaded.
+  // This handles the case where get_state response arrives before songs are ready.
+  const songsLoadedRef = useRef(false);
+  const songCount = Object.keys(songs).length;
+  useEffect(() => {
+    if (songCount === 0) {
+      songsLoadedRef.current = false;
+      return;
+    }
+    if (songsLoadedRef.current) return; // already applied
+    songsLoadedRef.current = true;
+    const pending = pendingWsStateRef.current;
+    if (!pending) return;
+    if (typeof pending.activeItemIndex === 'number') {
+      handleSelectItemRef.current?.(pending.activeItemIndex);
+      dispatch(setPresentationItemIndex(pending.activeItemIndex));
+    }
+    if (typeof pending.activeBlockIndex === 'number') {
+      dispatch(setPresentationBlockIndex(pending.activeBlockIndex));
+    }
+  }, [songCount, dispatch]);
+
   const handleShowSelected = useCallback(
     async (show: Show | null, isNew: boolean) => {
       if (!show) return;
       dispatch(setCurrentShow(show));
+      setActiveItemIndex(0);
+      updateMusicianSetting('musicianLastItemIndex', 0);
       dispatch(closeShowSelector());
       if (!isNew) {
         await dispatch(loadShowSongs(show));
@@ -195,7 +390,7 @@ export const MusicianPage = () => {
         dispatch(setSongOrders({}));
       }
     },
-    [dispatch],
+    [dispatch, updateMusicianSetting],
   );
 
   const handleSelectItem = useCallback(
@@ -208,28 +403,113 @@ export const MusicianPage = () => {
     },
     [pdfViewer, updateMusicianSetting],
   );
+  // Keep ref in sync so useWsSync onStateUpdate can call it without re-registering the hook
+  handleSelectItemRef.current = handleSelectItem;
 
-  /** Manual navigation (prev/next buttons) — disables sync first */
+  // Refs updated each render so callbacks always see the latest values without re-registering
+  const midiWsBroadcastRef = useRef(midiWsBroadcast);
+  midiWsBroadcastRef.current = midiWsBroadcast;
+  const lyricsBlocksRef = useRef(lyricsBlocks);
+  lyricsBlocksRef.current = lyricsBlocks;
+  const activeSongNumberRef = useRef(activeSongNumber);
+  activeSongNumberRef.current = activeSongNumber;
+
+  /** Broadcast musician sync via both WS relay (for browser peers) and IPC (for Electron operator window). */
+  const broadcastMidiSync = useCallback((data: Record<string, unknown>) => {
+    midiWsBroadcastRef.current('musician_sync', data);
+    // Also send directly to operator via Electron IPC when running in the desktop app
+    window.api?.musicianSyncToOperator?.({ action: 'musician_sync', data });
+  }, []);
+
+  /** User-initiated navigation (sidebar click, prev/next buttons) — disables sync first unless in midi mode */
+  const handleUserSelectItem = useCallback(
+    (index: number) => {
+      if (syncMode === 'midi') {
+        handleSelectItem(index);
+        dispatch(setPresentationItemIndex(index));
+        const newItem = showItemsRef.current[index] as (ShowItem & { songNumber?: number }) | undefined;
+        broadcastMidiSync({
+          activeItemIndex: index,
+          activeBlockIndex: 0,
+          activeLineIndex: 0,
+          songNumber: newItem?.type === 'song' ? newItem.songNumber : undefined,
+        });
+      } else {
+        if (syncMode !== 'off') {
+          setSyncMode('off');
+          updateMusicianSetting('musicianSyncMode', 'off');
+        }
+        handleSelectItem(index);
+      }
+    },
+    [syncMode, updateMusicianSetting, handleSelectItem, dispatch, broadcastMidiSync],
+  );
+
+  /** Manual navigation (prev/next buttons) — disables sync first unless in midi mode */
   const handleManualNav = useCallback(
     (index: number) => {
-      if (syncMode !== 'off') {
-        setSyncMode('off');
-        updateMusicianSetting('musicianSyncMode', 'off');
+      if (syncMode === 'midi') {
+        handleSelectItem(index);
+        dispatch(setPresentationItemIndex(index));
+        const newItem = showItemsRef.current[index] as (ShowItem & { songNumber?: number }) | undefined;
+        broadcastMidiSync({
+          activeItemIndex: index,
+          activeBlockIndex: 0,
+          activeLineIndex: 0,
+          songNumber: newItem?.type === 'song' ? newItem.songNumber : undefined,
+        });
+      } else {
+        if (syncMode !== 'off') {
+          setSyncMode('off');
+          updateMusicianSetting('musicianSyncMode', 'off');
+        }
+        handleSelectItem(index);
       }
-      handleSelectItem(index);
     },
-    [syncMode, updateMusicianSetting, handleSelectItem],
+    [syncMode, updateMusicianSetting, handleSelectItem, dispatch, broadcastMidiSync],
   );
 
   /** Handle MIDI actions for navigation */
   const handleMidiAction = useCallback(
     (action: MidiAction) => {
       switch (action) {
-        case 'next_song':
-          if (activeItemIndex < showItems.length - 1) handleManualNav(activeItemIndex + 1);
+        case 'next_song': {
+          const idx = activeItemIndexRef.current;
+          if (idx < showItemsRef.current.length - 1) handleManualNav(idx + 1);
           break;
-        case 'prev_song':
-          if (activeItemIndex > 0) handleManualNav(activeItemIndex - 1);
+        }
+        case 'prev_song': {
+          const idx = activeItemIndexRef.current;
+          if (idx > 0) handleManualNav(idx - 1);
+          break;
+        }
+        case 'next_block':
+          if (syncMode === 'midi') {
+            const next = operatorActiveBlockIndex + 1;
+            if (next < lyricsBlocksRef.current.length) {
+              dispatch(setPresentationBlockIndex(next));
+              broadcastMidiSync({
+                activeItemIndex: activeItemIndexRef.current,
+                activeBlockIndex: next,
+                activeLineIndex: 0,
+                songNumber: activeSongNumberRef.current,
+              });
+            }
+          }
+          break;
+        case 'prev_block':
+          if (syncMode === 'midi') {
+            const prev = operatorActiveBlockIndex - 1;
+            if (prev >= 0) {
+              dispatch(setPresentationBlockIndex(prev));
+              broadcastMidiSync({
+                activeItemIndex: activeItemIndexRef.current,
+                activeBlockIndex: prev,
+                activeLineIndex: 0,
+                songNumber: activeSongNumberRef.current,
+              });
+            }
+          }
           break;
         case 'next_page':
           if (pdfViewer.currentPage < pdfViewer.numPages) pdfViewer.setCurrentPage(pdfViewer.currentPage + 1);
@@ -239,8 +519,76 @@ export const MusicianPage = () => {
           break;
       }
     },
-    [activeItemIndex, showItems.length, handleManualNav, pdfViewer],
+    [handleManualNav, pdfViewer, syncMode, operatorActiveBlockIndex, dispatch, broadcastMidiSync],
   );
+
+  const handleOrderTagSelect = useCallback(
+    (_name: string, orderIndex: number) => {
+      if (syncMode !== 'midi') return;
+      if (orderIndex < 0 || orderIndex >= orderEditor.length) return;
+      dispatch(setPresentationBlockIndex(orderIndex));
+      broadcastMidiSync({
+        activeItemIndex: activeItemIndexRef.current,
+        activeBlockIndex: orderIndex,
+        activeLineIndex: 0,
+        songNumber: activeSongNumberRef.current,
+      });
+    },
+    [syncMode, orderEditor.length, dispatch, broadcastMidiSync],
+  );
+
+  const handleSaveOrderEditor = useCallback(async () => {
+    if (!activeSong || activeSongNumber == null || !currentShow) return;
+    const trimmedName = orderEditorName.trim();
+    if (!trimmedName || orderEditor.length === 0) return;
+
+    const nextOrders = { ...orderEditorOrders, [trimmedName]: orderEditor };
+    const updatedSong = new Song({
+      ...activeSong,
+      order: nextOrders,
+      initialOrder: activeSong.initialOrder,
+    });
+
+    try {
+      setOrderEditorSaving(true);
+      await updateSongMutation({
+        songNumber: updatedSong.songNumber,
+        title: updatedSong.title,
+        authors: updatedSong.authors,
+        copyright: updatedSong.copyright,
+        initialOrder: updatedSong.initialOrder || [],
+        order: updatedSong.order,
+        blocks: updatedSong.blocks,
+      }).unwrap();
+
+      dispatch(updateSongInStore(updatedSong));
+      dispatch(setCurrentSongOrder({ songNumber: updatedSong.songNumber, orderName: trimmedName }));
+      dispatch(updateShowItem({ index: activeItemIndex, item: { order: trimmedName } }));
+
+      const nextShowOrder = showItems.map((showItem, idx) => (idx === activeItemIndex ? { ...showItem, order: trimmedName } : showItem));
+      await saveShowMutation({
+        title: currentShow.title,
+        order: nextShowOrder,
+        styleId: currentShow.styleId ?? null,
+      }).unwrap();
+      dispatch(setDirty(false));
+      setOrderEditorDirty(false);
+    } finally {
+      setOrderEditorSaving(false);
+    }
+  }, [
+    activeSong,
+    activeSongNumber,
+    currentShow,
+    orderEditorName,
+    orderEditor,
+    orderEditorOrders,
+    updateSongMutation,
+    dispatch,
+    activeItemIndex,
+    showItems,
+    saveShowMutation,
+  ]);
 
   // Always-on MIDI — MIDI is a local hardware input and should work regardless of
   // the network sync mode. The MidiLearnDialog has its own separate useMidi instance.
@@ -267,7 +615,34 @@ export const MusicianPage = () => {
     }
   }, [syncMode, operatorItemIndex]); // intentionally exclude handleSelectItem / activeItemIndex to avoid loops
 
-  const isSynced = syncMode === 'operator' && blockIndicator;
+  // isSynced: block indicators visible only when sync is on, blockIndicator is enabled,
+  // and the operator is on the same song as the musician.
+  const operatorSongMatchesMusician = useMemo(() => {
+    if (syncMode === 'midi') {
+      // Electron shared Redux: compare item indices — both musician and operator index same show
+      return operatorItemIndex === activeItemIndex;
+    }
+    // WS modes: compare song numbers received via WS
+    if (operatorWsSongNumber == null) return true; // no info yet, assume match
+    return operatorWsSongNumber === activeSongNumber;
+  }, [syncMode, operatorItemIndex, activeItemIndex, operatorWsSongNumber, activeSongNumber]);
+
+  const isSynced =
+    (syncMode === 'operator' || syncMode === 'midi') && blockIndicator && operatorSongMatchesMusician;
+
+  const showMismatchDetected =
+    !!operatorWsShowTitle && !!currentShow?.title && operatorWsShowTitle !== currentShow.title && dismissedMismatchShowTitle !== operatorWsShowTitle;
+
+  const applyOperatorShow = useCallback(async () => {
+    if (!operatorWsShowTitle || !availableShows?.shows) return;
+    const operatorShow = availableShows.shows.find((show) => show.title === operatorWsShowTitle);
+    if (!operatorShow) return;
+    dispatch(setCurrentShow(operatorShow));
+    await dispatch(loadShowSongs(operatorShow));
+    setActiveItemIndex(0);
+    updateMusicianSetting('musicianLastItemIndex', 0);
+    setDismissedMismatchShowTitle(null);
+  }, [operatorWsShowTitle, availableShows?.shows, dispatch, updateMusicianSetting]);
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -281,7 +656,54 @@ export const MusicianPage = () => {
         currentShowTitle={currentShow?.title}
       />
       {/* QR sharing dialog */}
-      <QrCodeShare open={qrOpen} onClose={() => setQrOpen(false)} />      {/* PDF Upload dialog — always available for song items */}
+      <QrCodeShare open={qrOpen} onClose={() => setQrOpen(false)} />
+      {/* Show update notification */}
+      <Snackbar open={showUpdateAvailable} anchorOrigin={{ vertical: 'top', horizontal: 'center' }} sx={{ top: { xs: 8, sm: 16 } }}>
+        <Alert
+          severity="info"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={async () => {
+                setShowUpdateAvailable(false);
+                await reloadShow();
+              }}
+            >
+              {LL.SHOWS.UPDATE_AVAILABLE_ACTION()}
+            </Button>
+          }
+          onClose={() => {
+            setShowUpdateAvailable(false);
+            dismissShowUpdate();
+          }}
+        >
+          {LL.SHOWS.UPDATE_AVAILABLE()}
+        </Alert>
+      </Snackbar>{' '}
+      <Snackbar
+        open={showMismatchDetected}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ top: { xs: 72, sm: 80 } }}
+      >
+        <Alert
+          severity="warning"
+          action={
+            <Stack direction="row" spacing={1}>
+              <Button color="inherit" size="small" onClick={() => setDismissedMismatchShowTitle(operatorWsShowTitle ?? null)}>
+                {LL.CONNECTIVITY.SNACK_DISMISS()}
+              </Button>
+              <Button color="inherit" size="small" onClick={() => void applyOperatorShow()}>
+                {LL.MUSICIAN.SELECT_SHOW()}
+              </Button>
+            </Stack>
+          }
+          onClose={() => setDismissedMismatchShowTitle(operatorWsShowTitle ?? null)}
+        >
+          {LL.MUSICIAN.SHOW_MISMATCH_WARNING({ operatorShow: operatorWsShowTitle ?? '', currentShow: currentShow?.title ?? '' })}
+        </Alert>
+      </Snackbar>
+      {/* PDF Upload dialog — always available for song items */}
       {activeSongNumber != null && (
         <PdfUploadModal
           songNumber={activeSongNumber}
@@ -290,7 +712,11 @@ export const MusicianPage = () => {
           musicianNames={musicianNames}
           selectedPdf={pdfOverrideFilename || pdfViewer.resolvedFilename}
           onSelectPdf={(f) => setPdfOverrideFilename(f)}
-          onOpenAreaMapping={() => { trackEvent('musician_mapping_used', undefined, undefined, { type: 'area' }); trackEvent('modal_opened', undefined, undefined, { modal: 'area_mapping' }); setAreaMappingOpen(true); }}
+          onOpenAreaMapping={() => {
+            trackEvent('musician_mapping_used', undefined, undefined, { type: 'area' });
+            trackEvent('modal_opened', undefined, undefined, { modal: 'area_mapping' });
+            setAreaMappingOpen(true);
+          }}
         />
       )}
       {/* PDF Area Mapping editor */}
@@ -319,8 +745,15 @@ export const MusicianPage = () => {
         showFooter={showFooter}
         musicianNames={musicianNames}
         availableBands={availableBands}
-        setQrOpen={(open) => { if (open) trackEvent('modal_opened', undefined, undefined, { modal: 'qr_share' }); setQrOpen(open); }}
+        setQrOpen={(open) => {
+          if (open) trackEvent('modal_opened', undefined, undefined, { modal: 'qr_share' });
+          setQrOpen(open);
+        }}
         setPdfUploadOpen={setPdfUploadOpen}
+        onOpenMidiSettings={() => {
+          trackEvent('modal_opened', undefined, undefined, { modal: 'midi_learn' });
+          setMidiOpen(true);
+        }}
       />
       {/* Main layout */}
       <Stack direction="row" sx={{ height: '100dvh', overflow: 'hidden', position: 'relative' }}>
@@ -329,8 +762,12 @@ export const MusicianPage = () => {
           open={sidebarOpen}
           activeItemIndex={activeItemIndex}
           operatorActiveIndex={operatorItemIndex}
-          onSelectItem={handleSelectItem}
-          onOpenPdfModal={() => { trackEvent('modal_opened', undefined, undefined, { modal: 'pdf_manage' }); setPdfUploadOpen(true); }}
+          onSelectItem={handleUserSelectItem}
+          onOpenPdfModal={() => {
+            trackEvent('modal_opened', undefined, undefined, { modal: 'pdf_manage' });
+            setPdfUploadOpen(true);
+          }}
+          onClose={handleToggleSidebar}
         />
 
         {/* Content area */}
@@ -352,8 +789,15 @@ export const MusicianPage = () => {
             onToggleSidebar={handleToggleSidebar}
             syncMode={syncMode}
             onSetSyncMode={handleSetSyncMode}
-            onOpenSettings={() => { trackEvent('modal_opened', undefined, undefined, { modal: 'musician_settings' }); setSettingsOpen(true); }}
-            onOpenPdfModal={() => { trackEvent('modal_opened', undefined, undefined, { modal: 'pdf_manage' }); setPdfUploadOpen(true); }}
+            wsStatus={wsStatus}
+            onOpenSettings={() => {
+              trackEvent('modal_opened', undefined, undefined, { modal: 'musician_settings' });
+              setSettingsOpen(true);
+            }}
+            onOpenPdfModal={() => {
+              trackEvent('modal_opened', undefined, undefined, { modal: 'pdf_manage' });
+              setPdfUploadOpen(true);
+            }}
             isSongItem={isSongItem}
             activeSongNumber={activeSongNumber}
             pageView={pdfViewer.pageView}
@@ -367,7 +811,8 @@ export const MusicianPage = () => {
             onToggleAnnotate={() => setAnnotateMode((a) => !a)}
             hasPdfs={hasPdfs}
             onRefetchAnnotations={() => annotationRefetchRef.current?.()}
-            onOpenMidi={() => { trackEvent('modal_opened', undefined, undefined, { modal: 'midi_learn' }); setMidiOpen(true); }}
+            orderEditorOpen={orderEditorOpen}
+            onToggleOrderEditor={() => setOrderEditorOpen((prev) => !prev)}
           />
 
           {/* Main content */}
@@ -432,6 +877,12 @@ export const MusicianPage = () => {
               onZoomFitWidth={pdfViewer.handleZoomFitWidth}
               onZoomSync={pdfViewer.setZoomLevel}
               onRegisterRefetch={handleRegisterRefetch}
+              activeBlockAreaMapping={activeBlockAreaMapping}
+              nextBlockAreaMapping={nextBlockAreaMapping}
+              allBlockAreaMappings={pdfViewer.areaMappings}
+              isSynced={isSynced}
+              activeBlockIndex={operatorActiveBlockIndex}
+              orderedBlockNames={lyricsBlocks.map((block) => block.name)}
             />
           ) : isSongItem && activeSong ? (
             /* Lyrics fallback for songs without PDFs */
@@ -469,9 +920,83 @@ export const MusicianPage = () => {
             </Stack>
           )}
 
+          {orderEditorOpen && isSongItem && activeSong && (
+            <Box
+              sx={{
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                bottom: `calc(${showFooter ? 64 : 16}px + env(safe-area-inset-bottom, 0px))`,
+                zIndex: 12,
+                px: NAV_MARGIN,
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              <Stack sx={{ width: 'min(1100px, 100%)' }}>
+                <SongOrderEditor
+                  orders={orderEditorOrders}
+                  currentOrder={orderEditorName}
+                  order={orderEditor}
+                  availableBlocks={Object.keys(activeSong.blocks ?? {})}
+                  selectedBlockName={lyricsBlocks[operatorActiveBlockIndex]?.name}
+                  onSelectBlock={handleOrderTagSelect}
+                  showOrderControls={false}
+                  centerChips
+                  activeChipColor="secondary"
+                  selectedOrderIndex={operatorActiveBlockIndex}
+                  inactiveChipSx={{
+                    bgcolor: 'grey.900',
+                    color: '#fff',
+                    '& .MuiChip-deleteIcon': { color: 'rgba(255,255,255,0.75)' },
+                    '&:hover': { bgcolor: 'grey.800' },
+                  }}
+                  onChange={({ orders: nextOrders, currentOrder: nextCurrentOrder, order: nextOrder }) => {
+                    setOrderEditorOrders(nextOrders);
+                    setOrderEditorName(nextCurrentOrder);
+                    setOrderEditor(nextOrder);
+                    setOrderEditorDirty(true);
+                  }}
+                />
+                <Stack direction="row" sx={{ justifyContent: 'center', gap: 1, mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => {
+                      const sourceOrders =
+                        activeSong.order && Object.keys(activeSong.order).length > 0
+                          ? activeSong.order
+                          : {
+                              Default: activeSong.initialOrder ?? [],
+                            };
+                      const selectedOrderName = sourceOrders[activeSongOrder]
+                        ? activeSongOrder
+                        : (Object.keys(sourceOrders)[0] ?? 'Default');
+                      setOrderEditorOrders(sourceOrders);
+                      setOrderEditorName(selectedOrderName);
+                      setOrderEditor(sourceOrders[selectedOrderName] ?? []);
+                      setOrderEditorDirty(false);
+                    }}
+                    disabled={orderEditorSaving || !orderEditorDirty}
+                  >
+                    {LL.COMMON.CANCEL()}
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={() => void handleSaveOrderEditor()}
+                    disabled={orderEditorSaving || !orderEditorDirty}
+                  >
+                    {LL.COMMON.SAVE()}
+                  </Button>
+                </Stack>
+              </Stack>
+            </Box>
+          )}
+
           {/* Floating navigation buttons — bottom corners.
                Hidden when annotateMode is active so they don't intercept drawing events. */}
-          {/* Left group: prev page + prev song */}
+          {/* Left group: prev page + prev song [+ prev block in midi mode] */}
           <Stack
             direction="row"
             spacing={0.75}
@@ -509,9 +1034,24 @@ export const MusicianPage = () => {
                 <PrevSongIcon fontSize="small" />
               </IconButton>
             </Tooltip>
+            {syncMode === 'midi' && (
+              <Tooltip title={LL.MUSICIAN.PREV_BLOCK()} placement="top">
+                <IconButton
+                  onClick={() => handleMidiAction('prev_block')}
+                  size="small"
+                  sx={{
+                    ...floatingBtnSx(palette),
+                    opacity: operatorActiveBlockIndex > 0 ? 1 : 0.15,
+                    pointerEvents: operatorActiveBlockIndex > 0 ? 'auto' : 'none',
+                  }}
+                >
+                  <PrevBlockIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
           </Stack>
 
-          {/* Right group: next song + next page */}
+          {/* Right group: [next block in midi mode +] next song + next page */}
           <Stack
             direction="row"
             spacing={0.75}
@@ -523,6 +1063,21 @@ export const MusicianPage = () => {
               pointerEvents: 'none',
             }}
           >
+            {syncMode === 'midi' && (
+              <Tooltip title={LL.MUSICIAN.NEXT_BLOCK()} placement="top">
+                <IconButton
+                  onClick={() => handleMidiAction('next_block')}
+                  size="small"
+                  sx={{
+                    ...floatingBtnSx(palette),
+                    opacity: operatorActiveBlockIndex < lyricsBlocks.length - 1 ? 1 : 0.15,
+                    pointerEvents: operatorActiveBlockIndex < lyricsBlocks.length - 1 ? 'auto' : 'none',
+                  }}
+                >
+                  <NextBlockIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
             <Tooltip title={LL.MUSICIAN.NEXT_SONG()} placement="top">
               <IconButton
                 onClick={() => canGoNext && handleManualNav(activeItemIndex + 1)}

@@ -219,25 +219,25 @@ let preloadTimer: ReturnType<typeof setTimeout> | null = null;
 let lastCommittedHeavyKey = '';
 
 /** Build a key over the assets that need to be preloaded. */
-function heavyAssetKey(c: PresentationContent): string {
+const heavyAssetKey = (c: PresentationContent) => {
   const styleBgImg = c.style?.backgroundImage ?? '';
   const styleBgVideo = c.style?.backgroundVideo ?? '';
   const itemPath = c.contentType === 'media' && (c.mediaSubType === 'image' || c.mediaSubType === 'video') ? (c.mediaPath ?? '') : '';
   return `${styleBgImg}|${styleBgVideo}|${itemPath}`;
-}
+};
 
 /** Promise-based preload of an image. Resolves whether or not it succeeds. */
-function preloadImage(url: string): Promise<void> {
+const preloadImage: (url: string) => Promise<void> = (url) => {
   return new Promise((resolve) => {
     const img = new globalThis.Image();
     img.onload = () => resolve();
     img.onerror = () => resolve();
     img.src = url;
   });
-}
+};
 
 /** Promise-based preload of a video — resolves once enough is buffered to play. */
-function preloadVideo(url: string): Promise<void> {
+const preloadVideo: (url: string) => Promise<void> = (url) => {
   return new Promise((resolve) => {
     const v = document.createElement('video');
     v.preload = 'auto';
@@ -253,7 +253,7 @@ function preloadVideo(url: string): Promise<void> {
     v.onerror = finish;
     v.src = url;
   });
-}
+};
 
 /** Preload all heavy assets referenced by `content`. Resolves when all done. */
 const preloadHeavyAssets = async (content: PresentationContent): Promise<void> => {

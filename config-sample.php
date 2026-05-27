@@ -41,6 +41,19 @@ const OIDC_REQUIRED_GROUP = ''; // Optional: require user to be in this group (l
 const OIDC_REDIRECT_URI = BASE_URL . 'oidc';
 const OIDC_CLIENT_SCOPES = ['openid', 'email', 'profile', 'groups'];
 
+// WebSocket Relay Server
+// Configure the standalone WebSocket server that clients (operator + musician) connect to.
+// Set 'wss' => true when the server is behind a TLS-terminating reverse proxy.
+// 'path' is optional (default: '/'). Use a sub-path (e.g. '/ws') when the WS server
+// shares the same hostname as the PHP app and is routed by path in the reverse proxy.
+// Leave host empty or remove this constant to disable WebSocket sync.
+const WS_HOST = [
+  // 'wss'  => true,
+  // 'host' => 'presenter.example.com', // same host as the app — routed via /ws path
+  // 'port' => 443,
+  // 'path' => '/ws',
+];
+
 // Bible API Configuration
 // Only JSON-based APIs are supported. The translation is user-selectable at runtime.
 // See requirements.md §10.2 for details.

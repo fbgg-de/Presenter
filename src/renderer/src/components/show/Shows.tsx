@@ -28,11 +28,14 @@ import {
   Event as EventIcon,
   Edit as EditIcon,
   Upload as UploadIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetShowsQuery, useDeleteShowMutation, useSaveShowMutation } from '@/api/shows.api';
 import type { Show } from '@/api/shows.api';
 import { useGetSettings } from '@/store/settingsSlice';
+import { SONG_CUSTOM_NUMBER_LIMIT } from '@/song';
+import ccliIcon from '@/assets/ccli.svg';
 
 interface ShowsProps {
   open: boolean;
@@ -86,6 +89,22 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
   const [saveShowMutation] = useSaveShowMutation();
 
   const shows = showsData?.shows ?? [];
+
+  const getCcliSongNumbers = (show: Show): number[] =>
+    Array.from(
+      new Set(
+        (show.order ?? [])
+          .filter((item) => item.type === 'song' && typeof item.songNumber === 'number' && item.songNumber >= SONG_CUSTOM_NUMBER_LIMIT)
+          .map((item) => item.songNumber as number),
+      ),
+    );
+
+  const openCcliReport = (show: Show) => {
+    const songNumbers = getCcliSongNumbers(show);
+    if (songNumbers.length === 0) return;
+    const url = `https://reporting.ccli.com/search?s=${encodeURIComponent(songNumbers.join('|'))}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
 
   // Reset to show list when dialog closes/opens
   useEffect(() => {
@@ -212,6 +231,14 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
           >
             <EventIcon />
             <Typography variant="h6">{isCreatingNew ? LL.SHOWS.NEW() : LL.SHOWS.TITLE()}</Typography>
+            <Box sx={{ flexGrow: 1 }} />
+            {!isCreatingNew && (
+              <Tooltip title={LL.SHOWS.REFETCH()}>
+                <IconButton size="small" onClick={() => refetch()} disabled={isLoading}>
+                  {isLoading ? <CircularProgress size={18} /> : <RefreshIcon fontSize="small" />}
+                </IconButton>
+              </Tooltip>
+            )}
           </Stack>
         </DialogTitle>
         <DialogContent>
@@ -299,6 +326,21 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                                   >
                                     <UploadIcon fontSize="small" />
                                   </IconButton>
+                                </Tooltip>
+                                <Tooltip title={LL.SHOWS.CCLI_REPORT()}>
+                                  <span>
+                                    <IconButton
+                                      edge="end"
+                                      size="small"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        openCcliReport(show);
+                                      }}
+                                      disabled={getCcliSongNumbers(show).length === 0}
+                                    >
+                                      <Box component="img" src={ccliIcon} alt="CCLI" sx={{ width: 16, height: 16 }} />
+                                    </IconButton>
+                                  </span>
                                 </Tooltip>
                                 <Tooltip title={LL.SHOWS.RENAME_TOOLTIP()}>
                                   <IconButton

@@ -33,8 +33,11 @@ const logsApi = presenterApi.injectEndpoints({
       query: () => ({ url: 'rest/Log', method: 'DELETE' }),
       invalidatesTags: [{ type: 'Logs', id: 'LIST' }],
     }),
+    logClientError: build.mutation<ApiSuccess<void>, { message: string }>({
+      query: (body) => ({ url: 'rest/Log', method: 'POST', body }),
+    }),
   }),
   overrideExisting: false,
 });
 
-export const { useGetLogsQuery, useClearLogsMutation } = logsApi;
+export const { useGetLogsQuery, useClearLogsMutation, useLogClientErrorMutation } = logsApi;

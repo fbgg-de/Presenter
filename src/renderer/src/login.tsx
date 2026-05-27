@@ -11,6 +11,7 @@ import TypesafeI18n from '@/i18n/i18n-react';
 import { useGetSettings } from '@/store/settingsSlice';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '@/pages/LoginPage';
+import ConnectivityChecker from '@/components/settings/ConnectivityChecker';
 
 loadAllLocales();
 
@@ -23,6 +24,7 @@ const LoginApp = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <TypesafeI18n locale={uiLanguage}>
+        <ConnectivityChecker />
         <BrowserRouter>
           <Routes>
             <Route path="*" element={<LoginPage />} />

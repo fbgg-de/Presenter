@@ -1,5 +1,6 @@
-﻿import { Box, Stack, CircularProgress } from '@mui/material';
-import { useRef, useCallback, useState, useEffect, MutableRefObject, Ref, RefObject } from 'react';
+﻿import { useRef, useCallback, useState, useEffect, MutableRefObject, Ref, RefObject } from 'react';
+import { Box, Stack, CircularProgress } from '@mui/material';
+import type { PdfAreaMapping } from '@/components/pdf/PdfAreaMappingEditor';
 import { Document, Page } from 'react-pdf';
 import { PdfAnnotationToolbar } from '@/components/pdf/PdfAnnotationToolbar';
 import { MusicianFooter } from './MusicianFooter';
@@ -40,12 +41,176 @@ interface PdfViewProps {
    * floating MusicianToolbar can trigger immediate reloads.
    */
   onRegisterRefetch?: (refetch: () => void) => void;
+  /** All block area mappings — rendered as persistent fade-in/out overlays */
+  allBlockAreaMappings?: PdfAreaMapping[];
+  /** Active block area mapping to display as a visual indicator overlay */
+  activeBlockAreaMapping?: PdfAreaMapping;
+  /** Next block area mapping to display as a grey visual hint overlay */
+  nextBlockAreaMapping?: PdfAreaMapping;
+  /** Whether sync is active — controls visibility of the block indicator overlays */
+  isSynced?: boolean;
+  /** Current operator block index — used to detect block advances even for repeated section names */
+  activeBlockIndex?: number;
+  /** Ordered block names for the active song (includes duplicates). */
+  orderedBlockNames?: string[];
 }
+
+const getRemainingConsecutiveCount = (orderedBlockNames: string[], activeBlockIndex: number): number => {
+  if (activeBlockIndex < 0 || activeBlockIndex >= orderedBlockNames.length) return 0;
+  const activeName = orderedBlockNames[activeBlockIndex];
+  let count = 1;
+  for (let i = activeBlockIndex + 1; i < orderedBlockNames.length; i += 1) {
+    if (orderedBlockNames[i] !== activeName) break;
+    count += 1;
+  }
+  return count;
+};
 
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3.0;
 const ZOOM_DEFAULT = 1.0;
 const SCROLL_SAVE_DEBOUNCE_MS = 200;
+
+/** Shared with usePdfViewer — tracks intended smooth-scroll destination per container. */
+const pdfScrollTargets = new WeakMap<HTMLElement, number>();
+
+/**
+ * Renders persistent overlay indicators for ALL mapped block areas on a given page.
+ * Each overlay is always in the DOM at its fixed region — only opacity/border-color
+ * transitions between "idle", "next" and "active" states, so there is no positional
+ * jump on block changes and CSS transitions work smoothly.
+ *
+ * When isSynced is false all overlays are hidden (opacity 0) but still mounted.
+ */
+const BlockAreaOverlays = ({
+  mappings,
+  pageNum,
+  activeBlockName,
+  nextBlockName,
+  isSynced,
+  containerRef,
+  scrollKey,
+  orderedBlockNames,
+  activeBlockIndex,
+}: {
+  mappings: PdfAreaMapping[];
+  pageNum: number;
+  activeBlockName: string | null;
+  nextBlockName: string | null;
+  isSynced: boolean;
+  containerRef: RefObject<HTMLDivElement | null>;
+  /** Changes on every block advance so the scroll-into-view effect re-evaluates. */
+  scrollKey: string;
+  orderedBlockNames: string[];
+  activeBlockIndex: number;
+}) => {
+  const activeOverlayRef = useRef<HTMLDivElement | null>(null);
+
+  // Scroll the active overlay into view when the block changes.
+  useEffect(() => {
+    if (!isSynced || !activeBlockName) return;
+
+    let raf2: number;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        const el = activeOverlayRef.current;
+        const c = containerRef.current;
+        if (!el || !c) return;
+        if (el.offsetHeight === 0) return;
+
+        let elOffsetTop = 0;
+        let node: HTMLElement | null = el;
+        while (node && node !== c) {
+          elOffsetTop += node.offsetTop;
+          node = node.offsetParent as HTMLElement | null;
+        }
+        const elOffsetBottom = elOffsetTop + el.offsetHeight;
+
+        const pending = pdfScrollTargets.get(c);
+        const effectiveTop = pending ?? c.scrollTop;
+        const fullyVisible = elOffsetTop >= effectiveTop && elOffsetBottom <= effectiveTop + c.clientHeight;
+
+        if (!fullyVisible) {
+          const targetScroll = Math.max(0, elOffsetTop - c.clientHeight / 2 + el.offsetHeight / 2);
+          pdfScrollTargets.set(c, targetScroll);
+          c.scrollTo({ top: targetScroll, behavior: 'smooth' });
+          c.addEventListener('scrollend', function onScrollEnd() {
+            c.removeEventListener('scrollend', onScrollEnd);
+            if (pdfScrollTargets.get(c) === targetScroll) pdfScrollTargets.delete(c);
+          });
+        }
+      });
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollKey]);
+
+  const pageMappings = mappings.filter((m) => m.page === pageNum && m.region);
+  const remainingRepeatCount = getRemainingConsecutiveCount(orderedBlockNames, activeBlockIndex);
+
+  return (
+    <>
+      {pageMappings.map((m) => {
+        const r = m.region!;
+        const isActive = isSynced && m.blockName === activeBlockName;
+        const isNext = isSynced && m.blockName === nextBlockName && !isActive;
+        // opacity levels: active=1, next=0.6, idle (synced)=0.2, not synced=0
+        const opacity = !isSynced ? 0 : isActive ? 1 : isNext ? 0.6 : 0.2;
+        return (
+          <Box
+            key={m.blockName}
+            ref={isActive ? activeOverlayRef : undefined}
+            sx={{
+              position: 'absolute',
+              left: `${r.x}%`,
+              top: `${r.y}%`,
+              width: `${r.width}%`,
+              height: `${r.height}%`,
+              borderLeft: isActive ? '4px solid' : '3px solid',
+              borderColor: isActive ? 'primary.main' : isNext ? 'warning.main' : 'text.primary',
+              backgroundColor: isActive
+                ? 'rgba(25,118,210,0.12)'
+                : isNext
+                  ? 'rgba(237,108,2,0.08)'
+                  : 'rgba(0,0,0,0.06)',
+              pointerEvents: 'none',
+              boxSizing: 'border-box',
+              opacity,
+              transition: 'opacity 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out',
+            }}
+          >
+            {isActive && remainingRepeatCount > 1 && (
+              <Box
+                sx={{
+                  position: 'absolute',
+                  right: 0,
+                  top: 0,
+                  minWidth: 24,
+                  height: 20,
+                  px: 0.75,
+                  borderRadius: 0,
+                  bgcolor: 'rgba(0,0,0,0.72)',
+                  color: '#fff',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  lineHeight: 1,
+                }}
+              >
+                {`${remainingRepeatCount}x`}
+              </Box>
+            )}
+          </Box>
+        );
+      })}
+    </>
+  );
+};
 
 /** Read scroll from storage with legacy fallback */
 const readScroll = (songNumber: number, filename: string, page: number): { x: number; y: number } => {
@@ -95,6 +260,12 @@ export const PdfView = ({
   onZoomFitWidth,
   onZoomSync,
   onRegisterRefetch,
+  allBlockAreaMappings,
+  activeBlockAreaMapping,
+  nextBlockAreaMapping,
+  isSynced,
+  activeBlockIndex,
+  orderedBlockNames = [],
 }: PdfViewProps) => {
   const localContainerRef = useRef<HTMLDivElement>(null);
   // Stable panel refs using useRef — never recreated
@@ -460,18 +631,35 @@ export const PdfView = ({
                       minWidth: 'max-content',
                     }}
                   >
-                    {Array.from({ length: Math.max(0, numPages || 0) }, (_, i) => i + 1).map((pageNum) => (
-                      <Box key={pageNum} sx={{ boxShadow: 3 }}>
-                        <Page
-                          pageNumber={pageNum}
-                          width={pageBaseWidth * zoomLevel}
-                          renderAnnotationLayer
-                          renderTextLayer
-                          canvasBackground="white"
-                          loading={pageNum === currentPage ? <CircularProgress /> : null}
-                        />
-                      </Box>
-                    ))}
+                    {Array.from({ length: Math.max(0, numPages || 0) }, (_, i) => i + 1).map((pageNum) => {
+                      return (
+                        <Box key={pageNum} sx={{ boxShadow: 3, position: 'relative' }}>
+                          <Page
+                            pageNumber={pageNum}
+                            width={pageBaseWidth * zoomLevel}
+                            renderAnnotationLayer
+                            renderTextLayer
+                            canvasBackground="white"
+                            loading={pageNum === currentPage ? <CircularProgress /> : null}
+                          />
+                          {/* All block area overlays — always in the DOM at fixed positions,
+                              only opacity/color transitions between idle/next/active states. */}
+                          {allBlockAreaMappings && allBlockAreaMappings.length > 0 && (
+                            <BlockAreaOverlays
+                              mappings={allBlockAreaMappings}
+                              pageNum={pageNum}
+                              activeBlockName={isSynced ? (activeBlockAreaMapping?.blockName ?? null) : null}
+                              nextBlockName={isSynced ? (nextBlockAreaMapping?.blockName ?? null) : null}
+                              isSynced={!!isSynced}
+                              containerRef={localContainerRef}
+                              scrollKey={`${activeBlockIndex ?? 0}-${activeBlockAreaMapping?.blockName ?? ''}-${activeBlockAreaMapping?.page ?? 0}`}
+                              orderedBlockNames={orderedBlockNames}
+                              activeBlockIndex={activeBlockIndex ?? -1}
+                            />
+                          )}
+                        </Box>
+                      );
+                    })}
                   </Stack>
                 </Box>
               )}

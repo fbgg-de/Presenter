@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState, MouseEvent } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState, MouseEvent, DragEvent, ReactNode } from 'react';
 import {
   AppBar,
   Box,
@@ -42,6 +42,8 @@ import {
   OpenInNew as BringToFrontIcon,
   VisibilityOff as HideWindowIcon,
   TextFields as HideTextIcon,
+  People as WsClientsIcon,
+  Cable as MidiActiveIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
@@ -63,15 +65,75 @@ import {
   getHasRestoredSavedWindows,
   markRestoredSavedWindows,
 } from '@/utils/presentationBridge';
-import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
+
+const ConnectedWebsocketClients = ({
+  wsClientCount,
+  connected,
+  connectedLabel,
+  disconnectedLabel,
+}: {
+  wsClientCount: number;
+  connected: boolean;
+  connectedLabel: string;
+  disconnectedLabel: string;
+}) => (
+  <Tooltip title={connected ? connectedLabel : disconnectedLabel}>
+    <Chip
+      icon={<WsClientsIcon sx={{ pl: '0.25rem' }} />}
+      label={wsClientCount}
+      size="small"
+      color={connected && wsClientCount > 0 ? 'primary' : 'default'}
+      variant="outlined"
+      sx={{ alignSelf: 'center', fontSize: '0.7rem', cursor: 'default', opacity: connected ? 1 : 0.5 }}
+    />
+  </Tooltip>
+);
+
+const FooterActions = ({ onOpenStyleEditor, onOpenWindowManager }: { onOpenStyleEditor: () => void; onOpenWindowManager: () => void }) => {
+  const { LL } = useI18nContext();
+  return (
+    <>
+      <Tooltip title={LL.STYLE.EDITOR()}>
+        <IconButton size="small" onClick={onOpenStyleEditor}>
+          <StyleIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
+        <IconButton size="small" onClick={onOpenWindowManager}>
+          <WindowManagerIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </>
+  );
+};
 
 const Footer = () => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
+
+  // ── WS client count — from redux (kept in sync by usePresentationSync via useWsOperator)
+  const {
+    isBlack,
+    isTextHidden,
+    frozenWindows,
+    wsConnectedCount: wsClientCount,
+    wsMidiSyncAt,
+    wsOperatorConnected,
+  } = useGetPresentationSettings();
   const { windowConfigs: savedConfigs } = useGetWindows();
-  const { windowFooterVisible, restoreWindowsOnStart } = useGetSettings();
+  const { windowFooterVisible, restoreWindowsOnStart, midiTrackingMaster } = useGetSettings();
   const updateWindowSetting = useUpdateWindows();
-  const { isBlack, isTextHidden, frozenWindows } = useGetPresentationSettings();
+  const updateSetting = useUpdateSetting();
+
+  const MIDI_ACTIVE_TTL_MS = 10_000;
+  const [midiSyncActive, setMidiSyncActive] = useState(false);
+  useEffect(() => {
+    if (!wsMidiSyncAt) return;
+    setMidiSyncActive(true);
+    const t = setTimeout(() => setMidiSyncActive(false), MIDI_ACTIVE_TTL_MS);
+    return () => clearTimeout(t);
+  }, [wsMidiSyncAt]);
 
   const { data: styles = [] } = useGetStylesQuery();
 
@@ -148,7 +210,7 @@ const Footer = () => {
     dragIndexRef.current = index;
   }, []);
 
-  const handleChipDragOver = useCallback((e: React.DragEvent, index: number) => {
+  const handleChipDragOver = useCallback((e: DragEvent, index: number) => {
     e.preventDefault();
     setDragOverIndex(index);
   }, []);
@@ -158,7 +220,7 @@ const Footer = () => {
   }, []);
 
   const handleChipDrop = useCallback(
-    (e: React.DragEvent, toSavedIdx: number) => {
+    (e: DragEvent, toSavedIdx: number) => {
       e.preventDefault();
       setDragOverIndex(null);
       const fromIndex = dragIndexRef.current;
@@ -590,7 +652,7 @@ const Footer = () => {
                 const label = presetName ? `${name} (${presetName})` : name;
 
                 // Build a composite icon showing active states
-                const statusIcons: React.ReactNode[] = [];
+                const statusIcons: ReactNode[] = [];
                 if (isFrozen) statusIcons.push(<FreezeIcon key="f" sx={{ fontSize: 14 }} />);
                 if (cfg.fullscreen) statusIcons.push(<FullscreenIcon key="fs" sx={{ fontSize: 14 }} />);
                 if (cfg.alwaysOnTop) statusIcons.push(<OnTopIcon key="ot" sx={{ fontSize: 14 }} />);
@@ -621,9 +683,9 @@ const Footer = () => {
                       key={entry.runtimeId}
                       draggable={isDraggable}
                       onDragStart={isDraggable ? () => handleChipDragStart(entry.savedIdx) : undefined}
-                      onDragOver={isDraggable ? (e: React.DragEvent) => handleChipDragOver(e, entry.savedIdx) : undefined}
+                      onDragOver={isDraggable ? (e: DragEvent) => handleChipDragOver(e, entry.savedIdx) : undefined}
                       onDragLeave={isDraggable ? handleChipDragLeave : undefined}
-                      onDrop={isDraggable ? (e: React.DragEvent) => handleChipDrop(e, entry.savedIdx) : undefined}
+                      onDrop={isDraggable ? (e: DragEvent) => handleChipDrop(e, entry.savedIdx) : undefined}
                       onDragEnd={() => setDragOverIndex(null)}
                       sx={{
                         display: 'inline-flex',
@@ -669,9 +731,9 @@ const Footer = () => {
                       key={`closed-${idx}`}
                       draggable={isDraggable}
                       onDragStart={isDraggable ? () => handleChipDragStart(entry.savedIdx) : undefined}
-                      onDragOver={isDraggable ? (e: React.DragEvent) => handleChipDragOver(e, entry.savedIdx) : undefined}
+                      onDragOver={isDraggable ? (e: DragEvent) => handleChipDragOver(e, entry.savedIdx) : undefined}
                       onDragLeave={isDraggable ? handleChipDragLeave : undefined}
-                      onDrop={isDraggable ? (e: React.DragEvent) => handleChipDrop(e, entry.savedIdx) : undefined}
+                      onDrop={isDraggable ? (e: DragEvent) => handleChipDrop(e, entry.savedIdx) : undefined}
                       onDragEnd={() => setDragOverIndex(null)}
                       sx={{
                         display: 'inline-flex',
@@ -900,6 +962,32 @@ const Footer = () => {
                   ml: 'auto',
                 }}
               >
+                <Stack direction="row" sx={{ gap: 0.5, mr: 1 }}>
+                  <ConnectedWebsocketClients
+                    connected={wsOperatorConnected}
+                    wsClientCount={wsClientCount}
+                    connectedLabel={LL.FOOTER.WS_CLIENTS({ count: wsClientCount })}
+                    disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
+                  />
+                  <Tooltip title={midiTrackingMaster === 'midi' ? LL.MIDI.FOLLOW_MIDI_ACTIVE() : LL.MIDI.SYNC_ACTIVE()}>
+                    <Chip
+                      icon={<MidiActiveIcon sx={{ pl: '0.25rem' }} />}
+                      label="MIDI"
+                      size="small"
+                      color="success"
+                      variant={midiSyncActive || midiTrackingMaster === 'midi' ? 'filled' : 'outlined'}
+                      onClick={() => updateSetting('midiTrackingMaster', midiTrackingMaster === 'midi' ? 'operator' : 'midi')}
+                      sx={{
+                        alignSelf: 'center',
+                        fontSize: '0.7rem',
+                        cursor: 'pointer',
+                        opacity: midiSyncActive || midiTrackingMaster === 'midi' ? 1 : 0.25,
+                        transition: 'opacity 0.4s ease-in-out',
+                      }}
+                    />
+                  </Tooltip>
+                </Stack>
+
                 <Tooltip title={isTextHidden ? LL.FOOTER.SHOW_TEXT() : LL.FOOTER.HIDE_TEXT()}>
                   <IconButton size="small" onClick={() => dispatch(toggleTextHidden())} color={isTextHidden ? 'warning' : 'default'}>
                     <HideTextIcon fontSize="small" />
@@ -911,17 +999,7 @@ const Footer = () => {
                     {isBlack ? <ShowIcon fontSize="small" /> : <BlackIcon fontSize="small" />}
                   </IconButton>
                 </Tooltip>
-
-                <Tooltip title={LL.STYLE.EDITOR()}>
-                  <IconButton size="small" onClick={() => setStyleEditorOpen(true)}>
-                    <StyleIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
-                  <IconButton size="small" onClick={() => setWindowManagerOpen(true)}>
-                    <WindowManagerIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+                <FooterActions onOpenStyleEditor={() => setStyleEditorOpen(true)} onOpenWindowManager={() => setWindowManagerOpen(true)} />
               </Stack>
             </>
           ) : (
@@ -960,16 +1038,31 @@ const Footer = () => {
                   gap: 0.5,
                 }}
               >
-                <Tooltip title={LL.STYLE.EDITOR()}>
-                  <IconButton size="small" onClick={() => setStyleEditorOpen(true)}>
-                    <StyleIcon fontSize="small" />
-                  </IconButton>
+                <ConnectedWebsocketClients
+                  connected={wsOperatorConnected}
+                  wsClientCount={wsClientCount}
+                  connectedLabel={LL.FOOTER.WS_CLIENTS({ count: wsClientCount })}
+                  disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
+                />
+                <Tooltip title={midiTrackingMaster === 'midi' ? LL.MIDI.FOLLOW_MIDI_ACTIVE() : LL.MIDI.SYNC_ACTIVE()}>
+                  <Chip
+                    icon={<MidiActiveIcon sx={{ pl: '0.25rem' }} />}
+                    label="MIDI"
+                    size="small"
+                    color="success"
+                    variant={midiSyncActive || midiTrackingMaster === 'midi' ? 'filled' : 'outlined'}
+                    onClick={() => updateSetting('midiTrackingMaster', midiTrackingMaster === 'midi' ? 'operator' : 'midi')}
+                    sx={{
+                      alignSelf: 'center',
+                      fontSize: '0.7rem',
+                      cursor: 'pointer',
+                      opacity: midiSyncActive || midiTrackingMaster === 'midi' ? 1 : 0.25,
+                      transition: 'opacity 0.4s ease-in-out',
+                    }}
+                  />
                 </Tooltip>
-                <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
-                  <IconButton size="small" onClick={() => setWindowManagerOpen(true)}>
-                    <WindowManagerIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
+
+                <FooterActions onOpenStyleEditor={() => setStyleEditorOpen(true)} onOpenWindowManager={() => setWindowManagerOpen(true)} />
               </Stack>
             </Stack>
           )}

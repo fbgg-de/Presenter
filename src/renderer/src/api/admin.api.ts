@@ -129,7 +129,15 @@ export type AdminConfigData = {
     enabled: boolean;
     name: string | null;
     baseUrl: string | null;
+    translationsEndpoint: string | null;
+    verseEndpoint: string | null;
   };
+  wsHost: {
+    wss?: boolean;
+    host: string;
+    port: number;
+    path?: string;
+  } | null;
 };
 
 const adminApi = presenterApi.injectEndpoints({

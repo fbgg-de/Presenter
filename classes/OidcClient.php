@@ -90,6 +90,126 @@ class OidcClient
     }
 
     /**
+     * Use a refresh token to obtain a new set of tokens without user interaction.
+     * Returns the new token array on success, or throws on failure.
+     */
+    public function refreshToken(string $refreshToken): array
+    {
+        $discovery = $this->getDiscoveryDocument();
+        $tokenEndpoint = $discovery['token_endpoint'] ?? null;
+
+        if (!$tokenEndpoint) {
+            throw new Exception('Token endpoint not found in discovery document');
+        }
+
+        $params = [
+            'grant_type'    => 'refresh_token',
+            'refresh_token' => $refreshToken,
+            'client_id'     => $this->clientId,
+            'client_secret' => $this->clientSecret,
+        ];
+
+        $ch = curl_init($tokenEndpoint);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($httpCode !== 200 || !$response) {
+            throw new Exception('Token refresh failed (HTTP ' . $httpCode . ')');
+        }
+
+        $tokens = json_decode($response, true);
+        if (!$tokens || empty($tokens['access_token'])) {
+            throw new Exception('Invalid token refresh response');
+        }
+
+        return $tokens;
+    }
+
+    /**
+     * Attempt a silent token refresh using the refresh_token stored in $_SESSION['oidc_tokens'].
+     * Updates $_SESSION['oidc_tokens'] on success. Returns true if refreshed, false if not needed
+     * or not possible.
+     *
+     * Call this early in each authenticated request (e.g. from rest.php) so sessions are kept
+     * alive automatically without requiring the user to log in again every day.
+     *
+     * @param int $refreshBeforeExpireSeconds  Refresh when fewer than this many seconds remain.
+     */
+    public static function tryRefreshSession(int $refreshBeforeExpireSeconds = 300): bool
+    {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return false;
+        }
+
+        $tokens    = $_SESSION['oidc_tokens'] ?? null;
+        $authType  = $_SESSION['authType'] ?? null;
+
+        if (!$tokens || !$authType) {
+            return false; // No active OIDC session
+        }
+
+        $expiresAt    = $tokens['expires_at'] ?? 0;
+        $refreshToken = $tokens['refresh_token'] ?? null;
+
+        // Not yet close enough to expiry — nothing to do
+        if (time() < ($expiresAt - $refreshBeforeExpireSeconds)) {
+            return false;
+        }
+
+        if (!$refreshToken) {
+            return false; // No refresh token available
+        }
+
+        try {
+            // Re-create the correct OidcClient instance
+            $isAdmin    = ($authType === 'oidc_admin');
+            $providerId = $_SESSION['oidc_provider_id'] ?? null;
+
+            if ($isAdmin || !$providerId) {
+                $oidc = self::fromGlobalConfig();
+            } else {
+                // Load the provider from DB
+                require_once(__DIR__ . '/../classes/DB.php');
+                $db   = DB::getInstance();
+                $stmt = $db->prepare('SELECT * FROM `oidc_providers` WHERE `id` = ? AND `enabled` = 1 LIMIT 1');
+                $stmt->bind_param('i', $providerId);
+                $stmt->execute();
+                $result   = $stmt->get_result();
+                $provider = $result->fetch_assoc();
+                $stmt->close();
+
+                if (!$provider) {
+                    return false;
+                }
+
+                $oidc = self::fromProvider($provider);
+            }
+
+            $newTokens = $oidc->refreshToken($refreshToken);
+
+            // Update session with new tokens
+            $_SESSION['oidc_tokens'] = [
+                'access_token'  => $newTokens['access_token'],
+                'id_token'      => $newTokens['id_token'] ?? $tokens['id_token'] ?? null,
+                'refresh_token' => $newTokens['refresh_token'] ?? $refreshToken, // keep old one if not rotated
+                'expires_at'    => time() + ($newTokens['expires_in'] ?? 3600),
+            ];
+
+            return true;
+        } catch (\Throwable $e) {
+            // Refresh failed — log but don't break the request; the existing session may still be valid
+            error_log('[OidcClient] Token refresh failed: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Get authorization URL for OIDC login
      */
     public function getAuthorizationUrl(string $state): string

@@ -1,5 +1,5 @@
-import { PresentationLine } from '@/presentation/types';
 import { CSSProperties } from 'react';
+import { PresentationLine } from '@/presentation/types';
 import { LanguageStyleEntry } from '@/api/styles.api';
 import { filterLinesByLanguage, resolveLineLangCss } from '@/presentation/index';
 

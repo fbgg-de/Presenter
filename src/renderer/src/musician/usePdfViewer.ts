@@ -5,12 +5,16 @@ import type { ShowItem } from '@/api/shows.api';
 import type { PdfAreaMapping } from '@/components/pdf/PdfAreaMappingEditor';
 
 export type PageViewMode = 'two-page' | 'one-page';
-export type SyncMode = 'off' | 'operator' | 'midi' | 'midi-ws';
+export type SyncMode = 'off' | 'operator' | 'midi';
 
 const ZOOM_STEP = 0.1;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3.0;
 const ZOOM_DEFAULT = 1.0;
+
+/** Tracks the intended smooth-scroll destination per container to enable correct
+ *  visibility checks while an animation is in progress. */
+const pdfScrollTargets = new WeakMap<HTMLElement, number>();
 
 const SONGS_STORAGE_KEY = 'presenter_musician';
 const SONGS_STORAGE_KEY_OLD = 'presenter_musician_songs'; // migration ToDo remove
@@ -436,9 +440,12 @@ export const usePdfViewer = ({
     [musicianName, activeSongNumber, saveMappingsMutation],
   );
 
-  // Sync scroll to mapped block
+  // Sync scroll to mapped block — only when the block region is not already visible.
+  // Uses a module-level WeakMap to track the intended scroll destination so that
+  // visibility checks during an in-progress smooth scroll use the target position
+  // (where the container *will* be) rather than the live mid-animation scrollTop.
   useEffect(() => {
-    if (syncMode !== 'operator' || !blockIndicator || areaMappings.length === 0) return;
+    if ((syncMode !== 'operator' && syncMode !== 'midi') || !blockIndicator || areaMappings.length === 0) return;
     if (operatorActiveBlockIndex == null || operatorActiveBlockIndex < 0) return;
 
     const activeBlock = lyricsBlocks[operatorActiveBlockIndex];
@@ -450,16 +457,36 @@ export const usePdfViewer = ({
     if (mapping.page !== currentPage) setCurrentPage(mapping.page);
 
     const container = pdfContainerRef.current;
-    if (container) {
-      const pages = container.querySelectorAll('.react-pdf__Page');
-      const pageIdx = pageView === 'two-page' ? Math.floor((mapping.page - 1) / 2) : mapping.page - 1;
-      const pageEl = pages[pageIdx] as HTMLElement | undefined;
-      if (pageEl) {
-        const pageRect = pageEl.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        const targetY = pageEl.offsetTop + (mapping.region.y / 100) * pageRect.height - containerRect.height / 3;
-        container.scrollTo({ top: Math.max(0, targetY), behavior: 'smooth' });
-      }
+    if (!container) return;
+
+    const pages = container.querySelectorAll('.react-pdf__Page');
+    const pageIdx = pageView === 'two-page' ? Math.floor((mapping.page - 1) / 2) : mapping.page - 1;
+    const pageEl = pages[pageIdx] as HTMLElement | undefined;
+    if (!pageEl) return;
+
+    // Compute block top/bottom in scroll-space using stable layout values.
+    const regionTopFraction = mapping.region.y / 100;
+    const regionBottomFraction = (mapping.region.y + mapping.region.height) / 100;
+    const blockTop = pageEl.offsetTop + regionTopFraction * pageEl.offsetHeight;
+    const blockBottom = pageEl.offsetTop + regionBottomFraction * pageEl.offsetHeight;
+
+    // Use the pending target if a smooth scroll is in progress, otherwise live scrollTop.
+    const pending = pdfScrollTargets.get(container);
+    const effectiveTop = pending ?? container.scrollTop;
+    const fullyVisible = blockTop >= effectiveTop && blockBottom <= effectiveTop + container.clientHeight;
+
+    if (!fullyVisible) {
+      const targetY = Math.max(0, blockTop - container.clientHeight / 2 + (blockBottom - blockTop) / 2);
+      pdfScrollTargets.set(container, targetY);
+      container.scrollTo({ top: targetY, behavior: 'smooth' });
+      // Clear the pending target once the animation ends, but only if it hasn't
+      // been overwritten by a newer scroll in the meantime.
+      container.addEventListener('scrollend', function onScrollEnd() {
+        container.removeEventListener('scrollend', onScrollEnd);
+        if (pdfScrollTargets.get(container) === targetY) {
+          pdfScrollTargets.delete(container);
+        }
+      });
     }
   }, [operatorActiveBlockIndex, syncMode, blockIndicator, areaMappings, lyricsBlocks, currentPage, pageView]);
 
@@ -467,7 +494,7 @@ export const usePdfViewer = ({
     if (pdfContainerRef.current && numPages > 0) {
       const pages = pdfContainerRef.current.querySelectorAll('.react-pdf__Page');
       const idx = pageView === 'two-page' ? Math.floor((currentPage - 1) / 2) : currentPage - 1;
-      pages[idx]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pages[idx]?.scrollIntoView({ behavior: 'instant', block: 'start' });
     }
   }, [currentPage]);
 

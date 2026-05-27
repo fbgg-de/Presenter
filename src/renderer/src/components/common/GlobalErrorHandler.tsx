@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Snackbar } from '@mui/material';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useLogClientErrorMutation } from '@/api/logs.api';
 
 interface ErrorInfo {
   message: string;
@@ -21,6 +22,15 @@ export const GlobalErrorHandler = ({ boundaryError }: { boundaryError?: Error | 
   const { trackEvent } = useMetrics();
   const { errorBoundaryNotification } = useGetSettings();
   const [notification, setNotification] = useState<ErrorInfo | null>(null);
+  const [logClientError] = useLogClientErrorMutation();
+
+  const getBrowserDetails = () => {
+    try {
+      return `UA=${navigator.userAgent}; Lang=${navigator.language}; Platform=${navigator.platform}; Screen=${screen.width}x${screen.height}`;
+    } catch {
+      return 'browser details unavailable';
+    }
+  };
 
   const report = useCallback(
     (info: ErrorInfo) => {
@@ -29,11 +39,17 @@ export const GlobalErrorHandler = ({ boundaryError }: { boundaryError?: Error | 
         stack: info.stack,
         source: info.source,
       });
+
+      // Also persist to server log
+      const browserDetails = getBrowserDetails();
+      const logMessage = `[CLIENT_ERROR] [${info.source ?? 'unknown'}] ${info.message}${info.stack ? ` | Stack: ${info.stack.slice(0, 800)}` : ''} | Browser: ${browserDetails}`;
+      logClientError({ message: logMessage }).catch(() => {/* best-effort */});
+
       if (errorBoundaryNotification) {
         setNotification(info);
       }
     },
-    [trackEvent, errorBoundaryNotification],
+    [trackEvent, errorBoundaryNotification, logClientError],
   );
 
   // React ErrorBoundary errors passed via prop
@@ -73,4 +89,3 @@ export const GlobalErrorHandler = ({ boundaryError }: { boundaryError?: Error | 
     </Snackbar>
   );
 };
-

@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Box, Button, Card, CardContent, Divider, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
-import { Security as SecurityIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon } from '@mui/icons-material';
+import { Security as SecurityIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetAccountsQuery, useGetAdminOidcAuthUrlQuery, useGetOidcAuthUrlQuery } from '@/api/session.api';
 import { useUpdateSetting, useGetSettings, Account } from '@/store/settingsSlice';
+import { getOidcRedirectUrl, nextParamToPath, isElectronApp, electronFileUrl, getBackendOrigin } from '@/utils';
+import { useBackendConfig } from '@/components/settings/ConnectivityChecker';
 
 const useQueryParam = (name: string): string | null => {
   const { search } = useLocation();
@@ -13,19 +15,32 @@ const useQueryParam = (name: string): string | null => {
 
 export const LoginPage = () => {
   const { LL } = useI18nContext();
+  const { openDialog: openBackendDialog } = useBackendConfig();
 
   const next = useQueryParam('next') ?? '/';
 
   const { offlineMode, lastSelectedAccount } = useGetSettings();
   const updateSetting = useUpdateSetting();
 
+  // Notify the main process of the backend origin so it can identify OIDC callbacks
+  useEffect(() => {
+    if (isElectronApp()) {
+      const origin = getBackendOrigin();
+      if (origin) {
+        (window as { api?: { setBackendOrigin?: (o: string) => void } }).api?.setBackendOrigin?.(origin);
+      }
+    }
+  }, []);
+
   // In offline mode, redirect immediately to the intended destination
   useEffect(() => {
     if (offlineMode) {
       try {
-        window.location.replace(decodeURIComponent(next));
+        const dest = decodeURIComponent(next);
+        // In Electron, `next` is a bare filename (e.g. "musician.html") and relative navigation is unreliable — build the full file:// URL.
+        window.location.replace(isElectronApp() ? electronFileUrl(dest) : dest);
       } catch {
-        window.location.replace('/');
+        window.location.replace(isElectronApp() ? electronFileUrl('index.html') : '/');
       }
     }
   }, [offlineMode, next]);
@@ -74,7 +89,8 @@ export const LoginPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountsLoading, licenseParam]);
 
-  const redirectUrl = window.location.origin + next;
+  const redirectUrl = getOidcRedirectUrl(nextParamToPath(next));
+  const adminRedirectUrl = getOidcRedirectUrl('/admin');
 
   // Calculate tenant license number before using it in queries
   const isAdminSelected = selectedLicense === 'admin';
@@ -100,7 +116,7 @@ export const LoginPage = () => {
     isFetching: adminOidcLoading,
     error: adminOidcError,
   } = useGetAdminOidcAuthUrlQuery(
-    { redirect: window.location.origin + '/admin' },
+    { redirect: adminRedirectUrl },
     {
       skip: !isAdminSelected, // Only fetch when admin is selected
     },
@@ -139,7 +155,18 @@ export const LoginPage = () => {
 
             {errorText && <Alert severity="error">{errorText}</Alert>}
 
-            {accountsError && !offlineMode && <Alert severity="error">{LL.ERRORS.LOAD_LICENSES()}</Alert>}
+            {accountsError && !offlineMode && (
+              <Alert
+                severity="error"
+                action={
+                  <Button color="inherit" size="small" startIcon={<SettingsIcon fontSize="small" />} onClick={openBackendDialog}>
+                    {LL.CONNECTIVITY.SNACK_CHANGE_BUTTON()}
+                  </Button>
+                }
+              >
+                {LL.ERRORS.LOAD_LICENSES()}
+              </Alert>
+            )}
 
             {!offlineMode && (
               <>

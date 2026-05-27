@@ -9,7 +9,7 @@ import { pathToFileURL } from 'url';
 import { PresentationWindowManager } from './windows';
 import type { WindowConfig, MusicianViewConfig, PresentationContentIPC, SettingsDiff } from '../shared/types';
 
-export function registerIpcHandlers(windowManager: PresentationWindowManager): void {
+export const registerIpcHandlers = (windowManager: PresentationWindowManager) => {
   // ── Basic window controls ──
 
   ipcMain.handle('window-minimize', (event) => {
@@ -206,6 +206,17 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
     return result;
   });
 
+  // ── Musician IPC sync — forwards musician navigation state to the operator (main) window ──
+  ipcMain.on('musician-sync-to-operator', (_event, data) => {
+    const allWindows = BrowserWindow.getAllWindows();
+    // The main (operator) window is the one that did NOT send this message
+    for (const win of allWindows) {
+      if (!win.isDestroyed() && win.webContents.id !== _event.sender.id) {
+        win.webContents.send('musician-sync-from-ipc', data);
+      }
+    }
+  });
+
   // ── Musician view ──
 
   ipcMain.handle('open-musician-view', (_event, viewConfig: MusicianViewConfig) => {
@@ -344,4 +355,10 @@ export function registerIpcHandlers(windowManager: PresentationWindowManager): v
       return [];
     }
   });
-}
+
+  // ── Auto-updater: install now ──
+
+  ipcMain.handle('install-update', () => {
+    autoUpdater.quitAndInstall(false, true);
+  });
+};

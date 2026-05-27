@@ -41,6 +41,8 @@ import { useMetrics } from '@/hooks/useMetrics';
 import { exportSettings, importSettings, applyImportedSettings } from '@/utils/settingsExport';
 import { CompanionHelper } from '@/components/settings/CompanionHelper';
 import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
+import { AutoUpdaterSection } from '@/components/settings/AutoUpdaterSection';
+import { isElectronApp } from '@/utils';
 
 type SettingConfig = {
   key: keyof SettingsState;
@@ -86,9 +88,12 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'showLicenseNumber', type: 'boolean', group: 'Presentation', label: 'Show license number' },
   // Electron
   { key: 'mediaPath', type: 'string', group: 'Electron', label: 'Media directory path' },
-  { key: 'wsPort', type: 'number', group: 'Electron', label: 'WebSocket port' },
-  { key: 'autoCheckUpdates', type: 'boolean', group: 'Electron', label: 'Auto-check updates' },
-  { key: 'restoreWindowsOnStart', type: 'boolean', group: 'Electron', label: 'Restore windows on start' },
+  ...(isElectronApp()
+    ? ([
+        { key: 'autoCheckUpdates', type: 'boolean', group: 'Electron', label: 'Auto-check updates' },
+        { key: 'restoreWindowsOnStart', type: 'boolean', group: 'Electron', label: 'Restore windows on start' },
+      ] as SettingConfig[])
+    : []),
 ];
 
 const GROUP_ORDER = ['General', 'Behavior', 'Confirmations', 'Notifications', 'Privacy', 'Presentation', 'Electron'];
@@ -374,6 +379,18 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                 </AccordionDetails>
               </Accordion>
             )}
+
+          {/* Auto-updater — Electron only */}
+          {isElectronApp() && (!filterLower || LL.UPDATER.TITLE().toLowerCase().includes(filterLower)) && (
+            <Accordion defaultExpanded={false}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography sx={{ fontWeight: 600 }}>{LL.UPDATER.TITLE()}</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                <AutoUpdaterSection />
+              </AccordionDetails>
+            </Accordion>
+          )}
         </Stack>
       </Stack>
     </Drawer>
@@ -451,8 +468,6 @@ const SettingRow = ({ config, value }: { config: SettingConfig; value: string | 
         return LL.SETTINGS.OPTIONS.SHOW_LICENSE_NUMBER.TITLE();
       case 'mediaPath':
         return LL.SETTINGS.OPTIONS.MEDIA_PATH.TITLE();
-      case 'wsPort':
-        return LL.SETTINGS.OPTIONS.WS_PORT.TITLE();
       case 'autoCheckUpdates':
         return LL.SETTINGS.OPTIONS.AUTO_CHECK_UPDATES.TITLE();
       case 'restoreWindowsOnStart':

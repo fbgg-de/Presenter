@@ -4,7 +4,6 @@ import { join } from 'path';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { PresentationWindowManager } from './windows';
 import { registerIpcHandlers } from './ipc';
-import { PresenterWebSocketServer } from './wsServer';
 import { LocalMediaServer } from './mediaServer';
 import iconIco from '../../favicon.ico?asset';
 import iconPng from '../../favicon.svg?asset';
@@ -20,7 +19,7 @@ const boundsFile = join(app.getPath('userData'), 'window-bounds.json');
 // the server start and fails with ERR_CONNECTION_REFUSED.
 const mediaPathFile = join(app.getPath('userData'), 'media-path.json');
 
-function loadPersistedMediaPath(): string {
+const loadPersistedMediaPath = () => {
   try {
     if (existsSync(mediaPathFile)) {
       const raw = JSON.parse(readFileSync(mediaPathFile, 'utf-8')) as { path?: string };
@@ -30,9 +29,9 @@ function loadPersistedMediaPath(): string {
     /* ignore */
   }
   return '';
-}
+};
 
-function savePersistedMediaPath(mediaPath: string): void {
+const savePersistedMediaPath = (mediaPath: string) => {
   try {
     const dir = app.getPath('userData');
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -40,7 +39,7 @@ function savePersistedMediaPath(mediaPath: string): void {
   } catch {
     /* ignore */
   }
-}
+};
 
 interface WindowBoundsData {
   x?: number;
@@ -50,7 +49,7 @@ interface WindowBoundsData {
   isMaximized?: boolean;
 }
 
-function loadWindowBounds(): WindowBoundsData {
+const loadWindowBounds: () => WindowBoundsData = () => {
   try {
     if (existsSync(boundsFile)) {
       return JSON.parse(readFileSync(boundsFile, 'utf-8'));
@@ -59,9 +58,9 @@ function loadWindowBounds(): WindowBoundsData {
     /* ignore */
   }
   return { width: 450, height: 750 };
-}
+};
 
-function saveWindowBounds(bounds: WindowBoundsData): void {
+const saveWindowBounds = (bounds: WindowBoundsData) => {
   try {
     const dir = app.getPath('userData');
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
@@ -69,7 +68,7 @@ function saveWindowBounds(bounds: WindowBoundsData): void {
   } catch {
     /* ignore */
   }
-}
+};
 
 // ── Single instance lock ──
 const gotTheLock = app.requestSingleInstanceLock();
@@ -79,11 +78,11 @@ if (!gotTheLock) {
 
 // ── Module instances ──
 const windowManager = new PresentationWindowManager();
-let wsServer: PresenterWebSocketServer | null = null;
 let mediaServer: LocalMediaServer | null = null;
 let mainWindow: BrowserWindow | null = null;
+let backendOrigin = '';
 
-function createWindow(): void {
+const createWindow = () => {
   let icon: string | undefined;
   if (process.platform === 'win32') {
     icon = iconIco;
@@ -173,10 +172,70 @@ function createWindow(): void {
     return { action: 'deny' };
   });
 
-  // Set the main window reference for WebSocket server
-  if (wsServer) {
-    wsServer.setMainWindow(mainWindow);
-  }
+  const HTML_PATHS: Record<'/' | '/notes' | '/admin' | '/login', string> = {
+    '/': join(__dirname, '../renderer/index.html'),
+    '/notes': join(__dirname, '../renderer/musician.html'),
+    '/admin': join(__dirname, '../renderer/admin.html'),
+    '/login': join(__dirname, '../renderer/login.html'),
+  };
+
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('file://')) return;
+
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      event.preventDefault();
+      return;
+    }
+
+    // Detect OIDC callback: URL is on the backend domain AND has a `code` param
+    const backendHost = backendOrigin ? new URL(backendOrigin).host : null;
+    const isCallbackFromBackend = backendHost && parsed.host === backendHost;
+    const hasCode = parsed.searchParams.has('code');
+
+    if (isCallbackFromBackend && hasCode) {
+      // Block the navigation — perform the code exchange in a hidden window
+      event.preventDefault();
+
+      const htmlFile = HTML_PATHS[parsed.pathname as keyof typeof HTML_PATHS] ?? HTML_PATHS['/'];
+
+      const exchangeWin = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true } });
+
+      exchangeWin.webContents.on('did-finish-load', () => {
+        mainWindow!.loadFile(htmlFile);
+        exchangeWin.destroy();
+      });
+
+      exchangeWin.webContents.on('did-fail-load', (_e, errCode, errDesc) => {
+        console.error('[OIDC] Exchange failed:', errCode, errDesc);
+        mainWindow!.loadFile(HTML_PATHS['/login']);
+        exchangeWin.destroy();
+      });
+
+      exchangeWin.loadURL(url);
+      return;
+    }
+
+    // Navigation to the IdP (OIDC provider) — allow it to happen inside the window
+    // so the provider can redirect the callback back to us via will-navigate.
+    if (isCallbackFromBackend && !hasCode) {
+      // A backend URL without a code is a normal server redirect — allow it
+      return;
+    }
+
+    // Anything else that isn't the backend (e.g. IdP login page, user-clicked links):
+    // Allow IdP navigation to proceed inside the window so the OIDC flow completes.
+    // We distinguish IdP (navigated programmatically) from user-clicked links by
+    // checking whether it's a top-level navigation from a file:// page.
+    // Since we can't easily tell, we allow all non-file navigations that don't
+    // originate from a user click on an anchor. The setWindowOpenHandler already
+    // blocks new-window opens; will-navigate only fires for same-window navigations,
+    // which are always programmatic (window.location.assign) in our app.
+    // So: allow all same-window external navigations (they are all OIDC flows).
+  });
+
   // Set the main window reference for window bounds notifications
   windowManager.setMainWindow(mainWindow);
 
@@ -189,9 +248,9 @@ function createWindow(): void {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
   } else {
-    mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
+    mainWindow.loadFile(HTML_PATHS['/']);
   }
-}
+};
 
 // ── Register all IPC handlers ──
 registerIpcHandlers(windowManager);
@@ -201,8 +260,13 @@ ipcMain.handle('get-media-server-url', () => {
   return mediaServer?.getBaseUrl() || '';
 });
 
+// Renderer reports the configured backend URL so will-navigate can identify callbacks
+ipcMain.on('set-backend-origin', (_event, origin: string) => {
+  backendOrigin = origin;
+});
+
 // Auto-start media server when main window finishes loading and a media path is configured
-function autoStartMediaServer(): void {
+const autoStartMediaServer = () => {
   if (!mainWindow || mainWindow.isDestroyed()) return;
   mainWindow.webContents
     .executeJavaScript(
@@ -240,22 +304,35 @@ function autoStartMediaServer(): void {
       }
     })
     .catch(() => {});
-}
-
-// IPC handler for WebSocket broadcast (from renderer to WS clients)
-ipcMain.on('ws-broadcast', (_event, action: string, data?: Record<string, unknown>) => {
-  wsServer?.broadcast(action, data);
-});
-
-// IPC handler for WS state response (from renderer back to WS clients)
-ipcMain.on('ws-state-response', (_event, data: unknown) => {
-  console.log('[WS] State response from renderer:', data);
-});
+};
 
 // ── Auto Update Logic ──
 // Auto-check setting is read from renderer localStorage via IPC after window loads
 if (app.isPackaged) {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[Updater] Update available:', info.version);
+    mainWindow?.webContents.send('updater-update-available', { version: info.version, releaseDate: info.releaseDate });
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    mainWindow?.webContents.send('updater-update-not-available');
+  });
+
+  autoUpdater.on('download-progress', (progress) => {
+    mainWindow?.webContents.send('updater-download-progress', {
+      percent: Math.round(progress.percent),
+      transferred: progress.transferred,
+      total: progress.total,
+    });
+  });
+
   autoUpdater.on('update-downloaded', ({ version, releaseDate, releaseNotes, releaseName }) => {
+    console.log('[Updater] Update downloaded:', version);
+    mainWindow?.webContents.send('updater-update-downloaded', { version, releaseDate });
+    // Also show native dialog as fallback
     dialog
       .showMessageBox({
         type: 'info',
@@ -269,12 +346,13 @@ if (app.isPackaged) {
             : releaseName) ?? '',
         detail: `A new version (${version}, ${releaseDate}) has been downloaded. Restart the application to apply the updates.`,
       })
-      .then((returnValue) => returnValue.response === 0 && autoUpdater.quitAndInstall());
+      .then((returnValue) => returnValue.response === 0 && autoUpdater.quitAndInstall(false, true));
   });
 
   autoUpdater.on('error', (message) => {
     console.error('There was a problem updating the application');
     console.error(message);
+    mainWindow?.webContents.send('updater-error', { message: message?.message ?? String(message) });
   });
 }
 
@@ -284,14 +362,24 @@ app.whenReady().then(async () => {
   electronApp.setAppUserModelId('com.electron');
 
   // Default open or close DevTools by F12 in development
+  // In production, F12 still opens DevTools for debugging purposes
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window);
+    if (app.isPackaged) {
+      window.webContents.on('before-input-event', (_event, input) => {
+        if (input.type === 'keyDown' && input.key === 'F12') {
+          if (window.webContents.isDevToolsOpened()) {
+            window.webContents.closeDevTools();
+          } else {
+            window.webContents.openDevTools({ mode: 'detach' });
+          }
+        }
+      });
+    }
   });
 
   // Create the main window
   createWindow();
-
-  // Check for auto-update preference from renderer localStorage after window loads
   if (app.isPackaged && mainWindow) {
     mainWindow.webContents.on('did-finish-load', async () => {
       try {
@@ -320,19 +408,6 @@ app.whenReady().then(async () => {
         /* ignore */
       }
     });
-  }
-
-  // ── Start WebSocket server (§22.2) ──
-  try {
-    // Default port; the renderer can update it via IPC if needed
-    const wsPort = 9001;
-    wsServer = new PresenterWebSocketServer(wsPort, windowManager);
-    wsServer.start();
-    if (mainWindow) {
-      wsServer.setMainWindow(mainWindow);
-    }
-  } catch (err) {
-    console.error('[WS Server] Failed to start:', err);
   }
 
   // ── Start local media server (§7.2) ──
@@ -394,7 +469,7 @@ app.whenReady().then(async () => {
     }
   });
 
-  app.on('activate', function () {
+  app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
@@ -402,7 +477,6 @@ app.whenReady().then(async () => {
 // Quit when all windows are closed, except on macOS.
 app.on('window-all-closed', () => {
   // Clean up servers
-  wsServer?.stop();
   mediaServer?.stop();
 
   if (process.platform !== 'darwin') {

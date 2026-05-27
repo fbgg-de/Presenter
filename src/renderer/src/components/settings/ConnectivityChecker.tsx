@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, type SyntheticEvent } from 'react';
+import { useEffect, useState, useCallback, useContext, createContext, SyntheticEvent } from 'react';
 import {
   Alert,
   Button,
@@ -21,6 +21,12 @@ import { useGetSessionQuery, useLazyGetSessionQuery } from '@/api/session.api';
 import { presenterApi, getBackendBaseUrl } from '@/api/base.api';
 import { useAppDispatch } from '@/store';
 import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
+
+/** Context that lets any descendant open the backend-config dialog. */
+export const BackendConfigContext = createContext<{ openDialog: () => void }>({ openDialog: () => {} });
+
+/** Hook to open the backend-config dialog from anywhere inside ConnectivityChecker's tree. */
+export const useBackendConfig = () => useContext(BackendConfigContext);
 
 /**
  * Monitors backend connectivity via the existing Session endpoint.
@@ -131,7 +137,7 @@ export const ConnectivityChecker = () => {
   };
 
   return (
-    <>
+    <BackendConfigContext.Provider value={{ openDialog: () => setDialogOpen(true) }}>
       {/* ── Warning snackbar ── */}
       <Snackbar
         open={snackOpen}
@@ -240,7 +246,7 @@ export const ConnectivityChecker = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </>
+    </BackendConfigContext.Provider>
   );
 };
 

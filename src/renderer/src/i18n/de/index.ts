@@ -165,6 +165,8 @@ const de: Translation = {
     CONFIG_DEV_MODE: 'Entwicklungsmodus',
     CONFIG_ENABLED: 'Aktiviert',
     CONFIG_DISABLED: 'Deaktiviert',
+    WS_HOST_SECTION: 'WebSocket-Host',
+    WS_HOST_NOT_CONFIGURED: 'Kein WebSocket-Host in config.php konfiguriert.',
   },
 
   ADMIN_LOGS: {
@@ -243,6 +245,10 @@ const de: Translation = {
     UPDATE: 'Show aktualisieren',
     DELETE: 'Show löschen',
     CURRENT: 'Aktuell',
+    REFETCH: 'Shows neu laden',
+    UPDATE_AVAILABLE: 'Show wurde auf dem Server aktualisiert',
+    UPDATE_AVAILABLE_ACTION: 'Neu laden',
+    CCLI_REPORT: 'CCLI-Bericht',
   },
 
   SHOW_ITEMS: {
@@ -549,6 +555,8 @@ const de: Translation = {
     BRING_TO_FRONT: 'In den Vordergrund bringen',
     HIDE_TEXT: 'Text auf allen Fenstern ausblenden',
     SHOW_TEXT: 'Text auf allen Fenstern einblenden',
+    WS_CLIENTS: '{count} Musiker verbunden',
+    WS_NOT_CONNECTED: 'WebSocket-Relay nicht verbunden',
   },
 
   UNIFIED_SEARCH: {
@@ -721,7 +729,7 @@ const de: Translation = {
       MUSICIAN_BLOCK_INDICATOR: { TITLE: 'Block-Anzeige', DESCRIPTION: 'Aktuelle Block-Auswahl in der Musiker-Seitenleiste anzeigen' },
       MIDI_TRACKING_MASTER: { TITLE: 'Tracking-Master', DESCRIPTION: 'Wer steuert die Musiker-Ansicht: Operator oder MIDI-Gerät' },
       MEDIA_PATH: { TITLE: 'Medienverzeichnis', DESCRIPTION: 'Lokales Verzeichnis für Mediendateien (nur Electron)' },
-      WS_PORT: { TITLE: 'WebSocket-Port', DESCRIPTION: 'Port für den eingebauten WebSocket-Server (nur Electron)' },
+      WS_URL: { TITLE: 'WebSocket-Server-URL', DESCRIPTION: 'URL des externen WebSocket-Relay-Servers (z. B. wss://ws.example.com). Alle Accounts verbinden sich mit demselben Server; Nachrichten werden pro Account isoliert.' },
       AUTO_CHECK_UPDATES: {
         TITLE: 'Automatische Update-Prüfung',
         DESCRIPTION: 'Beim Start automatisch nach Updates suchen (nur Electron)',
@@ -729,6 +737,17 @@ const de: Translation = {
       RESTORE_WINDOWS_ON_START: {
         TITLE: 'Fenster beim Start wiederherstellen',
         DESCRIPTION: 'Präsentationsfenster, die beim letzten Schließen offen waren, automatisch wieder öffnen (nur Electron)',
+      },
+      WS_HOSTS: {
+        TITLE: 'WebSocket-Hosts',
+        DESCRIPTION: 'Konfiguriere die WebSocket-Hosts, zu denen sich Clients automatisch verbinden. Diese werden am Server gespeichert und automatisch an verbundene Geräte übermittelt.',
+        NO_HOSTS: 'Keine Hosts konfiguriert. Clients müssen die Verbindung manuell einrichten.',
+        LABEL_LABEL: 'Bezeichnung (optional)',
+        HOST_LABEL: 'Host / IP',
+        PORT_LABEL: 'Port',
+        ADD_HOST: 'Host hinzufügen',
+        WSS_LABEL: 'Verschlüsselt (wss://)',
+        MIXED_CONTENT_WARNING: 'Dieser Host verwendet ws://, aber die App wird über HTTPS bereitgestellt. Der Browser blockiert diese Verbindung. Aktiviere "Verschlüsselt (wss://)" oder verwende einen WSS-fähigen Server.',
       },
       TRANSITION_MODE: {
         TITLE: 'Übergangsart',
@@ -877,6 +896,10 @@ const de: Translation = {
     DESCRIPTION: 'Beschreibung',
     TARGET: 'Ziel',
     EXAMPLES: 'Beispiele',
+    SCAN_NETWORK: 'Netzwerk scannen',
+    SCAN_RUNNING: 'Wird gescannt…',
+    SCAN_NO_RESULTS: 'Keine WebSocket-Server im lokalen Netzwerk gefunden.',
+    SCAN_FOUND: '{count} Host(s) gefunden auf Port:',
   },
 
   MUSICIAN: {
@@ -908,9 +931,14 @@ const de: Translation = {
     CCLI_NUMBER: 'CCLI #{number}',
     KEY_LABEL: 'Tonart: {key}',
     ITEM_EDIT: 'Lied bearbeiten',
+    ITEM_EDIT_ORDER: 'Reihenfolge bearbeiten',
     ITEM_DELETE: 'Aus Show entfernen',
     ITEM_SELECT_KEY: 'Tonart',
     ITEM_SELECT_ORDER: 'Reihenfolge',
+    ORDER_SEQUENCE: 'Reihenfolge',
+    ORDER_SEQUENCE_HINT: 'Mit Kommas trennen, z. B. Verse, Chorus, Chorus',
+    ORDER_INVALID_BLOCKS: 'Unbekannte Blöcke: {blocks}',
+    ORDER_AVAILABLE_BLOCKS: 'Verfügbare Blöcke',
     MANAGE_PDFS: 'PDFs verwalten',
     SHOW_FOOTER: 'Fußzeile anzeigen',
     TOOLBAR_TOGGLE: 'Werkzeugleiste umschalten',
@@ -925,11 +953,28 @@ const de: Translation = {
     NEXT_SONG: 'Nächstes Lied',
     PREV_PAGE: 'Vorherige Seite',
     NEXT_PAGE: 'Nächste Seite',
+    PREV_BLOCK: 'Vorheriger Block',
+    NEXT_BLOCK: 'Nächster Block',
     PAGE_COUNT: '{count} Seite{{n}}',
     FULLSCREEN: 'Vollbild',
     EXIT_FULLSCREEN: 'Vollbild beenden',
     WAKE_LOCK_ON: 'Bildschirm wach halten',
     WAKE_LOCK_OFF: 'Bildschirm-Sperre erlauben',
+    WS_SYNC_TITLE: 'WebSocket-Sync einrichten',
+    WS_SYNC_DESC: 'Gib die WebSocket-Adresse des Presenter-Operators in diesem Netzwerk ein.',
+    WS_SYNC_HOST_LABEL: 'Host / IP-Adresse',
+    WS_SYNC_WS_PORT_LABEL: 'WS-Port',
+    WS_SYNC_CONNECT: 'Verbinden',
+    WS_SYNC_CONNECTED: 'Verbunden',
+    WS_SYNC_DISCONNECTED: 'Getrennt',
+    WS_SYNC_ERROR: 'Verbindung fehlgeschlagen',
+    WS_SYNC_STEP_CONFIGURE: 'Konfigurieren',
+    WS_SYNC_STEP_CONNECT: 'Verbinden',
+    WS_SYNC_CONNECTING: 'Verbinde mit {url}…',
+    WS_SYNC_SUCCESS_TITLE: 'Verbunden!',
+    WS_SYNC_SUCCESS_DESC: 'Die Musiker-Ansicht ist jetzt mit dem Operator bei {url} synchronisiert.',
+    WS_SYNC_CHANGE: 'Ändern',
+    SHOW_MISMATCH_WARNING: 'Unterschiedliche Show geladen (Operator: {operatorShow}, Dieses Gerät: {currentShow}).',
   },
 
   QR: {
@@ -1046,6 +1091,8 @@ const de: Translation = {
     NEXT_BLOCK: 'Nächster Block',
     PREV_BLOCK: 'Vorheriger Block',
     TOGGLE_TRACKING: 'Tracking Master umschalten',
+    SYNC_ACTIVE: 'Musiker-Sync aktiv — Klicken zum Folgen',
+    FOLLOW_MIDI_ACTIVE: 'MIDI-Musiker wird gefolgt — Klicken zum Beenden',
   },
 
   CONNECTIVITY: {
@@ -1057,6 +1104,21 @@ const de: Translation = {
     SNACK_MESSAGE: 'Backend ist nicht erreichbar',
     SNACK_CHANGE_BUTTON: 'Backend-Einstellungen ändern',
     SNACK_DISMISS: 'Schließen',
+  },
+
+  UPDATER: {
+    TITLE: 'App-Aktualisierungen',
+    CHECK_NOW: 'Nach Updates suchen',
+    CHECK_AGAIN: 'Erneut prüfen',
+    CHECKING: 'Suche nach Updates…',
+    UP_TO_DATE: 'Die Anwendung ist auf dem neuesten Stand.',
+    UPDATE_AVAILABLE: 'Update {version} ist verfügbar und wird automatisch heruntergeladen.',
+    DOWNLOADING: 'Update wird heruntergeladen… {percent}%',
+    DOWNLOADING_SOON: 'Wird automatisch im Hintergrund heruntergeladen.',
+    READY_TO_INSTALL: 'Update {version} ist bereit zur Installation.',
+    INSTALL_AND_RESTART: 'Installieren & Neu starten',
+    CHECK_FAILED: 'Update-Prüfung fehlgeschlagen. Bitte später erneut versuchen.',
+    ERROR: 'Beim Update ist ein Fehler aufgetreten.',
   },
 } satisfies Translation;
 

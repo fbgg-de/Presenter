@@ -1,11 +1,82 @@
 import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
-
-export const redirectToLogin = (next?: string) => {
-  window.location.replace('/login?next=' + encodeURIComponent(next ?? '/'));
-};
+import { getSetting } from '@/store/settingsSlice';
 
 /** Returns true when running inside the Electron shell (window.api is injected by the preload). */
 export const isElectronApp = (): boolean => typeof window !== 'undefined' && !!(window as { api?: unknown }).api;
+
+/**
+ * Mapping between logical URL paths and Electron HTML filenames.
+ * Single source of truth used by redirectToLogin, getOidcRedirectUrl, and LoginPage.
+ */
+export const PATH_TO_HTML: Record<string, string> = {
+  '/': 'index.html',
+  '/notes': 'musician.html',
+  '/admin': 'admin.html',
+  '/login': 'login.html',
+};
+
+const HTML_TO_PATH: Record<string, string> = Object.fromEntries(
+  Object.entries(PATH_TO_HTML).map(([path, html]) => [html, path]),
+);
+
+/**
+ * Returns the OIDC redirect URL for a given logical path (e.g. '/notes', '/admin').
+ * - Web:      uses window.location.origin  (e.g. https://example.com/notes)
+ * - Electron: uses the configured backendUrl, because window.location.origin
+ *             is "null" for file:// pages and the OIDC provider needs a real HTTPS URL.
+ */
+export const getOidcRedirectUrl = (logicalPath: string): string => {
+  const origin = isElectronApp()
+    ? String(getSetting('backendUrl') ?? '').trim().replace(/\/+$/, '')
+    : window.location.origin;
+  // Guard: ensure the path always starts with '/' so concatenation is safe.
+  // Without this, `origin + 'notes'` would produce `.de/notes` → `.denotes`.
+  const safePath = logicalPath.startsWith('/') ? logicalPath : '/' + logicalPath;
+  return origin + safePath;
+};
+
+/** Returns the configured backend origin (scheme + host), used by the main process to identify OIDC callbacks. */
+export const getBackendOrigin = (): string => {
+  return String(getSetting('backendUrl') ?? '').trim().replace(/\/+$/, '');
+};
+
+/**
+ * Converts the `next` query parameter back to a logical path.
+ * In Electron, `next` is an HTML filename (e.g. "musician.html").
+ * On the web, it's already a path (e.g. "/notes").
+ */
+export const nextParamToPath = (next: string): string => {
+  if (isElectronApp()) {
+    return HTML_TO_PATH[next] ?? '/';
+  }
+  return next;
+};
+
+/**
+ * In Electron, build a correct absolute file:// URL for a renderer HTML file.
+ * Uses window.api.rendererDir (a file:// URL injected by the preload via pathToFileURL)
+ * which is always correct even inside asar bundles.
+ */
+export const electronFileUrl = (filename: string): string => {
+  const rendererDir: string | undefined = (window as { api?: { rendererDir?: string } }).api?.rendererDir;
+  if (rendererDir) {
+    return `${rendererDir}${filename}`;
+  }
+  // Fallback for dev (window.location.href is correct in dev mode)
+  const currentHref = window.location.href.split('?')[0];
+  const dir = currentHref.substring(0, currentHref.lastIndexOf('/') + 1);
+  return `${dir}${filename}`;
+};
+
+export const redirectToLogin = (next?: string) => {
+  const target = next ?? '/';
+  if (isElectronApp()) {
+    const nextFile = PATH_TO_HTML[target] ?? 'index.html';
+    window.location.replace(electronFileUrl(`login.html?next=${nextFile}`));
+  } else {
+    window.location.replace('/login?next=' + encodeURIComponent(target));
+  }
+};
 
 export type DetectedOs = 'windows' | 'macos' | 'linux' | 'unknown';
 

@@ -14,7 +14,6 @@ import {
 import { Close as CloseIcon, ContentCopy as CopyIcon, Check as CheckIcon, QrCode2 as QrCodeIcon } from '@mui/icons-material';
 import { QRCodeSVG } from 'qrcode.react';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useGetSettings } from '@/store/settingsSlice';
 
 interface QrCodeShareProps {
   open: boolean;
@@ -23,7 +22,6 @@ interface QrCodeShareProps {
 
 export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
   const { LL } = useI18nContext();
-  const { wsPort } = useGetSettings();
   const [copied, setCopied] = useState(false);
 
   // Build the musician view URL — points directly to the separate musician.html bundle
@@ -32,19 +30,8 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
     return `${base}/notes`;
   }, []);
 
-  // Build the WebSocket URL
-  const wsUrl = useMemo(() => {
-    const hostname = window.location.hostname || 'localhost';
-    return `ws://${hostname}:${wsPort}`;
-  }, [wsPort]);
-
-  // Encode both URLs in the QR code payload
-  const qrPayload = useMemo(() => {
-    return JSON.stringify({
-      url: musicianUrl,
-      ws: wsUrl,
-    });
-  }, [musicianUrl, wsUrl]);
+  // QR code encodes just the musician URL
+  const qrPayload = musicianUrl;
 
   const handleCopyUrl = async () => {
     try {
@@ -119,13 +106,7 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
 
           {/* Musician View URL */}
           <Stack spacing={1} sx={{ width: '100%' }}>
-            <Typography
-              variant="caption"
-              sx={{
-                fontWeight: 600,
-                color: 'text.secondary',
-              }}
-            >
+            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary' }}>
               {LL.QR.SHARE_MUSICIAN_URL()}
             </Typography>
             <Stack direction="row" spacing={1}>
@@ -142,26 +123,6 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
                 </IconButton>
               </Tooltip>
             </Stack>
-          </Stack>
-
-          {/* WebSocket URL */}
-          <Stack spacing={1} sx={{ width: '100%' }}>
-            <Typography
-              variant="caption"
-              sx={{
-                fontWeight: 600,
-                color: 'text.secondary',
-              }}
-            >
-              {LL.QR.SHARE_WS_URL()}
-            </Typography>
-            <TextField
-              value={wsUrl}
-              size="small"
-              fullWidth
-              slotProps={{ input: { readOnly: true } }}
-              sx={{ '& .MuiInputBase-input': { fontFamily: 'monospace', fontSize: '0.85rem' } }}
-            />
           </Stack>
         </Stack>
       </DialogContent>

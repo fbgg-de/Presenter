@@ -13,7 +13,7 @@ export interface MusicianState {
   musicianTheme: 'dark' | 'light';
   musicianShowFooter: boolean;
   musicianToolbarExpanded: boolean;
-  musicianSyncMode: 'off' | 'operator' | 'midi' | 'midi-ws';
+  musicianSyncMode: 'off' | 'operator' | 'midi';
   musicianSidebarOpen: boolean;
   musicianLastItemIndex: number;
 }
@@ -37,6 +37,9 @@ try {
   const settings = localStorage.getItem(MUSICIAN_SETTINGS_KEY);
   if (settings) {
     initialState = { ...defaultMusicianSettings, ...JSON.parse(settings) };
+    if ((initialState as unknown as { musicianSyncMode?: string }).musicianSyncMode === 'midi-ws') {
+      initialState.musicianSyncMode = 'midi';
+    }
   }
 } catch (e) {
   console.error('Failed to load musician settings', e);

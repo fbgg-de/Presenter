@@ -1,9 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
+import { join } from 'path';
+import { pathToFileURL } from 'url';
 import { MusicianViewConfig } from '../shared/types';
+
+// The renderer directory as a file:// URL — reliable inside asar bundles because
+// __dirname in the preload always resolves correctly via Electron's module system.
+// Using pathToFileURL handles Windows drive letters and backslashes correctly.
+const rendererDir = pathToFileURL(join(__dirname, '../renderer')).toString().replace(/\/?$/, '/');
 
 // Custom APIs for renderer — full ElectronAPI per §7.3
 const api = {
+  // ── Renderer path (for building correct file:// URLs inside asar) ──
+  rendererDir,
   // ── Basic window controls ──
   minimize: () => electronAPI.ipcRenderer.invoke('window-minimize'),
   close: () => electronAPI.ipcRenderer.invoke('window-close'),
@@ -65,8 +74,46 @@ const api = {
   importSettings: () => electronAPI.ipcRenderer.invoke('import-settings'),
   applyImportedSettings: (diff: unknown) => electronAPI.ipcRenderer.invoke('apply-imported-settings', diff),
 
-  // ── WebSocket broadcast (renderer -> main -> WS clients) ──
-  wsBroadcast: (action: string, data?: Record<string, unknown>) => ipcRenderer.send('ws-broadcast', action, data),
+  // ── Auto-updater ──
+  installUpdate: () => electronAPI.ipcRenderer.invoke('install-update'),
+  onUpdaterUpdateAvailable: (callback: (info: { version: string; releaseDate: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { version: string; releaseDate: string });
+    ipcRenderer.on('updater-update-available', handler);
+    return () => ipcRenderer.removeListener('updater-update-available', handler);
+  },
+  onUpdaterUpdateNotAvailable: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('updater-update-not-available', handler);
+    return () => ipcRenderer.removeListener('updater-update-not-available', handler);
+  },
+  onUpdaterDownloadProgress: (callback: (progress: { percent: number; transferred: number; total: number }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) =>
+      callback(data as { percent: number; transferred: number; total: number });
+    ipcRenderer.on('updater-download-progress', handler);
+    return () => ipcRenderer.removeListener('updater-download-progress', handler);
+  },
+  onUpdaterUpdateDownloaded: (callback: (info: { version: string; releaseDate: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { version: string; releaseDate: string });
+    ipcRenderer.on('updater-update-downloaded', handler);
+    return () => ipcRenderer.removeListener('updater-update-downloaded', handler);
+  },
+  onUpdaterError: (callback: (info: { message: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { message: string });
+    ipcRenderer.on('updater-error', handler);
+    return () => ipcRenderer.removeListener('updater-error', handler);
+  },
+
+  // ── Backend origin (for OIDC callback detection in main process) ──
+  setBackendOrigin: (origin: string) => ipcRenderer.send('set-backend-origin', origin),
+
+  // ── Musician IPC sync — lets the musician window push navigation state
+  //    directly to the operator window via the main process (bypasses WS relay) ──
+  musicianSyncToOperator: (data: unknown) => ipcRenderer.send('musician-sync-to-operator', data),
+  onMusicianSyncFromIpc: (callback: (data: unknown) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
+    ipcRenderer.on('musician-sync-from-ipc', handler);
+    return () => ipcRenderer.removeListener('musician-sync-from-ipc', handler);
+  },
 
   // ── Video status from presentation windows ──
   onVideoStatus: (callback: (status: unknown) => void) => {
@@ -78,30 +125,6 @@ const api = {
   },
 
   // ── IPC event listeners (main -> renderer) ──
-  onWsNavigationAction: (callback: (data: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
-    ipcRenderer.on('ws-navigation-action', handler);
-    return () => {
-      ipcRenderer.removeListener('ws-navigation-action', handler);
-    };
-  },
-  onWsVideoAction: (callback: (data: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
-    ipcRenderer.on('ws-video-action', handler);
-    return () => {
-      ipcRenderer.removeListener('ws-video-action', handler);
-    };
-  },
-  onWsGetState: (callback: (data: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data);
-    ipcRenderer.on('ws-get-state', handler);
-    return () => {
-      ipcRenderer.removeListener('ws-get-state', handler);
-    };
-  },
-  sendWsStateResponse: (data: unknown) => {
-    ipcRenderer.send('ws-state-response', data);
-  },
   onPresentationWindowBoundsChanged: (
     callback: (data: { id: string; bounds: { x: number; y: number; width: number; height: number } }) => void,
   ) => {
@@ -111,11 +134,6 @@ const api = {
     return () => {
       ipcRenderer.removeListener('presentation-window-bounds-changed', handler);
     };
-  },
-  removeAllWsListeners: () => {
-    ipcRenderer.removeAllListeners('ws-navigation-action');
-    ipcRenderer.removeAllListeners('ws-video-action');
-    ipcRenderer.removeAllListeners('ws-get-state');
   },
 };
 

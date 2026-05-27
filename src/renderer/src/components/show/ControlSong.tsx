@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, memo, useCallback } from 'react';
+import { useMemo, useRef, useEffect, memo, useCallback, Ref } from 'react';
 import { Card, CardContent, CardMedia, Stack, Typography, useTheme } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppSelector, useAppDispatch } from '@/store';
@@ -49,7 +49,7 @@ interface BlockCardProps {
   onBlockClick: (i: number) => void;
   onBlockDoubleClick: (i: number) => void;
   onLineClick: (b: number, l: number) => void;
-  forwardRef?: React.Ref<HTMLDivElement>;
+  forwardRef?: Ref<HTMLDivElement>;
 }
 
 /**

@@ -39,7 +39,7 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
   const { LL } = useI18nContext();
   const midi = useMidi({ onAction, enabled: enabled && open });
 
-  function StatusChip({ status }: { status: MidiStatus }) {
+  const StatusChip = ({ status }: { status: MidiStatus }) => {
     switch (status) {
       case 'connected':
         return <Chip icon={<BluetoothIcon />} label={LL.MIDI.STATUS_CONNECTED()} color="success" size="small" />;
@@ -50,7 +50,7 @@ export const MidiLearnDialog = ({ open, onClose, onAction, enabled = true }: Mid
       default:
         return <Chip icon={<DisconnectedIcon />} label={LL.MIDI.STATUS_DISCONNECTED()} color="default" size="small" />;
     }
-  }
+  };
 
   const actionLabel = (key: MidiAction) => {
     switch (key) {

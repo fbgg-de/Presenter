@@ -1,5 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import { Stack, Box, useMediaQuery, useTheme, BottomNavigation, BottomNavigationAction, Paper } from '@mui/material';
+import { Stack, Box, useMediaQuery, useTheme, BottomNavigation, BottomNavigationAction, Paper, Snackbar, Alert, Button } from '@mui/material';
 import { ViewList as ShowListIcon, TouchApp as ControlIcon } from '@mui/icons-material';
 import Footer from '@/components/layout/Footer';
 import Sidebar, { type SidebarHandle } from '@/components/layout/Sidebar';
@@ -15,6 +15,7 @@ import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
 import PresentationSyncHost from '@/components/layout/PresentationSyncHost';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
 import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
 import { useGetAccountSettingsQuery } from '@/api/session.api';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
@@ -31,6 +32,9 @@ export const MainPage = () => {
   const { trackEvent } = useMetrics();
   const initialLoadDone = useRef(false);
   const sidebarRef = useRef<SidebarHandle>(null);
+
+  // ── Show update polling ──────────────────────────────────────────────
+  const { updateAvailable: showUpdateAvailable, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
 
   // Sync server-side account settings (global style) into local Redux store.
   // Skipped in offline mode — globalStyleId persists in localStorage from the
@@ -92,6 +96,20 @@ export const MainPage = () => {
     <RequireAuth>
       <Shows open={isShowSelectorOpen} onShowSelected={handleShowSelected} />
       <PresentationSyncHost />
+      {/* Show update notification */}
+      <Snackbar open={showUpdateAvailable} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert
+          severity="info"
+          action={
+            <Button color="inherit" size="small" onClick={() => reloadShow()}>
+              {LL.SHOWS.UPDATE_AVAILABLE_ACTION()}
+            </Button>
+          }
+          onClose={dismissShowUpdate}
+        >
+          {LL.SHOWS.UPDATE_AVAILABLE()}
+        </Alert>
+      </Snackbar>
       {!isShowSelectorOpen && (
         <Stack
           sx={{

@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { useAppDispatch, useAppSelector } from '@/store';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useAppSelector, useAppDispatch } from '@/store';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { broadcastContent, setWindowStyleResolver } from '@/utils/presentationBridge';
 import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
@@ -9,24 +9,12 @@ import { useGetStylesQuery } from '@/api/styles.api';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
 import { useGetWindows, useUpdateWindows, WindowConfig } from '@/store/windowSlice';
-import {
-  freezeWindow as freezeWindowAction,
-  nextBlock,
-  nextItem,
-  nextLine,
-  prevBlock,
-  prevItem,
-  prevLine,
-  setActiveBlockIndex,
-  setActiveItemIndex,
-  setActiveLineIndex,
-  setBlack,
-  toggleBlack,
-  unfreezeWindow as unfreezeWindowAction,
-  useGetPresentationSettings,
-} from '@/store/presentationSlice';
+import { useGetPresentationSettings } from '@/store/presentationSlice';
+import { setActiveItemIndex, setActiveBlockIndex, setActiveItemAndBlock, setWsConnectedCount, setWsMidiSyncAt, setWsOperatorConnected } from '@/store/presentationSlice';
 import { useGetShow } from '@/store/showSlice';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { useGetSessionQuery } from '@/api/session.api';
+import { useWsOperator, type WsOperatorIncomingSync } from '@/hooks/useWsOperator';
 
 /**
  * Parse song block lines to extract language tags.
@@ -62,11 +50,79 @@ export const usePresentationSync = (): void => {
     offlineMode,
     cachedStyles,
     showLicenseNumber,
+    midiTrackingMaster,
   } = useGetSettings();
+
+  // Keep midiTrackingMaster in a ref so the WS callback always sees the latest value
+  // without re-registering the callback (which would cause reconnects).
+  const midiTrackingMasterRef = useRef(midiTrackingMaster);
+  midiTrackingMasterRef.current = midiTrackingMaster;
   const { windowConfigs } = useGetWindows();
   const { currentShow } = useGetShow();
   const { songs } = useGetSongs();
   const updateWindowSetting = useUpdateWindows();
+
+  // Session — needed for the account number and WS host used in WS auth
+  const { data: sessionData } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const wsAccount = useMemo(() => {
+    const acc = sessionData?.account;
+    return typeof acc === 'number' ? acc : null;
+  }, [sessionData?.account]);
+
+  // Derive wsUrl from global session ws_hosts (configured in config.php)
+  const wsUrl = useMemo(() => {
+    const h = sessionData?.settings?.wsHost;
+    if (h?.host && h?.port) {
+      const path = h.path && h.path !== '/' ? h.path : '';
+      return `${h.wss ? 'wss' : 'ws'}://${h.host}:${h.port}${path}`;
+    }
+    return '';
+  }, [sessionData?.settings?.wsHost]);
+
+  // Called when a musician broadcasts their position — only applied when
+  // midiTrackingMaster === 'midi' (operator follows the MIDI musician).
+  const handleMusicianSync = useCallback((state: WsOperatorIncomingSync) => {
+    if (midiTrackingMasterRef.current !== 'midi') return;
+    const hasItem = typeof state.activeItemIndex === 'number';
+    const hasBlock = typeof state.activeBlockIndex === 'number';
+    if (hasItem && hasBlock) {
+      dispatch(setActiveItemAndBlock({ itemIndex: state.activeItemIndex!, blockIndex: state.activeBlockIndex! }));
+    } else if (hasItem) {
+      dispatch(setActiveItemIndex(state.activeItemIndex!));
+    } else if (hasBlock) {
+      dispatch(setActiveBlockIndex(state.activeBlockIndex!));
+    }
+  }, [dispatch]);
+
+  // Operator WebSocket connection to the relay server
+  const { broadcast: wsBroadcast, connected: wsOperatorConnected, connectedCount, lastMidiSyncAt } = useWsOperator(wsUrl, wsAccount, handleMusicianSync);
+
+  // Also listen for direct Electron IPC musician sync (bypasses WS relay, works offline / same machine)
+  useEffect(() => {
+    const cleanup = window.api?.onMusicianSyncFromIpc?.((raw) => {
+      const msg = raw as { action?: string; data?: WsOperatorIncomingSync };
+      if (msg?.action === 'musician_sync' && msg.data) {
+        dispatch(setWsMidiSyncAt(Date.now()));
+        handleMusicianSync(msg.data);
+      }
+    });
+    return () => { if (typeof cleanup === 'function') cleanup(); };
+  // handleMusicianSync is stable (useCallback with [dispatch])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep Redux in sync with the WS peer count, connection state and last midi-sync timestamp.
+  useEffect(() => {
+    dispatch(setWsConnectedCount(Math.max(0, connectedCount)));
+  }, [connectedCount, dispatch]);
+
+  useEffect(() => {
+    dispatch(setWsOperatorConnected(wsOperatorConnected));
+  }, [wsOperatorConnected, dispatch]);
+
+  useEffect(() => {
+    if (lastMidiSyncAt > 0) dispatch(setWsMidiSyncAt(lastMidiSyncAt));
+  }, [lastMidiSyncAt, dispatch]);
 
   const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden } = useGetPresentationSettings();
   const updateSetting = useUpdateSetting();
@@ -309,18 +365,17 @@ export const usePresentationSync = (): void => {
 
       broadcastContent(content);
 
-      // Broadcast musician_sync via WebSocket (Electron only) for musician views
-      if (window.api?.wsBroadcast) {
-        window.api.wsBroadcast('musician_sync', {
-          activeItemIndex: nav.activeItemIndex,
-          activeBlockIndex: nav.activeBlockIndex,
-          activeLineIndex: nav.activeLineIndex,
-          songNumber: cb.currentSongNumber,
-          songTitle: cb.title,
-          orderName: cb.orderName,
-          contentType: cb.contentType,
-        });
-      }
+      // Broadcast musician_sync via WebSocket relay server
+      wsBroadcast('musician_sync', {
+        activeItemIndex: nav.activeItemIndex,
+        activeBlockIndex: nav.activeBlockIndex,
+        activeLineIndex: nav.activeLineIndex,
+        songNumber: cb.currentSongNumber,
+        songTitle: cb.title,
+        showTitle: cb.currentShow?.title,
+        orderName: cb.orderName,
+        contentType: cb.contentType,
+      });
     };
 
     // Deduplicate scheduling using a lightweight key (includes styleHash so style
@@ -362,6 +417,7 @@ export const usePresentationSync = (): void => {
     activeItem?.mediaBlur,
     activeItem?.mediaAutoplay,
     activeItem?.mediaLoop,
+    wsBroadcast,
   ]);
 
   // ── Register a per-window style resolver so windows with a configured
@@ -419,98 +475,6 @@ export const usePresentationSync = (): void => {
     return () => setWindowStyleResolver(undefined);
   }, [allStyles, globalStyleId, currentShow?.styleId, windowStylesSig]);
 
-  // ── WebSocket navigation action listener (Electron only, §22.2) ──
-  const currentShowRef = useRef(currentShow);
-  currentShowRef.current = currentShow;
-
-  useEffect(() => {
-    if (!window.api?.onWsNavigationAction) return;
-
-    const handleWsAction = (data: unknown) => {
-      const msg = data as { action: string; payload?: Record<string, unknown> };
-      const maxItemIndex = (currentShowRef.current?.order?.length ?? 1) - 1;
-
-      switch (msg.action) {
-        case 'next_item':
-          dispatch(nextItem({ maxIndex: maxItemIndex }));
-          break;
-        case 'prev_item':
-          dispatch(prevItem());
-          break;
-        case 'next_block':
-          dispatch(nextBlock({ maxIndex: 999 }));
-          break;
-        case 'prev_block':
-          dispatch(prevBlock());
-          break;
-        case 'next_line':
-          dispatch(nextLine({ maxLineIndex: 999, maxBlockIndex: 999 }));
-          break;
-        case 'prev_line':
-          dispatch(prevLine({ prevBlockLastLineIndex: 999 }));
-          break;
-        case 'set_item':
-          if (msg.payload && typeof msg.payload.index === 'number') {
-            dispatch(setActiveItemIndex(msg.payload.index));
-          }
-          break;
-        case 'set_block':
-          if (msg.payload && typeof msg.payload.index === 'number') {
-            dispatch(setActiveBlockIndex(msg.payload.index));
-          }
-          break;
-        case 'set_line':
-          if (msg.payload && typeof msg.payload.index === 'number') {
-            dispatch(setActiveLineIndex(msg.payload.index));
-          }
-          break;
-        case 'toggle_black':
-          dispatch(toggleBlack());
-          break;
-        case 'set_black':
-          if (msg.payload && typeof msg.payload.value === 'boolean') {
-            dispatch(setBlack(msg.payload.value));
-          }
-          break;
-        case 'freeze_window':
-          if (msg.payload && typeof msg.payload.windowName === 'string') {
-            dispatch(freezeWindowAction(msg.payload.windowName));
-          }
-          break;
-        case 'unfreeze_window':
-          if (msg.payload && typeof msg.payload.windowName === 'string') {
-            dispatch(unfreezeWindowAction(msg.payload.windowName));
-          }
-          break;
-      }
-    };
-
-    return window.api.onWsNavigationAction(handleWsAction);
-  }, [dispatch]);
-
-  // ── WebSocket state request handler (Electron only) ──
-  // Use refs so the handler always reads current values without re-registering
-  const stateRef = useRef({ activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, currentShow });
-  stateRef.current = { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, currentShow };
-
-  useEffect(() => {
-    if (!window.api?.onWsGetState) return;
-
-    const handleGetState = () => {
-      const s = stateRef.current;
-      window.api.sendWsStateResponse({
-        activeItemIndex: s.activeItemIndex,
-        activeBlockIndex: s.activeBlockIndex,
-        activeLineIndex: s.activeLineIndex,
-        isBlack: s.isBlack,
-        showTitle: s.currentShow?.title,
-        itemCount: s.currentShow?.order?.length ?? 0,
-      });
-    };
-
-    return window.api.onWsGetState(handleGetState);
-  }, []);
-
   // ── Presentation window bounds change listener (Electron only) ──
   // Updates windowConfigs in Redux/localStorage when user moves/resizes a presentation window.
   const savedWindowConfigsRef = useRef(windowConfigs);
@@ -536,5 +500,5 @@ export const usePresentationSync = (): void => {
       }
     });
     return cleanup || undefined;
-  }, [dispatch]);
+  }, []);
 };

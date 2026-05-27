@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useMemo, useCallback, useRef, ReactNode } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback, useRef, ReactNode } from 'react';
 import {
   Accordion,
   AccordionDetails,
@@ -1740,10 +1740,10 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
               };
               // Ensure there is always at least a default entry
               const entries = langStyles.some((e) => e.language === '') ? langStyles : [{ language: '' }, ...langStyles];
-              const [addLangInput, setAddLangInput] = React.useState('');
+              const [addLangInput, setAddLangInput] = useState('');
               // Drag-and-drop state
-              const dragIndexRef = React.useRef<number | null>(null);
-              const [dragOver, setDragOver] = React.useState<number | null>(null);
+              const dragIndexRef = useRef<number | null>(null);
+              const [dragOver, setDragOver] = useState<number | null>(null);
 
               return (
                 <Section title={LL.STYLE.SECTION_TYPOGRAPHY()} defaultExpanded={false}>

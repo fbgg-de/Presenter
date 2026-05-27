@@ -27,7 +27,7 @@ const AdminApp = () => {
   useEffect(() => {
     if (offlineMode || sessionLoading) return;
     if (session && !session.isAuthenticated) {
-      redirectToLogin('/admin');
+      redirectToLogin('admin');
     }
   }, [offlineMode, session, sessionLoading]);
 

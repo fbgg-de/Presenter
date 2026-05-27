@@ -1,4 +1,4 @@
-﻿import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type DragEvent, MouseEvent } from 'react';
+﻿import { forwardRef, useEffect, useImperativeHandle, useRef, useState, DragEvent, MouseEvent, ChangeEvent } from 'react';
 import {
   Box,
   Chip,
@@ -45,6 +45,7 @@ import { Song } from '@/song';
 import { CCLISong } from '@/song';
 import { Settings } from '@/components/settings/Settings';
 import { SongEditor } from '@/components/song/SongEditor';
+import { QuickOrderDialog } from '@/components/song/QuickOrderDialog';
 import { SongLibrary } from '@/components/song/SongLibrary';
 import { Shows } from '@/components/show/Shows';
 import { BibleVersePicker } from '@/components/search/BibleVersePicker';
@@ -55,6 +56,7 @@ import { useAppDispatch } from '@/store';
 import { setCurrentShow, addShowItem, removeShowItem, reorderShowItems, setDirty, updateShowItem, useGetShow } from '@/store/showSlice';
 import {
   addSongToStore,
+  updateSongInStore,
   setSongsOrder as setSongsOrderAction,
   addToSongsOrder,
   setSongOrders as setSongOrdersAction,
@@ -68,6 +70,7 @@ import { useSaveShowMutation } from '@/api/shows.api';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
 import { useLazyGetSongQuery } from '@/api/songs.api';
+import { useUpdateSongMutation } from '@/api/songs.api';
 import { useMetrics } from '@/hooks/useMetrics';
 import { loadShowSongs } from '@/store/songsSlice';
 import { StyleEditor } from '@/components/style/StyleEditor';
@@ -135,6 +138,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   }));
 
   const [saveShowMutation] = useSaveShowMutation();
+  const [updateSongMutation] = useUpdateSongMutation();
   const { data: availableStyles = [] } = useGetStylesQuery();
 
   // Item context menu state
@@ -146,6 +150,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [itemStyleWinAnchor, setItemStyleWinAnchor] = useState<null | HTMLElement>(null);
   const [itemStyleStyleAnchor, setItemStyleStyleAnchor] = useState<null | HTMLElement>(null);
   const [itemStyleWindowName, setItemStyleWindowName] = useState<string>('');
+  const [quickOrderDialogOpen, setQuickOrderDialogOpen] = useState(false);
+  const [quickOrderContext, setQuickOrderContext] = useState<{ itemIndex: number; songNumber: number; orderName: string } | null>(null);
 
   // Window names available for per-item style overrides (from the footer's saved configs)
   const { windowConfigs: savedWindowConfigs } = useGetWindows();
@@ -295,6 +301,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       }
 
       dispatch(setCurrentShow(show));
+      dispatch(setActiveItemIndex(0));
 
       if (!isNew && !override) {
         await dispatch(loadShowSongs(show));
@@ -350,7 +357,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   // Ref for the hidden file-input used by the drop-zone click handler
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = [...(e.target.files ?? [])].filter((f) => f.type === 'text/plain' && f.name.endsWith('.txt'));
     files.forEach((file) => {
       const reader = new FileReader();
@@ -430,16 +437,64 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     handleItemMenuClose();
   };
 
-  const handleItemSetOrder = (order: string) => {
+  const saveCurrentShow = async (orderOverride?: ShowItem[]) => {
+    if (!currentShow) return;
+    try {
+      await saveShowMutation({
+        title: currentShow.title,
+        order: orderOverride ?? currentShow.order,
+        styleId: currentShow.styleId ?? null,
+      }).unwrap();
+      dispatch(setDirty(false));
+    } catch (error) {
+      console.error('Failed to save show:', error);
+    }
+  };
+
+  const handleItemSetOrder = async (order: string) => {
     if (itemMenuIndex >= 0) {
       const item = showItems[itemMenuIndex];
       if (item.songNumber != null) {
         dispatch(setCurrentSongOrderAction({ songNumber: item.songNumber, orderName: order }));
       }
       dispatch(updateShowItem({ index: itemMenuIndex, item: { order } }));
+      const nextShowOrder = showItems.map((showItem, idx) => (idx === itemMenuIndex ? { ...showItem, order } : showItem));
+      await saveCurrentShow(nextShowOrder);
     }
     setOrderSubmenuAnchor(null);
     handleItemMenuClose();
+  };
+
+  const handleQuickOrderSave = async (orderName: string, nextOrders: Record<string, string[]>) => {
+    if (!quickOrderContext) return;
+    const sourceSong = songs[quickOrderContext.songNumber];
+    if (!sourceSong) return;
+
+    const updatedSong = new Song({
+      ...sourceSong,
+      order: nextOrders,
+      initialOrder: sourceSong.initialOrder,
+    });
+
+    await updateSongMutation({
+      songNumber: updatedSong.songNumber,
+      title: updatedSong.title,
+      authors: updatedSong.authors,
+      copyright: updatedSong.copyright,
+      initialOrder: updatedSong.initialOrder || [],
+      order: updatedSong.order,
+      blocks: updatedSong.blocks,
+    }).unwrap();
+
+    dispatch(updateSongInStore(updatedSong));
+    dispatch(setCurrentSongOrderAction({ songNumber: updatedSong.songNumber, orderName }));
+    dispatch(updateShowItem({ index: quickOrderContext.itemIndex, item: { order: orderName } }));
+    const nextShowOrder = showItems.map((showItem, idx) =>
+      idx === quickOrderContext.itemIndex ? { ...showItem, order: orderName } : showItem,
+    );
+    await saveCurrentShow(nextShowOrder);
+    setQuickOrderDialogOpen(false);
+    setQuickOrderContext(null);
   };
 
   const handleItemEdit = () => {
@@ -467,7 +522,17 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       }}
     >
       <Settings open={openSettings} setOpen={setOpenSettings} />
-      <SongEditor open={openSongEditor} setOpen={setOpenSongEditor} song={songToEdit} />
+      <SongEditor
+        open={openSongEditor}
+        setOpen={setOpenSongEditor}
+        song={songToEdit}
+        onSongCreated={(createdSong) => {
+          dispatch(addToSongsOrder(createdSong.songNumber));
+          if (currentShow) {
+            dispatch(addShowItem({ type: 'song', songNumber: createdSong.songNumber, order: 'Default' }));
+          }
+        }}
+      />
       <SongLibrary
         open={openSongLibrary}
         onClose={() => setOpenSongLibrary(false)}
@@ -755,7 +820,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         {menuItemOrders.map((order) => (
           <MenuItem
             key={order}
-            onClick={() => handleItemSetOrder(order)}
+            onClick={() => void handleItemSetOrder(order)}
             selected={parseOrderKey(menuItem?.order).order === order}
             sx={{ fontSize: '0.85rem' }}
           >
@@ -763,6 +828,18 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
           </MenuItem>
         ))}
       </Menu>
+      {quickOrderContext && songs[quickOrderContext.songNumber] && (
+        <QuickOrderDialog
+          open={quickOrderDialogOpen}
+          onClose={() => {
+            setQuickOrderDialogOpen(false);
+            setQuickOrderContext(null);
+          }}
+          song={songs[quickOrderContext.songNumber]}
+          initialOrderName={quickOrderContext.orderName}
+          onSave={handleQuickOrderSave}
+        />
+      )}
       {/* Item-style: window list submenu */}
       <Menu
         anchorEl={itemStyleWinAnchor}
@@ -865,7 +942,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
               {LL.SHOW_ITEMS.EMPTY_HINT_OR()} {/* "add items" with the + icon */}
               <Box
                 component="span"
-                onClick={(e: React.MouseEvent<HTMLSpanElement>) => setAddMenuAnchor(e.currentTarget)}
+                onClick={(e: MouseEvent<HTMLSpanElement>) => setAddMenuAnchor(e.currentTarget)}
                 sx={{
                   color: 'primary.main',
                   cursor: 'pointer',

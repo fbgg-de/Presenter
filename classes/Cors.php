@@ -91,7 +91,26 @@ class Cors
         if (!$origin || !defined('CORS_ALLOWED_ORIGINS')) {
             return false;
         }
-        return in_array($origin, CORS_ALLOWED_ORIGINS, true);
+
+        $allowed = CORS_ALLOWED_ORIGINS;
+
+        // Auto-include the WS_HOST origin so it doesn't need to be listed twice.
+        // The WS server shares the same host/origin as the frontend when routed
+        // through the same reverse proxy.
+        if (defined('WS_HOST') && is_array(WS_HOST) && !empty(WS_HOST['host'])) {
+            $wsScheme = !empty(WS_HOST['wss']) ? 'https' : 'http';
+            $wsPort   = (int)(WS_HOST['port'] ?? 443);
+            $wsHost   = WS_HOST['host'];
+            // Only include port in origin when it's non-standard
+            $isDefaultPort = ($wsScheme === 'https' && $wsPort === 443)
+                          || ($wsScheme === 'http'  && $wsPort === 80);
+            $wsOrigin = $wsScheme . '://' . $wsHost . ($isDefaultPort ? '' : ':' . $wsPort);
+            if (!in_array($wsOrigin, $allowed, true)) {
+                $allowed[] = $wsOrigin;
+            }
+        }
+
+        return in_array($origin, $allowed, true);
     }
 }
 

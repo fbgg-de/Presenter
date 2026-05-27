@@ -64,7 +64,6 @@ export interface SettingsState {
   verseClick: ClickBehaviour;
   videoFadeDuration: number;
   windowFooterVisible: boolean;
-  wsPort: number;
 }
 
 const defaultState: SettingsState = {
@@ -118,7 +117,6 @@ const defaultState: SettingsState = {
   verseClick: 'double-click',
   videoFadeDuration: 0,
   windowFooterVisible: true,
-  wsPort: 9001,
 };
 
 let initialState: SettingsState = { ...defaultState };

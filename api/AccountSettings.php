@@ -3,8 +3,8 @@
 require_once(__DIR__ . '/RestController.php');
 
 /**
- * GET  /rest/AccountSettings         → returns account-wide settings (currently: default_style_id)
- * PUT  /rest/AccountSettings         → updates account-wide settings
+ * GET  /rest/AccountSettings → returns account-wide settings
+ * PUT  /rest/AccountSettings → updates account-wide settings
  */
 class AccountSettings extends RestController
 {
@@ -30,21 +30,22 @@ class AccountSettings extends RestController
             $res->error(400, 'No fields to update');
         }
 
-        // Allow null to unset, otherwise cast to int and validate the style belongs to this account
-        if ($defaultStyleIdRaw === '' || $defaultStyleIdRaw === false) {
-            $defaultStyleId = null;
-        } else {
-            $defaultStyleId = intval($defaultStyleIdRaw);
-
-            // Verify the style exists and belongs to this account
-            $check = self::prepare('SELECT `id` FROM `styles` WHERE `id` = ? AND `account` = ?');
-            $check->bind_param('ii', $defaultStyleId, $account)->execute()->fetchOne($styleRow)->close();
-
-            if (!$styleRow) {
-                $res->error(404, 'Style not found for this account');
+        // Handle defaultStyleId
+        $defaultStyleId = null;
+        if ($defaultStyleIdRaw !== null) {
+            if ($defaultStyleIdRaw === '' || $defaultStyleIdRaw === false) {
+                $defaultStyleId = null;
+            } else {
+                $defaultStyleId = intval($defaultStyleIdRaw);
+                $check = self::prepare('SELECT `id` FROM `styles` WHERE `id` = ? AND `account` = ?');
+                $check->bind_param('ii', $defaultStyleId, $account)->execute()->fetchOne($styleRow)->close();
+                if (!$styleRow) {
+                    $res->error(404, 'Style not found for this account');
+                }
             }
         }
 
+        // Build update query
         if ($defaultStyleId === null) {
             $stmt = self::prepare('UPDATE `account` SET `default_style_id` = NULL WHERE `license` = ?');
             $stmt->bind_param('i', $account)->execute()->close();
@@ -53,7 +54,14 @@ class AccountSettings extends RestController
             $stmt->bind_param('ii', $defaultStyleId, $account)->execute()->close();
         }
 
-        $res->success(['message' => 'Account settings updated', 'defaultStyleId' => $defaultStyleId]);
+        // Re-fetch updated values
+        $fetch = self::prepare('SELECT `default_style_id` FROM `account` WHERE `license` = ?');
+        $fetch->bind_param('i', $account)->execute()->fetchOne($updated)->close();
+
+        $res->success([
+            'message' => 'Account settings updated',
+            'defaultStyleId' => $updated ? (int)$updated['default_style_id'] : null,
+        ]);
     }
 }
 

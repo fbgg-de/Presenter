@@ -11,6 +11,10 @@ export interface PresentationState {
   frozenWindows: string[];
   keyboardDisabled: boolean;
   videoVisible: boolean;
+  wsConnectedCount: number;
+  wsMidiSyncAt: number;
+  /** Whether the operator's own WS connection to the relay is established. */
+  wsOperatorConnected: boolean;
 }
 
 const initialState: PresentationState = {
@@ -23,6 +27,9 @@ const initialState: PresentationState = {
   frozenWindows: [],
   keyboardDisabled: false,
   videoVisible: true,
+  wsConnectedCount: 0,
+  wsMidiSyncAt: 0,
+  wsOperatorConnected: false,
 };
 
 export const presentationSlice = createSlice({
@@ -127,6 +134,20 @@ export const presentationSlice = createSlice({
     toggleVideoVisible: (state) => {
       state.videoVisible = !state.videoVisible;
     },
+    setWsConnectedCount: (state, action: PayloadAction<number>) => {
+      state.wsConnectedCount = action.payload;
+    },
+    setWsMidiSyncAt: (state, action: PayloadAction<number>) => {
+      state.wsMidiSyncAt = action.payload;
+    },
+    setWsOperatorConnected: (state, action: PayloadAction<boolean>) => {
+      state.wsOperatorConnected = action.payload;
+    },
+    setActiveItemAndBlock: (state, action: PayloadAction<{ itemIndex: number; blockIndex: number }>) => {
+      state.activeItemIndex = action.payload.itemIndex;
+      state.activeBlockIndex = action.payload.blockIndex;
+      state.activeLineIndex = 0;
+    },
   },
 });
 
@@ -152,6 +173,10 @@ export const {
   setKeyboardDisabled,
   setVideoVisible,
   toggleVideoVisible,
+  setWsConnectedCount,
+  setWsMidiSyncAt,
+  setWsOperatorConnected,
+  setActiveItemAndBlock,
 } = presentationSlice.actions;
 
 export const useGetPresentationSettings = () => useAppSelector((state) => state.presentation);

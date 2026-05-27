@@ -2,7 +2,7 @@ import './assets/main.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 
-import { StrictMode, useMemo, useEffect } from 'react';
+import { StrictMode, useMemo, useEffect, useState, type ErrorInfo } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, CssBaseline, Box, CircularProgress } from '@mui/material';
 import { Provider } from 'react-redux';
@@ -17,6 +17,8 @@ import { useGetSessionQuery } from '@/api/session.api';
 import SessionExpired from '@/components/SessionExpired';
 import { useMetricSync } from '@/hooks/useMetricSync';
 import { redirectToLogin } from '@/utils';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { GlobalErrorHandler } from '@/components/common/GlobalErrorHandler';
 
 loadAllLocales();
 
@@ -25,6 +27,7 @@ const MusicianApp = () => {
   const { uiLanguage, offlineMode } = useGetSettings();
   const { musicianTheme } = useGetMusicianSettings();
   const muiTheme = useMemo(() => getTheme(musicianTheme), [musicianTheme]);
+  const [boundaryError, setBoundaryError] = useState<Error | null>(null);
 
   // Flush any queued offline metrics on mount
   useMetricSync();
@@ -35,7 +38,7 @@ const MusicianApp = () => {
   useEffect(() => {
     if (offlineMode || sessionLoading) return;
     if (session && !session.isAuthenticated) {
-      redirectToLogin('/notes');
+      redirectToLogin('notes');
     }
   }, [offlineMode, session, sessionLoading]);
 
@@ -47,16 +50,19 @@ const MusicianApp = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <TypesafeI18n locale={uiLanguage}>
-        {/* Session-expired snackbar — active whenever the token lapses */}
-        {!offlineMode && <SessionExpired />}
+        <ErrorBoundary onError={(err: Error, _info: ErrorInfo) => setBoundaryError(err)}>
+          <GlobalErrorHandler boundaryError={boundaryError} />
+          {/* Session-expired snackbar — active whenever the token lapses */}
+          {!offlineMode && <SessionExpired />}
 
-        {isAuthPending ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-            <CircularProgress />
-          </Box>
-        ) : (
-          <MusicianPage />
-        )}
+          {isAuthPending ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+              <CircularProgress />
+            </Box>
+          ) : (
+            <MusicianPage />
+          )}
+        </ErrorBoundary>
       </TypesafeI18n>
     </ThemeProvider>
   );

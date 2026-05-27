@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import {
   Box,
-  Card,
-  CardContent,
+  Button,
   Chip,
   Dialog,
   DialogContent,
@@ -26,7 +25,6 @@ import {
 } from '@mui/material';
 import { ContentCopy as CopyIcon, Close as CloseIcon, Cable as CableIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useGetSettings } from '@/store/settingsSlice';
 
 type WSAction = {
   action: string;
@@ -63,12 +61,8 @@ const WS_ACTIONS: WSAction[] = [
 export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const { LL } = useI18nContext();
 
-  const { wsPort } = useGetSettings();
-
   const [targetWindow, setTargetWindow] = useState('');
   const [copiedAction, setCopiedAction] = useState<string | null>(null);
-
-  const wsUrl = `ws://localhost:${wsPort || 9001}`;
 
   const buildCommand = (action: WSAction): string => {
     const cmd: Record<string, unknown> = { action: action.action };
@@ -96,20 +90,8 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        <Stack
-          direction="row"
-          sx={{
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{
-              alignItems: 'center',
-            }}
-          >
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
             <CableIcon />
             <Typography variant="h6">{LL.COMPANION.HELPER_TITLE()}</Typography>
           </Stack>
@@ -120,39 +102,6 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
       </DialogTitle>
       <DialogContent>
         <Stack spacing={2}>
-          {/* Connection Info */}
-          <Card variant="outlined">
-            <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-              <Stack
-                direction="row"
-                spacing={2}
-                sx={{
-                  alignItems: 'center',
-                }}
-              >
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontWeight: 600,
-                  }}
-                >
-                  {LL.COMPANION.WS_URL()}:
-                </Typography>
-                <Chip label={wsUrl} variant="outlined" size="small" sx={{ fontFamily: 'monospace' }} />
-                <Tooltip title={LL.COMPANION.COPY()}>
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      navigator.clipboard.writeText(wsUrl);
-                    }}
-                  >
-                    <CopyIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-            </CardContent>
-          </Card>
-
           {/* Target Window Selector */}
           <Stack
             direction="row"

@@ -623,6 +623,14 @@ type RootTranslation = {
 		 * D​i​s​a​b​l​e​d
 		 */
 		CONFIG_DISABLED: string
+		/**
+		 * W​e​b​S​o​c​k​e​t​ ​H​o​s​t
+		 */
+		WS_HOST_SECTION: string
+		/**
+		 * N​o​ ​W​e​b​S​o​c​k​e​t​ ​h​o​s​t​ ​c​o​n​f​i​g​u​r​e​d​ ​i​n​ ​c​o​n​f​i​g​.​p​h​p​.
+		 */
+		WS_HOST_NOT_CONFIGURED: string
 	}
 	ADMIN_LOGS: {
 		/**
@@ -893,6 +901,22 @@ type RootTranslation = {
 		 * C​u​r​r​e​n​t
 		 */
 		CURRENT: string
+		/**
+		 * R​e​l​o​a​d​ ​s​h​o​w​s
+		 */
+		REFETCH: string
+		/**
+		 * S​h​o​w​ ​u​p​d​a​t​e​d​ ​o​n​ ​s​e​r​v​e​r
+		 */
+		UPDATE_AVAILABLE: string
+		/**
+		 * R​e​l​o​a​d
+		 */
+		UPDATE_AVAILABLE_ACTION: string
+		/**
+		 * C​C​L​I​ ​r​e​p​o​r​t
+		 */
+		CCLI_REPORT: string
 	}
 	SHOW_ITEMS: {
 		/**
@@ -2016,6 +2040,15 @@ type RootTranslation = {
 		 * S​h​o​w​ ​T​e​x​t​ ​o​n​ ​a​l​l​ ​W​i​n​d​o​w​s
 		 */
 		SHOW_TEXT: string
+		/**
+		 * {​c​o​u​n​t​}​ ​m​u​s​i​c​i​a​n​{​{​s​}​}​ ​c​o​n​n​e​c​t​e​d
+		 * @param {number} count
+		 */
+		WS_CLIENTS: RequiredParams<'count'>
+		/**
+		 * W​e​b​S​o​c​k​e​t​ ​r​e​l​a​y​ ​n​o​t​ ​c​o​n​n​e​c​t​e​d
+		 */
+		WS_NOT_CONNECTED: string
 	}
 	UNIFIED_SEARCH: {
 		/**
@@ -2672,13 +2705,13 @@ type RootTranslation = {
 				 */
 				DESCRIPTION: string
 			}
-			WS_PORT: {
+			WS_URL: {
 				/**
-				 * W​e​b​S​o​c​k​e​t​ ​p​o​r​t
+				 * W​e​b​S​o​c​k​e​t​ ​S​e​r​v​e​r​ ​U​R​L
 				 */
 				TITLE: string
 				/**
-				 * P​o​r​t​ ​f​o​r​ ​t​h​e​ ​b​u​i​l​t​-​i​n​ ​W​e​b​S​o​c​k​e​t​ ​s​e​r​v​e​r​ ​(​E​l​e​c​t​r​o​n​ ​o​n​l​y​)
+				 * U​R​L​ ​o​f​ ​t​h​e​ ​s​t​a​n​d​a​l​o​n​e​ ​W​e​b​S​o​c​k​e​t​ ​r​e​l​a​y​ ​s​e​r​v​e​r​ ​(​e​.​g​.​ ​w​s​s​:​/​/​w​s​.​e​x​a​m​p​l​e​.​c​o​m​)​.​ ​A​l​l​ ​a​c​c​o​u​n​t​s​ ​c​o​n​n​e​c​t​ ​t​o​ ​t​h​e​ ​s​a​m​e​ ​s​e​r​v​e​r​;​ ​m​e​s​s​a​g​e​s​ ​a​r​e​ ​i​s​o​l​a​t​e​d​ ​p​e​r​ ​a​c​c​o​u​n​t​.
 				 */
 				DESCRIPTION: string
 			}
@@ -2701,6 +2734,44 @@ type RootTranslation = {
 				 * A​u​t​o​m​a​t​i​c​a​l​l​y​ ​r​e​o​p​e​n​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s​ ​t​h​a​t​ ​w​e​r​e​ ​o​p​e​n​ ​w​h​e​n​ ​t​h​e​ ​a​p​p​ ​w​a​s​ ​l​a​s​t​ ​c​l​o​s​e​d​ ​(​E​l​e​c​t​r​o​n​ ​o​n​l​y​)
 				 */
 				DESCRIPTION: string
+			}
+			WS_HOSTS: {
+				/**
+				 * W​e​b​S​o​c​k​e​t​ ​H​o​s​t​s
+				 */
+				TITLE: string
+				/**
+				 * C​o​n​f​i​g​u​r​e​ ​t​h​e​ ​W​e​b​S​o​c​k​e​t​ ​h​o​s​t​s​ ​t​h​a​t​ ​c​l​i​e​n​t​s​ ​w​i​l​l​ ​a​u​t​o​-​c​o​n​n​e​c​t​ ​t​o​.​ ​T​h​e​s​e​ ​a​r​e​ ​s​a​v​e​d​ ​t​o​ ​t​h​e​ ​s​e​r​v​e​r​ ​a​n​d​ ​d​e​l​i​v​e​r​e​d​ ​t​o​ ​c​o​n​n​e​c​t​e​d​ ​d​e​v​i​c​e​s​ ​a​u​t​o​m​a​t​i​c​a​l​l​y​.
+				 */
+				DESCRIPTION: string
+				/**
+				 * N​o​ ​h​o​s​t​s​ ​c​o​n​f​i​g​u​r​e​d​.​ ​C​l​i​e​n​t​s​ ​w​i​l​l​ ​n​e​e​d​ ​t​o​ ​s​e​t​ ​u​p​ ​t​h​e​ ​c​o​n​n​e​c​t​i​o​n​ ​m​a​n​u​a​l​l​y​.
+				 */
+				NO_HOSTS: string
+				/**
+				 * L​a​b​e​l​ ​(​o​p​t​i​o​n​a​l​)
+				 */
+				LABEL_LABEL: string
+				/**
+				 * H​o​s​t​ ​/​ ​I​P
+				 */
+				HOST_LABEL: string
+				/**
+				 * P​o​r​t
+				 */
+				PORT_LABEL: string
+				/**
+				 * A​d​d​ ​H​o​s​t
+				 */
+				ADD_HOST: string
+				/**
+				 * S​e​c​u​r​e​ ​(​w​s​s​:​/​/​)
+				 */
+				WSS_LABEL: string
+				/**
+				 * T​h​i​s​ ​h​o​s​t​ ​u​s​e​s​ ​w​s​:​/​/​ ​b​u​t​ ​t​h​e​ ​a​p​p​ ​i​s​ ​s​e​r​v​e​d​ ​o​v​e​r​ ​H​T​T​P​S​.​ ​T​h​e​ ​b​r​o​w​s​e​r​ ​w​i​l​l​ ​b​l​o​c​k​ ​t​h​i​s​ ​c​o​n​n​e​c​t​i​o​n​.​ ​E​n​a​b​l​e​ ​"​S​e​c​u​r​e​ ​(​w​s​s​:​/​/​)​"​ ​o​r​ ​u​s​e​ ​a​ ​W​S​S​-​c​a​p​a​b​l​e​ ​s​e​r​v​e​r​.
+				 */
+				MIXED_CONTENT_WARNING: string
 			}
 			TRANSITION_MODE: {
 				/**
@@ -3222,6 +3293,23 @@ type RootTranslation = {
 		 * E​x​a​m​p​l​e​s
 		 */
 		EXAMPLES: string
+		/**
+		 * S​c​a​n​ ​N​e​t​w​o​r​k
+		 */
+		SCAN_NETWORK: string
+		/**
+		 * S​c​a​n​n​i​n​g​.​.​.
+		 */
+		SCAN_RUNNING: string
+		/**
+		 * N​o​ ​W​e​b​S​o​c​k​e​t​ ​s​e​r​v​e​r​s​ ​f​o​u​n​d​ ​o​n​ ​t​h​e​ ​l​o​c​a​l​ ​n​e​t​w​o​r​k​.
+		 */
+		SCAN_NO_RESULTS: string
+		/**
+		 * F​o​u​n​d​ ​{​c​o​u​n​t​}​ ​h​o​s​t​(​s​)​ ​o​n​ ​p​o​r​t​:
+		 * @param {unknown} count
+		 */
+		SCAN_FOUND: RequiredParams<'count'>
 	}
 	MUSICIAN: {
 		/**
@@ -3341,6 +3429,10 @@ type RootTranslation = {
 		 */
 		ITEM_EDIT: string
 		/**
+		 * E​d​i​t​ ​o​r​d​e​r
+		 */
+		ITEM_EDIT_ORDER: string
+		/**
 		 * R​e​m​o​v​e​ ​f​r​o​m​ ​S​h​o​w
 		 */
 		ITEM_DELETE: string
@@ -3352,6 +3444,23 @@ type RootTranslation = {
 		 * O​r​d​e​r
 		 */
 		ITEM_SELECT_ORDER: string
+		/**
+		 * O​r​d​e​r​ ​s​e​q​u​e​n​c​e
+		 */
+		ORDER_SEQUENCE: string
+		/**
+		 * U​s​e​ ​c​o​m​m​a​s​,​ ​e​.​g​.​ ​V​e​r​s​e​,​ ​C​h​o​r​u​s​,​ ​C​h​o​r​u​s
+		 */
+		ORDER_SEQUENCE_HINT: string
+		/**
+		 * U​n​k​n​o​w​n​ ​b​l​o​c​k​s​:​ ​{​b​l​o​c​k​s​}
+		 * @param {unknown} blocks
+		 */
+		ORDER_INVALID_BLOCKS: RequiredParams<'blocks'>
+		/**
+		 * A​v​a​i​l​a​b​l​e​ ​b​l​o​c​k​s
+		 */
+		ORDER_AVAILABLE_BLOCKS: string
 		/**
 		 * M​a​n​a​g​e​ ​P​D​F​s
 		 */
@@ -3409,6 +3518,14 @@ type RootTranslation = {
 		 */
 		NEXT_PAGE: string
 		/**
+		 * P​r​e​v​i​o​u​s​ ​B​l​o​c​k
+		 */
+		PREV_BLOCK: string
+		/**
+		 * N​e​x​t​ ​B​l​o​c​k
+		 */
+		NEXT_BLOCK: string
+		/**
 		 * {​c​o​u​n​t​}​ ​p​a​g​e​{​{​s​}​}
 		 * @param {number} count
 		 */
@@ -3429,6 +3546,70 @@ type RootTranslation = {
 		 * A​l​l​o​w​ ​S​c​r​e​e​n​ ​S​l​e​e​p
 		 */
 		WAKE_LOCK_OFF: string
+		/**
+		 * W​e​b​S​o​c​k​e​t​ ​S​y​n​c​ ​S​e​t​u​p
+		 */
+		WS_SYNC_TITLE: string
+		/**
+		 * E​n​t​e​r​ ​t​h​e​ ​W​e​b​S​o​c​k​e​t​ ​a​d​d​r​e​s​s​ ​o​f​ ​t​h​e​ ​P​r​e​s​e​n​t​e​r​ ​o​p​e​r​a​t​o​r​ ​o​n​ ​t​h​i​s​ ​n​e​t​w​o​r​k​.
+		 */
+		WS_SYNC_DESC: string
+		/**
+		 * H​o​s​t​ ​/​ ​I​P​ ​A​d​d​r​e​s​s
+		 */
+		WS_SYNC_HOST_LABEL: string
+		/**
+		 * W​S​ ​P​o​r​t
+		 */
+		WS_SYNC_WS_PORT_LABEL: string
+		/**
+		 * C​o​n​n​e​c​t
+		 */
+		WS_SYNC_CONNECT: string
+		/**
+		 * C​o​n​n​e​c​t​e​d
+		 */
+		WS_SYNC_CONNECTED: string
+		/**
+		 * D​i​s​c​o​n​n​e​c​t​e​d
+		 */
+		WS_SYNC_DISCONNECTED: string
+		/**
+		 * C​o​n​n​e​c​t​i​o​n​ ​f​a​i​l​e​d
+		 */
+		WS_SYNC_ERROR: string
+		/**
+		 * C​o​n​f​i​g​u​r​e
+		 */
+		WS_SYNC_STEP_CONFIGURE: string
+		/**
+		 * C​o​n​n​e​c​t
+		 */
+		WS_SYNC_STEP_CONNECT: string
+		/**
+		 * C​o​n​n​e​c​t​i​n​g​ ​t​o​ ​{​u​r​l​}​…
+		 * @param {unknown} url
+		 */
+		WS_SYNC_CONNECTING: RequiredParams<'url'>
+		/**
+		 * C​o​n​n​e​c​t​e​d​!
+		 */
+		WS_SYNC_SUCCESS_TITLE: string
+		/**
+		 * T​h​e​ ​m​u​s​i​c​i​a​n​ ​v​i​e​w​ ​i​s​ ​n​o​w​ ​s​y​n​c​e​d​ ​w​i​t​h​ ​t​h​e​ ​o​p​e​r​a​t​o​r​ ​a​t​ ​{​u​r​l​}​.
+		 * @param {unknown} url
+		 */
+		WS_SYNC_SUCCESS_DESC: RequiredParams<'url'>
+		/**
+		 * C​h​a​n​g​e
+		 */
+		WS_SYNC_CHANGE: string
+		/**
+		 * D​i​f​f​e​r​e​n​t​ ​s​h​o​w​ ​l​o​a​d​e​d​ ​(​O​p​e​r​a​t​o​r​:​ ​{​o​p​e​r​a​t​o​r​S​h​o​w​}​,​ ​T​h​i​s​ ​d​e​v​i​c​e​:​ ​{​c​u​r​r​e​n​t​S​h​o​w​}​)​.
+		 * @param {unknown} currentShow
+		 * @param {unknown} operatorShow
+		 */
+		SHOW_MISMATCH_WARNING: RequiredParams<'currentShow' | 'operatorShow'>
 	}
 	QR: {
 		/**
@@ -3865,6 +4046,14 @@ type RootTranslation = {
 		 * T​o​g​g​l​e​ ​T​r​a​c​k​i​n​g​ ​M​a​s​t​e​r
 		 */
 		TOGGLE_TRACKING: string
+		/**
+		 * M​u​s​i​c​i​a​n​ ​s​y​n​c​ ​a​c​t​i​v​e​ ​—​ ​c​l​i​c​k​ ​t​o​ ​f​o​l​l​o​w
+		 */
+		SYNC_ACTIVE: string
+		/**
+		 * F​o​l​l​o​w​i​n​g​ ​M​I​D​I​ ​m​u​s​i​c​i​a​n​ ​—​ ​c​l​i​c​k​ ​t​o​ ​s​t​o​p
+		 */
+		FOLLOW_MIDI_ACTIVE: string
 	}
 	CONNECTIVITY: {
 		/**
@@ -3899,6 +4088,59 @@ type RootTranslation = {
 		 * D​i​s​m​i​s​s
 		 */
 		SNACK_DISMISS: string
+	}
+	UPDATER: {
+		/**
+		 * A​p​p​l​i​c​a​t​i​o​n​ ​U​p​d​a​t​e​s
+		 */
+		TITLE: string
+		/**
+		 * C​h​e​c​k​ ​f​o​r​ ​u​p​d​a​t​e​s
+		 */
+		CHECK_NOW: string
+		/**
+		 * C​h​e​c​k​ ​a​g​a​i​n
+		 */
+		CHECK_AGAIN: string
+		/**
+		 * C​h​e​c​k​i​n​g​ ​f​o​r​ ​u​p​d​a​t​e​s​…
+		 */
+		CHECKING: string
+		/**
+		 * T​h​e​ ​a​p​p​l​i​c​a​t​i​o​n​ ​i​s​ ​u​p​ ​t​o​ ​d​a​t​e​.
+		 */
+		UP_TO_DATE: string
+		/**
+		 * U​p​d​a​t​e​ ​{​v​e​r​s​i​o​n​}​ ​i​s​ ​a​v​a​i​l​a​b​l​e​ ​a​n​d​ ​w​i​l​l​ ​b​e​ ​d​o​w​n​l​o​a​d​e​d​ ​a​u​t​o​m​a​t​i​c​a​l​l​y​.
+		 * @param {unknown} version
+		 */
+		UPDATE_AVAILABLE: RequiredParams<'version'>
+		/**
+		 * D​o​w​n​l​o​a​d​i​n​g​ ​u​p​d​a​t​e​…​ ​{​p​e​r​c​e​n​t​}​%
+		 * @param {unknown} percent
+		 */
+		DOWNLOADING: RequiredParams<'percent'>
+		/**
+		 * D​o​w​n​l​o​a​d​i​n​g​ ​a​u​t​o​m​a​t​i​c​a​l​l​y​ ​i​n​ ​t​h​e​ ​b​a​c​k​g​r​o​u​n​d​.
+		 */
+		DOWNLOADING_SOON: string
+		/**
+		 * U​p​d​a​t​e​ ​{​v​e​r​s​i​o​n​}​ ​i​s​ ​r​e​a​d​y​ ​t​o​ ​i​n​s​t​a​l​l​.
+		 * @param {unknown} version
+		 */
+		READY_TO_INSTALL: RequiredParams<'version'>
+		/**
+		 * I​n​s​t​a​l​l​ ​&​ ​R​e​s​t​a​r​t
+		 */
+		INSTALL_AND_RESTART: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​c​h​e​c​k​ ​f​o​r​ ​u​p​d​a​t​e​s​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​ ​l​a​t​e​r​.
+		 */
+		CHECK_FAILED: string
+		/**
+		 * A​n​ ​e​r​r​o​r​ ​o​c​c​u​r​r​e​d​ ​d​u​r​i​n​g​ ​t​h​e​ ​u​p​d​a​t​e​ ​p​r​o​c​e​s​s​.
+		 */
+		ERROR: string
 	}
 }
 
@@ -4502,6 +4744,14 @@ export type TranslationFunctions = {
 		 * Disabled
 		 */
 		CONFIG_DISABLED: () => LocalizedString
+		/**
+		 * WebSocket Host
+		 */
+		WS_HOST_SECTION: () => LocalizedString
+		/**
+		 * No WebSocket host configured in config.php.
+		 */
+		WS_HOST_NOT_CONFIGURED: () => LocalizedString
 	}
 	ADMIN_LOGS: {
 		/**
@@ -4766,6 +5016,22 @@ export type TranslationFunctions = {
 		 * Current
 		 */
 		CURRENT: () => LocalizedString
+		/**
+		 * Reload shows
+		 */
+		REFETCH: () => LocalizedString
+		/**
+		 * Show updated on server
+		 */
+		UPDATE_AVAILABLE: () => LocalizedString
+		/**
+		 * Reload
+		 */
+		UPDATE_AVAILABLE_ACTION: () => LocalizedString
+		/**
+		 * CCLI report
+		 */
+		CCLI_REPORT: () => LocalizedString
 	}
 	SHOW_ITEMS: {
 		/**
@@ -5886,6 +6152,14 @@ export type TranslationFunctions = {
 		 * Show Text on all Windows
 		 */
 		SHOW_TEXT: () => LocalizedString
+		/**
+		 * {count} musician{{s}} connected
+		 */
+		WS_CLIENTS: (arg: { count: number }) => LocalizedString
+		/**
+		 * WebSocket relay not connected
+		 */
+		WS_NOT_CONNECTED: () => LocalizedString
 	}
 	UNIFIED_SEARCH: {
 		/**
@@ -6529,13 +6803,13 @@ export type TranslationFunctions = {
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
-			WS_PORT: {
+			WS_URL: {
 				/**
-				 * WebSocket port
+				 * WebSocket Server URL
 				 */
 				TITLE: () => LocalizedString
 				/**
-				 * Port for the built-in WebSocket server (Electron only)
+				 * URL of the standalone WebSocket relay server (e.g. wss://ws.example.com). All accounts connect to the same server; messages are isolated per account.
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
@@ -6558,6 +6832,44 @@ export type TranslationFunctions = {
 				 * Automatically reopen presentation windows that were open when the app was last closed (Electron only)
 				 */
 				DESCRIPTION: () => LocalizedString
+			}
+			WS_HOSTS: {
+				/**
+				 * WebSocket Hosts
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Configure the WebSocket hosts that clients will auto-connect to. These are saved to the server and delivered to connected devices automatically.
+				 */
+				DESCRIPTION: () => LocalizedString
+				/**
+				 * No hosts configured. Clients will need to set up the connection manually.
+				 */
+				NO_HOSTS: () => LocalizedString
+				/**
+				 * Label (optional)
+				 */
+				LABEL_LABEL: () => LocalizedString
+				/**
+				 * Host / IP
+				 */
+				HOST_LABEL: () => LocalizedString
+				/**
+				 * Port
+				 */
+				PORT_LABEL: () => LocalizedString
+				/**
+				 * Add Host
+				 */
+				ADD_HOST: () => LocalizedString
+				/**
+				 * Secure (wss://)
+				 */
+				WSS_LABEL: () => LocalizedString
+				/**
+				 * This host uses ws:// but the app is served over HTTPS. The browser will block this connection. Enable "Secure (wss://)" or use a WSS-capable server.
+				 */
+				MIXED_CONTENT_WARNING: () => LocalizedString
 			}
 			TRANSITION_MODE: {
 				/**
@@ -7078,6 +7390,22 @@ export type TranslationFunctions = {
 		 * Examples
 		 */
 		EXAMPLES: () => LocalizedString
+		/**
+		 * Scan Network
+		 */
+		SCAN_NETWORK: () => LocalizedString
+		/**
+		 * Scanning...
+		 */
+		SCAN_RUNNING: () => LocalizedString
+		/**
+		 * No WebSocket servers found on the local network.
+		 */
+		SCAN_NO_RESULTS: () => LocalizedString
+		/**
+		 * Found {count} host(s) on port:
+		 */
+		SCAN_FOUND: (arg: { count: unknown }) => LocalizedString
 	}
 	MUSICIAN: {
 		/**
@@ -7193,6 +7521,10 @@ export type TranslationFunctions = {
 		 */
 		ITEM_EDIT: () => LocalizedString
 		/**
+		 * Edit order
+		 */
+		ITEM_EDIT_ORDER: () => LocalizedString
+		/**
 		 * Remove from Show
 		 */
 		ITEM_DELETE: () => LocalizedString
@@ -7204,6 +7536,22 @@ export type TranslationFunctions = {
 		 * Order
 		 */
 		ITEM_SELECT_ORDER: () => LocalizedString
+		/**
+		 * Order sequence
+		 */
+		ORDER_SEQUENCE: () => LocalizedString
+		/**
+		 * Use commas, e.g. Verse, Chorus, Chorus
+		 */
+		ORDER_SEQUENCE_HINT: () => LocalizedString
+		/**
+		 * Unknown blocks: {blocks}
+		 */
+		ORDER_INVALID_BLOCKS: (arg: { blocks: unknown }) => LocalizedString
+		/**
+		 * Available blocks
+		 */
+		ORDER_AVAILABLE_BLOCKS: () => LocalizedString
 		/**
 		 * Manage PDFs
 		 */
@@ -7261,6 +7609,14 @@ export type TranslationFunctions = {
 		 */
 		NEXT_PAGE: () => LocalizedString
 		/**
+		 * Previous Block
+		 */
+		PREV_BLOCK: () => LocalizedString
+		/**
+		 * Next Block
+		 */
+		NEXT_BLOCK: () => LocalizedString
+		/**
 		 * {count} page{{s}}
 		 */
 		PAGE_COUNT: (arg: { count: number }) => LocalizedString
@@ -7280,6 +7636,66 @@ export type TranslationFunctions = {
 		 * Allow Screen Sleep
 		 */
 		WAKE_LOCK_OFF: () => LocalizedString
+		/**
+		 * WebSocket Sync Setup
+		 */
+		WS_SYNC_TITLE: () => LocalizedString
+		/**
+		 * Enter the WebSocket address of the Presenter operator on this network.
+		 */
+		WS_SYNC_DESC: () => LocalizedString
+		/**
+		 * Host / IP Address
+		 */
+		WS_SYNC_HOST_LABEL: () => LocalizedString
+		/**
+		 * WS Port
+		 */
+		WS_SYNC_WS_PORT_LABEL: () => LocalizedString
+		/**
+		 * Connect
+		 */
+		WS_SYNC_CONNECT: () => LocalizedString
+		/**
+		 * Connected
+		 */
+		WS_SYNC_CONNECTED: () => LocalizedString
+		/**
+		 * Disconnected
+		 */
+		WS_SYNC_DISCONNECTED: () => LocalizedString
+		/**
+		 * Connection failed
+		 */
+		WS_SYNC_ERROR: () => LocalizedString
+		/**
+		 * Configure
+		 */
+		WS_SYNC_STEP_CONFIGURE: () => LocalizedString
+		/**
+		 * Connect
+		 */
+		WS_SYNC_STEP_CONNECT: () => LocalizedString
+		/**
+		 * Connecting to {url}…
+		 */
+		WS_SYNC_CONNECTING: (arg: { url: unknown }) => LocalizedString
+		/**
+		 * Connected!
+		 */
+		WS_SYNC_SUCCESS_TITLE: () => LocalizedString
+		/**
+		 * The musician view is now synced with the operator at {url}.
+		 */
+		WS_SYNC_SUCCESS_DESC: (arg: { url: unknown }) => LocalizedString
+		/**
+		 * Change
+		 */
+		WS_SYNC_CHANGE: () => LocalizedString
+		/**
+		 * Different show loaded (Operator: {operatorShow}, This device: {currentShow}).
+		 */
+		SHOW_MISMATCH_WARNING: (arg: { currentShow: unknown, operatorShow: unknown }) => LocalizedString
 	}
 	QR: {
 		/**
@@ -7700,6 +8116,14 @@ export type TranslationFunctions = {
 		 * Toggle Tracking Master
 		 */
 		TOGGLE_TRACKING: () => LocalizedString
+		/**
+		 * Musician sync active — click to follow
+		 */
+		SYNC_ACTIVE: () => LocalizedString
+		/**
+		 * Following MIDI musician — click to stop
+		 */
+		FOLLOW_MIDI_ACTIVE: () => LocalizedString
 	}
 	CONNECTIVITY: {
 		/**
@@ -7734,6 +8158,56 @@ export type TranslationFunctions = {
 		 * Dismiss
 		 */
 		SNACK_DISMISS: () => LocalizedString
+	}
+	UPDATER: {
+		/**
+		 * Application Updates
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Check for updates
+		 */
+		CHECK_NOW: () => LocalizedString
+		/**
+		 * Check again
+		 */
+		CHECK_AGAIN: () => LocalizedString
+		/**
+		 * Checking for updates…
+		 */
+		CHECKING: () => LocalizedString
+		/**
+		 * The application is up to date.
+		 */
+		UP_TO_DATE: () => LocalizedString
+		/**
+		 * Update {version} is available and will be downloaded automatically.
+		 */
+		UPDATE_AVAILABLE: (arg: { version: unknown }) => LocalizedString
+		/**
+		 * Downloading update… {percent}%
+		 */
+		DOWNLOADING: (arg: { percent: unknown }) => LocalizedString
+		/**
+		 * Downloading automatically in the background.
+		 */
+		DOWNLOADING_SOON: () => LocalizedString
+		/**
+		 * Update {version} is ready to install.
+		 */
+		READY_TO_INSTALL: (arg: { version: unknown }) => LocalizedString
+		/**
+		 * Install & Restart
+		 */
+		INSTALL_AND_RESTART: () => LocalizedString
+		/**
+		 * Failed to check for updates. Please try again later.
+		 */
+		CHECK_FAILED: () => LocalizedString
+		/**
+		 * An error occurred during the update process.
+		 */
+		ERROR: () => LocalizedString
 	}
 }
 

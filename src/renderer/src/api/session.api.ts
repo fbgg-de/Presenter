@@ -1,6 +1,13 @@
 import { presenterApi } from './base.api';
 import type { ApiSuccess } from './base.api';
 
+export type WsHost = {
+  host: string;
+  port: number;
+  path?: string;
+  wss?: boolean;
+};
+
 export type SessionInfo = {
   account: number;
   mail: string;
@@ -8,6 +15,7 @@ export type SessionInfo = {
   authType?: 'oidc' | 'oidc_admin' | null;
   settings?: {
     bibleEnabled: boolean;
+    wsHost?: WsHost;
   };
 };
 

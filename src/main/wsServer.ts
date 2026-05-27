@@ -39,6 +39,7 @@ export class PresenterWebSocketServer {
 
     this.wss.on('connection', (ws) => {
       this.clients.add(ws);
+      this.notifyClientCount();
 
       ws.on('message', (data) => {
         try {
@@ -56,10 +57,12 @@ export class PresenterWebSocketServer {
 
       ws.on('close', () => {
         this.clients.delete(ws);
+        this.notifyClientCount();
       });
 
       ws.on('error', () => {
         this.clients.delete(ws);
+        this.notifyClientCount();
       });
     });
 
@@ -92,6 +95,16 @@ export class PresenterWebSocketServer {
     this.port = port;
     this.stop();
     this.start();
+  }
+
+  /** Return current number of connected WS clients. */
+  getClientCount(): number {
+    return this.clients.size;
+  }
+
+  /** Send client count update to the main renderer window. */
+  private notifyClientCount(): void {
+    this.sendToRenderer('ws-client-count', { count: this.clients.size });
   }
 
   /**

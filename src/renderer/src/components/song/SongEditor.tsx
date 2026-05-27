@@ -1,7 +1,5 @@
-import type { TextFieldProps, ZoomProps } from '@mui/material';
-import { SpeedDialAction } from '@mui/material';
+import { useRef, useEffect, useState, ReactNode } from 'react';
 import {
-  Zoom,
   Button,
   SpeedDialIcon,
   SpeedDial,
@@ -16,15 +14,13 @@ import {
   Tabs,
   TextField,
   Typography,
-  Select,
-  MenuItem,
-  FormControl,
   Badge,
+  SpeedDialAction,
+  TextFieldProps,
 } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
-import AddOrderDialog from './AddOrderDialog';
-import DeleteOrderDialog from './DeleteOrderDialog';
+import { SongOrderEditor } from './SongOrderEditor';
 import {
   Close as CloseIcon,
   Delete as DeleteIcon,
@@ -36,11 +32,11 @@ import {
 } from '@mui/icons-material';
 import type { ISong, TBlocks } from '@/song';
 import { SONG_BLOCK_SEPARATOR, Song } from '@/song';
-import type { PropsWithChildren, ReactNode } from 'react';
-import { useRef, useEffect, useState } from 'react';
 import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { addSongToStore, updateSongInStore } from '@/store/songsSlice';
 import { useGetSettings } from '@/store/settingsSlice';
+
+type Block = { name: string; lines: string[] };
 
 const StyledInput = styled(TextField)(({ theme }) => ({
   background: theme.palette.background.paper,
@@ -61,21 +57,6 @@ const Input = (props: TextFieldProps & { startAdornment?: ReactNode; endAdornmen
   return <StyledInput {...inputProps} slotProps={customSlotProps} />;
 };
 
-const SpeedDialBlock = styled(SpeedDial)`
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 32px;
-  & .MuiFab-root {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
-  }
-  & .MuiSpeedDial-actions {
-    white-space: nowrap;
-  }
-`;
-
 const SpeedDialTranslate = styled(SpeedDial)`
   margin: 4px;
   width: 32px;
@@ -92,45 +73,12 @@ const SpeedDialTranslate = styled(SpeedDial)`
   }
 `;
 
-const Animation = (props: PropsWithChildren<ZoomProps & { key?: number | string; delay: number }>) => (
-  <Zoom key={props.key} in={props.in} timeout={300} style={{ transitionDelay: `${props.delay}ms` }}>
-    {props.children}
-  </Zoom>
-);
-
-const AddBlock = (props: { order: string[]; index: number; selected: number; onSelect: (name: string, index: number) => void }) => {
-  const { order, index, selected, onSelect } = props;
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Box sx={{ height: 32, width: 32, position: 'relative', zIndex: 9999 }}>
-      <SpeedDialBlock
-        open={open}
-        onClose={() => setOpen(false)}
-        onClick={() => setOpen(!open)}
-        ariaLabel="add block"
-        icon={<SpeedDialIcon icon={<AddIcon />} />}
-      >
-        {order.map((order, i) => (
-          <Animation key={order} in={open} timeout={300} delay={i * 30}>
-            <Button
-              variant="contained"
-              color={i === selected ? 'secondary' : 'primary'}
-              sx={{ margin: '2px' }}
-              onClick={() => onSelect(order, index)}
-            >
-              {order}
-            </Button>
-          </Animation>
-        ))}
-      </SpeedDialBlock>
-    </Box>
-  );
-};
-
-type Block = { name: string; lines: string[] };
-
-export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => void; song?: ISong }) => {
+export const SongEditor = (props: {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  song?: ISong;
+  onSongCreated?: (song: ISong) => void;
+}) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const { defaultNewVerseName } = useGetSettings();
@@ -138,7 +86,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
   const [createSongMutation] = useCreateSongMutation();
   const [updateSongMutation] = useUpdateSongMutation();
 
-  const { open, setOpen, song } = props;
+  const { open, setOpen, song, onSongCreated } = props;
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [openTranslation, setOpenTranslation] = useState(false);
@@ -156,9 +104,6 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
   const [currentOrder, setCurrentOrder] = useState<string>('Default');
   const [block, setBlock] = useState('');
   const [newBlock, setNewBlock] = useState('');
-
-  const [openAddOrderDialog, setOpenAddOrderDialog] = useState(false);
-  const [openDeleteOrderDialog, setOpenDeleteOrderDialog] = useState(false);
 
   const languages = ['EN', 'DE']; // TODO: derive from account settings
 
@@ -270,6 +215,7 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
         }).unwrap();
         const savedSong = new Song({ ...newSong, songNumber: result.songNumber });
         dispatch(addSongToStore(savedSong));
+        onSongCreated?.(savedSong);
       }
       setIsDirty(false);
       setOpen(false);
@@ -284,34 +230,6 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
 
   return (
     <Drawer open={open} anchor="right">
-      <AddOrderDialog
-        open={openAddOrderDialog}
-        onClose={() => setOpenAddOrderDialog(false)}
-        orders={orders}
-        onCreate={(name) => {
-          const updatedOrders = { ...orders, [currentOrder]: [...order], [name]: [...order] };
-          setOrders(updatedOrders);
-          setCurrentOrder(name);
-          setOrder([...order]);
-          setOpenAddOrderDialog(false);
-          markDirty();
-        }}
-      />
-      <DeleteOrderDialog
-        open={openDeleteOrderDialog}
-        onClose={() => setOpenDeleteOrderDialog(false)}
-        orderName={currentOrder}
-        onDelete={() => {
-          const updatedOrders = { ...orders };
-          delete updatedOrders[currentOrder];
-          setOrders(updatedOrders);
-          const firstOrd = Object.keys(updatedOrders)[0];
-          setCurrentOrder(firstOrd);
-          setOrder(updatedOrders[firstOrd] ?? []);
-          setOpenDeleteOrderDialog(false);
-          markDirty();
-        }}
-      />
       <Stack
         sx={{
           gap: 2,
@@ -344,9 +262,8 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
 
         <Stack
           sx={{
-            gap: 2,
+            gap: 1,
             padding: '10px 15px',
-            minHeight: 350,
             bgcolor: 'background.paper',
           }}
         >
@@ -515,92 +432,25 @@ export const SongEditor = (props: { open: boolean; setOpen: (open: boolean) => v
             bgcolor: 'background.paper',
           }}
         >
-          <Stack
-            direction="row"
-            sx={{
-              gap: 1,
-              alignItems: 'center',
-              mb: 1,
+          <SongOrderEditor
+            orders={orders}
+            currentOrder={currentOrder}
+            order={order}
+            availableBlocks={blocksOrder}
+            selectedBlockName={tab > 0 && tab <= blocks.length ? blocks[tab - 1].name : undefined}
+            onSelectBlock={(name) => {
+              const blockIndex = blocks.findIndex((block) => block.name === name);
+              if (blockIndex >= 0) {
+                setTab(blockIndex + 1);
+              }
             }}
-          >
-            <Typography
-              variant="subtitle2"
-              sx={{
-                color: 'text.secondary',
-              }}
-            >
-              Order:
-            </Typography>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select
-                value={currentOrder}
-                onChange={(e) => {
-                  const updatedOrders = { ...orders, [currentOrder]: order };
-                  setOrders(updatedOrders);
-                  const newOrder = e.target.value;
-                  setCurrentOrder(newOrder);
-                  setOrder(updatedOrders[newOrder] ?? []);
-                }}
-                sx={{ fontSize: '0.875rem' }}
-              >
-                {Object.keys(orders).map((ord) => (
-                  <MenuItem key={ord} value={ord}>
-                    {ord}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <IconButton size="small" onClick={() => setOpenAddOrderDialog(true)} title="Add new order">
-              <AddIcon fontSize="small" />
-            </IconButton>
-            {Object.keys(orders).length > 1 && (
-              <IconButton size="small" onClick={() => setOpenDeleteOrderDialog(true)} title="Delete current order">
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            )}
-          </Stack>
-
-          <Stack
-            direction="row"
-            sx={{
-              gap: 1,
-              flexWrap: 'wrap',
+            onChange={({ orders: nextOrders, currentOrder: nextCurrentOrder, order: nextOrder }) => {
+              setOrders(nextOrders);
+              setCurrentOrder(nextCurrentOrder);
+              setOrder(nextOrder);
+              markDirty();
             }}
-          >
-            <AddBlock
-              index={0}
-              order={blocksOrder}
-              selected={tab - 1}
-              onSelect={(name) => {
-                setOrder([name, ...order]);
-                markDirty();
-              }}
-            />
-            {order.map((name, i) => [
-              <Chip
-                key={i}
-                label={name}
-                color={tab > 0 && tab <= blocks.length && blocks[tab - 1].name === name ? 'secondary' : 'default'}
-                onClick={() => setTab(blocks.findIndex((block) => block.name === name) + 1)}
-                {...(order.length > 1 && {
-                  onDelete: () => {
-                    setOrder(order.filter((_, j) => i !== j));
-                    markDirty();
-                  },
-                })}
-              />,
-              <AddBlock
-                key={`add-${i}`}
-                index={i + 1}
-                order={blocksOrder}
-                selected={tab - 1}
-                onSelect={(name) => {
-                  setOrder([...order.slice(0, i + 1), name, ...order.slice(i + 1)]);
-                  markDirty();
-                }}
-              />,
-            ])}
-          </Stack>
+          />
         </Stack>
 
         <Stack

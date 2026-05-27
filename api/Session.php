@@ -44,14 +44,22 @@ class Session extends RestController
                 break;
             default:
                 $res->success([
-                              'account' => $_SESSION['account'] ?? 0,
-                              'mail' => $_SESSION['mail'] ?? '',
-                              'isAuthenticated' => isset($_SESSION['authType']) && !empty($_SESSION['authType']),
-                              'authType' => $_SESSION['authType'] ?? null,
-                              'settings' => [
-                                'bibleEnabled' => defined('BIBLE_API') && is_array(BIBLE_API) && !empty(BIBLE_API['enabled']) && BIBLE_API['enabled'],
-                              ],
-                          ]);
+                    'account' => $_SESSION['account'] ?? 0,
+                    'mail' => $_SESSION['mail'] ?? '',
+                    'isAuthenticated' => isset($_SESSION['authType']) && !empty($_SESSION['authType']),
+                    'authType' => $_SESSION['authType'] ?? null,
+                    'settings' => [
+                        'bibleEnabled' => defined('BIBLE_API') && is_array(BIBLE_API) && !empty(BIBLE_API['enabled']) && BIBLE_API['enabled'],
+                        'wsHost' => defined('WS_HOST') && is_array(WS_HOST) && !empty(WS_HOST['host'])
+                            ? [
+                                'host' => WS_HOST['host'],
+                                'port' => (int)(WS_HOST['port'] ?? 443),
+                                'path' => WS_HOST['path'] ?? '/',
+                                'wss'  => !empty(WS_HOST['wss']),
+                              ]
+                            : null,
+                    ],
+                ]);
         }
     }
 
