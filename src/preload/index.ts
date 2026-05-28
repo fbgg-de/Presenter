@@ -66,6 +66,35 @@ const api = {
   getMediaServerUrl: () => electronAPI.ipcRenderer.invoke('get-media-server-url'),
   startMediaServer: (mediaPath: string) => electronAPI.ipcRenderer.invoke('start-media-server', mediaPath),
 
+  // ── Built-in WebSocket server status ──
+  getWsServerInfo: () => electronAPI.ipcRenderer.invoke('get-ws-server-info'),
+  setWsCommandHandlingEnabled: (enabled: boolean) => electronAPI.ipcRenderer.invoke('set-ws-command-handling-enabled', enabled),
+  onWsClientCount: (callback: (data: { count: number }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { count: number });
+    ipcRenderer.on('ws-client-count', handler);
+    return () => ipcRenderer.removeListener('ws-client-count', handler);
+  },
+  onWsLastCommand: (callback: (data: { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) =>
+      callback(data as { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number });
+    ipcRenderer.on('ws-last-command', handler);
+    return () => ipcRenderer.removeListener('ws-last-command', handler);
+  },
+  onWsNavigationAction: (callback: (data: { action: string; payload?: Record<string, unknown> }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { action: string; payload?: Record<string, unknown> });
+    ipcRenderer.on('ws-navigation-action', handler);
+    return () => ipcRenderer.removeListener('ws-navigation-action', handler);
+  },
+  onWsVideoAction: (callback: (data: { action: string; target?: string; payload?: Record<string, unknown> }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) =>
+      callback(data as { action: string; target?: string; payload?: Record<string, unknown> });
+    ipcRenderer.on('ws-video-action', handler);
+    return () => ipcRenderer.removeListener('ws-video-action', handler);
+  },
+  wsBroadcastState: (data: Record<string, unknown>) => {
+    ipcRenderer.send('ws-broadcast-state', data);
+  },
+
   // ── Musician view ──
   openMusicianView: (config?: MusicianViewConfig) => electronAPI.ipcRenderer.invoke('open-musician-view', config || {}),
 

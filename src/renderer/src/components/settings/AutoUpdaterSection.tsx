@@ -28,11 +28,31 @@ export const AutoUpdaterSection = () => {
     api.getAppVersion?.().then((v) => setCurrentVersion(v ?? ''));
 
     const unsubs: Array<(() => void) | void> = [];
-    unsubs.push(api.onUpdaterUpdateAvailable?.((i) => { setInfo(i); setState('available'); }));
+    unsubs.push(
+      api.onUpdaterUpdateAvailable?.((i) => {
+        setInfo(i);
+        setState('available');
+      }),
+    );
     unsubs.push(api.onUpdaterUpdateNotAvailable?.(() => setState('not-available')));
-    unsubs.push(api.onUpdaterDownloadProgress?.((p) => { setDownloadPercent(p.percent); setState('downloading'); }));
-    unsubs.push(api.onUpdaterUpdateDownloaded?.((i) => { setInfo(i); setState('ready'); }));
-    unsubs.push(api.onUpdaterError?.((e) => { setErrorMsg(e.message); setState('error'); }));
+    unsubs.push(
+      api.onUpdaterDownloadProgress?.((p) => {
+        setDownloadPercent(p.percent);
+        setState('downloading');
+      }),
+    );
+    unsubs.push(
+      api.onUpdaterUpdateDownloaded?.((i) => {
+        setInfo(i);
+        setState('ready');
+      }),
+    );
+    unsubs.push(
+      api.onUpdaterError?.((e) => {
+        setErrorMsg(e.message);
+        setState('error');
+      }),
+    );
 
     return () => {
       unsubs.forEach((u) => u?.());
@@ -48,7 +68,7 @@ export const AutoUpdaterSection = () => {
     setErrorMsg('');
     try {
       await api?.checkForUpdates?.();
-      setTimeout(() => setState((s) => s === 'checking' ? 'not-available' : s), 15000);
+      setTimeout(() => setState((s) => (s === 'checking' ? 'not-available' : s)), 15000);
     } catch {
       setState('error');
       setErrorMsg(LL.UPDATER.CHECK_FAILED());
@@ -62,44 +82,39 @@ export const AutoUpdaterSection = () => {
   return (
     <Stack spacing={1.5}>
       <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-        <UpdateIcon fontSize="small" color="action" />
-        <Typography variant="subtitle2">{LL.UPDATER.TITLE()}</Typography>
-        {currentVersion && (
-          <Typography variant="caption" color="text.secondary">
-            v{currentVersion}
-          </Typography>
-        )}
+        <Typography variant="body2" sx={{ flex: 1 }}>
+          {LL.UPDATER.TITLE()}
+        </Typography>
+        <Stack direction="row" sx={{ flex: 1, gap: 1, alignItems: 'center' }}>
+          {currentVersion && (
+            <Typography variant="body2" color="text.secondary">
+              v{currentVersion}
+            </Typography>
+          )}
+          {state === 'checking' ? (
+            <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+              <CircularProgress size={14} />
+              <Typography variant="caption" color="text.secondary">
+                {LL.UPDATER.CHECKING()}
+              </Typography>
+            </Stack>
+          ) : state === 'idle' || state === 'not-available' || state === 'error' ? (
+            <Button size="small" variant="outlined" startIcon={<UpdateIcon />} onClick={handleCheck}>
+              {LL.UPDATER.CHECK_NOW()}
+            </Button>
+          ) : null}
+        </Stack>
       </Stack>
 
-      {state === 'idle' && (
-        <Button size="small" variant="outlined" startIcon={<UpdateIcon />} onClick={handleCheck}>
-          {LL.UPDATER.CHECK_NOW()}
-        </Button>
-      )}
-
-      {state === 'checking' && (
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <CircularProgress size={16} />
-          <Typography variant="body2">{LL.UPDATER.CHECKING()}</Typography>
-        </Stack>
-      )}
-
       {state === 'not-available' && (
-        <Stack spacing={1}>
-          <Alert severity="success" icon={<CheckCircleIcon fontSize="small" />} sx={{ py: 0 }}>
-            {LL.UPDATER.UP_TO_DATE()}
-          </Alert>
-          <Button size="small" variant="text" onClick={handleCheck}>
-            {LL.UPDATER.CHECK_AGAIN()}
-          </Button>
-        </Stack>
+        <Alert severity="success" icon={<CheckCircleIcon fontSize="small" />} sx={{ py: 0 }}>
+          {LL.UPDATER.UP_TO_DATE()}
+        </Alert>
       )}
 
       {state === 'available' && (
         <Alert severity="info" sx={{ py: 0 }}>
-          {LL.UPDATER.UPDATE_AVAILABLE({ version: info.version ?? '' })}
-          {' '}
-          {LL.UPDATER.DOWNLOADING_SOON()}
+          {LL.UPDATER.UPDATE_AVAILABLE({ version: info.version ?? '' })} {LL.UPDATER.DOWNLOADING_SOON()}
         </Alert>
       )}
 
@@ -124,18 +139,10 @@ export const AutoUpdaterSection = () => {
       )}
 
       {state === 'error' && (
-        <Stack spacing={1}>
-          <Alert severity="error" sx={{ py: 0 }}>
-            {errorMsg || LL.UPDATER.ERROR()}
-          </Alert>
-          <Button size="small" variant="text" onClick={handleCheck}>
-            {LL.UPDATER.CHECK_AGAIN()}
-          </Button>
-        </Stack>
+        <Alert severity="error" sx={{ py: 0 }}>
+          {errorMsg || LL.UPDATER.ERROR()}
+        </Alert>
       )}
     </Stack>
   );
 };
-
-
-

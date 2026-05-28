@@ -56,27 +56,22 @@ type SettingConfig = {
 const SETTINGS_CONFIG: SettingConfig[] = [
   // General
   { key: 'backendUrl', type: 'string', group: 'General', label: 'Backend URL' },
-  { key: 'showSaveFormat', type: 'string', group: 'General', label: 'Show title template' },
-  // Behavior
+  // Behavior (includes confirmations)
   { key: 'songClick', type: 'select', values: ['click', 'double-click'], group: 'Behavior', label: 'Song click' },
   { key: 'verseClick', type: 'select', values: ['click', 'double-click'], group: 'Behavior', label: 'Block click' },
   { key: 'defaultNewVerseName', type: 'string', group: 'Behavior', label: 'Default new block name' },
-  { key: 'defaultVerseName', type: 'string', group: 'Behavior', label: 'Default first block name' },
   { key: 'overrideSongImport', type: 'boolean', group: 'Behavior', label: 'Override on import' },
   { key: 'showDeleteFromDb', type: 'boolean', group: 'Behavior', label: 'Show delete from DB' },
   { key: 'touchDuration', type: 'number', group: 'Behavior', label: 'Long-press duration (ms)' },
-  // Confirmations
-  { key: 'confirmPageLeave', type: 'boolean', group: 'Confirmations', label: 'Confirm page leave' },
-  { key: 'confirmShowDeletion', type: 'boolean', group: 'Confirmations', label: 'Confirm show deletion' },
-  { key: 'confirmShowOverwrite', type: 'boolean', group: 'Confirmations', label: 'Confirm show overwrite' },
-  { key: 'confirmSongDelete', type: 'boolean', group: 'Confirmations', label: 'Confirm song delete' },
+  { key: 'confirmPageLeave', type: 'boolean', group: 'Behavior', label: 'Confirm page leave' },
+  { key: 'confirmShowDeletion', type: 'boolean', group: 'Behavior', label: 'Confirm show deletion' },
+  { key: 'confirmShowOverwrite', type: 'boolean', group: 'Behavior', label: 'Confirm show overwrite' },
+  { key: 'confirmSongDelete', type: 'boolean', group: 'Behavior', label: 'Confirm song delete' },
   // Notifications
   { key: 'notificationCount', type: 'number', group: 'Notifications', label: 'Max visible' },
   { key: 'notificationTime', type: 'number', group: 'Notifications', label: 'Auto-dismiss (ms)' },
   { key: 'uploadNotifications', type: 'boolean', group: 'Notifications', label: 'Song upload notifications' },
   { key: 'errorBoundaryNotification', type: 'boolean', group: 'Notifications', label: 'Show uncaught error notifications' },
-  // Privacy
-  { key: 'metricsEnabled', type: 'boolean', group: 'Privacy', label: 'Send usage metrics' },
   // Presentation
   { key: 'bibleTranslation', type: 'string', group: 'Presentation', label: 'Default Bible translation' },
   { key: 'windowFooterVisible', type: 'boolean', group: 'Presentation', label: 'Show window footer bar' },
@@ -94,9 +89,11 @@ const SETTINGS_CONFIG: SettingConfig[] = [
         { key: 'restoreWindowsOnStart', type: 'boolean', group: 'Electron', label: 'Restore windows on start' },
       ] as SettingConfig[])
     : []),
+  // Privacy — last
+  { key: 'metricsEnabled', type: 'boolean', group: 'Privacy', label: 'Send usage metrics' },
 ];
 
-const GROUP_ORDER = ['General', 'Behavior', 'Confirmations', 'Notifications', 'Privacy', 'Presentation', 'Electron'];
+const GROUP_ORDER = ['General', 'Behavior', 'Notifications', 'Presentation', 'Keyboard', 'Electron', 'Privacy'];
 
 export const Settings = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
   const { LL } = useI18nContext();
@@ -147,6 +144,8 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
         return LL.SETTINGS.GROUP_CONFIRMATIONS();
       case 'Notifications':
         return LL.SETTINGS.GROUP_NOTIFICATIONS();
+      case 'Privacy':
+        return LL.SETTINGS.GROUP_PRIVACY();
       case 'Presentation':
         return LL.SETTINGS.GROUP_PRESENTATION();
       case 'Musician':
@@ -158,7 +157,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
     }
   };
 
-  // Group and filter settings
+  // Group and filter settings — 'Keyboard' is handled specially (no config entries)
   const groups: Record<string, SettingConfig[]> = {};
   const filterLower = filter.toLowerCase();
 
@@ -170,6 +169,13 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
     if (!groups[config.group]) groups[config.group] = [];
     groups[config.group].push(config);
   }
+
+  // Keyboard group: always present if filter matches
+  const keyboardVisible =
+    !filterLower ||
+    LL.KEYBOARD.MAPPING().toLowerCase().includes(filterLower) ||
+    LL.SETTINGS.GROUP_KEYBOARD().toLowerCase().includes(filterLower);
+  if (keyboardVisible && !groups['Keyboard']) groups['Keyboard'] = [];
 
   return (
     <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right">
@@ -277,29 +283,16 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
 
         <Stack sx={{ flex: 1, overflow: 'auto', px: 1 }}>
           {/* Setting groups */}
-          {GROUP_ORDER.filter((g) => groups[g] && groups[g].length > 0).map((groupName) => (
+          {GROUP_ORDER.filter((g) => groups[g] !== undefined).map((groupName) => (
             <Accordion key={groupName} defaultExpanded={false}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography
-                  sx={{
-                    fontWeight: 600,
-                  }}
-                >
-                  {getGroupLabel(groupName)}
-                </Typography>
+                <Typography sx={{ fontWeight: 600 }}>{getGroupLabel(groupName)}</Typography>
               </AccordionSummary>
               <AccordionDetails>
                 <Stack spacing={1}>
                   {/* Global Style selector — inside General group */}
                   {groupName === 'General' && (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{
-                        alignItems: 'center',
-                        py: 0.5,
-                      }}
-                    >
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', py: 0.5 }}>
                       <Tooltip title={LL.SETTINGS.GLOBAL_STYLE_HINT()}>
                         <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
                           {LL.SETTINGS.GLOBAL_STYLE()}
@@ -329,33 +322,52 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                       </Box>
                     </Stack>
                   )}
-                  {groups[groupName].map((config) => (
+                  {/* Show Title Template — account-synced, inside General group */}
+                  {groupName === 'General' && (
+                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', py: 0.5 }}>
+                      <Tooltip title={LL.SETTINGS.OPTIONS.SHOW_TITLE_TEMPLATE.TITLE()}>
+                        <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+                          {LL.SETTINGS.OPTIONS.SHOW_TITLE_TEMPLATE.TITLE()}
+                        </Typography>
+                      </Tooltip>
+                      <Box sx={{ flex: 1 }}>
+                        <SettingInput
+                          key={`showSaveFormat-${accountSettings?.showTitleTemplate ?? settings.showSaveFormat}`}
+                          value={accountSettings?.showTitleTemplate ?? settings.showSaveFormat}
+                          type="string"
+                          onChange={(v) => {
+                            updateSetting('showSaveFormat', v);
+                            if (!settings.offlineMode) {
+                              updateAccountSettings({ showTitleTemplate: v || null });
+                            }
+                          }}
+                        />
+                      </Box>
+                    </Stack>
+                  )}
+                  {/* Regular setting rows */}
+                  {(groups[groupName] ?? []).map((config) => (
                     <SettingRow key={config.key} config={config} value={settings[config.key] as string} />
                   ))}
+                  {/* Keyboard mapping — inside Keyboard group */}
+                  {groupName === 'Keyboard' && <KeyboardMappingEditor />}
+                  {/* AutoUpdater — inside Electron group */}
+                  {groupName === 'Electron' && isElectronApp() && <AutoUpdaterSection />}
+                  {/* Privacy description — inside Privacy group */}
+                  {groupName === 'Privacy' && (
+                    <Stack spacing={0.75} sx={{ pb: 0.5 }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {LL.SETTINGS.PRIVACY_DESCRIPTION()}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {LL.SETTINGS.PRIVACY_METRICS_LIST()}
+                      </Typography>
+                    </Stack>
+                  )}
                 </Stack>
               </AccordionDetails>
             </Accordion>
           ))}
-
-          {/* Keyboard Mapping */}
-          {(!filterLower ||
-            LL.KEYBOARD.MAPPING().toLowerCase().includes(filterLower) ||
-            LL.SETTINGS.GROUP_KEYBOARD().toLowerCase().includes(filterLower)) && (
-            <Accordion defaultExpanded={false}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography
-                  sx={{
-                    fontWeight: 600,
-                  }}
-                >
-                  {LL.SETTINGS.GROUP_KEYBOARD()}
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <KeyboardMappingEditor />
-              </AccordionDetails>
-            </Accordion>
-          )}
 
           {/* Desktop App Download — hidden inside Electron */}
           {(!filterLower || LL.DESKTOP_APP.SETTINGS_SECTION().toLowerCase().includes(filterLower)) &&
@@ -379,18 +391,6 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                 </AccordionDetails>
               </Accordion>
             )}
-
-          {/* Auto-updater — Electron only */}
-          {isElectronApp() && (!filterLower || LL.UPDATER.TITLE().toLowerCase().includes(filterLower)) && (
-            <Accordion defaultExpanded={false}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography sx={{ fontWeight: 600 }}>{LL.UPDATER.TITLE()}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <AutoUpdaterSection />
-              </AccordionDetails>
-            </Accordion>
-          )}
         </Stack>
       </Stack>
     </Drawer>

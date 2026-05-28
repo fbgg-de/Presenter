@@ -1,7 +1,7 @@
 # Presenter -- Requirements Specification
 
-> **Version:** 2.1
-> **Date:** 2026-04-23
+> **Version:** 2.0
+> **Date:** 2026-05-28
 > **Author:** Marcel Birkholz
 > **Goal:** Unify the existing PHP + vanilla-JS web app and the Electron prototype into a single repository with a modern, maintainable architecture. The result must work as a standalone browser app **and** as an Electron desktop client.
 
@@ -515,7 +515,8 @@ All endpoints are prefixed with `/rest/`. Authentication is required for all exc
 
 - Show selector/creator/renamer/deleter dialog.
 - Show title auto-generated from the **account-level template** (stored in `account.show_title_template`), supporting date variables: `{yyyy}`, `{MM}`, `{dd}`, `{HH}`, `{mm}`, `{ss}`. The template is editable in account settings.
-- CCLI reporting link generation. **Explicit save** via a Save button with unsaved-changes indicator. No auto-save.
+- **Per-show CCLI reporting:** Each show entry has a dedicated CCLI icon button that collects all CCLI song numbers in that show and opens `https://reporting.ccli.com/search?s=...` with those numbers pre-filled.
+- **Explicit save** via a Save button with unsaved-changes indicator. No auto-save.
 
 #### Settings Drawer
 
@@ -662,7 +663,10 @@ interface Show {
 - Create new show with **account-level title template** (e.g., `Show {dd}.{MM}.{yyyy}`).
 - Load, save, override, rename, delete shows.
 - Add items via dedicated "Add" menu: Song (from library or CCLI search), Media (file picker or color picker), Bible Verse (verse picker).
-- CCLI reporting link generation. **Explicit save** via a Save button with unsaved-changes indicator.
+- **Per-show CCLI reporting:** Each show entry has a dedicated CCLI icon button that collects all CCLI song numbers in that show and opens `https://reporting.ccli.com/search?s=...` with those numbers pre-filled.
+- When a new song is created and saved via the Song Editor it is automatically added to the current show's item list.
+- Selecting a new show resets the active song index to 0 to avoid mis-navigating into a position that does not exist in the new show.
+- **Explicit save** via a Save button with unsaved-changes indicator.
 
 ---
 
@@ -1110,7 +1114,9 @@ Mappings are intentionally **device-independent**. The same MIDI message coming 
   - **Operator (default):** The musician view follows the operator's block selection via WebSocket sync. MIDI foot-switch presses are still allowed for page turns.
   - **MIDI (self):** The musician navigates independently via MIDI. Operator sync is paused. Useful during rehearsal or when the musician needs to jump ahead.
 - Stored in the redux setting `midiTrackingMaster` (`'operator' | 'midi'`, default `'operator'`); persisted via the standard settings persistence layer.
-- The `toggle_tracking` MIDI action flips this value. It can also be changed manually in the MIDI settings panel.
+- The `toggle_tracking` MIDI action flips this value. It can also be changed in the Musician Settings panel (no longer in the separate toolbar).
+- **Simplified sync modes:** The previous `midi-ws` (follow-over-WebSocket) mode has been removed. The three supported modes are now `off`, `operator`, and `midi`. Any persisted old values are migrated to `operator` on load.
+- The MIDI settings panel is accessed via the Musician Settings dialog (not from the main toolbar), keeping the toolbar uncluttered.
 
 #### WebSocket Sharing
 
@@ -1558,6 +1564,7 @@ The `orders` field on a song is a JSON object mapping order names to block-name 
 ### 18.3 Features
 
 - **Song editor:** Manage orders in a dedicated tab. Add/rename/delete orders. Drag blocks to reorder within an order. Blocks can appear multiple times (e.g., Chorus repeated).
+- **Shared order editor UI:** The order-editing UI (chip-based block sequence with a plus speed-dial menu for inserting blocks between chips) is implemented as a reusable `SongOrderEditor` component. It is used identically in the Song Editor (Orders tab), the quick "Edit order" dialog accessible from the sidebar context menu (below "Manage PDFs", pencil icon), and the inline order panel in the musician view toolbar.
 - **Band name autocomplete:** When creating a new order name, previously used band names across all songs are suggested for consistency.
 - **Per-show-item order selection:** Each song in the set-list can specify which order to use (`ShowItem.order`). The operator selects from a dropdown of available orders when adding the song to the show.
 - **Default order:** If no specific order is selected, the `"Default"` order is used.
@@ -1809,22 +1816,27 @@ Actions:
 
 ### 22.3 Companion Command Helper
 
-Helper panel in the app:
+A dialog accessible from the Settings drawer via the cable icon button:
 
-- Lists all actions with pre-filled JSON payloads. One-click **copy to clipboard**.
-- Target window name dropdown (populated from account-level window names).
-- Shows the WebSocket URL: `ws://localhost:9001`.
-- Examples:
+- Lists all actions with pre-filled JSON payloads. One-click **copy to clipboard** per action.
+- **Target window selector** — populated from the account's configured window names (from `windowSlice`). Can also be typed as free text.
+- **Enabled toggle** — a switch that enables or disables Companion command effects globally. Safe to turn off if anything causes unexpected behaviour. Persisted in `companionCommandsEnabled` (localStorage) and also applied to the WS server process in Electron (so the server actively rejects mutable commands when disabled).
+- **Status bar** — compact chips showing: enabled/disabled state, current connection count, and port number.
+- **Latest received command** — shows the minified JSON of the last incoming command for easy debugging.
+- **Connection panel** (bottom) — select from all detected network interfaces and copy the connection URL.
+- Actions are ordered as prev/next pairs (prev_item, next_item, prev_block, next_block, …) for readability.
+- Received action chips are briefly highlighted in warning color when a matching incoming command is detected.
 
-```json
-{ "action": "fade_to_black", "target": "Main Lyrics" }
-{ "action": "set_block", "payload": { "index": 0 } }
-{ "action": "set_line", "payload": { "index": 2 } }
-{ "action": "freeze_window", "target": "Stream" }
-{ "action": "identify_windows" }
-{ "action": "video_play" }
-{ "action": "video_play", "target": "Main Lyrics" }
-```
+### 22.4 Companion Command Execution
+
+Incoming WebSocket navigation commands are applied in real-time to the operator's Redux state via the `useWsCompanionCommands` hook (mounted on `MainPage`):
+
+- **Navigation actions** (`prev_item`, `next_item`, `prev_block`, `next_block`, `prev_line`, `next_line`, `set_item`, `set_block`, `set_line`) dispatch the same Redux actions as keyboard navigation.
+- **Black/freeze actions** (`toggle_black`, `set_black`, `freeze_window`, `unfreeze_window`) dispatch the corresponding Redux actions.
+- **Video actions** (`video_play`, `video_pause`, `video_stop`, `video_seek`) are forwarded via `window.api.videoCommand`.
+- Window actions (`fade_to_black`, `fade_from_black`, `identify_windows`, `set_display_mode`) are handled directly in the main process by the `PresenterWebSocketServer`.
+- The `keyboardDisabled` flag (which disables keyboard nav when text inputs are focused) does **not** block incoming WS commands — external controllers should always be able to navigate.
+- When `companionCommandsEnabled` is `false`, mutable commands are rejected before executing; read-only queries (`get_state`, `get_windows`) always pass through.
 
 ---
 

@@ -29,6 +29,8 @@ export type MetricEventType =
   | 'musician_edit_tool_used'
   | 'musician_layer_action'
   | 'musician_mapping_used'
+  | 'ws_companion_connected'
+  | 'ws_companion_command'
   | 'fresh_start'
   | 'uncaught_error'
   | 'metrics_disabled';

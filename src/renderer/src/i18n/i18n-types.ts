@@ -2224,6 +2224,14 @@ type RootTranslation = {
 		 */
 		GROUP_PRIVACY: string
 		/**
+		 * T​h​e​ ​f​o​l​l​o​w​i​n​g​ ​a​n​o​n​y​m​o​u​s​ ​u​s​a​g​e​ ​d​a​t​a​ ​m​a​y​ ​b​e​ ​c​o​l​l​e​c​t​e​d​ ​t​o​ ​h​e​l​p​ ​u​n​d​e​r​s​t​a​n​d​ ​h​o​w​ ​t​h​e​ ​a​p​p​ ​i​s​ ​u​s​e​d​ ​a​n​d​ ​t​o​ ​i​m​p​r​o​v​e​ ​i​t​.​ ​N​o​ ​p​e​r​s​o​n​a​l​ ​i​n​f​o​r​m​a​t​i​o​n​,​ ​s​o​n​g​ ​c​o​n​t​e​n​t​,​ ​o​r​ ​s​h​o​w​ ​d​a​t​a​ ​i​s​ ​e​v​e​r​ ​t​r​a​n​s​m​i​t​t​e​d​.
+		 */
+		PRIVACY_DESCRIPTION: string
+		/**
+		 * C​o​l​l​e​c​t​e​d​ ​e​v​e​n​t​s​ ​i​n​c​l​u​d​e​:​ ​f​e​a​t​u​r​e​ ​u​s​a​g​e​ ​(​e​.​g​.​ ​s​o​n​g​s​ ​s​e​l​e​c​t​e​d​,​ ​s​h​o​w​s​ ​o​p​e​n​e​d​,​ ​b​l​o​c​k​s​ ​n​a​v​i​g​a​t​e​d​)​,​ ​U​I​ ​i​n​t​e​r​a​c​t​i​o​n​s​ ​(​e​.​g​.​ ​s​t​y​l​e​ ​c​h​a​n​g​e​s​,​ ​w​i​n​d​o​w​ ​a​c​t​i​o​n​s​)​,​ ​e​r​r​o​r​ ​r​e​p​o​r​t​s​,​ ​a​n​d​ ​a​p​p​ ​l​i​f​e​c​y​c​l​e​ ​e​v​e​n​t​s​ ​(​e​.​g​.​ ​l​o​g​i​n​,​ ​s​t​a​r​t​u​p​)​.​ ​E​a​c​h​ ​e​v​e​n​t​ ​i​s​ ​t​a​g​g​e​d​ ​w​i​t​h​ ​a​n​ ​a​n​o​n​y​m​o​u​s​ ​d​e​v​i​c​e​ ​I​D​.
+		 */
+		PRIVACY_METRICS_LIST: string
+		/**
 		 * P​r​e​s​e​n​t​a​t​i​o​n
 		 */
 		GROUP_PRESENTATION: string
@@ -3254,6 +3262,18 @@ type RootTranslation = {
 		 */
 		HELPER_DESC: string
 		/**
+		 * E​n​a​b​l​e​d
+		 */
+		ENABLED: string
+		/**
+		 * C​o​m​m​a​n​d​s​ ​e​n​a​b​l​e​d
+		 */
+		ENABLED_STATUS_ON: string
+		/**
+		 * C​o​m​m​a​n​d​s​ ​d​i​s​a​b​l​e​d
+		 */
+		ENABLED_STATUS_OFF: string
+		/**
 		 * W​e​b​S​o​c​k​e​t​ ​U​R​L
 		 */
 		WS_URL: string
@@ -3261,6 +3281,10 @@ type RootTranslation = {
 		 * C​o​p​y​ ​t​o​ ​c​l​i​p​b​o​a​r​d
 		 */
 		COPY: string
+		/**
+		 * C​o​p​y​ ​U​R​L
+		 */
+		COPY_URL: string
 		/**
 		 * C​o​p​i​e​d​!
 		 */
@@ -3290,9 +3314,123 @@ type RootTranslation = {
 		 */
 		TARGET: string
 		/**
-		 * E​x​a​m​p​l​e​s
+		 * S​e​r​v​e​r​ ​U​R​L​s
 		 */
-		EXAMPLES: string
+		SERVER_URLS: string
+		/**
+		 * C​o​n​n​e​c​t​i​o​n
+		 */
+		CONNECTION_TITLE: string
+		/**
+		 * W​e​b​S​o​c​k​e​t​ ​s​e​r​v​e​r​ ​i​n​f​o​ ​i​s​ ​n​o​t​ ​a​v​a​i​l​a​b​l​e​ ​i​n​ ​b​r​o​w​s​e​r​ ​m​o​d​e​.
+		 */
+		SERVER_INFO_UNAVAILABLE: string
+		/**
+		 * {​c​o​u​n​t​}​ ​a​c​t​i​v​e​ ​c​o​n​n​e​c​t​i​o​n​{​{​s​}​}
+		 * @param {string | number | boolean} count
+		 */
+		CONNECTIONS: RequiredParams<'count'>
+		/**
+		 * P​o​r​t​ ​{​p​o​r​t​}
+		 * @param {unknown} port
+		 */
+		PORT: RequiredParams<'port'>
+		/**
+		 * L​a​t​e​s​t​ ​c​o​m​m​a​n​d
+		 */
+		LATEST_COMMAND: string
+		/**
+		 * N​o​ ​c​o​m​m​a​n​d​ ​r​e​c​e​i​v​e​d​ ​y​e​t
+		 */
+		NO_COMMAND_RECEIVED: string
+		/**
+		 * S​e​l​e​c​t​ ​t​h​e​ ​n​e​x​t​ ​s​h​o​w​ ​i​t​e​m​ ​a​n​d​ ​r​e​s​e​t​ ​b​l​o​c​k​/​l​i​n​e​ ​s​e​l​e​c​t​i​o​n​.
+		 */
+		ACTION_DESC_NEXT_ITEM: string
+		/**
+		 * S​e​l​e​c​t​ ​t​h​e​ ​p​r​e​v​i​o​u​s​ ​s​h​o​w​ ​i​t​e​m​ ​a​n​d​ ​r​e​s​e​t​ ​b​l​o​c​k​/​l​i​n​e​ ​s​e​l​e​c​t​i​o​n​.
+		 */
+		ACTION_DESC_PREV_ITEM: string
+		/**
+		 * M​o​v​e​ ​t​o​ ​t​h​e​ ​n​e​x​t​ ​b​l​o​c​k​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​s​o​n​g​ ​o​r​d​e​r​.
+		 */
+		ACTION_DESC_NEXT_BLOCK: string
+		/**
+		 * M​o​v​e​ ​t​o​ ​t​h​e​ ​p​r​e​v​i​o​u​s​ ​b​l​o​c​k​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​s​o​n​g​ ​o​r​d​e​r​.
+		 */
+		ACTION_DESC_PREV_BLOCK: string
+		/**
+		 * M​o​v​e​ ​t​o​ ​t​h​e​ ​n​e​x​t​ ​v​i​s​i​b​l​e​ ​l​i​n​e​ ​(​a​u​t​o​-​a​d​v​a​n​c​e​s​ ​b​l​o​c​k​ ​a​t​ ​t​h​e​ ​e​n​d​)​.
+		 */
+		ACTION_DESC_NEXT_LINE: string
+		/**
+		 * M​o​v​e​ ​t​o​ ​t​h​e​ ​p​r​e​v​i​o​u​s​ ​v​i​s​i​b​l​e​ ​l​i​n​e​ ​(​m​o​v​e​s​ ​t​o​ ​p​r​e​v​i​o​u​s​ ​b​l​o​c​k​ ​i​f​ ​n​e​e​d​e​d​)​.
+		 */
+		ACTION_DESC_PREV_LINE: string
+		/**
+		 * J​u​m​p​ ​d​i​r​e​c​t​l​y​ ​t​o​ ​t​h​e​ ​s​h​o​w​ ​i​t​e​m​ ​a​t​ ​p​a​y​l​o​a​d​.​i​n​d​e​x​.
+		 */
+		ACTION_DESC_SET_ITEM: string
+		/**
+		 * J​u​m​p​ ​d​i​r​e​c​t​l​y​ ​t​o​ ​t​h​e​ ​b​l​o​c​k​ ​a​t​ ​p​a​y​l​o​a​d​.​i​n​d​e​x​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​s​o​n​g​.
+		 */
+		ACTION_DESC_SET_BLOCK: string
+		/**
+		 * J​u​m​p​ ​d​i​r​e​c​t​l​y​ ​t​o​ ​t​h​e​ ​v​i​s​i​b​l​e​ ​l​i​n​e​ ​a​t​ ​p​a​y​l​o​a​d​.​i​n​d​e​x​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​b​l​o​c​k​.
+		 */
+		ACTION_DESC_SET_LINE: string
+		/**
+		 * F​a​d​e​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​ ​t​o​ ​b​l​a​c​k​.
+		 */
+		ACTION_DESC_FADE_TO_BLACK: string
+		/**
+		 * F​a​d​e​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​ ​b​a​c​k​ ​t​o​ ​l​i​v​e​ ​c​o​n​t​e​n​t​.
+		 */
+		ACTION_DESC_FADE_FROM_BLACK: string
+		/**
+		 * T​o​g​g​l​e​ ​b​l​a​c​k​-​s​c​r​e​e​n​ ​m​o​d​e​ ​f​o​r​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
+		 */
+		ACTION_DESC_TOGGLE_BLACK: string
+		/**
+		 * F​r​e​e​z​e​ ​a​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​ ​s​o​ ​i​t​ ​i​g​n​o​r​e​s​ ​f​u​r​t​h​e​r​ ​c​o​n​t​e​n​t​ ​u​p​d​a​t​e​s​.
+		 */
+		ACTION_DESC_FREEZE_WINDOW: string
+		/**
+		 * U​n​f​r​e​e​z​e​ ​a​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​ ​a​n​d​ ​r​e​s​u​m​e​ ​l​i​v​e​ ​u​p​d​a​t​e​s​.
+		 */
+		ACTION_DESC_UNFREEZE_WINDOW: string
+		/**
+		 * S​h​o​w​ ​a​ ​t​e​m​p​o​r​a​r​y​ ​i​d​e​n​t​i​f​y​ ​o​v​e​r​l​a​y​ ​o​n​ ​a​l​l​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s​.
+		 */
+		ACTION_DESC_IDENTIFY_WINDOWS: string
+		/**
+		 * S​e​t​ ​d​i​s​p​l​a​y​ ​m​o​d​e​ ​(​`​n​o​r​m​a​l​`​ ​o​r​ ​`​s​t​r​e​a​m​`​)​ ​f​o​r​ ​m​a​t​c​h​i​n​g​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​s​.
+		 */
+		ACTION_DESC_SET_DISPLAY_MODE: string
+		/**
+		 * S​t​a​r​t​ ​v​i​d​e​o​ ​p​l​a​y​b​a​c​k​ ​o​n​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
+		 */
+		ACTION_DESC_VIDEO_PLAY: string
+		/**
+		 * P​a​u​s​e​ ​v​i​d​e​o​ ​p​l​a​y​b​a​c​k​ ​o​n​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
+		 */
+		ACTION_DESC_VIDEO_PAUSE: string
+		/**
+		 * S​t​o​p​ ​v​i​d​e​o​ ​p​l​a​y​b​a​c​k​ ​o​n​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
+		 */
+		ACTION_DESC_VIDEO_STOP: string
+		/**
+		 * S​e​e​k​ ​v​i​d​e​o​ ​p​l​a​y​b​a​c​k​ ​t​o​ ​p​a​y​l​o​a​d​.​p​o​s​i​t​i​o​n​ ​s​e​c​o​n​d​s​ ​o​n​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
+		 */
+		ACTION_DESC_VIDEO_SEEK: string
+		/**
+		 * R​e​q​u​e​s​t​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​c​o​n​t​r​o​l​l​e​r​ ​s​t​a​t​e​ ​f​r​o​m​ ​t​h​e​ ​o​p​e​r​a​t​o​r​ ​a​p​p​.
+		 */
+		ACTION_DESC_GET_STATE: string
+		/**
+		 * R​e​t​u​r​n​ ​c​u​r​r​e​n​t​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s​ ​a​n​d​ ​r​u​n​t​i​m​e​ ​s​t​a​t​u​s​.
+		 */
+		ACTION_DESC_GET_WINDOWS: string
 		/**
 		 * S​c​a​n​ ​N​e​t​w​o​r​k
 		 */
@@ -6335,6 +6473,14 @@ export type TranslationFunctions = {
 		 */
 		GROUP_PRIVACY: () => LocalizedString
 		/**
+		 * The following anonymous usage data may be collected to help understand how the app is used and to improve it. No personal information, song content, or show data is ever transmitted.
+		 */
+		PRIVACY_DESCRIPTION: () => LocalizedString
+		/**
+		 * Collected events include: feature usage (e.g. songs selected, shows opened, blocks navigated), UI interactions (e.g. style changes, window actions), error reports, and app lifecycle events (e.g. login, startup). Each event is tagged with an anonymous device ID.
+		 */
+		PRIVACY_METRICS_LIST: () => LocalizedString
+		/**
 		 * Presentation
 		 */
 		GROUP_PRESENTATION: () => LocalizedString
@@ -7351,6 +7497,18 @@ export type TranslationFunctions = {
 		 */
 		HELPER_DESC: () => LocalizedString
 		/**
+		 * Enabled
+		 */
+		ENABLED: () => LocalizedString
+		/**
+		 * Commands enabled
+		 */
+		ENABLED_STATUS_ON: () => LocalizedString
+		/**
+		 * Commands disabled
+		 */
+		ENABLED_STATUS_OFF: () => LocalizedString
+		/**
 		 * WebSocket URL
 		 */
 		WS_URL: () => LocalizedString
@@ -7358,6 +7516,10 @@ export type TranslationFunctions = {
 		 * Copy to clipboard
 		 */
 		COPY: () => LocalizedString
+		/**
+		 * Copy URL
+		 */
+		COPY_URL: () => LocalizedString
 		/**
 		 * Copied!
 		 */
@@ -7387,9 +7549,121 @@ export type TranslationFunctions = {
 		 */
 		TARGET: () => LocalizedString
 		/**
-		 * Examples
+		 * Server URLs
 		 */
-		EXAMPLES: () => LocalizedString
+		SERVER_URLS: () => LocalizedString
+		/**
+		 * Connection
+		 */
+		CONNECTION_TITLE: () => LocalizedString
+		/**
+		 * WebSocket server info is not available in browser mode.
+		 */
+		SERVER_INFO_UNAVAILABLE: () => LocalizedString
+		/**
+		 * {count} active connection{{s}}
+		 */
+		CONNECTIONS: (arg: { count: string | number | boolean }) => LocalizedString
+		/**
+		 * Port {port}
+		 */
+		PORT: (arg: { port: unknown }) => LocalizedString
+		/**
+		 * Latest command
+		 */
+		LATEST_COMMAND: () => LocalizedString
+		/**
+		 * No command received yet
+		 */
+		NO_COMMAND_RECEIVED: () => LocalizedString
+		/**
+		 * Select the next show item and reset block/line selection.
+		 */
+		ACTION_DESC_NEXT_ITEM: () => LocalizedString
+		/**
+		 * Select the previous show item and reset block/line selection.
+		 */
+		ACTION_DESC_PREV_ITEM: () => LocalizedString
+		/**
+		 * Move to the next block in the current song order.
+		 */
+		ACTION_DESC_NEXT_BLOCK: () => LocalizedString
+		/**
+		 * Move to the previous block in the current song order.
+		 */
+		ACTION_DESC_PREV_BLOCK: () => LocalizedString
+		/**
+		 * Move to the next visible line (auto-advances block at the end).
+		 */
+		ACTION_DESC_NEXT_LINE: () => LocalizedString
+		/**
+		 * Move to the previous visible line (moves to previous block if needed).
+		 */
+		ACTION_DESC_PREV_LINE: () => LocalizedString
+		/**
+		 * Jump directly to the show item at payload.index.
+		 */
+		ACTION_DESC_SET_ITEM: () => LocalizedString
+		/**
+		 * Jump directly to the block at payload.index in the current song.
+		 */
+		ACTION_DESC_SET_BLOCK: () => LocalizedString
+		/**
+		 * Jump directly to the visible line at payload.index in the current block.
+		 */
+		ACTION_DESC_SET_LINE: () => LocalizedString
+		/**
+		 * Fade the target window(s) to black.
+		 */
+		ACTION_DESC_FADE_TO_BLACK: () => LocalizedString
+		/**
+		 * Fade the target window(s) back to live content.
+		 */
+		ACTION_DESC_FADE_FROM_BLACK: () => LocalizedString
+		/**
+		 * Toggle black-screen mode for the target window(s).
+		 */
+		ACTION_DESC_TOGGLE_BLACK: () => LocalizedString
+		/**
+		 * Freeze a target window so it ignores further content updates.
+		 */
+		ACTION_DESC_FREEZE_WINDOW: () => LocalizedString
+		/**
+		 * Unfreeze a target window and resume live updates.
+		 */
+		ACTION_DESC_UNFREEZE_WINDOW: () => LocalizedString
+		/**
+		 * Show a temporary identify overlay on all presentation windows.
+		 */
+		ACTION_DESC_IDENTIFY_WINDOWS: () => LocalizedString
+		/**
+		 * Set display mode (`normal` or `stream`) for matching target windows.
+		 */
+		ACTION_DESC_SET_DISPLAY_MODE: () => LocalizedString
+		/**
+		 * Start video playback on the target window(s).
+		 */
+		ACTION_DESC_VIDEO_PLAY: () => LocalizedString
+		/**
+		 * Pause video playback on the target window(s).
+		 */
+		ACTION_DESC_VIDEO_PAUSE: () => LocalizedString
+		/**
+		 * Stop video playback on the target window(s).
+		 */
+		ACTION_DESC_VIDEO_STOP: () => LocalizedString
+		/**
+		 * Seek video playback to payload.position seconds on the target window(s).
+		 */
+		ACTION_DESC_VIDEO_SEEK: () => LocalizedString
+		/**
+		 * Request the current controller state from the operator app.
+		 */
+		ACTION_DESC_GET_STATE: () => LocalizedString
+		/**
+		 * Return current presentation windows and runtime status.
+		 */
+		ACTION_DESC_GET_WINDOWS: () => LocalizedString
 		/**
 		 * Scan Network
 		 */

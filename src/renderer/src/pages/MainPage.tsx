@@ -12,6 +12,8 @@ import { useAppDispatch } from '@/store';
 import { setCurrentShow, closeShowSelector, useGetShow } from '@/store/showSlice';
 import { setSongsOrder as setSongsOrderAction, setSongOrders as setSongOrdersAction, loadShowSongs } from '@/store/songsSlice';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
+import { useWsCompanionCommands } from '@/hooks/useWsCompanionCommands';
+import { useBroadcastCompanionState } from '@/hooks/useBroadcastCompanionState';
 import PresentationSyncHost from '@/components/layout/PresentationSyncHost';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -46,10 +48,15 @@ export const MainPage = () => {
     if (accountSettings?.defaultStyleId !== undefined) {
       updateSetting('globalStyleId', accountSettings.defaultStyleId ?? 0);
     }
-  }, [accountSettings?.defaultStyleId]);
+    if (accountSettings?.showTitleTemplate != null) {
+      updateSetting('showSaveFormat', accountSettings.showTitleTemplate);
+    }
+  }, [accountSettings?.defaultStyleId, accountSettings?.showTitleTemplate]);
 
   // Keyboard navigation hook
   useKeyboardNavigation();
+  useWsCompanionCommands();
+  useBroadcastCompanionState();
 
   // On mount: if a show was restored from localStorage, load its songs
   useEffect(() => {

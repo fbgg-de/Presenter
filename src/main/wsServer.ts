@@ -14,6 +14,7 @@ export class PresenterWebSocketServer {
   private windowManager: PresentationWindowManager;
   private mainWindow: BrowserWindow | null = null;
   private clients: Set<WebSocket> = new Set();
+  private commandHandlingEnabled = true;
 
   constructor(port: number, windowManager: PresentationWindowManager) {
     this.port = port;
@@ -102,9 +103,32 @@ export class PresenterWebSocketServer {
     return this.clients.size;
   }
 
+  /** Return the configured WS server port. */
+  getPort(): number {
+    return this.port;
+  }
+
+  /** Return whether incoming companion commands are currently applied. */
+  isCommandHandlingEnabled(): boolean {
+    return this.commandHandlingEnabled;
+  }
+
+  /** Enable/disable applying incoming companion commands. */
+  setCommandHandlingEnabled(enabled: boolean): void {
+    this.commandHandlingEnabled = enabled;
+  }
+
   /** Send client count update to the main renderer window. */
   private notifyClientCount(): void {
     this.sendToRenderer('ws-client-count', { count: this.clients.size });
+  }
+
+  /**
+   * Broadcast a state_update to all connected clients.
+   * Called from the renderer (via IPC) after every navigation action.
+   */
+  broadcastStateUpdate(data: Record<string, unknown>): void {
+    this.broadcast('state_update', data);
   }
 
   /**
@@ -131,6 +155,25 @@ export class PresenterWebSocketServer {
    */
   private handleCommand(ws: WebSocket, command: WSCommand): void {
     const { id, action, target, payload } = command;
+
+    this.sendToRenderer('ws-last-command', {
+      action,
+      target,
+      payload,
+      receivedAt: Date.now(),
+    });
+
+    const queryOnlyActions = new Set(['get_state', 'get_windows']);
+    if (!this.commandHandlingEnabled && !queryOnlyActions.has(action)) {
+      this.sendResponse(ws, {
+        id,
+        type: 'response',
+        action,
+        success: false,
+        error: 'Companion command handling is disabled',
+      });
+      return;
+    }
 
     try {
       switch (action) {
@@ -196,8 +239,31 @@ export class PresenterWebSocketServer {
           break;
 
         case 'set_display_mode':
-          // TODO: Update window config dynamically
-          this.sendResponse(ws, { id, type: 'response', action, success: true });
+          if (!target) {
+            this.sendResponse(ws, { id, type: 'response', action, success: false, error: 'Target window name required' });
+            break;
+          }
+
+          if (payload?.mode !== 'normal' && payload?.mode !== 'stream') {
+            this.sendResponse(ws, { id, type: 'response', action, success: false, error: 'Payload mode must be "normal" or "stream"' });
+            break;
+          }
+
+          {
+            const states = this.windowManager.getWindowStates();
+            const matching = states.filter((state) => state.name === target);
+
+            if (matching.length === 0) {
+              this.sendResponse(ws, { id, type: 'response', action, success: false, error: `No window found for target: ${target}` });
+              break;
+            }
+
+            matching.forEach((state) => {
+              this.windowManager.updateWindowConfig(state.id, { displayMode: payload.mode as 'normal' | 'stream' });
+            });
+
+            this.sendResponse(ws, { id, type: 'response', action, success: true, data: { updated: matching.length } });
+          }
           break;
 
         // ── Video controls (delegated to renderer) ──

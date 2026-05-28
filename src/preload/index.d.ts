@@ -71,6 +71,16 @@ export interface FrontendAPI {
   // ── WebSocket network scan ──
   scanWsHosts: (url: string) => Promise<string[]>;
 
+  // ── Built-in WebSocket server status ──
+  getWsServerInfo: () => Promise<{ hosts: string[]; port: number; clientCount: number; commandHandlingEnabled: boolean }>;
+  setWsCommandHandlingEnabled: (enabled: boolean) => Promise<boolean>;
+  onWsClientCount: (callback: (data: { count: number }) => void) => (() => void) | void;
+  onWsLastCommand: (callback: (data: { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number }) => void) =>
+    (() => void) | void;
+  onWsNavigationAction: (callback: (data: { action: string; payload?: Record<string, unknown> }) => void) => (() => void) | void;
+  onWsVideoAction: (callback: (data: { action: string; target?: string; payload?: Record<string, unknown> }) => void) => (() => void) | void;
+  wsBroadcastState: (data: Record<string, unknown>) => void;
+
   // ── Auto-updater ──
   installUpdate: () => Promise<void>;
   onUpdaterUpdateAvailable: (callback: (info: { version: string; releaseDate: string }) => void) => (() => void) | void;

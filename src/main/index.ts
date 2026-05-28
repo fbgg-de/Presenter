@@ -1,10 +1,12 @@
 import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { join } from 'path';
+import { networkInterfaces } from 'os';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { PresentationWindowManager } from './windows';
 import { registerIpcHandlers } from './ipc';
 import { LocalMediaServer } from './mediaServer';
+import { PresenterWebSocketServer } from './wsServer';
 import iconIco from '../../favicon.ico?asset';
 import iconPng from '../../favicon.svg?asset';
 import iconSvg from '../../favicon.svg?asset';
@@ -81,6 +83,22 @@ const windowManager = new PresentationWindowManager();
 let mediaServer: LocalMediaServer | null = null;
 let mainWindow: BrowserWindow | null = null;
 let backendOrigin = '';
+const wsServer = new PresenterWebSocketServer(9001, windowManager);
+
+const getWsHosts = (): string[] => {
+  const nets = networkInterfaces();
+  const hosts = new Set<string>(['127.0.0.1', 'localhost']);
+
+  Object.values(nets).forEach((entries) => {
+    entries?.forEach((entry) => {
+      if (entry && entry.family === 'IPv4' && !entry.internal) {
+        hosts.add(entry.address);
+      }
+    });
+  });
+
+  return Array.from(hosts);
+};
 
 const createWindow = () => {
   let icon: string | undefined;
@@ -238,6 +256,8 @@ const createWindow = () => {
 
   // Set the main window reference for window bounds notifications
   windowManager.setMainWindow(mainWindow);
+  wsServer.setMainWindow(mainWindow);
+  wsServer.start();
 
   // Auto-start media server after renderer finishes loading
   mainWindow.webContents.on('did-finish-load', () => {
@@ -258,6 +278,25 @@ registerIpcHandlers(windowManager);
 // IPC handler for media server URL
 ipcMain.handle('get-media-server-url', () => {
   return mediaServer?.getBaseUrl() || '';
+});
+
+ipcMain.handle('get-ws-server-info', () => {
+  return {
+    hosts: getWsHosts(),
+    port: wsServer.getPort(),
+    clientCount: wsServer.getClientCount(),
+    commandHandlingEnabled: wsServer.isCommandHandlingEnabled(),
+  };
+});
+
+ipcMain.handle('set-ws-command-handling-enabled', (_event, enabled: boolean) => {
+  wsServer.setCommandHandlingEnabled(Boolean(enabled));
+  return wsServer.isCommandHandlingEnabled();
+});
+
+// Renderer pushes current state after executing a navigation command
+ipcMain.on('ws-broadcast-state', (_event, data: Record<string, unknown>) => {
+  wsServer.broadcastStateUpdate(data);
 });
 
 // Renderer reports the configured backend URL so will-navigate can identify callbacks
@@ -478,6 +517,7 @@ app.whenReady().then(async () => {
 app.on('window-all-closed', () => {
   // Clean up servers
   mediaServer?.stop();
+  wsServer.stop();
 
   if (process.platform !== 'darwin') {
     app.quit();
@@ -486,5 +526,6 @@ app.on('window-all-closed', () => {
 
 // Ensure all child windows are destroyed before quit
 app.on('before-quit', () => {
+  wsServer.stop();
   windowManager.destroyAll();
 });

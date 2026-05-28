@@ -22,6 +22,7 @@ export interface SettingsState {
   confirmShowDeletion: boolean;
   confirmShowOverwrite: boolean;
   confirmSongDelete: boolean;
+  companionCommandsEnabled: boolean;
   defaultNewVerseName: string;
   defaultVerseName: string;
   desktopAppDismissed: boolean;
@@ -75,7 +76,8 @@ const defaultState: SettingsState = {
   confirmShowDeletion: true,
   confirmShowOverwrite: true,
   confirmSongDelete: true,
-  defaultNewVerseName: 'Outro',
+  companionCommandsEnabled: true,
+  defaultNewVerseName: 'Vers 1',
   defaultVerseName: 'Vers 1',
   desktopAppDismissed: false,
   deviceId: crypto.randomUUID(),

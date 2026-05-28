@@ -30,6 +30,7 @@ export type AccountListItem = {
 
 export type AccountSettingsData = {
   defaultStyleId: number | null;
+  showTitleTemplate: string | null;
 };
 
 const sessionApi = presenterApi.injectEndpoints({
