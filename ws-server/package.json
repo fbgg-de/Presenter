@@ -1,0 +1,21 @@
+{
+  "name": "presenter-ws-relay",
+  "version": "1.0.0",
+  "description": "Standalone WebSocket relay server for Presenter — routes messages between clients of the same account.",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node src/server.ts"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.13",
+    "typescript": "^5.5.4",
+    "ts-node": "^10.9.2"
+  }
+}
+

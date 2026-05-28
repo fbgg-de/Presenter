@@ -1,50 +1,75 @@
 <?php
 
-	require_once(__DIR__ . '/RestController.php');
+require_once(__DIR__ . '/RestController.php');
+require_once(__DIR__ . '/../config.php');
 
-	class Session extends RestController {
-		protected function get(Request &$req, Response &$res) : never {
-			$res->success([
-				'account' => $_SESSION['account'] ?? 0,
-				'mail' => $_SESSION['mail'] ?? ''
-			]);
-		}
+class Session extends RestController
+{
+    protected function get(Request &$req, Response &$res): never
+    {
+        // Optional sub-routes under /rest/Session/...
+        $subRoute = strtolower($req->path->get(0, ''));
 
-		protected function post(Request &$req, Response &$res) : never {
-			$req->params->check('mail')->checkNumeric('license');
+        switch ($subRoute) {
+            case 'oidc-auth-url':
+                // Returns a URL that starts the OIDC login flow.
+                // The client should open this URL (web: window.location, electron: shell.openExternal).
+                $redirect = $req->query->get('redirect', BASE_URL);
+                $redirect = filter_var($redirect, FILTER_SANITIZE_URL);
 
-			$license = $req->params->getAsInt('license');
-			$mail = $req->params->get('mail');
+                // Ensure redirect stays within our domain (basic safety)
+                if (str_starts_with($redirect, '/')) {
+                    $redirect = BASE_URL . ltrim($redirect, '/');
+                }
 
-			$stmt = self::prepare('
-				SELECT 1
-				FROM `account`
-				WHERE `license` = ?
-				AND `mail` = ?
-			');
+                $admin = $req->query->getAsBool('admin', false);
+                // License is optional - use get() with valueRequired=false instead of getAsInt()
+                $licenseRaw = $req->query->get('license', null, false);
+                $license = $licenseRaw !== null ? intval($licenseRaw) : null;
 
-			$stmt->bind_param('is', $license, $mail)->execute();
+                // Return an absolute URL pointing to the backend oidc handler.
+                // This is required when the frontend is on a different origin (e.g. Electron
+                // dev server on localhost:5173 vs the PHP backend on its own domain).
+                // On production, BASE_URL already points to the correct server.
+                $url = BASE_URL . 'oidc?redirect=' . urlencode($redirect);
+                if ($admin) {
+                    $url .= '&admin=1';
+                } elseif ($license !== null) {
+                    $url .= '&license=' . intval($license);
+                }
 
-			if(!$stmt->fetch()) {
-				$res->error(401, 'credentials are invalid');
-			}
+                $res->success([
+                    'url' => $url
+                ]);
+                break;
+            default:
+                $res->success([
+                    'account' => $_SESSION['account'] ?? 0,
+                    'mail' => $_SESSION['mail'] ?? '',
+                    'isAuthenticated' => isset($_SESSION['authType']) && !empty($_SESSION['authType']),
+                    'authType' => $_SESSION['authType'] ?? null,
+                    'settings' => [
+                        'bibleEnabled' => defined('BIBLE_API') && is_array(BIBLE_API) && !empty(BIBLE_API['enabled']) && BIBLE_API['enabled'],
+                        'wsHost' => defined('WS_HOST') && is_array(WS_HOST) && !empty(WS_HOST['host'])
+                            ? [
+                                'host' => WS_HOST['host'],
+                                'port' => (int)(WS_HOST['port'] ?? 443),
+                                'path' => WS_HOST['path'] ?? '/',
+                                'wss'  => !empty(WS_HOST['wss']),
+                              ]
+                            : null,
+                    ],
+                ]);
+        }
+    }
 
-			$_SESSION['account'] = $license;
-			$_SESSION['mail'] = $mail;
+    protected function delete(Request &$req, Response &$res): never
+    {
+        session_unset();
+        session_destroy();
 
-			$stmt->close();
-
-			$res->success([
-				'message' => 'successfully logged in'
-			]);
-		}
-
-		protected function delete(Request &$req, Response &$res) : never {
-			session_unset();
-			session_destroy();
-
-			$res->success([
-				'message' => 'successfully logged out'
-			]);
-		}
-	}
+        $res->success([
+            'message' => 'successfully logged out'
+        ]);
+    }
+}

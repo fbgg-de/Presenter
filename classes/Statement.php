@@ -1,103 +1,136 @@
 <?php
 
-	class Statement {
-		private mysqli_stmt $stmt;
+class Statement
+{
+    private mysqli_stmt $stmt;
 
-		public function __construct(mysqli_stmt $stmt) {
-			$this->stmt = $stmt;
-		}
+    public function __construct(mysqli_stmt $stmt)
+    {
+        $this->stmt = $stmt;
+    }
 
-		private function throwError($message) : void {
-			if($this->stmt->errno) {
-				throw new Error('sql error ' . $this->stmt->errno . ': ' . $this->stmt->error);
-			}
+    private function throwError($message): void
+    {
+        if ($this->stmt->errno) {
+            throw new Error('sql error ' . $this->stmt->errno . ': ' . $this->stmt->error);
+        }
 
-			throw new Error('sql error: ' . $message);
-		}
+        throw new Error('sql error: ' . $message);
+    }
 
-		public function id(int | string | null &$id) : Statement {
-			$id = $this->stmt->insert_id;
+    public function id(int | string | null &$id): Statement
+    {
+        $id = $this->stmt->insert_id;
 
-			return $this;
-		}
+        return $this;
+    }
 
-		public function rows(int | null &$rows) : Statement {
-			$rows = $this->stmt->num_rows;
+    public function rows(int | null &$rows): Statement
+    {
+        $result = $this->stmt->get_result();
 
-			return $this;
-		}
+        if ($result === false) {
+            $this->stmt->store_result();
+            $rows = $this->stmt->num_rows;
+            $this->stmt->free_result();
+        } else {
+            $rows = $result->num_rows;
+        }
 
-		public function bind_param(string $types, $param1, ...$params) : Statement {
-			if(!$this->stmt->bind_param($types, $param1, ...$params)) {
-				$this->throwError('could not bind parameters');
-			}
+        return $this;
+    }
 
-			return $this;
-		}
+    public function affected(int | null &$rows): Statement
+    {
+        $rows = $this->stmt->affected_rows;
 
-		public function execute() : Statement {
-			if(!$this->stmt->execute()) {
-				$this->throwError('could not execute statement');
-			}
+        return $this;
+    }
 
-			return $this;
-		}
+    public function bind_param(string $types, $param1, ...$params): Statement
+    {
+        if (!$this->stmt->bind_param($types, $param1, ...$params)) {
+            $this->throwError('could not bind parameters');
+        }
 
-		public function bind_result(&$param1, &...$params) : Statement {
-			if(!$this->stmt->bind_result($param1, ...$params)) {
-				$this->throwError('could not bind result');
-			}
+        return $this;
+    }
 
-			return $this;
-		}
+    public function execute(): Statement
+    {
+        try {
+            if (!$this->stmt->execute()) {
+                $this->throwError('could not execute statement');
+            }
+        } catch (mysqli_sql_exception $e) {
+            $this->throwError($e->getMessage());
+        }
 
-		public function fetch() : ?bool {
-			return $this->stmt->fetch();
-		}
+        return $this;
+    }
 
-		public function fetchOne(&$result) : Statement {
-			$stmtResult = $this->stmt->get_result();
-			if($stmtResult === false) {
-				$this->throwError('could not get result');
-			}
+    public function bind_result(&$param1, &...$params): Statement
+    {
+        if (!$this->stmt->bind_result($param1, ...$params)) {
+            $this->throwError('could not bind result');
+        }
 
-			$result = $stmtResult->fetch_assoc();
+        return $this;
+    }
 
-			return $this;
-		}
+    public function fetch(): ?bool
+    {
+        return $this->stmt->fetch();
+    }
 
-		public function fetchAll(&$result) : Statement {
-			$stmtResult = $this->stmt->get_result();
-			if($stmtResult === false) {
-				$this->throwError('could not get result');
-			}
+    public function fetchOne(&$result): Statement
+    {
+        $stmtResult = $this->stmt->get_result();
+        if ($stmtResult === false) {
+            $this->throwError('could not get result');
+        }
 
-			$result = $stmtResult->fetch_all(MYSQLI_ASSOC);
+        $result = $stmtResult->fetch_assoc();
 
-			return $this;
-		}
+        return $this;
+    }
 
-		public function store_result() : Statement {
-			if(!$this->stmt->store_result()) {
-				$this->throwError('could not store statement results');
-			}
+    public function fetchAll(&$result): Statement
+    {
+        $stmtResult = $this->stmt->get_result();
+        if ($stmtResult === false) {
+            $this->throwError('could not get result');
+        }
 
-			return $this;
-		}
+        $result = $stmtResult->fetch_all(MYSQLI_ASSOC);
 
-		public function free_result() : Statement {
-			$this->stmt->free_result();
+        return $this;
+    }
 
-			return $this;
-		}
+    public function store_result(): Statement
+    {
+        if (!$this->stmt->store_result()) {
+            $this->throwError('could not store statement results');
+        }
 
-		public function close() : void {
-			if($this->stmt->errno) {
-				throw new Error('error (' . $this->stmt->errno . ': ' . $this->stmt->error . ')');
-			}
+        return $this;
+    }
 
-			if(!$this->stmt->close()) {
-				throw new Error('could not close mysqli statement');
-			}
-		}
-	}
+    public function free_result(): Statement
+    {
+        $this->stmt->free_result();
+
+        return $this;
+    }
+
+    public function close(): void
+    {
+        if ($this->stmt->errno) {
+            throw new Error('error (' . $this->stmt->errno . ': ' . $this->stmt->error . ')');
+        }
+
+        if (!$this->stmt->close()) {
+            throw new Error('could not close mysqli statement');
+        }
+    }
+}

@@ -1,155 +1,173 @@
 <?php
 
-	class Values {
-		private string $type;
-		public array $values;
+class Values
+{
+    private string $type;
+    public array $values;
 
-		public function __construct(string $type, array $values = []) {
-			$this->type = $type . ' -> ';
-			$this->values = $values;
-		}
+    public function __construct(string $type, array $values = [])
+    {
+        $this->type = $type . ' -> ';
+        $this->values = $values;
+    }
 
-		public function has($attribute) : bool {
-			return isset($this->values[$attribute]);
-		}
+    public function has($attribute): bool
+    {
+        return isset($this->values[$attribute]);
+    }
 
-		public function hasPath(string $name) : bool {
-			foreach($this->values as $key => $value) {
-				if($value === $name) {
-					return isset($this->values[$key + 1]);
-				}
-			}
+    public function hasPath(string $name, bool $checkValue = true): bool
+    {
+        foreach ($this->values as $key => $value) {
+            if ($value === $name) {
+                return !$checkValue || isset($this->values[$key + 1]);
+            }
+        }
 
-			return false;
-		}
+        return false;
+    }
 
-		public function isNumeric(... $attributes) : bool {
-			foreach($attributes as $attribute) {
-				if(!isset($this->values[$attribute])) {
-					return false;
-				}
+    public function isNumeric(... $attributes): bool
+    {
+        foreach ($attributes as $attribute) {
+            if (!isset($this->values[$attribute])) {
+                return false;
+            }
 
-				if($this->values[$attribute] === '' || intval($this->values[$attribute]) < 0) {
-					return false;
-				}
-			}
+            if ($this->values[$attribute] === '' || intval($this->values[$attribute]) < 0) {
+                return false;
+            }
+        }
 
-			return true;
-		}
+        return true;
+    }
 
-		public function check(... $attributes) : Values {
-			foreach($attributes as $attribute) {
-				if(!isset($this->values[$attribute])) {
-					throw new Error($this->type . '[' . $attribute . '] is missing');
-				}
-			}
+    public function check(... $attributes): Values
+    {
+        foreach ($attributes as $attribute) {
+            if (!isset($this->values[$attribute])) {
+                throw new Error($this->type . '[' . $attribute . '] is missing');
+            }
+        }
 
-			return $this;
-		}
+        return $this;
+    }
 
-		public function checkNumeric(... $attributes) : Values {
-			foreach($attributes as $attribute) {
-				if(!isset($this->values[$attribute])) {
-					throw new Error($this->type . '[' . $attribute . '] is missing');
-				}
+    public function checkNumeric(... $attributes): Values
+    {
+        foreach ($attributes as $attribute) {
+            if (!isset($this->values[$attribute])) {
+                throw new Error($this->type . '[' . $attribute . '] is missing');
+            }
 
-				if($this->values[$attribute] === '' || intval($this->values[$attribute]) < 0) {
-					throw new Error($this->type . '[' . $attribute . '] is not a valid number');
-				}
-			}
+            if ($this->values[$attribute] === '' || intval($this->values[$attribute]) < 0) {
+                throw new Error($this->type . '[' . $attribute . '] is not a valid number');
+            }
+        }
 
-			return $this;
-		}
+        return $this;
+    }
 
-		public function checkObject(... $attributes) : Values {
-			foreach($attributes as $attribute) {
-				if(!isset($this->values[$attribute])) {
-					throw new Error($this->type . '[' . $attribute . '] is missing');
-				}
+    public function add(string $key, $value): Values
+    {
+        $this->values[$key] = $value;
 
-				if(!is_object($this->values[$attribute])) {
-					throw new Error($this->type . '[' . $attribute . '] is not an array');
-				}
-			}
+        return $this;
+    }
 
-			return $this;
-		}
+    public function get(string $attribute, $default = null, $valueRequired = true): mixed
+    {
+        if (!isset($this->values[$attribute])) {
+            if ($default === null && $valueRequired) {
+                throw new Error($this->type . '[' . $attribute . '] is missing');
+            }
 
-		public function checkArray(... $attributes) : Values {
-			foreach($attributes as $attribute) {
-				if(!isset($this->values[$attribute])) {
-					throw new Error($this->type . '[' . $attribute . '] is missing');
-				}
+            return $default;
+        }
 
-				if(!is_Array($this->values[$attribute])) {
-					throw new Error($this->type . '[' . $attribute . '] is not an array');
-				}
-			}
+        return $this->values[$attribute];
+    }
 
-			return $this;
-		}
+    public function getPath(string $name, $default = null, $valueRequired = true): mixed
+    {
+        foreach ($this->values as $key => $value) {
+            if ($value === $name) {
+                if (!isset($this->values[$key + 1])) {
+                    if ($valueRequired) {
+                        throw new Error($this->type . 'value for [' . $name . '] is missing');
+                    }
 
-		public function add(string $key, $value) : Values {
-			$this->values[$key] = $value;
+                    return $default;
+                }
 
-			return $this;
-		}
+                return $this->values[$key + 1];
+            }
+        }
 
-		public function get(string $attribute, $default = NULL) : mixed {
-			if(!isset($this->values[$attribute])) {
-				if($default === NULL) {
-					throw new Error($this->type . '[' . $attribute . '] is missing');
-				}
+        if ($default === null) {
+            throw new Error($this->type . '[' . $name . '] is missing');
+        }
 
-				return $default;
-			}
+        return $default;
+    }
 
-			return $this->values[$attribute];
-		}
+    public function getPathAsInt(string $name, $default = null): int
+    {
+        return intval($this->getPath($name, $default));
+    }
 
-		public function getPath(string $name, $default = NULL) : mixed {
-			foreach($this->values as $key => $value) {
-				if($value === $name) {
-					if(!isset($this->values[$key + 1])) {
-						throw new Error($this->type . 'value for [' . $name . '] is missing');
-					}
+    public function getPathAsBool(string $name, $default = null): bool
+    {
+        return boolval($this->getPath($name, $default));
+    }
 
-					return $this->values[$key + 1];
-				}
-			}
+    public function getAsInt(string $attribute, int $default = null): int
+    {
+        return intval($this->get($attribute, $default));
+    }
 
-			if($default === NULL) {
-				throw new Error($this->type . '[' . $name . '] is missing');
-			}
+    public function getAsBool(string $attribute, bool $default = null): bool
+    {
+        return boolval($this->get($attribute, $default));
+    }
 
-			return $default;
-		}
+    public function getAsArray(string $attribute, array $default = []): array
+    {
+        $value = $this->get($attribute, $default, false);
+        if (is_array($value)) {
+            return $value;
+        }
+        if (is_object($value)) {
+            return (array)$value;
+        }
+        return $default;
+    }
 
-		public function getAsInt(string $attribute, int $default = NULL) : int {
-			return intval($this->get($attribute, $default));
-		}
+    public function getAsObject(string $attribute, $default = null): mixed
+    {
+        return $this->get($attribute, $default, false);
+    }
 
-		public function getAsBool(string $attribute, bool $default = NULL) : bool {
-			return boolval($this->get($attribute, $default));
-		}
+    public function checkArray(string ...$attributes): Values
+    {
+        foreach ($attributes as $attribute) {
+            if (!isset($this->values[$attribute])) {
+                throw new Error($this->type . '[' . $attribute . '] is missing');
+            }
+            if (!is_array($this->values[$attribute])) {
+                throw new Error($this->type . '[' . $attribute . '] must be an array');
+            }
+        }
+        return $this;
+    }
 
-		public function getAsObject(string $attribute, array | object $default = NULL) : object {
-			$value = $this->get($attribute, $default);
-
-			if(!is_object($value)) {
-				return $default;
-			}
-
-			return $value;
-		}
-
-		public function getAsArray(string $attribute, array $default = NULL) : array {
-			$value = $this->get($attribute, $default);
-
-			if(!is_array($value)) {
-				return $default;
-			}
-
-			return $value;
-		}
-	}
+    public function checkObject(string ...$attributes): Values
+    {
+        foreach ($attributes as $attribute) {
+            if (!isset($this->values[$attribute])) {
+                throw new Error($this->type . '[' . $attribute . '] is missing');
+            }
+        }
+        return $this;
+    }
+}

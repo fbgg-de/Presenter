@@ -1,0 +1,48 @@
+version: '3.9'
+
+networks:
+  presenter_network:
+    driver: bridge
+    name: presenter
+    ipam:
+      driver: default
+      config:
+        - subnet: "172.27.0.0/16"
+          gateway: "172.27.0.1"
+
+services:
+  ws-relay:
+    container_name: "presenter-websocket"
+    build: .
+    restart: unless-stopped
+    environment:
+      PORT: "9001"
+    # Expose port to host only — put a reverse proxy (nginx/Caddy/Traefik) in
+    # front to terminate TLS so clients can connect with wss://.
+    ports:
+      - "9001:9001"
+    networks:
+      - presenter_network
+
+  # ── Optional: Caddy reverse proxy for automatic HTTPS ──────────────────
+  # Uncomment and adjust the Caddyfile snippet below if you want Caddy to
+  # handle TLS termination automatically via Let's Encrypt.
+  #
+  # caddy:
+  #   image: caddy:2-alpine
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./Caddyfile:/etc/caddy/Caddyfile:ro
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #   networks:
+  #     - presenter_network
+  #
+  # volumes:
+  #   caddy_data:
+  #   caddy_config:
+
+

@@ -1,9 +1,43 @@
+Options -MultiViews
 RewriteEngine On
 
+# Handle REST API calls
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^rest/(.*)$ rest.php/$1 [L]
 
+# Handle OIDC flow — rewrite /oidc to oidc.php (no conditions needed, /oidc is never a real file)
+RewriteRule ^oidc$ oidc.php [L,QSA]
+RewriteRule ^oidc/(.*)$ oidc.php/$1 [L,QSA]
+
+RewriteRule ^login$ login.html [L,QSA]
+RewriteRule ^login/(.*)$ login.html [L,QSA]
+RewriteRule ^admin$ admin.html [L,QSA]
+RewriteRule ^admin/(.*)$ admin.html [L,QSA]
+RewriteRule ^notes$ musician.html [L,QSA]
+
+# Protect data directory from direct access
+RewriteRule ^data/ - [F,L]
+
+# Handle React Router (HTML5 History Mode)
+# Don't rewrite if file or directory exists
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+# Don't rewrite PHP files, assets, OIDC, or special HTML pages
+RewriteCond %{REQUEST_URI} !\.php$
+RewriteCond %{REQUEST_URI} !^/assets/
+RewriteCond %{REQUEST_URI} !^/oidc
+RewriteCond %{REQUEST_URI} !^/admin\.html
+RewriteCond %{REQUEST_URI} !^/login\.html
+RewriteCond %{REQUEST_URI} !^/musician\.html
+RewriteCond %{REQUEST_URI} !^/presentation\.html
+# Rewrite everything else to index.html for React Router
+RewriteRule ^(.*)$ index.html [L]
+
 <Files "error.log">
+  Require all denied
+</Files>
+
+<Files "config.php">
   Require all denied
 </Files>

@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Presenter - Presentation</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' blob: http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https: wss:; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: http: blob:; media-src 'self' https: http: blob:; font-src 'self' https: data:; worker-src 'self' blob:"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        cursor: none;
+      }
+      #presentation-root {
+        width: 100%;
+        height: 100%;
+      }
+      /* Hide ALL videos when the controller toggles "Hide video".
+         Defaults to a hard cut (display:none). When the controller sends
+         mode='fade' with a duration, body[data-hide-transition="fade"]
+         applies an opacity transition driven by --hide-bg-video-duration.
+         This applies to both style background videos AND media-item videos —
+         when the operator presses Hide, every video on the screen disappears. */
+      body video {
+        transition: opacity var(--hide-bg-video-duration, 0ms) linear;
+      }
+      body.hide-bg-video[data-hide-transition='fade'] video {
+        opacity: 0;
+        pointer-events: none;
+      }
+      body.hide-bg-video:not([data-hide-transition='fade']) video {
+        display: none !important;
+      }
+      /* When a media item is active, hide style background videos so only the
+         item video is visible. Set via the `media-item-active` body class on
+         every content update (see presentation/index.tsx). The transition
+         duration mirrors the operator's hide-transition setting so the
+         crossover from a song's background video to a media-item video is
+         not abrupt. */
+      body.media-item-active video:not([data-role='media-item']) {
+        opacity: 0;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="presentation-root"></div>
+    <script type="module" src="/src/presentation/index.tsx"></script>
+  </body>
+</html>

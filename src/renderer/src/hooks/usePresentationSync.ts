@@ -1,0 +1,504 @@
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useAppSelector, useAppDispatch } from '@/store';
+import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
+import { broadcastContent, setWindowStyleResolver } from '@/utils/presentationBridge';
+import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
+import type { ContentType, PresentationBlock, PresentationContent, PresentationLine } from '@/presentation/types';
+import { DEFAULT_STYLE, mergeStyles, type ResolvedStyle, resolveStyleCascade, resolveStyleData } from '@/utils/styleUtils';
+import { useGetStylesQuery } from '@/api/styles.api';
+import { resolveMediaUrl } from '@/utils/mediaUrl';
+import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
+import { useGetWindows, useUpdateWindows, WindowConfig } from '@/store/windowSlice';
+import { useGetPresentationSettings } from '@/store/presentationSlice';
+import { setActiveItemIndex, setActiveBlockIndex, setActiveItemAndBlock, setWsConnectedCount, setWsMidiSyncAt, setWsOperatorConnected } from '@/store/presentationSlice';
+import { useGetShow } from '@/store/showSlice';
+import { useI18nContext } from '@/i18n/i18n-react';
+import { useGetSessionQuery } from '@/api/session.api';
+import { useWsOperator, type WsOperatorIncomingSync } from '@/hooks/useWsOperator';
+
+/**
+ * Parse song block lines to extract language tags.
+ * Lines like "[EN] Some text" are tagged with the language.
+ * Lines without tags are considered universal (no language).
+ */
+const parseSongLines = (rawLines: string[]): PresentationLine[] => {
+  return rawLines.map((line) => {
+    const match = line.match(SONG_TRANSLATION_LINE_REGEX);
+    if (match) {
+      return {
+        text: match[2],
+        language: match[1].toUpperCase(),
+      };
+    }
+    return { text: line };
+  });
+};
+
+/**
+ * Hook that watches Redux state and broadcasts presentation content
+ * to all open presentation windows whenever relevant state changes.
+ */
+export const usePresentationSync = (): void => {
+  const { LL } = useI18nContext();
+  const dispatch = useAppDispatch();
+  const {
+    nextLinePreview,
+    nextLinePreviewColor,
+    globalStyleId,
+    transitionMode,
+    transitionDuration,
+    offlineMode,
+    cachedStyles,
+    showLicenseNumber,
+    midiTrackingMaster,
+  } = useGetSettings();
+
+  // Keep midiTrackingMaster in a ref so the WS callback always sees the latest value
+  // without re-registering the callback (which would cause reconnects).
+  const midiTrackingMasterRef = useRef(midiTrackingMaster);
+  midiTrackingMasterRef.current = midiTrackingMaster;
+  const { windowConfigs } = useGetWindows();
+  const { currentShow } = useGetShow();
+  const { songs } = useGetSongs();
+  const updateWindowSetting = useUpdateWindows();
+
+  // Session — needed for the account number and WS host used in WS auth
+  const { data: sessionData } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const wsAccount = useMemo(() => {
+    const acc = sessionData?.account;
+    return typeof acc === 'number' ? acc : null;
+  }, [sessionData?.account]);
+
+  // Derive wsUrl from global session ws_hosts (configured in config.php)
+  const wsUrl = useMemo(() => {
+    const h = sessionData?.settings?.wsHost;
+    if (h?.host && h?.port) {
+      const path = h.path && h.path !== '/' ? h.path : '';
+      return `${h.wss ? 'wss' : 'ws'}://${h.host}:${h.port}${path}`;
+    }
+    return '';
+  }, [sessionData?.settings?.wsHost]);
+
+  // Called when a musician broadcasts their position — only applied when
+  // midiTrackingMaster === 'midi' (operator follows the MIDI musician).
+  const handleMusicianSync = useCallback((state: WsOperatorIncomingSync) => {
+    if (midiTrackingMasterRef.current !== 'midi') return;
+    const hasItem = typeof state.activeItemIndex === 'number';
+    const hasBlock = typeof state.activeBlockIndex === 'number';
+    if (hasItem && hasBlock) {
+      dispatch(setActiveItemAndBlock({ itemIndex: state.activeItemIndex!, blockIndex: state.activeBlockIndex! }));
+    } else if (hasItem) {
+      dispatch(setActiveItemIndex(state.activeItemIndex!));
+    } else if (hasBlock) {
+      dispatch(setActiveBlockIndex(state.activeBlockIndex!));
+    }
+  }, [dispatch]);
+
+  // Operator WebSocket connection to the relay server
+  const { broadcast: wsBroadcast, connected: wsOperatorConnected, connectedCount, lastMidiSyncAt } = useWsOperator(wsUrl, wsAccount, handleMusicianSync);
+
+  // Also listen for direct Electron IPC musician sync (bypasses WS relay, works offline / same machine)
+  useEffect(() => {
+    const cleanup = window.api?.onMusicianSyncFromIpc?.((raw) => {
+      const msg = raw as { action?: string; data?: WsOperatorIncomingSync };
+      if (msg?.action === 'musician_sync' && msg.data) {
+        dispatch(setWsMidiSyncAt(Date.now()));
+        handleMusicianSync(msg.data);
+      }
+    });
+    return () => { if (typeof cleanup === 'function') cleanup(); };
+  // handleMusicianSync is stable (useCallback with [dispatch])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep Redux in sync with the WS peer count, connection state and last midi-sync timestamp.
+  useEffect(() => {
+    dispatch(setWsConnectedCount(Math.max(0, connectedCount)));
+  }, [connectedCount, dispatch]);
+
+  useEffect(() => {
+    dispatch(setWsOperatorConnected(wsOperatorConnected));
+  }, [wsOperatorConnected, dispatch]);
+
+  useEffect(() => {
+    if (lastMidiSyncAt > 0) dispatch(setWsMidiSyncAt(lastMidiSyncAt));
+  }, [lastMidiSyncAt, dispatch]);
+
+  const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden } = useGetPresentationSettings();
+  const updateSetting = useUpdateSetting();
+
+  // Fetch all styles for cascade resolution
+  const { data: fetchedStyles } = useGetStylesQuery(undefined, { skip: offlineMode });
+  const allStyles = offlineMode ? (cachedStyles as typeof fetchedStyles) : fetchedStyles;
+
+  // Cache styles to localStorage whenever we get a fresh fetch
+  useEffect(() => {
+    if (!offlineMode && fetchedStyles && fetchedStyles.length > 0) {
+      updateSetting('cachedStyles', fetchedStyles as unknown as object[]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchedStyles, offlineMode]);
+
+  // A signature of per-window styleIds — when a user assigns a preset to a
+  // window we must re-broadcast even though the global state is unchanged.
+  const windowStylesSig = useMemo(
+    () =>
+      (windowConfigs as Array<{ name?: string; styleId?: number }> | undefined)
+        ?.map((c) => `${c.name ?? ''}:${c.styleId ?? ''}`)
+        .join('|') ?? '',
+    [windowConfigs],
+  );
+
+  // Get the active show item
+  const activeItem = currentShow?.order?.[activeItemIndex];
+
+  // Resolve the song's active order
+  const currentSongNumber = activeItem?.type === 'song' ? activeItem.songNumber : undefined;
+  const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
+  const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
+
+  // Use a ref to avoid sending duplicate content — compare key fields only
+  const lastKeyRef = useRef('');
+  // Throttle/coalesce broadcast scheduling — see broadcast effect below.
+  const broadcastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastBroadcastAtRef = useRef(0);
+  // Mirror the navigation indices so the deferred flush always sends the
+  // newest values (otherwise a fast-repeating key would re-schedule the
+  // timer with a stale closure). Updated synchronously below.
+  const navStateRef = useRef({ activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden });
+  navStateRef.current = { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden };
+
+  // ── Memoize expensive computations ──
+  // These only recompute when content changes (song/show/styles), NOT on every index change.
+  const { contentType, blocks, style, title, copyright, authors, licenseNumber } = useMemo(() => {
+    let contentType: ContentType = 'empty';
+    let blocks: PresentationBlock[] = [];
+    let title: string | undefined;
+    let copyright: string | undefined;
+    let authors: string | undefined;
+
+    if (activeItem) {
+      switch (activeItem.type) {
+        case 'song': {
+          contentType = 'song';
+          if (currentSong) {
+            title = currentSong.title;
+            authors = currentSong.authors;
+            copyright = currentSong.copyright;
+
+            const songBlocks = currentSong.getBlocks(orderName);
+            blocks = songBlocks
+              .filter((b) => !b.copyright)
+              .map((b) => ({
+                name: b.name,
+                lines: parseSongLines(b.lines || []),
+              }));
+          }
+          break;
+        }
+
+        case 'bible_verse': {
+          contentType = 'bible_verse';
+          const verseText = activeItem.label || activeItem.bibleRef || '';
+          blocks = [
+            {
+              name: activeItem.bibleRef || 'Bible Verse',
+              lines: verseText.split('\n').map((text) => {
+                const segments = activeItem.bibleFormattedSegments || [];
+                const lineStart = verseText.indexOf(text);
+                const lineEnd = lineStart + text.length;
+                const isBold = segments.some((s) => s.bold && s.start <= lineEnd && s.end >= lineStart);
+                return { text, bold: isBold };
+              }),
+            },
+          ];
+          break;
+        }
+
+        case 'media': {
+          contentType = 'media';
+          break;
+        }
+      }
+    }
+
+    // Resolve the three-level style cascade (Global → Show → Item)
+    const styles = allStyles ?? [];
+    const globalStyle = globalStyleId ? styles.find((s) => s.id === globalStyleId && s.enabled) : undefined;
+    const showStyle = currentShow?.styleId ? styles.find((s) => s.id === currentShow.styleId && s.enabled) : undefined;
+    const itemStyle = activeItem?.styleId ? styles.find((s) => s.id === activeItem.styleId && s.enabled) : undefined;
+    const resolvedCascade = resolveStyleCascade(globalStyle, showStyle, itemStyle, undefined, styles);
+    const rawStyle: ResolvedStyle = mergeStyles(DEFAULT_STYLE, resolvedCascade);
+
+    // Resolve relative media paths so presentation windows can load them
+    const style: ResolvedStyle = {
+      ...rawStyle,
+      backgroundImage: resolveMediaUrl(rawStyle.backgroundImage),
+      backgroundVideo: resolveMediaUrl(rawStyle.backgroundVideo),
+    };
+
+    const licenseNumber = currentSong ? (currentSong.account ?? undefined) : undefined;
+    return { contentType, blocks, style, title, copyright, authors, licenseNumber };
+  }, [currentSong, activeItem, orderName, allStyles, globalStyleId, currentShow?.styleId]);
+
+  // Keep frequently-changing object refs accessible inside the broadcast effect
+  // WITHOUT making them part of its dependency array (would otherwise cause the
+  // heavy effect — and IPC broadcast — to fire on every parent re-render).
+  const broadcastRef = useRef({
+    contentType,
+    blocks,
+    style,
+    title,
+    copyright,
+    authors,
+    licenseNumber,
+    activeItem,
+    currentShow,
+    currentSongNumber,
+    orderName,
+    nextLinePreview,
+    nextLinePreviewColor,
+    transitionMode,
+    transitionDuration,
+  });
+  broadcastRef.current = {
+    contentType,
+    blocks,
+    style,
+    title,
+    copyright,
+    authors,
+    licenseNumber,
+    activeItem,
+    currentShow,
+    currentSongNumber,
+    orderName,
+    nextLinePreview,
+    nextLinePreviewColor,
+    transitionMode,
+    transitionDuration,
+  };
+
+  // A cheap content-identity hash (changes only when actual style values change).
+  const styleHash = useMemo(() => {
+    try {
+      return JSON.stringify(style);
+    } catch {
+      return '';
+    }
+  }, [style]);
+
+  useEffect(() => {
+    const b = broadcastRef.current;
+    if (!b.currentShow) return;
+
+    // Throttled flush: when keys auto-repeat we get a Redux dispatch (and
+    // thus this effect) per keypress. Previously we cancelled-and-rescheduled
+    // a rAF on every keypress which meant the broadcast (and the
+    // wsBroadcast → musician_sync) only fired once the user RELEASED the key.
+    // Now we always send immediately if the throttle window has elapsed, and
+    // otherwise schedule a single trailing flush — guaranteeing the latest
+    // navigation state is delivered while still coalescing bursts.
+    const MIN_INTERVAL_MS = 16; // ~60fps; identical broadcasts are deduped per-window
+
+    const flush = () => {
+      broadcastTimerRef.current = null;
+      lastBroadcastAtRef.current = Date.now();
+
+      // Read the LATEST navigation state from refs — not the closure values,
+      // which may be stale by the time the trailing flush runs.
+      const nav = navStateRef.current;
+      const cb = broadcastRef.current;
+
+      // Compute next-block preview lines — style.nextLinePreview overrides global setting
+      const showNextLinePreview = cb.style.nextLinePreview !== undefined ? cb.style.nextLinePreview : cb.nextLinePreview;
+      let nextBlockPreviewLines: PresentationLine[] | undefined;
+      if (showNextLinePreview && cb.blocks.length > 0 && cb.contentType === 'song') {
+        const nextBlockIndex = nav.activeBlockIndex + 1;
+        if (nextBlockIndex < cb.blocks.length) {
+          const nb = cb.blocks[nextBlockIndex];
+          if (nb && nb.lines.length > 0) {
+            // Send only the first semantic group: first primary line + any immediately
+            // following translation lines (lines with a language tag).
+            const group: PresentationLine[] = [];
+            for (const line of nb.lines) {
+              if (!line.language && group.length > 0) break; // stop at second primary line
+              group.push(line);
+            }
+            nextBlockPreviewLines = group;
+          }
+        }
+      }
+
+      const content: PresentationContent = {
+        contentType: cb.contentType,
+        displayMode: 'normal',
+        activeBlockIndex: nav.activeBlockIndex,
+        activeLineIndex: nav.activeLineIndex,
+        blocks: cb.blocks,
+        style: cb.style,
+        isBlack: nav.isBlack,
+        hideText: nav.isTextHidden,
+        title: cb.title,
+        songNumber: cb.currentSongNumber,
+        copyright: cb.copyright,
+        authors: cb.authors,
+        showLicenseNumber: showLicenseNumber,
+        license: `${LL.AUTH.LICENSE()}: #${cb.licenseNumber}`,
+        showCopyright: cb.contentType === 'song' && !!cb.copyright && nav.activeBlockIndex >= cb.blocks.length,
+        mediaSubType: cb.activeItem?.mediaSubType,
+        mediaPath: resolveMediaUrl(cb.activeItem?.mediaPath),
+        mediaColor: cb.activeItem?.mediaColor,
+        mediaObjectFit: cb.activeItem?.mediaObjectFit,
+        mediaObjectPosition: cb.activeItem?.mediaObjectPosition,
+        mediaZoom: cb.activeItem?.mediaZoom,
+        mediaBlur: cb.activeItem?.mediaBlur,
+        mediaAutoplay: cb.activeItem?.mediaAutoplay,
+        mediaLoop: cb.activeItem?.mediaLoop,
+        bibleRef: cb.activeItem?.bibleRef,
+        bibleTranslation: cb.activeItem?.bibleTranslation,
+        nextBlockPreviewLines,
+        nextLinePreviewColor: cb.nextLinePreviewColor,
+        transitionMode: cb.transitionMode,
+        transitionDuration: cb.transitionDuration,
+      };
+
+      broadcastContent(content);
+
+      // Broadcast musician_sync via WebSocket relay server
+      wsBroadcast('musician_sync', {
+        activeItemIndex: nav.activeItemIndex,
+        activeBlockIndex: nav.activeBlockIndex,
+        activeLineIndex: nav.activeLineIndex,
+        songNumber: cb.currentSongNumber,
+        songTitle: cb.title,
+        showTitle: cb.currentShow?.title,
+        orderName: cb.orderName,
+        contentType: cb.contentType,
+      });
+    };
+
+    // Deduplicate scheduling using a lightweight key (includes styleHash so style
+    // edits actually re-broadcast and apply immediately).
+    const ai = b.activeItem;
+    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${b.blocks.length}|${b.nextLinePreview}|${b.nextLinePreviewColor}|${ai?.mediaPath}|${ai?.mediaColor}|${ai?.mediaObjectFit}|${ai?.mediaObjectPosition}|${ai?.mediaZoom}|${ai?.mediaBlur}|${ai?.mediaAutoplay}|${ai?.mediaLoop}|${styleHash}|${windowStylesSig}`;
+    if (contentKey === lastKeyRef.current) return;
+    lastKeyRef.current = contentKey;
+
+    const elapsed = Date.now() - lastBroadcastAtRef.current;
+    if (elapsed >= MIN_INTERVAL_MS && broadcastTimerRef.current === null) {
+      // Leading edge — fire immediately for snappy feedback.
+      flush();
+    } else if (broadcastTimerRef.current === null) {
+      // Schedule a trailing flush; do NOT cancel an existing one (it will pick
+      // up the latest state from refs when it fires).
+      broadcastTimerRef.current = setTimeout(flush, Math.max(0, MIN_INTERVAL_MS - elapsed));
+    }
+  }, [
+    activeItemIndex,
+    activeBlockIndex,
+    activeLineIndex,
+    isBlack,
+    isTextHidden,
+    styleHash,
+    // The following primitives change rarely but should still trigger a re-broadcast:
+    contentType,
+    blocks.length,
+    nextLinePreview,
+    nextLinePreviewColor,
+    windowStylesSig,
+    // Media-item display props (zoom/blur/fit/position/autoplay/loop/path/color)
+    // — the user can edit these on the active item and we need to re-broadcast.
+    activeItem?.mediaPath,
+    activeItem?.mediaColor,
+    activeItem?.mediaObjectFit,
+    activeItem?.mediaObjectPosition,
+    activeItem?.mediaZoom,
+    activeItem?.mediaBlur,
+    activeItem?.mediaAutoplay,
+    activeItem?.mediaLoop,
+    wsBroadcast,
+  ]);
+
+  // ── Register a per-window style resolver so windows with a configured
+  //    preset (styleId) — and active items with per-window overrides — get
+  //    their style merged on top of the cascade. ──
+  const activeItemRef = useRef(activeItem);
+  activeItemRef.current = activeItem;
+
+  useEffect(() => {
+    setWindowStyleResolver((_id, config: WindowConfig) => {
+      if (!allStyles) return undefined;
+      let merged: ResolvedStyle | undefined;
+      const wname = config.name;
+
+      // Helper: resolve a style id and merge it into `merged` (creating it if undefined).
+      const applyStyleId = (sid: number | undefined | null) => {
+        if (!sid) return;
+        const s = allStyles.find((x) => x.id === sid);
+        if (!s || !s.enabled) return;
+        const resolved = resolveStyleData(s.data);
+        merged = mergeStyles(merged ?? {}, {
+          ...resolved,
+          backgroundImage: resolveMediaUrl(resolved.backgroundImage),
+          backgroundVideo: resolveMediaUrl(resolved.backgroundVideo),
+        });
+      };
+
+      // Helper: if the given style has a per-window-name override matching `wname`,
+      // resolve and merge that override style. This implements the "window override"
+      // layer of the cascade for the General / Show / Item levels.
+      const applyWindowOverride = (style: { windowOverrides?: { window_name: string; override_style_id: number }[] } | undefined) => {
+        if (!style?.windowOverrides || !wname) return;
+        const wo = style.windowOverrides.find((w) => w.window_name === wname);
+        if (wo) applyStyleId(wo.override_style_id);
+      };
+
+      // Re-walk the General → Show → Item cascade, applying each level's per-window override.
+      const item = activeItemRef.current;
+      const globalStyleEntity = globalStyleId ? allStyles.find((x) => x.id === globalStyleId) : undefined;
+      const showStyleEntity = currentShow?.styleId ? allStyles.find((x) => x.id === currentShow.styleId) : undefined;
+      const itemStyleEntity = item?.styleId ? allStyles.find((x) => x.id === item.styleId) : undefined;
+      applyWindowOverride(globalStyleEntity);
+      applyWindowOverride(showStyleEntity);
+      applyWindowOverride(itemStyleEntity);
+
+      // Window-level preset (configured on the BrowserWindow itself)
+      applyStyleId(config.styleId);
+
+      // Per-item per-window override (highest priority)
+      if (item?.itemStyleByWindow && wname && item.itemStyleByWindow[wname] != null) {
+        applyStyleId(item.itemStyleByWindow[wname]);
+      }
+      return merged;
+    });
+    return () => setWindowStyleResolver(undefined);
+  }, [allStyles, globalStyleId, currentShow?.styleId, windowStylesSig]);
+
+  // ── Presentation window bounds change listener (Electron only) ──
+  // Updates windowConfigs in Redux/localStorage when user moves/resizes a presentation window.
+  const savedWindowConfigsRef = useRef(windowConfigs);
+  savedWindowConfigsRef.current = windowConfigs;
+
+  useEffect(() => {
+    if (!window.api?.onPresentationWindowBoundsChanged) return;
+
+    const cleanup = window.api.onPresentationWindowBoundsChanged(({ id, bounds }) => {
+      const configs = [
+        ...(savedWindowConfigsRef.current as Array<{
+          _runtimeId?: string;
+          positionX?: number;
+          positionY?: number;
+          width?: number;
+          height?: number;
+        }>),
+      ];
+      const idx = configs.findIndex((c) => c._runtimeId === id);
+      if (idx >= 0) {
+        configs[idx] = { ...configs[idx], positionX: bounds.x, positionY: bounds.y, width: bounds.width, height: bounds.height };
+        updateWindowSetting('windowConfigs', configs as any);
+      }
+    });
+    return cleanup || undefined;
+  }, []);
+};
