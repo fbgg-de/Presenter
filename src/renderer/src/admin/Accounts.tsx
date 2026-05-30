@@ -28,6 +28,7 @@ import {
   Delete as DeleteIcon,
   Link as LinkIcon,
   CheckCircle as CheckCircleIcon,
+  Church as ChurchIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import {
@@ -57,6 +58,7 @@ export const Accounts = () => {
   const [accountDialog, setAccountDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
   const [assignDialog, setAssignDialog] = useState<{ open: boolean; license?: number }>({ open: false });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id?: number; name?: string }>({ open: false });
+  const [ctDialog, setCtDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
 
   const handleSaveAccount = async (data: CreateAccountRequest | UpdateAccountRequest) => {
     try {
@@ -68,6 +70,19 @@ export const Accounts = () => {
       setAccountDialog({ open: false });
     } catch (e) {
       console.error('Failed to save account:', e);
+    }
+  };
+
+  const handleSaveCtConfig = async (license: number, churchToolsUrl: string, churchToolsToken: string) => {
+    try {
+      await updateAccount({
+        license,
+        churchToolsUrl: churchToolsUrl || null,
+        churchToolsToken: churchToolsToken || null,
+      }).unwrap();
+      setCtDialog({ open: false });
+    } catch (e) {
+      console.error('Failed to save ChurchTools config:', e);
     }
   };
 
@@ -124,6 +139,7 @@ export const Accounts = () => {
                 <TableCell>{LL.COMMON.EMAIL()}</TableCell>
                 <TableCell>{LL.COMMON.STATUS()}</TableCell>
                 <TableCell>{LL.ADMIN.OIDC_PROVIDERS()}</TableCell>
+                <TableCell>{LL.ADMIN.CHURCH_TOOLS()}</TableCell>
                 <TableCell>{LL.COMMON.ACTIONS()}</TableCell>
               </TableRow>
             </TableHead>
@@ -154,6 +170,20 @@ export const Accounts = () => {
                       <Tooltip title={LL.ADMIN.ASSIGN_PROVIDER()}>
                         <IconButton size="small" onClick={() => setAssignDialog({ open: true, license: account.license })}>
                           <LinkIcon sx={{ fontSize: 'small' }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
+                    <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        label={account.church_tools_enabled ? LL.COMMON.ENABLED() : LL.COMMON.DISABLED()}
+                        color={account.church_tools_enabled ? 'success' : 'default'}
+                        size="small"
+                      />
+                      <Tooltip title={LL.ADMIN.CONFIGURE_CHURCH_TOOLS()}>
+                        <IconButton size="small" onClick={() => setCtDialog({ open: true, account })}>
+                          <ChurchIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     </Stack>
@@ -192,6 +222,12 @@ export const Accounts = () => {
         assignedProviders={accounts.find((a) => a.license === assignDialog.license)?.providers || []}
         onClose={() => setAssignDialog({ open: false })}
         onAssign={handleAssignProvider}
+      />
+      <ChurchToolsDialog
+        open={ctDialog.open}
+        account={ctDialog.account}
+        onClose={() => setCtDialog({ open: false })}
+        onSave={handleSaveCtConfig}
       />
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false })} maxWidth="sm" fullWidth>
         <DialogTitle>{LL.ADMIN.CONFIRM_DELETE()}</DialogTitle>
@@ -343,3 +379,70 @@ const AssignProviderDialog = ({
     </Dialog>
   );
 };
+
+/**
+ * Dialog for configuring the ChurchTools integration URL and API token per account.
+ * The token is write-only: it is never returned by the API, so the field is always blank
+ * on open. Leave it blank to keep the existing token unchanged.
+ */
+const ChurchToolsDialog = ({
+  open,
+  account,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  account?: AdminAccount;
+  onClose: () => void;
+  onSave: (license: number, url: string, token: string) => void;
+}) => {
+  const { LL } = useI18nContext();
+  const [url, setUrl] = useState('');
+  const [token, setToken] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setUrl(account?.church_tools_url ?? '');
+      setToken(''); // token is write-only; never pre-filled
+    }
+  }, [open, account]);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>{LL.ADMIN.CONFIGURE_CHURCH_TOOLS()}</DialogTitle>
+      <DialogContent>
+        <Stack sx={{ gap: 2, mt: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {LL.ADMIN.CHURCH_TOOLS_HELP()}
+          </Typography>
+          <TextField
+            label={LL.ADMIN.CHURCH_TOOLS_URL()}
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://demo.church.tools/api/"
+            fullWidth
+          />
+          <TextField
+            label={LL.ADMIN.CHURCH_TOOLS_TOKEN()}
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder={account?.church_tools_enabled ? LL.ADMIN.CHURCH_TOOLS_TOKEN_PLACEHOLDER_SET() : ''}
+            helperText={LL.ADMIN.CHURCH_TOOLS_TOKEN_HELP()}
+            type="password"
+            fullWidth
+          />
+          {!url && account?.church_tools_enabled && (
+            <Alert severity="warning">{LL.ADMIN.CHURCH_TOOLS_CLEAR_WARNING()}</Alert>
+          )}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
+        <Button onClick={() => account && onSave(account.license, url, token)} variant="contained">
+          {LL.COMMON.SAVE()}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+

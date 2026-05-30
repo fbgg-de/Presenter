@@ -1,4 +1,4 @@
-appId: com.electron.app
+appId: de.fbbg.presenter
 productName: Presenter
 directories:
   buildResources: build

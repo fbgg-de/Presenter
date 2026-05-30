@@ -5,6 +5,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetAdminMigrationsQuery } from '@/api/admin.api';
 import { useLogoutMutation, useGetSessionQuery } from '@/api/session.api';
+import { useUpdateSetting } from '@/store/settingsSlice';
+import { redirectToLogin } from '@/utils';
 import { Accounts } from '@/admin/Accounts';
 import { Providers } from '@/admin/Providers';
 import { Metrics } from '@/admin/Metrics';
@@ -26,6 +28,7 @@ export const AdminPage = () => {
 
   const { data: migrationStatus } = useGetAdminMigrationsQuery(undefined, { skip: !isAdmin });
   const [logout] = useLogoutMutation();
+  const updateSetting = useUpdateSetting();
 
   const handleTabChange = (_: SyntheticEvent, newValue: number) => {
     navigate(`/admin/${TAB_SLUGS[newValue]}`, { replace: true });
@@ -34,7 +37,10 @@ export const AdminPage = () => {
   const handleLogout = async () => {
     try {
       await logout().unwrap();
-      navigate('/login', { replace: true });
+      // Clear last-selected account so the login page does not default back
+      // to the admin account, allowing the user to pick a different one.
+      updateSetting('lastSelectedAccount', '');
+      redirectToLogin();
     } catch (e) {
       console.error('Failed to logout:', e);
     }

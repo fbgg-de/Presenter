@@ -113,4 +113,3 @@ class Cors
         return in_array($origin, $allowed, true);
     }
 }
-

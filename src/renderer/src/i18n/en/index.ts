@@ -163,6 +163,14 @@ const en = {
     CONFIG_DISABLED: 'Disabled',
     WS_HOST_SECTION: 'WebSocket Host',
     WS_HOST_NOT_CONFIGURED: 'No WebSocket host configured in config.php.',
+    CHURCH_TOOLS: 'ChurchTools',
+    CONFIGURE_CHURCH_TOOLS: 'Configure ChurchTools',
+    CHURCH_TOOLS_HELP: 'Connect this account to a ChurchTools instance to enable CCLI SongSelect search and arrangement downloads for musicians.',
+    CHURCH_TOOLS_URL: 'ChurchTools API URL',
+    CHURCH_TOOLS_TOKEN: 'API Login Token',
+    CHURCH_TOOLS_TOKEN_HELP: 'Leave blank to keep the existing token. Enter a new value to update it.',
+    CHURCH_TOOLS_TOKEN_PLACEHOLDER_SET: '(token already set)',
+    CHURCH_TOOLS_CLEAR_WARNING: 'Clearing the URL will disable the ChurchTools integration for this account.',
   },
 
   ADMIN_LOGS: {
@@ -200,6 +208,8 @@ const en = {
     CCLI_LICENSE_NUMBER: 'CCLI-Licensenumber',
     CCLI_REPORTING: 'CCLI Reporting',
     COPY_CCLI_LIST: 'Copy CCLI List',
+    IMPORT_ERROR: 'Failed to import song file',
+    IMPORT_ERROR_DUPLICATE: 'A song with this CCLI number already exists in your library',
   },
 
   SONG_EDITOR: {
@@ -563,8 +573,28 @@ const en = {
     STYLES: 'Styles',
     BIBLE: 'Bible',
     CCLI: 'CCLI',
+    CHURCH_TOOLS: 'ChurchTools',
     NO_RESULTS: 'No results found',
     DEEP: 'Deep Search (lyrics)',
+  },
+
+  CHURCH_TOOLS: {
+    SEARCH_PLACEHOLDER: 'Search songs in ChurchTools...',
+    NO_RESULTS: 'No songs found in ChurchTools',
+    ARRANGEMENTS: 'Arrangements',
+    ARRANGEMENT: 'Arrangement',
+    KEY: 'Key',
+    BEAT: 'Beat',
+    TEMPO: 'Tempo (BPM)',
+    FILES: 'Files',
+    DOWNLOAD: 'Download',
+    IMPORT_AND_ADD: 'Import & add to show',
+    ADD_TO_SHOW: 'Add to show',
+    ALREADY_IMPORTED: 'Already in library',
+    LOADING: 'Loading from ChurchTools…',
+    ERROR: 'Failed to load from ChurchTools',
+    DISABLED: 'ChurchTools is not configured',
+    SONG_DETAIL_TITLE: 'ChurchTools Arrangements',
   },
 
   KEYBOARD: {

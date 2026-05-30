@@ -52,4 +52,3 @@ trait BibleApi
         return $current;
     }
 }
-

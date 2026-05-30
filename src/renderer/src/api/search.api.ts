@@ -4,7 +4,7 @@ import type { ApiSuccess } from './base.api';
 export type SearchResult = {
   id: number | string;
   name: string;
-  type: 'song' | 'style' | 'media' | 'bible';
+  type: 'song' | 'style' | 'media' | 'bible' | 'churchtools';
 };
 
 const searchApi = presenterApi.injectEndpoints({

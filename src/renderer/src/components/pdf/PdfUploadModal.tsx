@@ -44,6 +44,8 @@ import { useListPdfsQuery, useUploadPdfMutation, useDeletePdfMutation, useRename
 import { MUSICAL_KEYS } from '@/utils/orderKeyUtils';
 import { formatDateTime, formatFileSize } from '@/utils';
 import { useMetrics } from '@/hooks/useMetrics';
+import { ChurchToolsArrangementPanel } from '@/components/churchtools/ChurchToolsArrangementPanel';
+import { useGetSessionQuery } from '@/api/session.api';
 
 /**
  * Try to detect a musical key from a filename.
@@ -67,6 +69,10 @@ interface PdfUploadModalProps {
   onSelectPdf?: (filename: string | null) => void;
   /** Called to open the area mapping editor for a specific PDF */
   onOpenAreaMapping?: () => void;
+  /** ChurchTools song ID — when provided the arrangement panel is shown */
+  ctSongId?: number | null;
+  /** ChurchTools song name */
+  ctSongName?: string;
 }
 
 export const PdfUploadModal = ({
@@ -77,10 +83,16 @@ export const PdfUploadModal = ({
   selectedPdf,
   onSelectPdf,
   onOpenAreaMapping,
+  ctSongId,
+  ctSongName,
 }: PdfUploadModalProps) => {
   const { LL } = useI18nContext();
   const { trackEvent } = useMetrics();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Determine if ChurchTools is globally enabled
+  const { data: session } = useGetSessionQuery();
+  const churchToolsEnabled = session?.settings?.churchToolsEnabled ?? false;
 
   // Import form state
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -555,6 +567,13 @@ export const PdfUploadModal = ({
           </Paper>
         </Stack>
       </DialogContent>
+      {/* ChurchTools arrangement panel */}
+      {churchToolsEnabled && ctSongId != null && ctSongName && (
+        <>
+          <Divider />
+          <ChurchToolsArrangementPanel ctSongId={ctSongId} songName={ctSongName} />
+        </>
+      )}
       <DialogActions>
         <Button onClick={handleClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>

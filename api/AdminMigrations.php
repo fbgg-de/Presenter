@@ -119,7 +119,7 @@ class AdminMigrations extends RestController
             ];
         }
 
-        $pendingCount = count(array_filter($migrations, fn($m) => !$m['applied']));
+        $pendingCount = count(array_filter($migrations, fn ($m) => !$m['applied']));
 
         return [
             'currentVersion' => $currentVersion,
@@ -145,7 +145,7 @@ class AdminMigrations extends RestController
         };
 
         $fkExists = function (string $table, string $constraintName) use ($db): bool {
-            $dbName = DB_DATABASE;
+            $dbName = DB['database'];
             $result = $db->query("
                 SELECT COUNT(*) AS c FROM information_schema.TABLE_CONSTRAINTS
                 WHERE TABLE_SCHEMA = '{$dbName}'
@@ -371,23 +371,35 @@ class AdminMigrations extends RestController
                 'description' => 'Migrate songs.order from comma-separated to JSON orders map',
                 'up' => function (mysqli $db) {
                     $result = $db->query("SHOW COLUMNS FROM `songs` LIKE 'order'");
-                    if ($result->num_rows === 0) { echo "No 'order' column in songs — skipping.\n"; return; }
+                    if ($result->num_rows === 0) {
+                        echo "No 'order' column in songs — skipping.\n";
+                        return;
+                    }
                     $col = $result->fetch_assoc();
                     $colType = strtolower($col['Type'] ?? '');
-                    if (strpos($colType, 'json') !== false) { echo "songs.order is already JSON — skipping.\n"; return; }
+                    if (strpos($colType, 'json') !== false) {
+                        echo "songs.order is already JSON — skipping.\n";
+                        return;
+                    }
 
                     $songs = $db->query('SELECT `account`, `songnumber`, `order` FROM `songs`');
                     $converted = 0;
                     while ($row = $songs->fetch_assoc()) {
                         $oldOrder = $row['order'] ?? '';
-                        if (empty($oldOrder)) continue;
+                        if (empty($oldOrder)) {
+                            continue;
+                        }
                         $parsed = json_decode($oldOrder, true);
-                        if (is_array($parsed) && isset($parsed['Default'])) continue;
-                        $blockNames = array_filter(array_map('trim', explode(',', $oldOrder)), fn($b) => $b !== '');
+                        if (is_array($parsed) && isset($parsed['Default'])) {
+                            continue;
+                        }
+                        $blockNames = array_filter(array_map('trim', explode(',', $oldOrder)), fn ($b) => $b !== '');
                         $newOrders = json_encode(['Default' => array_values($blockNames)]);
                         $stmt = $db->prepare('UPDATE `songs` SET `order` = ? WHERE `account` = ? AND `songnumber` = ?');
                         $stmt->bind_param('sii', $newOrders, $row['account'], $row['songnumber']);
-                        $stmt->execute(); $stmt->close(); $converted++;
+                        $stmt->execute();
+                        $stmt->close();
+                        $converted++;
                     }
                     echo "Converted {$converted} songs.order entries.\n";
                     $db->query("UPDATE `songs` SET `order` = '{\"Default\":[]}' WHERE `order` IS NULL OR TRIM(`order`) = ''");
@@ -400,24 +412,37 @@ class AdminMigrations extends RestController
                 'description' => 'Migrate shows.order from number array to typed ShowItem array',
                 'up' => function (mysqli $db) {
                     $colResult = $db->query("SHOW COLUMNS FROM `shows` LIKE 'order'");
-                    if ($colResult->num_rows === 0) { echo "No 'order' column in shows — skipping.\n"; return; }
+                    if ($colResult->num_rows === 0) {
+                        echo "No 'order' column in shows — skipping.\n";
+                        return;
+                    }
                     $colInfo = $colResult->fetch_assoc();
                     $colType = strtolower($colInfo['Type'] ?? '');
                     $isAlreadyJson = (strpos($colType, 'json') !== false);
 
                     $shows = $db->query("SELECT `account`, `title`, CAST(`order` AS CHAR) AS `order_raw` FROM `shows`");
-                    if (!$shows) throw new Exception('Failed to read shows: ' . $db->error);
+                    if (!$shows) {
+                        throw new Exception('Failed to read shows: ' . $db->error);
+                    }
                     $converted = 0;
                     while ($row = $shows->fetch_assoc()) {
                         $oldOrder = trim($row['order_raw'] ?? '');
-                        $account = intval($row['account']); $title = $row['title'];
+                        $account = intval($row['account']);
+                        $title = $row['title'];
                         if (empty($oldOrder)) {
                             $s = $db->prepare("UPDATE `shows` SET `order` = '[]' WHERE `account` = ? AND `title` = ?");
-                            $s->bind_param('is', $account, $title); $s->execute(); $s->close(); continue;
+                            $s->bind_param('is', $account, $title);
+                            $s->execute();
+                            $s->close();
+                            continue;
                         }
                         $parsed = json_decode($oldOrder, true);
-                        if (is_array($parsed) && count($parsed) > 0 && isset($parsed[0]['type'])) continue;
-                        if (is_array($parsed) && count($parsed) === 0) continue;
+                        if (is_array($parsed) && count($parsed) > 0 && isset($parsed[0]['type'])) {
+                            continue;
+                        }
+                        if (is_array($parsed) && count($parsed) === 0) {
+                            continue;
+                        }
                         $numbers = [];
                         if (is_array($parsed) && count($parsed) > 0) {
                             $numbers = $parsed;
@@ -435,13 +460,18 @@ class AdminMigrations extends RestController
                         }
                         $newJson = json_encode($newOrder);
                         $s = $db->prepare("UPDATE `shows` SET `order` = ? WHERE `account` = ? AND `title` = ?");
-                        $s->bind_param('sis', $newJson, $account, $title); $s->execute(); $s->close(); $converted++;
+                        $s->bind_param('sis', $newJson, $account, $title);
+                        $s->execute();
+                        $s->close();
+                        $converted++;
                     }
                     echo "Converted {$converted} shows.order entries.\n";
                     if (!$isAlreadyJson) {
                         $db->query("UPDATE `shows` SET `order` = '[]' WHERE `order` IS NULL OR TRIM(CAST(`order` AS CHAR)) = ''");
                         $db->query('ALTER TABLE `shows` MODIFY COLUMN `order` JSON NOT NULL');
-                        if ($db->error) throw new Exception('ALTER TABLE failed: ' . $db->error);
+                        if ($db->error) {
+                            throw new Exception('ALTER TABLE failed: ' . $db->error);
+                        }
                         echo "Changed shows.order column type to JSON.\n";
                     }
                 },
@@ -530,7 +560,20 @@ class AdminMigrations extends RestController
                     echo "Created table: pdf_annotations\n";
                 },
             ],
+
+            14 => [
+                'description' => 'Add ChurchTools per-account configuration columns',
+                'up' => function (mysqli $db) use ($columnExists) {
+                    if (!$columnExists('account', 'church_tools_url')) {
+                        $db->query("ALTER TABLE `account` ADD COLUMN `church_tools_url` VARCHAR(500) DEFAULT NULL");
+                        echo "Added column: account.church_tools_url\n";
+                    }
+                    if (!$columnExists('account', 'church_tools_token')) {
+                        $db->query("ALTER TABLE `account` ADD COLUMN `church_tools_token` VARCHAR(500) DEFAULT NULL");
+                        echo "Added column: account.church_tools_token\n";
+                    }
+                },
+            ],
         ];
     }
 }
-

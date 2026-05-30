@@ -17,6 +17,8 @@ class AdminAccounts extends RestController
 					a.active,
 					a.created_at,
 					a.lastactivity,
+					a.church_tools_url,
+					a.church_tools_token,
 					GROUP_CONCAT(
 						CONCAT(
 							aop.provider_id, ":",
@@ -40,6 +42,10 @@ class AdminAccounts extends RestController
         foreach ($accounts as &$account) {
             $account['license'] = (int)$account['license'];
             $account['active'] = (bool)$account['active'];
+            $account['church_tools_url'] = $account['church_tools_url'] ?? null;
+            // Never expose the token — send only a flag indicating whether it's set
+            $account['church_tools_enabled'] = !empty($account['church_tools_url']) && !empty($account['church_tools_token']);
+            unset($account['church_tools_token']);
 
             $providersList = [];
             if (!empty($account['providers'])) {
@@ -98,6 +104,8 @@ class AdminAccounts extends RestController
         $mail = $req->params->get('mail', null);
         $name = $req->params->get('name', null);
         $active = $req->params->has('active') ? $req->params->getAsBool('active') : null;
+        $churchToolsUrl = $req->params->has('churchToolsUrl') ? $req->params->get('churchToolsUrl', null) : false;
+        $churchToolsToken = $req->params->has('churchToolsToken') ? $req->params->get('churchToolsToken', null) : false;
 
         // Build dynamic update query
         $updates = [];
@@ -120,6 +128,28 @@ class AdminAccounts extends RestController
             $updates[] = 'active = ?';
             $types .= 'i';
             $values[] = $active ? 1 : 0;
+        }
+
+        if ($churchToolsUrl !== false) {
+            $ctUrl = $churchToolsUrl ? trim($churchToolsUrl) : null;
+            if ($ctUrl === null || $ctUrl === '') {
+                $updates[] = '`church_tools_url` = NULL';
+            } else {
+                $updates[] = '`church_tools_url` = ?';
+                $types .= 's';
+                $values[] = $ctUrl;
+            }
+        }
+
+        if ($churchToolsToken !== false) {
+            $ctToken = $churchToolsToken ? trim($churchToolsToken) : null;
+            if ($ctToken === null || $ctToken === '') {
+                $updates[] = '`church_tools_token` = NULL';
+            } else {
+                $updates[] = '`church_tools_token` = ?';
+                $types .= 's';
+                $values[] = $ctToken;
+            }
         }
 
         if (empty($updates)) {

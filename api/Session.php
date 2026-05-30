@@ -43,13 +43,21 @@ class Session extends RestController
                 ]);
                 break;
             default:
+                $account = $_SESSION['account'] ?? 0;
+                $ctEnabled = false;
+                if ($account) {
+                    $ctStmt = self::prepare('SELECT `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
+                    $ctStmt->bind_param('i', $account)->execute()->fetchOne($ctRow)->close();
+                    $ctEnabled = !empty($ctRow['church_tools_url']) && !empty($ctRow['church_tools_token']);
+                }
                 $res->success([
-                    'account' => $_SESSION['account'] ?? 0,
+                    'account' => $account,
                     'mail' => $_SESSION['mail'] ?? '',
                     'isAuthenticated' => isset($_SESSION['authType']) && !empty($_SESSION['authType']),
                     'authType' => $_SESSION['authType'] ?? null,
                     'settings' => [
                         'bibleEnabled' => defined('BIBLE_API') && is_array(BIBLE_API) && !empty(BIBLE_API['enabled']) && BIBLE_API['enabled'],
+                        'churchToolsEnabled' => $ctEnabled,
                         'wsHost' => defined('WS_HOST') && is_array(WS_HOST) && !empty(WS_HOST['host'])
                             ? [
                                 'host' => WS_HOST['host'],

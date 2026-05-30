@@ -8,6 +8,9 @@ export type AdminAccount = {
   active: boolean;
   created_at: string;
   lastactivity: string;
+  church_tools_url?: string | null;
+  /** True if both URL and token are configured server-side. Token is never sent to the client. */
+  church_tools_enabled: boolean;
   providers: Array<{
     provider_id: number;
     provider_name: string;
@@ -39,6 +42,10 @@ export type UpdateAccountRequest = {
   mail?: string;
   name?: string;
   active?: boolean;
+  /** ChurchTools instance URL, e.g. https://demo.church.tools/api/ */
+  churchToolsUrl?: string | null;
+  /** ChurchTools API login token. Pass empty string to clear. */
+  churchToolsToken?: string | null;
 };
 
 export type CreateProviderRequest = {

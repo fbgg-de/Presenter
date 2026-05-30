@@ -100,4 +100,3 @@ class AccountSettings extends RestController
         ]);
     }
 }
-

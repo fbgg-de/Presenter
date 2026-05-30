@@ -97,7 +97,7 @@ class Song extends RestController
         $req->params->check('title')->checkArray('initialOrder')->checkObject('blocks');
 
         $account = $req->account;
-        $songNumber = $req->params->getAsInt('songNumber');
+        $songNumber = $req->params->getAsInt('songNumber', 0);
         $title = $req->params->get('title');
         $initialOrder = $req->params->getAsArray('initialOrder'); // Fixed: get as array
         $blocks = $req->params->getAsObject('blocks');

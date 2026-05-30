@@ -1,5 +1,6 @@
-﻿import { forwardRef, useEffect, useImperativeHandle, useRef, useState, DragEvent, MouseEvent, ChangeEvent } from 'react';
+﻿import { forwardRef, useEffect, useImperativeHandle, useRef, useState, MouseEvent, ChangeEvent } from 'react';
 import {
+  Alert,
   Box,
   Chip,
   Divider,
@@ -8,6 +9,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Snackbar,
   Stack,
   Typography,
   useTheme,
@@ -43,6 +45,7 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import type { ISong } from '@/song';
 import { Song } from '@/song';
 import { CCLISong } from '@/song';
+import { SngSong } from '@/song';
 import { Settings } from '@/components/settings/Settings';
 import { SongEditor } from '@/components/song/SongEditor';
 import { QuickOrderDialog } from '@/components/song/QuickOrderDialog';
@@ -69,15 +72,17 @@ import type { SongListItem } from '@/api/songs.api';
 import { useSaveShowMutation } from '@/api/shows.api';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
-import { useLazyGetSongQuery } from '@/api/songs.api';
-import { useUpdateSongMutation } from '@/api/songs.api';
+import { useLazyGetSongQuery, useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
+import { useGetChurchToolsSongQuery } from '@/api/churchtools.api';
+import type { CtSongDetail } from '@/api/churchtools.api';
 import { useMetrics } from '@/hooks/useMetrics';
 import { loadShowSongs } from '@/store/songsSlice';
 import { StyleEditor } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
 import { MUSICAL_KEYS, parseOrderKey } from '@/utils/orderKeyUtils';
-import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useGetWindows } from '@/store/windowSlice';
+import { redirectToLogin } from '@/utils';
 import { DEFAULT_SONG_ITEM_COLOR, DEFAULT_MEDIA_ITEM_COLOR, DEFAULT_BIBLE_ITEM_COLOR } from '@/theme';
 
 export interface SidebarHandle {
@@ -93,6 +98,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const navigate = useNavigate();
 
   const { songClick } = useGetSettings();
+  const updateSetting = useUpdateSetting();
   const { currentShow, isDirty } = useGetShow();
 
   const dispatch = useAppDispatch();
@@ -115,10 +121,16 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [songToEdit, _setSongToEdit] = useState<ISong>();
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
   const [windowManagerOpen, setWindowManagerOpen] = useState(false);
+  /** Error message shown when a song file import fails. */
+  const [importErrorMsg, setImportErrorMsg] = useState<string | null>(null);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<null | HTMLElement>(null);
+  /** ChurchTools: selected song for the arrangement panel */
+  const [ctSongId, setCtSongId] = useState<number | null>(null);
+  const [ctSongName, setCtSongName] = useState<string>('');
 
   const { data: session } = useGetSessionQuery();
   const bibleEnabled = session?.settings?.bibleEnabled ?? false;
+  const churchToolsEnabled = session?.settings?.churchToolsEnabled ?? false;
   const [logout] = useLogoutMutation();
   const [fetchSong] = useLazyGetSongQuery();
 
@@ -138,8 +150,76 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   }));
 
   const [saveShowMutation] = useSaveShowMutation();
+  const [createSongMutation] = useCreateSongMutation();
   const [updateSongMutation] = useUpdateSongMutation();
   const { data: availableStyles = [] } = useGetStylesQuery();
+
+  // ChurchTools: fetch arrangements when a CT song is selected
+  const { data: ctSongDetail } = useGetChurchToolsSongQuery(
+    { ctSongId: ctSongId! },
+    { skip: ctSongId === null },
+  );
+
+  /**
+   * Import a ChurchTools song into the local library, then add it to the show.
+   * Uses the CT song data (name, author, copyright, CCLI) to pre-populate the song.
+   * If the song (by CCLI) is already in the library, adds it directly without re-importing.
+   */
+  const handleChurchToolsSongSelected = async (selectedCtSongId: number, name: string, detail?: CtSongDetail) => {
+    const ccliNumber = detail?.ccli ? parseInt(detail.ccli, 10) : undefined;
+
+    // Check if a song with this CCLI is already in the local store
+    if (ccliNumber && ccliNumber > 0) {
+      const existing = Object.values(songs).find((s) => (s as ISong & { ccliNumber?: number }).ccliNumber === ccliNumber);
+      if (existing) {
+        dispatch(addToSongsOrder(existing.songNumber));
+        dispatch(addShowItem({ type: 'song', songNumber: existing.songNumber, order: 'Default' }));
+        setOpenSongSearch(false);
+        return;
+      }
+    }
+
+    try {
+      const result = await createSongMutation({
+        title: name,
+        authors: detail?.author ?? '',
+        copyright: detail?.copyright ?? '',
+        initialOrder: [],
+        order: { Default: [] },
+        blocks: {},
+        ...(ccliNumber && ccliNumber > 0 ? { songNumber: ccliNumber } : {}),
+      }).unwrap();
+
+      const savedSong = new Song({
+        songNumber: result.songNumber,
+        title: name,
+        authors: detail?.author ?? '',
+        copyright: detail?.copyright ?? '',
+        initialOrder: [],
+        order: { Default: [] },
+        blocks: {},
+      });
+
+      dispatch(addSongToStore(savedSong));
+      dispatch(addToSongsOrder(savedSong.songNumber));
+      dispatch(addShowItem({ type: 'song', songNumber: savedSong.songNumber, order: 'Default' }));
+    } catch (err) {
+      console.error('Failed to import ChurchTools song:', err);
+      const serverMessage =
+        err != null && typeof err === 'object' && 'data' in err
+          ? String((err as { data?: { message?: string } }).data?.message ?? '')
+          : '';
+      const isDuplicate = serverMessage.toLowerCase().includes('already exists');
+      setImportErrorMsg(
+        `${name}: ${isDuplicate ? LL.SONGS.IMPORT_ERROR_DUPLICATE() : LL.SONGS.IMPORT_ERROR()}${serverMessage && !isDuplicate ? ` (${serverMessage})` : ''}`,
+      );
+    }
+
+    // Store the CT song context so the arrangement panel can be shown
+    setCtSongId(selectedCtSongId);
+    setCtSongName(name);
+    setOpenSongSearch(false);
+  };
 
   // Item context menu state
   const [itemMenuAnchor, setItemMenuAnchor] = useState<null | HTMLElement>(null);
@@ -162,7 +242,10 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     setAccountMenuAnchor(null);
     try {
       await logout().unwrap();
-      navigate('/login', { replace: true });
+      // Clear last-selected account so the login page does not default back
+      // to the same account (especially important when logging out of admin).
+      updateSetting('lastSelectedAccount', '');
+      redirectToLogin();
     } catch (error) {
       console.error('Failed to logout:', error);
     }
@@ -312,41 +395,82 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     }
   };
 
-  const onDragOver = (e: DragEvent) => {
-    if (e.dataTransfer.items) {
-      const items = [...e.dataTransfer.items].filter((item) => item.type === 'text/plain');
-      if (items.length > 0) {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'copy';
+  /** Returns true for files this sidebar can import (CCLI .txt or SongBeamer .sng). */
+  const isSupportedSongFile = (file: File): boolean =>
+    (file.type === 'text/plain' && file.name.endsWith('.txt')) || file.name.endsWith('.sng');
+
+  /** Parse a supported song file into an ISong. */
+  const parseSongFile = (file: File, content: string): ISong =>
+    file.name.endsWith('.sng') ? SngSong(content) : CCLISong(file.name, content);
+
+  /** Read and import a single supported song file into the store. */
+  const importSongFile = (file: File) => {
+    // SongBeamer files are often saved in Windows-1252 (CP1252) rather than UTF-8.
+    // Strategy: read as UTF-8 first; if the result contains the Unicode replacement
+    // character (U+FFFD) indicating a mis-decode, re-read with windows-1252.
+    const doImport = async (content: string) => {
+      const parsed = parseSongFile(file, content);
+
+      try {
+        // Always upload to the backend so it assigns the canonical song number.
+        // Omit songNumber entirely — the backend defaults to 0 and auto-generates one.
+        const result = await createSongMutation({
+          title: parsed.title,
+          authors: parsed.authors,
+          copyright: parsed.copyright,
+          initialOrder: parsed.initialOrder ?? [],
+          order: parsed.order,
+          blocks: parsed.blocks,
+        }).unwrap();
+
+        const savedSong = new Song({ ...parsed, songNumber: result.songNumber });
+        dispatch(addSongToStore(savedSong));
+        dispatch(addToSongsOrder(savedSong.songNumber));
+        dispatch(addShowItem({ type: 'song', songNumber: savedSong.songNumber, order: 'Default' }));
+      } catch (err) {
+        console.error('Failed to upload imported song:', err);
+        const serverMessage =
+          err != null && typeof err === 'object' && 'data' in err
+            ? String((err as { data?: { message?: string } }).data?.message ?? '')
+            : '';
+        // Detect duplicate CCLI number error from the server
+        const isDuplicate = serverMessage.toLowerCase().includes('already exists');
+        setImportErrorMsg(
+          `${file.name}: ${isDuplicate ? LL.SONGS.IMPORT_ERROR_DUPLICATE() : LL.SONGS.IMPORT_ERROR()}${serverMessage && !isDuplicate ? ` (${serverMessage})` : ''}`,
+        );
       }
+    };
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const utf8Result = ev.target?.result?.toString() ?? '';
+      if (utf8Result.includes('\uFFFD') && file.name.endsWith('.sng')) {
+        // Re-read with Windows-1252 encoding fallback
+        const fallbackReader = new FileReader();
+        fallbackReader.onload = (ev2) => void doImport(ev2.target?.result?.toString() ?? '');
+        fallbackReader.readAsText(file, 'windows-1252');
+      } else {
+        void doImport(utf8Result);
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+
+  // Accept any file drag — .sng files may report an empty or non-text MIME type
+  // depending on OS, so we must not filter on `item.type` here.
+  const onDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.dataTransfer.items && [...e.dataTransfer.items].some((item) => item.kind === 'file')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
     }
   };
 
-  const onDrop = (e: DragEvent) => {
+  const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
     if (e.dataTransfer.files) {
-      const files = [...e.dataTransfer.files].filter((file) => file.type === 'text/plain' && file.name.endsWith('.txt'));
-
+      const files = [...e.dataTransfer.files].filter(isSupportedSongFile);
       if (files.length > 0) {
         e.preventDefault();
-
-        files.forEach((file) => {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            if (ev.target && ev.target.result) {
-              const importedSong = CCLISong(file.name, ev.target.result.toString());
-              dispatch(addSongToStore(importedSong));
-              dispatch(addToSongsOrder(importedSong.songNumber));
-              dispatch(
-                addShowItem({
-                  type: 'song',
-                  songNumber: importedSong.songNumber,
-                  order: 'Default',
-                }),
-              );
-            }
-          };
-          reader.readAsText(file);
-        });
+        files.forEach(importSongFile);
       }
     }
   };
@@ -358,19 +482,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const files = [...(e.target.files ?? [])].filter((f) => f.type === 'text/plain' && f.name.endsWith('.txt'));
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          const importedSong = CCLISong(file.name, ev.target.result.toString());
-          dispatch(addSongToStore(importedSong));
-          dispatch(addToSongsOrder(importedSong.songNumber));
-          dispatch(addShowItem({ type: 'song', songNumber: importedSong.songNumber, order: 'Default' }));
-        }
-      };
-      reader.readAsText(file);
-    });
+    [...(e.target.files ?? [])].filter(isSupportedSongFile).forEach(importSongFile);
     // Reset so the same file can be re-selected
     e.target.value = '';
   };
@@ -521,6 +633,17 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         background: palette.background.default,
       }}
     >
+      {/* Import error notification */}
+      <Snackbar
+        open={importErrorMsg !== null}
+        autoHideDuration={8000}
+        onClose={() => setImportErrorMsg(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" onClose={() => setImportErrorMsg(null)} sx={{ width: '100%' }}>
+          {importErrorMsg}
+        </Alert>
+      </Snackbar>
       <Settings open={openSettings} setOpen={setOpenSettings} />
       <SongEditor
         open={openSongEditor}
@@ -586,6 +709,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
                 setOpenSongSearch(false);
                 setOpenSongLibrary(true);
               }}
+              churchToolsEnabled={churchToolsEnabled}
+              onSelectChurchToolsSong={(id, name) => void handleChurchToolsSongSelected(id, name, ctSongDetail)}
             />
           </Box>
         ) : (
@@ -974,7 +1099,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
               <Typography variant="caption" color="text.disabled">
                 {LL.SHOW_ITEMS.EMPTY_HINT_DROP()}
               </Typography>
-              <input ref={fileInputRef} type="file" accept=".txt" multiple hidden onChange={handleFileInputChange} />
+              <input ref={fileInputRef} type="file" accept=".txt,.sng" multiple hidden onChange={handleFileInputChange} />
             </Box>
           </Stack>
         )}

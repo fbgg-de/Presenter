@@ -14,10 +14,10 @@ class DB
                 require_once(__DIR__ . '/../config.php');
 
                 self::$db = new mysqli(
-                    DB_HOST,
-                    DB_USER,
-                    DB_PASSWORD,
-                    DB_DATABASE
+                    DB['host'],
+                    DB['user'],
+                    DB['password'],
+                    DB['database']
                 );
 
                 self::$db->set_charset("utf8");

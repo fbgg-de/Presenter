@@ -1,5 +1,6 @@
 export * from './Song';
 export * from './CcliSong';
+export * from './SngSong';
 
 export type TBlocks = { [key: string]: string[] };
 

@@ -124,33 +124,33 @@ try {
 
     if ($isAdminLogin) {
         // ── Admin login ──────────────────────────────────────────────────
-        // Check global OIDC_REQUIRED_GROUP first (if configured)
-        if (defined('OIDC_REQUIRED_GROUP') && !empty(OIDC_REQUIRED_GROUP)) {
-            $requiredGroup = strtolower(trim(OIDC_REQUIRED_GROUP));
+        // Check global OIDC required_group first (if configured)
+        if (defined('OIDC') && is_array(OIDC) && !empty(OIDC['required_group'])) {
+            $requiredGroup = strtolower(trim(OIDC['required_group']));
             $userGroupsLower = array_map(fn ($g) => strtolower(trim($g)), $groups);
             if (!in_array($requiredGroup, $userGroupsLower)) {
                 $userGroups = count($groups) > 0 ? implode(', ', $groups) : '[none]';
-                Logging::warning('OIDC access denied for user ' . $sub . '. Required group: ' . OIDC_REQUIRED_GROUP . '. User groups: ' . $userGroups);
+                Logging::warning('OIDC access denied for user ' . $sub . '. Required group: ' . OIDC['required_group'] . '. User groups: ' . $userGroups);
                 MetricsHelper::record('login_failed', null, ['method' => 'oidc', 'reason' => 'access_denied', 'sub' => $sub]);
-                header('Location: /unauthorized?error=oidc.access_denied&required_group=' . OIDC_REQUIRED_GROUP . '&user_groups=' . urlencode($userGroups) . '&sub=' . urlencode($sub));
+                header('Location: /unauthorized?error=oidc.access_denied&required_group=' . OIDC['required_group'] . '&user_groups=' . urlencode($userGroups) . '&sub=' . urlencode($sub));
                 exit;
             }
         }
 
-        // Enforce OIDC_ADMIN_GROUP
-        if (!defined('OIDC_ADMIN_GROUP') || empty(OIDC_ADMIN_GROUP)) {
-            Logging::warning('Admin login attempted but OIDC_ADMIN_GROUP is not configured');
+        // Enforce admin_group
+        if (!defined('OIDC') || !is_array(OIDC) || empty(OIDC['admin_group'])) {
+            Logging::warning('Admin login attempted but OIDC[admin_group] is not configured');
             MetricsHelper::record('login_failed', null, ['method' => 'oidc', 'reason' => 'admin_group_not_configured', 'sub' => $sub]);
             header('Location: /unauthorized?error=oidc.admin_access_denied');
             exit;
         }
-        $adminGroup = strtolower(trim(OIDC_ADMIN_GROUP));
+        $adminGroup = strtolower(trim(OIDC['admin_group']));
         $userGroupsLower = array_map(fn ($g) => strtolower(trim($g)), $groups);
         if (!in_array($adminGroup, $userGroupsLower)) {
             $userGroups = count($groups) > 0 ? implode(', ', $groups) : '[none]';
-            Logging::warning('Admin access denied for user ' . $sub . '. Required admin group: ' . OIDC_ADMIN_GROUP . '. User groups: ' . $userGroups);
+            Logging::warning('Admin access denied for user ' . $sub . '. Required admin group: ' . OIDC['admin_group'] . '. User groups: ' . $userGroups);
             MetricsHelper::record('login_failed', null, ['method' => 'oidc', 'reason' => 'admin_access_denied', 'sub' => $sub]);
-            header('Location: /unauthorized?error=oidc.admin_access_denied&required_group=' . urlencode(OIDC_ADMIN_GROUP) . '&user_groups=' . urlencode($userGroups) . '&sub=' . urlencode($sub));
+            header('Location: /unauthorized?error=oidc.admin_access_denied&required_group=' . urlencode(OIDC['admin_group']) . '&user_groups=' . urlencode($userGroups) . '&sub=' . urlencode($sub));
             exit;
         }
         // Admin login successful
@@ -216,7 +216,7 @@ try {
  */
 function lookupDefaultProvider(int $license): ?array
 {
-    $db = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_DATABASE);
+    $db = new mysqli(DB['host'], DB['user'], DB['password'], DB['database']);
     if ($db->connect_error) {
         Logging::error('DB connection failed in lookupDefaultProvider: ' . $db->connect_error);
         return null;
@@ -246,7 +246,7 @@ function lookupDefaultProvider(int $license): ?array
  */
 function lookupProviderById(int $providerId): ?array
 {
-    $db = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_DATABASE);
+    $db = new mysqli(DB['host'], DB['user'], DB['password'], DB['database']);
     if ($db->connect_error) {
         Logging::error('DB connection failed in lookupProviderById: ' . $db->connect_error);
         return null;

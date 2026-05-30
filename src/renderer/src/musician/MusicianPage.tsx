@@ -44,6 +44,7 @@ import { useGetSessionQuery } from '@/api/session.api';
 import { useUpdateSongMutation } from '@/api/songs.api';
 import { useSaveShowMutation, useGetShowsQuery } from '@/api/shows.api';
 import { SongOrderEditor } from '@/components/song/SongOrderEditor';
+import { useLazySearchChurchToolsSongsQuery } from '@/api/churchtools.api';
 
 /**
  * Top-level page component for the Musician View.
@@ -101,8 +102,14 @@ export const MusicianPage = () => {
   // Fetch session to get the authenticated account number
   const { offlineMode } = useGetSettings();
   const { data: sessionData } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const churchToolsEnabled = sessionData?.settings?.churchToolsEnabled ?? false;
   const [updateSongMutation] = useUpdateSongMutation();
   const [saveShowMutation] = useSaveShowMutation();
+
+  // ChurchTools: resolve CT song ID from the active song's CCLI number
+  const [ctSongId, setCtSongId] = useState<number | null>(null);
+  const [ctSongName, setCtSongName] = useState<string>('');
+  const [searchCtSongs] = useLazySearchChurchToolsSongsQuery();
 
   // Derive wsUrl from global session ws_hosts
   const wsUrl = useMemo(() => {
@@ -606,6 +613,9 @@ export const MusicianPage = () => {
   useEffect(() => {
     setAnnotateMode(false);
     setPdfOverrideFilename(null);
+    // Reset CT context when song changes
+    setCtSongId(null);
+    setCtSongName('');
   }, [activeItemIndex]);
 
   // ── Sync: follow operator item selection ─────────────────────────
@@ -717,6 +727,8 @@ export const MusicianPage = () => {
             trackEvent('modal_opened', undefined, undefined, { modal: 'area_mapping' });
             setAreaMappingOpen(true);
           }}
+          ctSongId={ctSongId}
+          ctSongName={ctSongName}
         />
       )}
       {/* PDF Area Mapping editor */}
@@ -765,6 +777,16 @@ export const MusicianPage = () => {
           onSelectItem={handleUserSelectItem}
           onOpenPdfModal={() => {
             trackEvent('modal_opened', undefined, undefined, { modal: 'pdf_manage' });
+            // When CT is enabled, resolve the CT song ID from the active song title
+            if (churchToolsEnabled && activeSong && !ctSongId) {
+              void searchCtSongs({ q: activeSong.title, limit: 1 }).then((res) => {
+                const first = res.data?.songs?.[0];
+                if (first) {
+                  setCtSongId(first.id);
+                  setCtSongName(first.name);
+                }
+              });
+            }
             setPdfUploadOpen(true);
           }}
           onClose={handleToggleSidebar}
@@ -796,6 +818,12 @@ export const MusicianPage = () => {
             }}
             onOpenPdfModal={() => {
               trackEvent('modal_opened', undefined, undefined, { modal: 'pdf_manage' });
+              if (churchToolsEnabled && activeSong && !ctSongId) {
+                void searchCtSongs({ q: activeSong.title, limit: 1 }).then((res) => {
+                  const first = res.data?.songs?.[0];
+                  if (first) { setCtSongId(first.id); setCtSongName(first.name); }
+                });
+              }
               setPdfUploadOpen(true);
             }}
             isSongItem={isSongItem}

@@ -38,10 +38,10 @@ abstract class RestController extends DB implements Rest
         $res->error(500, 'method "delete" not implemented');
     }
 
-  protected function patch(Request &$req, Response &$res): never
-  {
-    $res->error(500, 'method "patch" not implemented');
-  }
+    protected function patch(Request &$req, Response &$res): never
+    {
+        $res->error(500, 'method "patch" not implemented');
+    }
 
     public function handle(Request $req): never
     {

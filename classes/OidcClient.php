@@ -36,11 +36,11 @@ class OidcClient
     public static function fromGlobalConfig(): self
     {
         return new self(
-            OIDC_DISCOVERY_URL,
-            OIDC_CLIENT_ID,
-            OIDC_CLIENT_SECRET,
-            implode(' ', OIDC_CLIENT_SCOPES),
-            OIDC_REDIRECT_URI,
+            OIDC['discovery_url'],
+            OIDC['client_id'],
+            OIDC['client_secret'],
+            implode(' ', OIDC['scopes']),
+            OIDC['redirect_uri'],
         );
     }
 
@@ -54,7 +54,7 @@ class OidcClient
             $provider['client_id'],
             $provider['client_secret'],
             $provider['scopes'] ?? 'openid email profile',
-            OIDC_REDIRECT_URI,
+            OIDC['redirect_uri'],
         );
     }
 

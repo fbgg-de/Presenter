@@ -1,18 +1,18 @@
 <?php
 
-  require_once(__DIR__ . '/RestController.php');
+require_once(__DIR__ . '/RestController.php');
 
-  /**
-   * GET /rest/LanguageTags
-   * Returns all distinct language tags found in song blocks, matching lines like "[EN] ..." or "[DE] ...".
-   */
-  class LanguageTags extends RestController
-  {
+/**
+ * GET /rest/LanguageTags
+ * Returns all distinct language tags found in song blocks, matching lines like "[EN] ..." or "[DE] ...".
+ */
+class LanguageTags extends RestController
+{
     protected function get(Request &$req, Response &$res): never
     {
-      $account = $req->account;
+        $account = $req->account;
 
-      $stmt = self::prepare('
+        $stmt = self::prepare('
             WITH RECURSIVE codes AS (
                 SELECT
                     `text`,
@@ -38,16 +38,16 @@
             ORDER BY lang_code
         ');
 
-      $stmt->bind_param('i', $account)->execute();
-      $stmt->fetchAll($rows);
-      $stmt->close();
+        $stmt->bind_param('i', $account)->execute();
+        $stmt->fetchAll($rows);
+        $stmt->close();
 
-      $tags = array_column($rows, 'lang_code');
+        $tags = array_column($rows, 'lang_code');
 
-      if (!in_array('EN', $tags, true)) {
-        $tags[] = 'EN';
-      }
+        if (!in_array('EN', $tags, true)) {
+            $tags[] = 'EN';
+        }
 
-      $res->success($tags);
+        $res->success($tags);
     }
-  }
+}

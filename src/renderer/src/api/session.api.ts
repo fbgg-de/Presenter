@@ -15,6 +15,7 @@ export type SessionInfo = {
   authType?: 'oidc' | 'oidc_admin' | null;
   settings?: {
     bibleEnabled: boolean;
+    churchToolsEnabled?: boolean;
     wsHost?: WsHost;
   };
 };

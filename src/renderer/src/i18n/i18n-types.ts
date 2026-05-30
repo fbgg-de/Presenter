@@ -631,6 +631,38 @@ type RootTranslation = {
 		 * N​o​ ​W​e​b​S​o​c​k​e​t​ ​h​o​s​t​ ​c​o​n​f​i​g​u​r​e​d​ ​i​n​ ​c​o​n​f​i​g​.​p​h​p​.
 		 */
 		WS_HOST_NOT_CONFIGURED: string
+		/**
+		 * C​h​u​r​c​h​T​o​o​l​s
+		 */
+		CHURCH_TOOLS: string
+		/**
+		 * C​o​n​f​i​g​u​r​e​ ​C​h​u​r​c​h​T​o​o​l​s
+		 */
+		CONFIGURE_CHURCH_TOOLS: string
+		/**
+		 * C​o​n​n​e​c​t​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​t​o​ ​a​ ​C​h​u​r​c​h​T​o​o​l​s​ ​i​n​s​t​a​n​c​e​ ​t​o​ ​e​n​a​b​l​e​ ​C​C​L​I​ ​S​o​n​g​S​e​l​e​c​t​ ​s​e​a​r​c​h​ ​a​n​d​ ​a​r​r​a​n​g​e​m​e​n​t​ ​d​o​w​n​l​o​a​d​s​ ​f​o​r​ ​m​u​s​i​c​i​a​n​s​.
+		 */
+		CHURCH_TOOLS_HELP: string
+		/**
+		 * C​h​u​r​c​h​T​o​o​l​s​ ​A​P​I​ ​U​R​L
+		 */
+		CHURCH_TOOLS_URL: string
+		/**
+		 * A​P​I​ ​L​o​g​i​n​ ​T​o​k​e​n
+		 */
+		CHURCH_TOOLS_TOKEN: string
+		/**
+		 * L​e​a​v​e​ ​b​l​a​n​k​ ​t​o​ ​k​e​e​p​ ​t​h​e​ ​e​x​i​s​t​i​n​g​ ​t​o​k​e​n​.​ ​E​n​t​e​r​ ​a​ ​n​e​w​ ​v​a​l​u​e​ ​t​o​ ​u​p​d​a​t​e​ ​i​t​.
+		 */
+		CHURCH_TOOLS_TOKEN_HELP: string
+		/**
+		 * (​t​o​k​e​n​ ​a​l​r​e​a​d​y​ ​s​e​t​)
+		 */
+		CHURCH_TOOLS_TOKEN_PLACEHOLDER_SET: string
+		/**
+		 * C​l​e​a​r​i​n​g​ ​t​h​e​ ​U​R​L​ ​w​i​l​l​ ​d​i​s​a​b​l​e​ ​t​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​i​n​t​e​g​r​a​t​i​o​n​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		CHURCH_TOOLS_CLEAR_WARNING: string
 	}
 	ADMIN_LOGS: {
 		/**
@@ -763,6 +795,14 @@ type RootTranslation = {
 		 * C​o​p​y​ ​C​C​L​I​ ​L​i​s​t
 		 */
 		COPY_CCLI_LIST: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​i​m​p​o​r​t​ ​s​o​n​g​ ​f​i​l​e
+		 */
+		IMPORT_ERROR: string
+		/**
+		 * A​ ​s​o​n​g​ ​w​i​t​h​ ​t​h​i​s​ ​C​C​L​I​ ​n​u​m​b​e​r​ ​a​l​r​e​a​d​y​ ​e​x​i​s​t​s​ ​i​n​ ​y​o​u​r​ ​l​i​b​r​a​r​y
+		 */
+		IMPORT_ERROR_DUPLICATE: string
 	}
 	SONG_EDITOR: {
 		/**
@@ -2080,6 +2120,10 @@ type RootTranslation = {
 		 */
 		CCLI: string
 		/**
+		 * C​h​u​r​c​h​T​o​o​l​s
+		 */
+		CHURCH_TOOLS: string
+		/**
 		 * N​o​ ​r​e​s​u​l​t​s​ ​f​o​u​n​d
 		 */
 		NO_RESULTS: string
@@ -2087,6 +2131,72 @@ type RootTranslation = {
 		 * D​e​e​p​ ​S​e​a​r​c​h​ ​(​l​y​r​i​c​s​)
 		 */
 		DEEP: string
+	}
+	CHURCH_TOOLS: {
+		/**
+		 * S​e​a​r​c​h​ ​s​o​n​g​s​ ​i​n​ ​C​h​u​r​c​h​T​o​o​l​s​.​.​.
+		 */
+		SEARCH_PLACEHOLDER: string
+		/**
+		 * N​o​ ​s​o​n​g​s​ ​f​o​u​n​d​ ​i​n​ ​C​h​u​r​c​h​T​o​o​l​s
+		 */
+		NO_RESULTS: string
+		/**
+		 * A​r​r​a​n​g​e​m​e​n​t​s
+		 */
+		ARRANGEMENTS: string
+		/**
+		 * A​r​r​a​n​g​e​m​e​n​t
+		 */
+		ARRANGEMENT: string
+		/**
+		 * K​e​y
+		 */
+		KEY: string
+		/**
+		 * B​e​a​t
+		 */
+		BEAT: string
+		/**
+		 * T​e​m​p​o​ ​(​B​P​M​)
+		 */
+		TEMPO: string
+		/**
+		 * F​i​l​e​s
+		 */
+		FILES: string
+		/**
+		 * D​o​w​n​l​o​a​d
+		 */
+		DOWNLOAD: string
+		/**
+		 * I​m​p​o​r​t​ ​&​ ​a​d​d​ ​t​o​ ​s​h​o​w
+		 */
+		IMPORT_AND_ADD: string
+		/**
+		 * A​d​d​ ​t​o​ ​s​h​o​w
+		 */
+		ADD_TO_SHOW: string
+		/**
+		 * A​l​r​e​a​d​y​ ​i​n​ ​l​i​b​r​a​r​y
+		 */
+		ALREADY_IMPORTED: string
+		/**
+		 * L​o​a​d​i​n​g​ ​f​r​o​m​ ​C​h​u​r​c​h​T​o​o​l​s​…
+		 */
+		LOADING: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​l​o​a​d​ ​f​r​o​m​ ​C​h​u​r​c​h​T​o​o​l​s
+		 */
+		ERROR: string
+		/**
+		 * C​h​u​r​c​h​T​o​o​l​s​ ​i​s​ ​n​o​t​ ​c​o​n​f​i​g​u​r​e​d
+		 */
+		DISABLED: string
+		/**
+		 * C​h​u​r​c​h​T​o​o​l​s​ ​A​r​r​a​n​g​e​m​e​n​t​s
+		 */
+		SONG_DETAIL_TITLE: string
 	}
 	KEYBOARD: {
 		/**
@@ -4890,6 +5000,38 @@ export type TranslationFunctions = {
 		 * No WebSocket host configured in config.php.
 		 */
 		WS_HOST_NOT_CONFIGURED: () => LocalizedString
+		/**
+		 * ChurchTools
+		 */
+		CHURCH_TOOLS: () => LocalizedString
+		/**
+		 * Configure ChurchTools
+		 */
+		CONFIGURE_CHURCH_TOOLS: () => LocalizedString
+		/**
+		 * Connect this account to a ChurchTools instance to enable CCLI SongSelect search and arrangement downloads for musicians.
+		 */
+		CHURCH_TOOLS_HELP: () => LocalizedString
+		/**
+		 * ChurchTools API URL
+		 */
+		CHURCH_TOOLS_URL: () => LocalizedString
+		/**
+		 * API Login Token
+		 */
+		CHURCH_TOOLS_TOKEN: () => LocalizedString
+		/**
+		 * Leave blank to keep the existing token. Enter a new value to update it.
+		 */
+		CHURCH_TOOLS_TOKEN_HELP: () => LocalizedString
+		/**
+		 * (token already set)
+		 */
+		CHURCH_TOOLS_TOKEN_PLACEHOLDER_SET: () => LocalizedString
+		/**
+		 * Clearing the URL will disable the ChurchTools integration for this account.
+		 */
+		CHURCH_TOOLS_CLEAR_WARNING: () => LocalizedString
 	}
 	ADMIN_LOGS: {
 		/**
@@ -5018,6 +5160,14 @@ export type TranslationFunctions = {
 		 * Copy CCLI List
 		 */
 		COPY_CCLI_LIST: () => LocalizedString
+		/**
+		 * Failed to import song file
+		 */
+		IMPORT_ERROR: () => LocalizedString
+		/**
+		 * A song with this CCLI number already exists in your library
+		 */
+		IMPORT_ERROR_DUPLICATE: () => LocalizedString
 	}
 	SONG_EDITOR: {
 		/**
@@ -6329,6 +6479,10 @@ export type TranslationFunctions = {
 		 */
 		CCLI: () => LocalizedString
 		/**
+		 * ChurchTools
+		 */
+		CHURCH_TOOLS: () => LocalizedString
+		/**
 		 * No results found
 		 */
 		NO_RESULTS: () => LocalizedString
@@ -6336,6 +6490,72 @@ export type TranslationFunctions = {
 		 * Deep Search (lyrics)
 		 */
 		DEEP: () => LocalizedString
+	}
+	CHURCH_TOOLS: {
+		/**
+		 * Search songs in ChurchTools...
+		 */
+		SEARCH_PLACEHOLDER: () => LocalizedString
+		/**
+		 * No songs found in ChurchTools
+		 */
+		NO_RESULTS: () => LocalizedString
+		/**
+		 * Arrangements
+		 */
+		ARRANGEMENTS: () => LocalizedString
+		/**
+		 * Arrangement
+		 */
+		ARRANGEMENT: () => LocalizedString
+		/**
+		 * Key
+		 */
+		KEY: () => LocalizedString
+		/**
+		 * Beat
+		 */
+		BEAT: () => LocalizedString
+		/**
+		 * Tempo (BPM)
+		 */
+		TEMPO: () => LocalizedString
+		/**
+		 * Files
+		 */
+		FILES: () => LocalizedString
+		/**
+		 * Download
+		 */
+		DOWNLOAD: () => LocalizedString
+		/**
+		 * Import & add to show
+		 */
+		IMPORT_AND_ADD: () => LocalizedString
+		/**
+		 * Add to show
+		 */
+		ADD_TO_SHOW: () => LocalizedString
+		/**
+		 * Already in library
+		 */
+		ALREADY_IMPORTED: () => LocalizedString
+		/**
+		 * Loading from ChurchTools…
+		 */
+		LOADING: () => LocalizedString
+		/**
+		 * Failed to load from ChurchTools
+		 */
+		ERROR: () => LocalizedString
+		/**
+		 * ChurchTools is not configured
+		 */
+		DISABLED: () => LocalizedString
+		/**
+		 * ChurchTools Arrangements
+		 */
+		SONG_DETAIL_TITLE: () => LocalizedString
 	}
 	KEYBOARD: {
 		/**

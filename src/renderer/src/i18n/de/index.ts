@@ -167,6 +167,14 @@ const de: Translation = {
     CONFIG_DISABLED: 'Deaktiviert',
     WS_HOST_SECTION: 'WebSocket-Host',
     WS_HOST_NOT_CONFIGURED: 'Kein WebSocket-Host in config.php konfiguriert.',
+    CHURCH_TOOLS: 'ChurchTools',
+    CONFIGURE_CHURCH_TOOLS: 'ChurchTools konfigurieren',
+    CHURCH_TOOLS_HELP: 'Verbinde dieses Konto mit einer ChurchTools-Instanz, um die CCLI SongSelect-Suche und Arrangement-Downloads für Musiker zu aktivieren.',
+    CHURCH_TOOLS_URL: 'ChurchTools API-URL',
+    CHURCH_TOOLS_TOKEN: 'API Login-Token',
+    CHURCH_TOOLS_TOKEN_HELP: 'Leer lassen, um das vorhandene Token beizubehalten. Neuen Wert eingeben, um es zu ändern.',
+    CHURCH_TOOLS_TOKEN_PLACEHOLDER_SET: '(Token bereits gesetzt)',
+    CHURCH_TOOLS_CLEAR_WARNING: 'Das Leeren der URL deaktiviert die ChurchTools-Integration für dieses Konto.',
   },
 
   ADMIN_LOGS: {
@@ -204,6 +212,8 @@ const de: Translation = {
     CCLI_LICENSE_NUMBER: 'CCLI-Lizenznummer',
     CCLI_REPORTING: 'CCLI-Bericht',
     COPY_CCLI_LIST: 'CCLI-Liste kopieren',
+    IMPORT_ERROR: 'Lieddatei konnte nicht importiert werden',
+    IMPORT_ERROR_DUPLICATE: 'Ein Lied mit dieser CCLI-Nummer existiert bereits in deiner Bibliothek',
   },
 
   SONG_EDITOR: {
@@ -567,8 +577,28 @@ const de: Translation = {
     STYLES: 'Stile',
     BIBLE: 'Bibel',
     CCLI: 'CCLI',
+    CHURCH_TOOLS: 'ChurchTools',
     NO_RESULTS: 'Keine Ergebnisse gefunden',
     DEEP: 'Tiefensuche (Liedtexte)',
+  },
+
+  CHURCH_TOOLS: {
+    SEARCH_PLACEHOLDER: 'Lieder in ChurchTools suchen...',
+    NO_RESULTS: 'Keine Lieder in ChurchTools gefunden',
+    ARRANGEMENTS: 'Arrangements',
+    ARRANGEMENT: 'Arrangement',
+    KEY: 'Tonart',
+    BEAT: 'Takt',
+    TEMPO: 'Tempo (BPM)',
+    FILES: 'Dateien',
+    DOWNLOAD: 'Herunterladen',
+    IMPORT_AND_ADD: 'Importieren & zur Show hinzufügen',
+    ADD_TO_SHOW: 'Zur Show hinzufügen',
+    ALREADY_IMPORTED: 'Bereits in der Bibliothek',
+    LOADING: 'Lade von ChurchTools…',
+    ERROR: 'Fehler beim Laden aus ChurchTools',
+    DISABLED: 'ChurchTools ist nicht konfiguriert',
+    SONG_DETAIL_TITLE: 'ChurchTools Arrangements',
   },
 
   KEYBOARD: {

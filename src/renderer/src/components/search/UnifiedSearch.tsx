@@ -27,14 +27,16 @@ import {
   MenuBook as MenuBookIcon,
   SelectAll as AllIcon,
   FolderOpen as FolderOpenIcon,
+  Church as ChurchIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useUnifiedSearchQuery } from '@/api/search.api';
 import { useSearchSongsQuery, useGetSongsAllQuery } from '@/api/songs.api';
+import { useLazySearchChurchToolsSongsQuery } from '@/api/churchtools.api';
 import type { SearchResult } from '@/api/search.api';
 import { useDebounce } from '@/hooks/useDebounce';
 
-type SearchType = '' | 'song' | 'media' | 'bible';
+type SearchType = '' | 'song' | 'media' | 'bible' | 'churchtools';
 
 interface UnifiedSearchProps {
   open: boolean;
@@ -47,6 +49,10 @@ interface UnifiedSearchProps {
   songsOnly?: boolean;
   /** Callback to open the full song library modal */
   onOpenSongLibrary?: () => void;
+  /** When true, show the ChurchTools search tab (only if CT is enabled in session) */
+  churchToolsEnabled?: boolean;
+  /** Callback when a ChurchTools song is selected — receives the CT song ID */
+  onSelectChurchToolsSong?: (ctSongId: number, songName: string) => void;
 }
 
 const TYPE_CHIPS: { type: SearchType; icon: typeof AllIcon; colorKey: string }[] = [
@@ -55,6 +61,13 @@ const TYPE_CHIPS: { type: SearchType; icon: typeof AllIcon; colorKey: string }[]
   { type: 'media', icon: ImageIcon, colorKey: '#f9a825' },
   { type: 'bible', icon: MenuBookIcon, colorKey: '#388e3c' },
 ];
+
+/** ChurchTools chip — appended conditionally when CT is enabled */
+const CT_CHIP: { type: SearchType; icon: typeof AllIcon; colorKey: string } = {
+  type: 'churchtools',
+  icon: ChurchIcon,
+  colorKey: '#7b1fa2',
+};
 
 const getTypeLabel = (type: SearchType, LL: ReturnType<typeof useI18nContext>['LL']): string => {
   switch (type) {
@@ -66,6 +79,8 @@ const getTypeLabel = (type: SearchType, LL: ReturnType<typeof useI18nContext>['L
       return LL.UNIFIED_SEARCH.MEDIA();
     case 'bible':
       return LL.UNIFIED_SEARCH.BIBLE();
+    case 'churchtools':
+      return LL.UNIFIED_SEARCH.CHURCH_TOOLS();
     default:
       return type;
   }
@@ -79,6 +94,8 @@ const getResultIcon = (type: string) => {
       return <ImageIcon fontSize="small" sx={{ color: '#f9a825' }} />;
     case 'bible':
       return <MenuBookIcon fontSize="small" sx={{ color: '#388e3c' }} />;
+    case 'churchtools':
+      return <ChurchIcon fontSize="small" sx={{ color: '#7b1fa2' }} />;
     default:
       return <SearchIcon fontSize="small" />;
   }
@@ -93,6 +110,8 @@ export const UnifiedSearch = ({
   onSelectBible,
   songsOnly = false,
   onOpenSongLibrary,
+  churchToolsEnabled = false,
+  onSelectChurchToolsSong,
 }: UnifiedSearchProps) => {
   const { LL } = useI18nContext();
   const [query, setQuery] = useState('');
@@ -105,6 +124,8 @@ export const UnifiedSearch = ({
   const isSearching = debouncedQuery.length >= 1;
   const isNumericQuery = /^\d+$/.test(debouncedQuery.trim());
 
+  const isCtSearch = activeType === 'churchtools';
+
   // Determine search mode for songs-only search
   const songSearchMode = isNumericQuery ? 'number' : deepSearch ? 'text' : 'title';
 
@@ -116,15 +137,33 @@ export const UnifiedSearch = ({
 
   // For unified search, use the unified endpoint
   const { data: unifiedResults, isFetching: unifiedFetching } = useUnifiedSearchQuery(
-    { q: debouncedQuery, type: activeType || undefined },
-    { skip: !isSearching || songsOnly },
+    { q: debouncedQuery, type: (activeType === '' || activeType === 'churchtools') ? undefined : activeType },
+    { skip: !isSearching || songsOnly || isCtSearch },
   );
 
+  // ChurchTools search
+  const [searchCtSongs, { data: ctSearchData, isFetching: ctFetching }] = useLazySearchChurchToolsSongsQuery();
+  useEffect(() => {
+    if (isCtSearch && isSearching) {
+      void searchCtSongs({ q: debouncedQuery });
+    }
+  }, [isCtSearch, isSearching, debouncedQuery, searchCtSongs]);
+
+  const ctResults: (SearchResult & { subtitle?: string })[] | undefined = ctSearchData?.songs.map((s) => ({
+    id: s.id,
+    name: s.name,
+    type: 'churchtools' as const,
+    subtitle: [s.author, s.ccli ? `CCLI: ${s.ccli}` : null].filter(Boolean).join(' · ') || undefined,
+  }));
+
   // Map song search results to SearchResult format for consistent rendering
-  const searchResults: SearchResult[] | undefined = songsOnly
-    ? songSearchResults?.map((s) => ({ id: s.songNumber, name: s.title, type: 'song' as const }))
-    : unifiedResults;
-  const searchFetching = songsOnly ? songSearchFetching : unifiedFetching;
+  const searchResults: (SearchResult & { subtitle?: string })[] | undefined = isCtSearch
+    ? ctResults
+    : songsOnly
+      ? songSearchResults?.map((s) => ({ id: s.songNumber, name: s.title, type: 'song' as const }))
+      : unifiedResults;
+
+  const searchFetching = isCtSearch ? ctFetching : songsOnly ? songSearchFetching : unifiedFetching;
 
   // Full song list when not searching
   const { data: allSongs = [] } = useGetSongsAllQuery(undefined, {
@@ -163,6 +202,9 @@ export const UnifiedSearch = ({
       case 'bible':
         onSelectBible?.(result.name);
         break;
+      case 'churchtools':
+        onSelectChurchToolsSong?.(Number(result.id), result.name);
+        break;
     }
     onClose();
   };
@@ -170,7 +212,7 @@ export const UnifiedSearch = ({
   // Group results by type when viewing all
   const groupedResults = (() => {
     if (!searchResults || searchResults.length === 0) return {};
-    const groups: Record<string, SearchResult[]> = {};
+    const groups: Record<string, (SearchResult & { subtitle?: string })[]> = {};
     for (const r of searchResults) {
       if (!groups[r.type]) groups[r.type] = [];
       groups[r.type].push(r);
@@ -235,7 +277,7 @@ export const UnifiedSearch = ({
                         <ListItemIcon sx={{ minWidth: 32 }}>{getResultIcon(result.type)}</ListItemIcon>
                         <ListItemText
                           primary={result.name}
-                          secondary={result.type === 'song' ? `#${result.id}` : undefined}
+                          secondary={result.subtitle ?? (result.type === 'song' ? `#${result.id}` : undefined)}
                           slotProps={{
                             primary: { variant: 'body2', noWrap: true },
                             secondary: { variant: 'caption' },
@@ -255,7 +297,7 @@ export const UnifiedSearch = ({
                     <ListItemIcon sx={{ minWidth: 32 }}>{getResultIcon(result.type)}</ListItemIcon>
                     <ListItemText
                       primary={result.name}
-                      secondary={result.type === 'song' ? `#${result.id}` : undefined}
+                      secondary={result.subtitle ?? (result.type === 'song' ? `#${result.id}` : undefined)}
                       slotProps={{
                         primary: { variant: 'body2', noWrap: true },
                         secondary: { variant: 'caption' },
@@ -385,7 +427,7 @@ export const UnifiedSearch = ({
         {/* Type filter chips */}
         {!songsOnly && (
           <Stack direction="row" spacing={0.5} sx={{ px: 0.5, flexWrap: 'wrap' }}>
-            {TYPE_CHIPS.map(({ type, icon: Icon, colorKey }) => (
+            {[...TYPE_CHIPS, ...(churchToolsEnabled ? [CT_CHIP] : [])].map(({ type, icon: Icon, colorKey }) => (
               <Chip
                 key={type || 'all'}
                 icon={<Icon sx={{ fontSize: '0.9rem' }} />}

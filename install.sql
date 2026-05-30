@@ -13,6 +13,8 @@ CREATE TABLE `account` (
   `show_title_template` varchar(200) DEFAULT 'Show {dd}.{MM}.{yyyy}',
   `window_names` JSON DEFAULT NULL,
   `musician_names` JSON DEFAULT NULL,
+  `church_tools_url` VARCHAR(500) DEFAULT NULL,
+  `church_tools_token` VARCHAR(500) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `lastactivity` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`license`)
