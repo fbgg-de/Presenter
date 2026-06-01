@@ -45,9 +45,9 @@ appImage:
 npmRebuild: false
 publish:
   provider: github
-  private: true
+  private: false
   owner: fbgg-de
-  repo: presenter
+  repo: Presenter
   releaseType: release
 electronDownload:
   mirror: https://npmmirror.com/mirrors/electron/
