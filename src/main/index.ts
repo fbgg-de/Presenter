@@ -398,7 +398,7 @@ if (app.isPackaged) {
 // ── App lifecycle ──
 app.whenReady().then(async () => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron');
+  electronApp.setAppUserModelId('de.fbbg.presenter');
 
   // Default open or close DevTools by F12 in development
   // In production, F12 still opens DevTools for debugging purposes
