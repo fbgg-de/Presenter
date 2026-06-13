@@ -431,9 +431,7 @@ const ChurchToolsDialog = ({
             type="password"
             fullWidth
           />
-          {!url && account?.church_tools_enabled && (
-            <Alert severity="warning">{LL.ADMIN.CHURCH_TOOLS_CLEAR_WARNING()}</Alert>
-          )}
+          {!url && account?.church_tools_enabled && <Alert severity="warning">{LL.ADMIN.CHURCH_TOOLS_CLEAR_WARNING()}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
@@ -445,4 +443,3 @@ const ChurchToolsDialog = ({
     </Dialog>
   );
 };
-

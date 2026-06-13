@@ -144,18 +144,48 @@ class PdfAnnotations extends RestController
             $res->success(['message' => 'Layer renamed']);
         }
 
-        // PUT /rest/PdfAnnotations/{songNumber}/{annotationId} — update annotation position
+        // PUT /rest/PdfAnnotations/{songNumber}/{annotationId} — update annotation
         $annotationId = $req->path->get(1, '', false);
         if ($annotationId && is_numeric($annotationId)) {
             $aid = intval($annotationId);
             $x = floatval($req->params->get('x', '0', false));
             $y = floatval($req->params->get('y', '0', false));
 
+            // Optional: full content update (for text edit via double-click)
+            $color   = $req->params->has('color') ? $req->params->get('color', null, false) : null;
+            $opacity = $req->params->has('opacity') ? floatval($req->params->get('opacity', '1', false)) : null;
+            $data    = $req->params->has('data') ? json_encode($req->params->getAsArray('data', [])) : null;
+
+            $setClauses = ['x = ?', 'y = ?'];
+            $types = 'dd';
+            $values = [$x, $y];
+
+            if ($color !== null) {
+                $setClauses[] = 'color = ?';
+                $types .= 's';
+                $values[] = $color;
+            }
+            if ($opacity !== null) {
+                $setClauses[] = 'opacity = ?';
+                $types .= 'd';
+                $values[] = $opacity;
+            }
+            if ($data !== null) {
+                $setClauses[] = 'data = ?';
+                $types .= 's';
+                $values[] = $data;
+            }
+
+            $types .= 'iii';
+            $values[] = $aid;
+            $values[] = $account;
+            $values[] = $sn;
+
             $stmt = self::prepare(
-                'UPDATE pdf_annotations SET x = ?, y = ? WHERE id = ? AND account = ? AND songnumber = ?'
+                'UPDATE pdf_annotations SET ' . implode(', ', $setClauses) . ' WHERE id = ? AND account = ? AND songnumber = ?'
             );
-            $stmt->bind_param('ddiii', $x, $y, $aid, $account, $sn)->execute()->close();
-            $res->success(['message' => 'Annotation updated', 'id' => $aid, 'x' => $x, 'y' => $y]);
+            $stmt->bind_param($types, ...$values)->execute()->close();
+            $res->success(['message' => 'Annotation updated', 'id' => $aid]);
         }
 
         $res->error(400, 'Unknown PUT action');

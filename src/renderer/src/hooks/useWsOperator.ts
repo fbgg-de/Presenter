@@ -22,7 +22,12 @@ export interface WsOperatorIncomingSync {
   contentType?: string;
 }
 
-export const useWsOperator = (url: string, account: number | null, onMusicianSync?: (state: WsOperatorIncomingSync) => void) => {
+export const useWsOperator = (
+  url: string,
+  account: number | null,
+  onMusicianSync?: (state: WsOperatorIncomingSync) => void,
+  onGetState?: () => void,
+) => {
   const wsRef = useRef<WebSocket | null>(null);
   const authedRef = useRef(false);
   const [connected, setConnected] = useState(false);
@@ -30,6 +35,8 @@ export const useWsOperator = (url: string, account: number | null, onMusicianSyn
   const [lastMidiSyncAt, setLastMidiSyncAt] = useState<number>(0);
   const onMusicianSyncRef = useRef(onMusicianSync);
   onMusicianSyncRef.current = onMusicianSync;
+  const onGetStateRef = useRef(onGetState);
+  onGetStateRef.current = onGetState;
 
   useEffect(() => {
     if (!url || account == null) {
@@ -84,6 +91,9 @@ export const useWsOperator = (url: string, account: number | null, onMusicianSyn
             // A musician is broadcasting their current position — record the timestamp
             setLastMidiSyncAt(Date.now());
             onMusicianSyncRef.current?.(msg.data as WsOperatorIncomingSync);
+          } else if (msg.action === 'get_state') {
+            // A new musician client is requesting the current state — re-broadcast immediately
+            onGetStateRef.current?.();
           }
         } catch {
           // ignore

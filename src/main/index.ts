@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, shell, BrowserWindow, dialog, ipcMain, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { join } from 'path';
 import { networkInterfaces } from 'os';
@@ -7,6 +7,7 @@ import { PresentationWindowManager } from './windows';
 import { registerIpcHandlers } from './ipc';
 import { LocalMediaServer } from './mediaServer';
 import { PresenterWebSocketServer } from './wsServer';
+import { getCredentials } from './credentials';
 import iconIco from '../../favicon.ico?asset';
 import iconPng from '../../favicon.svg?asset';
 import iconSvg from '../../favicon.svg?asset';
@@ -15,6 +16,7 @@ import iconSvg from '../../favicon.svg?asset';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 
 const boundsFile = join(app.getPath('userData'), 'window-bounds.json');
+const cookiesFile = join(app.getPath('userData'), 'session-cookies.json');
 // Sidecar file mirroring `presenter_media_path` from renderer localStorage so
 // that the media server can be started BEFORE the renderer has finished
 // loading. Without this the very first /list request from MediaBrowser races
@@ -69,6 +71,51 @@ const saveWindowBounds = (bounds: WindowBoundsData) => {
     writeFileSync(boundsFile, JSON.stringify(bounds), 'utf-8');
   } catch {
     /* ignore */
+  }
+};
+
+// ── Session cookie persistence ──
+// Chromium treats cookies without an explicit expiry as "session cookies" and
+// discards them when the process exits. We save them to disk before quit and
+// restore them (with a 30-day expiry) on the next launch so the user stays
+// logged in across app restarts.
+
+const saveSessionCookies = async (): Promise<void> => {
+  try {
+    const cookies = await session.defaultSession.cookies.get({});
+    const dir = app.getPath('userData');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(cookiesFile, JSON.stringify(cookies), 'utf-8');
+  } catch (err) {
+    console.error('[Cookies] Failed to save session cookies:', err);
+  }
+};
+
+const restoreSessionCookies = async (): Promise<void> => {
+  try {
+    if (!existsSync(cookiesFile)) return;
+    const cookies = JSON.parse(readFileSync(cookiesFile, 'utf-8')) as Electron.Cookie[];
+    const thirtyDaysFromNow = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+    for (const cookie of cookies) {
+      try {
+        await session.defaultSession.cookies.set({
+          url: `${cookie.secure ? 'https' : 'http'}://${cookie.domain?.replace(/^\./, '')}`,
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain,
+          path: cookie.path,
+          secure: cookie.secure,
+          httpOnly: cookie.httpOnly,
+          expirationDate: cookie.expirationDate ?? thirtyDaysFromNow,
+          sameSite: cookie.sameSite,
+        });
+      } catch {
+        // Individual cookie may fail (e.g. invalid domain); skip and continue
+      }
+    }
+    console.log(`[Cookies] Restored ${cookies.length} session cookie(s)`);
+  } catch (err) {
+    console.error('[Cookies] Failed to restore session cookies:', err);
   }
 };
 
@@ -150,8 +197,9 @@ const createWindow = () => {
       saveWindowBounds({ x: b.x, y: b.y, width: b.width, height: b.height, isMaximized: false });
     }
   };
-  mainWindow.on('move', persistBounds);
-  mainWindow.on('resize', persistBounds);
+  // Only save bounds when the user intentionally closes the window.
+  // Saving on every move/resize would capture OS-clamped values (e.g. taskbar
+  // shrinking the height from 1080 → 1040) and persist the wrong size.
   mainWindow.on('close', () => {
     persistBounds();
     // Destroy any presentation/musician windows so the app can fully quit.
@@ -262,6 +310,104 @@ const createWindow = () => {
   // Auto-start media server after renderer finishes loading
   mainWindow.webContents.on('did-finish-load', () => {
     autoStartMediaServer();
+  });
+
+  // Auto-fill OIDC provider login form when the window navigates to an external page.
+  // Many IdP pages render their form asynchronously, so we retry with increasing delays
+  // until fields are found or a timeout is reached.
+  const scheduleAutoFill = async (url: string): Promise<void> => {
+    if (!url || url.startsWith('file://') || url.startsWith('about:')) return;
+
+    const creds = getCredentials();
+    if (!creds) return;
+
+    // The script returns the number of fields that were actually filled so we know
+    // whether to keep retrying.
+    const fillScript = `
+      (() => {
+        const username = ${JSON.stringify(creds.username)};
+        const password = ${JSON.stringify(creds.password)};
+        // Read the autoLogin preference directly from renderer localStorage
+        const autoLogin = (() => {
+          try {
+            return JSON.parse(localStorage.getItem('presenter_settings') || '{}').autoLogin === true;
+          } catch { return false; }
+        })();
+        const usernameSelectors = [
+          'input#username', 'input[name="username"]',
+          'input[type="email"]', 'input#email', 'input[name="email"]',
+          'input[autocomplete="username"]', 'input[autocomplete="email"]'
+        ];
+        const passwordSelectors = [
+          'input[type="password"]', 'input#password', 'input[name="password"]'
+        ];
+        function fill(el, val) {
+          try {
+            const setter = Object.getOwnPropertyDescriptor(
+              window.HTMLInputElement.prototype, 'value'
+            )?.set;
+            if (setter) setter.call(el, val);
+            else el.value = val;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+            return true;
+          } catch { return false; }
+        }
+        let filled = 0;
+        for (const sel of usernameSelectors) {
+          const el = document.querySelector(sel);
+          if (el) { fill(el, username); filled++; break; }
+        }
+        for (const sel of passwordSelectors) {
+          const el = document.querySelector(sel);
+          if (el) { fill(el, password); filled++; break; }
+        }
+        if (filled > 0 && autoLogin) {
+          setTimeout(() => {
+            const submitBtn = document.querySelector(
+              'button[type="submit"], input[type="submit"], form button:not([type="button"])'
+            );
+            if (submitBtn) {
+              submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+            } else {
+              const form = document.querySelector('form');
+              if (form) form.submit();
+            }
+          }, 500);
+        }
+        return filled;
+      })()
+    `;
+
+    // Retry at increasing intervals to handle pages that render forms asynchronously.
+    const retryDelays = [0, 400, 900, 1800, 3200];
+    for (const delay of retryDelays) {
+      if (delay > 0) await new Promise<void>((r) => setTimeout(r, delay));
+      if (!mainWindow || mainWindow.isDestroyed()) break;
+      // Abort if the user has already navigated to a different page
+      if (mainWindow.webContents.getURL() !== url) break;
+      try {
+        const filled = (await mainWindow.webContents.executeJavaScript(fillScript)) as number;
+        if (filled > 0) {
+          console.log(`[Credentials] Auto-filled ${filled} field(s) on ${new URL(url).hostname}`);
+          break;
+        }
+      } catch (err) {
+        console.error('[Credentials] Auto-fill attempt failed:', err);
+        break;
+      }
+    }
+  };
+
+  mainWindow.webContents.on('did-finish-load', () => {
+    const url = mainWindow!.webContents.getURL();
+    scheduleAutoFill(url).catch((err) => console.error('[Credentials] Auto-fill error:', err));
+  });
+
+  // did-navigate fires when the renderer navigates to a new URL (including IdP redirects).
+  // Combined with did-finish-load this ensures we attempt auto-fill on every navigation.
+  mainWindow.webContents.on('did-navigate', (_event, url) => {
+    scheduleAutoFill(url).catch((err) => console.error('[Credentials] Auto-fill error:', err));
   });
 
   // HMR for renderer based on electron-vite cli.
@@ -400,6 +546,10 @@ app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('de.fbbg.presenter');
 
+  // Restore session cookies saved from the previous run so the user stays
+  // logged in without re-entering credentials every time.
+  await restoreSessionCookies();
+
   // Default open or close DevTools by F12 in development
   // In production, F12 still opens DevTools for debugging purposes
   app.on('browser-window-created', (_, window) => {
@@ -524,8 +674,18 @@ app.on('window-all-closed', () => {
   }
 });
 
-// Ensure all child windows are destroyed before quit
-app.on('before-quit', () => {
+// Ensure all child windows are destroyed before quit, and flush session cookies
+// to disk so the user stays logged in on the next launch.
+let isFlushing = false;
+app.on('before-quit', (e) => {
   wsServer.stop();
   windowManager.destroyAll();
+
+  if (isFlushing) return; // second call after our explicit app.quit() below
+  e.preventDefault();
+  isFlushing = true;
+
+  saveSessionCookies()
+    .catch(() => {})
+    .finally(() => app.quit());
 });

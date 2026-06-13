@@ -111,8 +111,7 @@ const groupByField = (metrics: MetricEvent[], field: 'event' | 'entity_type'): R
   return counts;
 };
 
-const countByEvent = (metrics: MetricEvent[], eventType: string) =>
-  metrics.filter((m) => m.event === eventType).length;
+const countByEvent = (metrics: MetricEvent[], eventType: string) => metrics.filter((m) => m.event === eventType).length;
 
 const groupMetadataField = (metrics: MetricEvent[], eventType: string, field: string, limit = 15) => {
   const counts: Record<string, number> = {};
@@ -188,17 +187,23 @@ export const Metrics = () => {
   // ── Overview ────────────────────────────────────────────────────────────────
   const eventsOverTime = useMemo(() => {
     const grouped = groupByDate(metrics, granularity);
-    return Object.entries(grouped).sort((a, b) => a[0].localeCompare(b[0])).map(([date, count]) => ({ date, count }));
+    return Object.entries(grouped)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, count]) => ({ date, count }));
   }, [metrics, granularity]);
 
   const eventTypeDistribution = useMemo(() => {
     const grouped = groupByField(metrics, 'event');
-    return Object.entries(grouped).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+    return Object.entries(grouped)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => ({ name, value }));
   }, [metrics]);
 
   const entityTypeDistribution = useMemo(() => {
     const grouped = groupByField(metrics, 'entity_type');
-    return Object.entries(grouped).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+    return Object.entries(grouped)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => ({ name, value }));
   }, [metrics]);
 
   // ── Devices ─────────────────────────────────────────────────────────────────
@@ -210,12 +215,17 @@ export const Metrics = () => {
       const date = new Date(m.created_at);
       let key: string;
       if (granularity === 'day') key = date.toISOString().slice(0, 10);
-      else if (granularity === 'week') { const d = new Date(date); d.setDate(d.getDate() - d.getDay()); key = d.toISOString().slice(0, 10); }
-      else key = date.toISOString().slice(0, 7);
+      else if (granularity === 'week') {
+        const d = new Date(date);
+        d.setDate(d.getDate() - d.getDay());
+        key = d.toISOString().slice(0, 10);
+      } else key = date.toISOString().slice(0, 7);
       if (!devicesByDate[key]) devicesByDate[key] = new Set();
       devicesByDate[key].add(deviceId);
     }
-    return Object.entries(devicesByDate).sort((a, b) => a[0].localeCompare(b[0])).map(([date, devices]) => ({ date, count: devices.size }));
+    return Object.entries(devicesByDate)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, devices]) => ({ date, count: devices.size }));
   }, [metrics, granularity]);
 
   const totalUniqueDevices = useMemo(() => {
@@ -225,7 +235,10 @@ export const Metrics = () => {
 
   const uniqueDeviceIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const m of metrics) { const id = (m.metadata as Record<string, string> | undefined)?.device_id; if (id) ids.add(id); }
+    for (const m of metrics) {
+      const id = (m.metadata as Record<string, string> | undefined)?.device_id;
+      if (id) ids.add(id);
+    }
     return Array.from(ids).sort();
   }, [metrics]);
 
@@ -237,21 +250,29 @@ export const Metrics = () => {
 
   // ── Shows ────────────────────────────────────────────────────────────────────
   const showCreatedOverTime = useMemo(() => groupEventByDate(metrics, 'show_created', granularity), [metrics, granularity]);
-  const showActivityData = useMemo(() => [
-    { name: 'show_created', value: countByEvent(metrics, 'show_created') },
-    { name: 'show_loaded', value: countByEvent(metrics, 'show_loaded') },
-    { name: 'show_saved', value: countByEvent(metrics, 'show_saved') },
-    { name: 'show_deleted', value: countByEvent(metrics, 'show_deleted') },
-  ].filter((d) => d.value > 0), [metrics]);
+  const showActivityData = useMemo(
+    () =>
+      [
+        { name: 'show_created', value: countByEvent(metrics, 'show_created') },
+        { name: 'show_loaded', value: countByEvent(metrics, 'show_loaded') },
+        { name: 'show_saved', value: countByEvent(metrics, 'show_saved') },
+        { name: 'show_deleted', value: countByEvent(metrics, 'show_deleted') },
+      ].filter((d) => d.value > 0),
+    [metrics],
+  );
 
   // ── Content – PDF / Media / Bible ─────────────────────────────────────────
-  const contentActivityData = useMemo(() => [
-    { name: 'pdf_uploaded', value: countByEvent(metrics, 'pdf_uploaded') },
-    { name: 'pdf_viewed', value: countByEvent(metrics, 'pdf_viewed') },
-    { name: 'pdf_deleted', value: countByEvent(metrics, 'pdf_deleted') },
-    { name: 'media_added', value: countByEvent(metrics, 'media_added') },
-    { name: 'bible_verse_added', value: countByEvent(metrics, 'bible_verse_added') },
-  ].filter((d) => d.value > 0), [metrics]);
+  const contentActivityData = useMemo(
+    () =>
+      [
+        { name: 'pdf_uploaded', value: countByEvent(metrics, 'pdf_uploaded') },
+        { name: 'pdf_viewed', value: countByEvent(metrics, 'pdf_viewed') },
+        { name: 'pdf_deleted', value: countByEvent(metrics, 'pdf_deleted') },
+        { name: 'media_added', value: countByEvent(metrics, 'media_added') },
+        { name: 'bible_verse_added', value: countByEvent(metrics, 'bible_verse_added') },
+      ].filter((d) => d.value > 0),
+    [metrics],
+  );
 
   // ── Search ───────────────────────────────────────────────────────────────────
   const searchOverTime = useMemo(() => groupEventByDate(metrics, 'search_performed', granularity), [metrics, granularity]);
@@ -260,11 +281,15 @@ export const Metrics = () => {
   const windowOpenedData = useMemo(() => groupMetadataField(metrics, 'window_opened', 'window'), [metrics]);
 
   // ── Presentation ─────────────────────────────────────────────────────────────
-  const presentationData = useMemo(() => [
-    { name: 'presentation_opened', value: countByEvent(metrics, 'presentation_opened') },
-    { name: 'style_changed', value: countByEvent(metrics, 'style_changed') },
-    { name: 'block_navigated', value: countByEvent(metrics, 'block_navigated') },
-  ].filter((d) => d.value > 0), [metrics]);
+  const presentationData = useMemo(
+    () =>
+      [
+        { name: 'presentation_opened', value: countByEvent(metrics, 'presentation_opened') },
+        { name: 'style_changed', value: countByEvent(metrics, 'style_changed') },
+        { name: 'block_navigated', value: countByEvent(metrics, 'block_navigated') },
+      ].filter((d) => d.value > 0),
+    [metrics],
+  );
 
   // ── Musician ─────────────────────────────────────────────────────────────────
   const musicianButtonData = useMemo(() => groupMetadataField(metrics, 'musician_button_clicked', 'button'), [metrics]);
@@ -276,15 +301,28 @@ export const Metrics = () => {
   );
 
   // ── Settings ─────────────────────────────────────────────────────────────────
-  const settingChangedData = useMemo(() => groupMetadataField(metrics, 'setting_changed', 'key' in (metrics.find((m) => m.event === 'setting_changed')?.metadata ?? {}) ? 'key' : 'value', 12), [metrics]);
+  const settingChangedData = useMemo(
+    () =>
+      groupMetadataField(
+        metrics,
+        'setting_changed',
+        'key' in (metrics.find((m) => m.event === 'setting_changed')?.metadata ?? {}) ? 'key' : 'value',
+        12,
+      ),
+    [metrics],
+  );
 
   // ── Auth / System ─────────────────────────────────────────────────────────────
-  const authSystemData = useMemo(() => [
-    { name: 'login', value: countByEvent(metrics, 'login') },
-    { name: 'fresh_start', value: countByEvent(metrics, 'fresh_start') },
-    { name: 'uncaught_error', value: countByEvent(metrics, 'uncaught_error') },
-    { name: 'metrics_disabled', value: countByEvent(metrics, 'metrics_disabled') },
-  ].filter((d) => d.value > 0), [metrics]);
+  const authSystemData = useMemo(
+    () =>
+      [
+        { name: 'login', value: countByEvent(metrics, 'login') },
+        { name: 'fresh_start', value: countByEvent(metrics, 'fresh_start') },
+        { name: 'uncaught_error', value: countByEvent(metrics, 'uncaught_error') },
+        { name: 'metrics_disabled', value: countByEvent(metrics, 'metrics_disabled') },
+      ].filter((d) => d.value > 0),
+    [metrics],
+  );
 
   const uncaughtErrorData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -292,22 +330,39 @@ export const Metrics = () => {
       const src = (m.metadata as Record<string, string> | undefined)?.source ?? 'unknown';
       counts[src] = (counts[src] || 0) + 1;
     }
-    return Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([name, value]) => ({ name, value }));
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, value]) => ({ name, value }));
   }, [metrics]);
 
   // ── Misc ────────────────────────────────────────────────────────────────────
-  const uniqueEvents = useMemo(() => { const events = new Set<string>(); for (const m of metrics) events.add(m.event); return Array.from(events).sort(); }, [metrics]);
+  const uniqueEvents = useMemo(() => {
+    const events = new Set<string>();
+    for (const m of metrics) events.add(m.event);
+    return Array.from(events).sort();
+  }, [metrics]);
   const recentEvents = useMemo(() => metrics.slice(0, 50), [metrics]);
 
   const handleExportAll = () => {
     exportToCsv(
-      metrics.map((m) => ({ id: m.id, event: m.event, entity_type: m.entity_type ?? '', entity_id: m.entity_id ?? '', metadata: m.metadata ? JSON.stringify(m.metadata) : '', created_at: m.created_at })),
+      metrics.map((m) => ({
+        id: m.id,
+        event: m.event,
+        entity_type: m.entity_type ?? '',
+        entity_id: m.entity_id ?? '',
+        metadata: m.metadata ? JSON.stringify(m.metadata) : '',
+        created_at: m.created_at,
+      })),
       `metrics_${dateFrom}_${dateTo}.csv`,
     );
   };
 
   if (isLoading) {
-    return <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   return (
@@ -315,13 +370,31 @@ export const Metrics = () => {
       {/* ── Filters ─────────────────────────────────────────────────────────── */}
       <Paper sx={{ p: 2 }}>
         <Stack direction="row" spacing={2} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
-          <TextField type="date" label={LL.METRICS.DATE_FROM()} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} size="small" slotProps={{ inputLabel: { shrink: true } }} />
-          <TextField type="date" label={LL.METRICS.DATE_TO()} value={dateTo} onChange={(e) => setDateTo(e.target.value)} size="small" slotProps={{ inputLabel: { shrink: true } }} />
+          <TextField
+            type="date"
+            label={LL.METRICS.DATE_FROM()}
+            value={dateFrom}
+            onChange={(e) => setDateFrom(e.target.value)}
+            size="small"
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
+          <TextField
+            type="date"
+            label={LL.METRICS.DATE_TO()}
+            value={dateTo}
+            onChange={(e) => setDateTo(e.target.value)}
+            size="small"
+            slotProps={{ inputLabel: { shrink: true } }}
+          />
           <FormControl size="small" sx={{ minWidth: 160 }}>
             <InputLabel>{LL.METRICS.EVENT_TYPE()}</InputLabel>
             <Select value={eventFilter} label={LL.METRICS.EVENT_TYPE()} onChange={(e) => setEventFilter(e.target.value)}>
               <MenuItem value="">{LL.UNIFIED_SEARCH.ALL()}</MenuItem>
-              {uniqueEvents.map((ev) => <MenuItem key={ev} value={ev}>{ev}</MenuItem>)}
+              {uniqueEvents.map((ev) => (
+                <MenuItem key={ev} value={ev}>
+                  {ev}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           {isAdmin && adminAccounts.length > 0 && (
@@ -329,7 +402,11 @@ export const Metrics = () => {
               <InputLabel>{LL.COMMON.ACCOUNT()}</InputLabel>
               <Select value={accountFilter} label={LL.COMMON.ACCOUNT()} onChange={(e) => setAccountFilter(e.target.value as number | '')}>
                 <MenuItem value="">{LL.UNIFIED_SEARCH.ALL()}</MenuItem>
-                {adminAccounts.map((a) => <MenuItem key={a.license} value={a.license}>{a.name ? `${a.name} (#${a.license})` : `#${a.license}`}</MenuItem>)}
+                {adminAccounts.map((a) => (
+                  <MenuItem key={a.license} value={a.license}>
+                    {a.name ? `${a.name} (#${a.license})` : `#${a.license}`}
+                  </MenuItem>
+                ))}
               </Select>
             </FormControl>
           )}
@@ -337,7 +414,11 @@ export const Metrics = () => {
             <InputLabel>{LL.METRICS.DEVICE_ID()}</InputLabel>
             <Select value={deviceIdFilter} label={LL.METRICS.DEVICE_ID()} onChange={(e) => setDeviceIdFilter(e.target.value)}>
               <MenuItem value="">{LL.UNIFIED_SEARCH.ALL()}</MenuItem>
-              {uniqueDeviceIds.map((id) => <MenuItem key={id} value={id} sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{id.slice(0, 13)}…</MenuItem>)}
+              {uniqueDeviceIds.map((id) => (
+                <MenuItem key={id} value={id} sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                  {id.slice(0, 13)}…
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
           <FormControl size="small" sx={{ minWidth: 120 }}>
@@ -348,12 +429,18 @@ export const Metrics = () => {
               <MenuItem value="month">{LL.METRICS.MONTHLY()}</MenuItem>
             </Select>
           </FormControl>
-          <Button startIcon={<RefreshIcon />} onClick={() => refetch()} disabled={isFetching}>{LL.METRICS.REFRESH()}</Button>
+          <Button startIcon={<RefreshIcon />} onClick={() => refetch()} disabled={isFetching}>
+            {LL.METRICS.REFRESH()}
+          </Button>
           <Box sx={{ flexGrow: 1 }} />
           <Tooltip title={LL.METRICS.EXPORT_CSV()}>
-            <IconButton onClick={handleExportAll} disabled={metrics.length === 0}><DownloadIcon /></IconButton>
+            <IconButton onClick={handleExportAll} disabled={metrics.length === 0}>
+              <DownloadIcon />
+            </IconButton>
           </Tooltip>
-          <Typography variant="body2" color="text.secondary">{LL.METRICS.TOTAL_EVENTS({ count: data?.total ?? 0 })}</Typography>
+          <Typography variant="body2" color="text.secondary">
+            {LL.METRICS.TOTAL_EVENTS({ count: data?.total ?? 0 })}
+          </Typography>
         </Stack>
       </Paper>
 
@@ -363,11 +450,21 @@ export const Metrics = () => {
         <>
           {/* ── Summary Cards ──────────────────────────────────────────────── */}
           <Stack direction="row" spacing={2} useFlexGap sx={{ flexWrap: 'wrap' }}>
-            <SummaryCard icon={<BarChartIcon />} label={LL.METRICS.TOTAL_EVENTS({ count: metrics.length })} value={metrics.length} color="#1976d2" />
+            <SummaryCard
+              icon={<BarChartIcon />}
+              label={LL.METRICS.TOTAL_EVENTS({ count: metrics.length })}
+              value={metrics.length}
+              color="#1976d2"
+            />
             <SummaryCard icon={<TrendingUpIcon />} label={LL.METRICS.EVENT_TYPES()} value={eventTypeDistribution.length} color="#388e3c" />
             <SummaryCard icon={<DevicesIcon />} label={LL.METRICS.UNIQUE_DEVICES()} value={totalUniqueDevices} color="#9c27b0" />
             <SummaryCard icon={<SongIcon />} label={LL.METRICS.SONGS_IMPORTED()} value={songImportedCount} color="#e65100" />
-            <SummaryCard icon={<ShowIcon />} label={LL.METRICS.SHOWS_CREATED()} value={countByEvent(metrics, 'show_created')} color="#00838f" />
+            <SummaryCard
+              icon={<ShowIcon />}
+              label={LL.METRICS.SHOWS_CREATED()}
+              value={countByEvent(metrics, 'show_created')}
+              color="#00838f"
+            />
             <SummaryCard icon={<ErrorIcon />} label={LL.METRICS.ERRORS()} value={countByEvent(metrics, 'uncaught_error')} color="#c62828" />
           </Stack>
 
@@ -376,7 +473,10 @@ export const Metrics = () => {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <Card sx={{ flex: 2 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom><BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.EVENTS_OVER_TIME()}</Typography>
+                <Typography variant="h6" gutterBottom>
+                  <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                  {LL.METRICS.EVENTS_OVER_TIME()}
+                </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={eventsOverTime}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -390,12 +490,27 @@ export const Metrics = () => {
             </Card>
             <Card sx={{ flex: 1 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom><PieChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.EVENT_DISTRIBUTION()}</Typography>
+                <Typography variant="h6" gutterBottom>
+                  <PieChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                  {LL.METRICS.EVENT_DISTRIBUTION()}
+                </Typography>
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
-                    <Pie data={eventTypeDistribution} cx="50%" cy="50%" outerRadius={100} dataKey="value" nameKey="name"
-                      label={({ name, percent }: PieLabelRenderProps) => `${name ?? ''} (${(((percent as number) ?? 0) * 100).toFixed(0)}%)`} labelLine={false}>
-                      {eventTypeDistribution.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
+                    <Pie
+                      data={eventTypeDistribution}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="value"
+                      nameKey="name"
+                      label={({ name, percent }: PieLabelRenderProps) =>
+                        `${name ?? ''} (${(((percent as number) ?? 0) * 100).toFixed(0)}%)`
+                      }
+                      labelLine={false}
+                    >
+                      {eventTypeDistribution.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
                     </Pie>
                     <RechartsTooltip />
                   </PieChart>
@@ -408,7 +523,10 @@ export const Metrics = () => {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <Card sx={{ flex: 2 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom><TrendingUpIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.USAGE_TREND()}</Typography>
+                <Typography variant="h6" gutterBottom>
+                  <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                  {LL.METRICS.USAGE_TREND()}
+                </Typography>
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={eventsOverTime}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -423,12 +541,27 @@ export const Metrics = () => {
             </Card>
             <Card sx={{ flex: 1 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom><PieChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.ENTITY_DISTRIBUTION()}</Typography>
+                <Typography variant="h6" gutterBottom>
+                  <PieChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                  {LL.METRICS.ENTITY_DISTRIBUTION()}
+                </Typography>
                 <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
-                    <Pie data={entityTypeDistribution} cx="50%" cy="50%" outerRadius={100} dataKey="value" nameKey="name"
-                      label={({ name, percent }: PieLabelRenderProps) => `${name ?? ''} (${(((percent as number) ?? 0) * 100).toFixed(0)}%)`} labelLine={false}>
-                      {entityTypeDistribution.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + 5) % CHART_COLORS.length]} />)}
+                    <Pie
+                      data={entityTypeDistribution}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      dataKey="value"
+                      nameKey="name"
+                      label={({ name, percent }: PieLabelRenderProps) =>
+                        `${name ?? ''} (${(((percent as number) ?? 0) * 100).toFixed(0)}%)`
+                      }
+                      labelLine={false}
+                    >
+                      {entityTypeDistribution.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[(i + 5) % CHART_COLORS.length]} />
+                      ))}
                     </Pie>
                     <RechartsTooltip />
                   </PieChart>
@@ -442,7 +575,10 @@ export const Metrics = () => {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <Card sx={{ flex: 2 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom><TrendingUpIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.UNIQUE_DEVICES_OVER_TIME()}</Typography>
+                <Typography variant="h6" gutterBottom>
+                  <TrendingUpIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                  {LL.METRICS.UNIQUE_DEVICES_OVER_TIME()}
+                </Typography>
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={uniqueDevicesOverTime}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -450,7 +586,14 @@ export const Metrics = () => {
                     <YAxis allowDecimals={false} />
                     <RechartsTooltip />
                     <Legend />
-                    <Line type="monotone" dataKey="count" stroke="#9c27b0" strokeWidth={2} dot={{ r: 3 }} name={LL.METRICS.UNIQUE_DEVICES()} />
+                    <Line
+                      type="monotone"
+                      dataKey="count"
+                      stroke="#9c27b0"
+                      strokeWidth={2}
+                      dot={{ r: 3 }}
+                      name={LL.METRICS.UNIQUE_DEVICES()}
+                    />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -458,7 +601,10 @@ export const Metrics = () => {
             {windowOpenedData.length > 0 && (
               <Card sx={{ flex: 1 }}>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom><WindowIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.WINDOWS_OPENED()}</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    <WindowIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                    {LL.METRICS.WINDOWS_OPENED()}
+                  </Typography>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={windowOpenedData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" />
@@ -478,7 +624,10 @@ export const Metrics = () => {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <Card sx={{ flex: 2 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom><SongIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.SONGS_IMPORTED_OVER_TIME()}</Typography>
+                <Typography variant="h6" gutterBottom>
+                  <SongIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                  {LL.METRICS.SONGS_IMPORTED_OVER_TIME()}
+                </Typography>
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={songImportedOverTime}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -492,7 +641,10 @@ export const Metrics = () => {
             </Card>
             <Card sx={{ flex: 1 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom><SongIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.SONG_ACTIVITY()}</Typography>
+                <Typography variant="h6" gutterBottom>
+                  <SongIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                  {LL.METRICS.SONG_ACTIVITY()}
+                </Typography>
                 <Stack spacing={2} sx={{ mt: 1 }}>
                   <SummaryCard icon={<SongIcon />} label={LL.METRICS.SONGS_IMPORTED()} value={songImportedCount} color="#e65100" />
                   <SummaryCard icon={<SongIcon />} label={LL.METRICS.SONGS_DELETED()} value={songDeletedCount} color="#c62828" />
@@ -504,7 +656,14 @@ export const Metrics = () => {
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                       <YAxis allowDecimals={false} />
                       <RechartsTooltip />
-                      <Line type="monotone" dataKey="count" stroke="#f9a825" strokeWidth={2} dot={false} name={LL.METRICS.SONG_SELECTED()} />
+                      <Line
+                        type="monotone"
+                        dataKey="count"
+                        stroke="#f9a825"
+                        strokeWidth={2}
+                        dot={false}
+                        name={LL.METRICS.SONG_SELECTED()}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -517,7 +676,10 @@ export const Metrics = () => {
           <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
             <Card sx={{ flex: 2 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom><ShowIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.SHOWS_CREATED_OVER_TIME()}</Typography>
+                <Typography variant="h6" gutterBottom>
+                  <ShowIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                  {LL.METRICS.SHOWS_CREATED_OVER_TIME()}
+                </Typography>
                 <ResponsiveContainer width="100%" height={260}>
                   <BarChart data={showCreatedOverTime}>
                     <CartesianGrid strokeDasharray="3 3" />
@@ -532,7 +694,10 @@ export const Metrics = () => {
             {showActivityData.length > 0 && (
               <Card sx={{ flex: 1 }}>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom><ShowIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.SHOW_ACTIVITY()}</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    <ShowIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                    {LL.METRICS.SHOW_ACTIVITY()}
+                  </Typography>
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={showActivityData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -540,7 +705,9 @@ export const Metrics = () => {
                       <YAxis allowDecimals={false} />
                       <RechartsTooltip />
                       <Bar dataKey="value" fill="#00838f" radius={[4, 4, 0, 0]} name={LL.METRICS.EVENTS()}>
-                        {showActivityData.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + 4) % CHART_COLORS.length]} />)}
+                        {showActivityData.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[(i + 4) % CHART_COLORS.length]} />
+                        ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -555,7 +722,10 @@ export const Metrics = () => {
               <SectionTitle>{LL.METRICS.SECTION_CONTENT()}</SectionTitle>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom><TableChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.CONTENT_ACTIVITY()}</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    <TableChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                    {LL.METRICS.CONTENT_ACTIVITY()}
+                  </Typography>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={contentActivityData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -563,7 +733,9 @@ export const Metrics = () => {
                       <YAxis allowDecimals={false} />
                       <RechartsTooltip />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]} name={LL.METRICS.EVENTS()}>
-                        {contentActivityData.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + 7) % CHART_COLORS.length]} />)}
+                        {contentActivityData.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[(i + 7) % CHART_COLORS.length]} />
+                        ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -578,7 +750,10 @@ export const Metrics = () => {
               <SectionTitle>{LL.METRICS.SECTION_SEARCH()}</SectionTitle>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom><SearchIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.SEARCHES_OVER_TIME()}</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    <SearchIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                    {LL.METRICS.SEARCHES_OVER_TIME()}
+                  </Typography>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={searchOverTime}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -599,7 +774,10 @@ export const Metrics = () => {
               <SectionTitle>{LL.METRICS.SECTION_PRESENTATION()}</SectionTitle>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom><BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.PRESENTATION_ACTIVITY()}</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                    {LL.METRICS.PRESENTATION_ACTIVITY()}
+                  </Typography>
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={presentationData}>
                       <CartesianGrid strokeDasharray="3 3" />
@@ -607,7 +785,9 @@ export const Metrics = () => {
                       <YAxis allowDecimals={false} />
                       <RechartsTooltip />
                       <Bar dataKey="value" radius={[4, 4, 0, 0]} name={LL.METRICS.EVENTS()}>
-                        {presentationData.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + 1) % CHART_COLORS.length]} />)}
+                        {presentationData.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[(i + 1) % CHART_COLORS.length]} />
+                        ))}
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
@@ -624,7 +804,10 @@ export const Metrics = () => {
                 {musicianButtonData.length > 0 && (
                   <Card sx={{ flex: 1 }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom><BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.MUSICIAN_BUTTON_USAGE()}</Typography>
+                      <Typography variant="h6" gutterBottom>
+                        <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                        {LL.METRICS.MUSICIAN_BUTTON_USAGE()}
+                      </Typography>
                       <ResponsiveContainer width="100%" height={280}>
                         <BarChart data={musicianButtonData} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" />
@@ -640,7 +823,10 @@ export const Metrics = () => {
                 {musicianLayerData.length > 0 && (
                   <Card sx={{ flex: 1 }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom><BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.LAYER_ACTIONS()}</Typography>
+                      <Typography variant="h6" gutterBottom>
+                        <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                        {LL.METRICS.LAYER_ACTIONS()}
+                      </Typography>
                       <ResponsiveContainer width="100%" height={280}>
                         <BarChart data={musicianLayerData} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" />
@@ -658,7 +844,10 @@ export const Metrics = () => {
                 {modalOpenedData.length > 0 && (
                   <Card sx={{ flex: 1 }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom><BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.MODAL_OPENED()}</Typography>
+                      <Typography variant="h6" gutterBottom>
+                        <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                        {LL.METRICS.MODAL_OPENED()}
+                      </Typography>
                       <ResponsiveContainer width="100%" height={260}>
                         <BarChart data={modalOpenedData} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" />
@@ -674,7 +863,10 @@ export const Metrics = () => {
                 {syncModeData.length > 0 && (
                   <Card sx={{ flex: 1 }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom><BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.SYNC_MODE_USAGE()}</Typography>
+                      <Typography variant="h6" gutterBottom>
+                        <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                        {LL.METRICS.SYNC_MODE_USAGE()}
+                      </Typography>
                       <ResponsiveContainer width="100%" height={260}>
                         <BarChart data={syncModeData}>
                           <CartesianGrid strokeDasharray="3 3" />
@@ -697,7 +889,10 @@ export const Metrics = () => {
               <SectionTitle>{LL.METRICS.SECTION_SETTINGS()}</SectionTitle>
               <Card>
                 <CardContent>
-                  <Typography variant="h6" gutterBottom><BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.SETTINGS_CHANGED()}</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                    {LL.METRICS.SETTINGS_CHANGED()}
+                  </Typography>
                   <ResponsiveContainer width="100%" height={Math.max(220, settingChangedData.length * 28)}>
                     <BarChart data={settingChangedData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" />
@@ -719,7 +914,10 @@ export const Metrics = () => {
               <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
                 <Card sx={{ flex: 1 }}>
                   <CardContent>
-                    <Typography variant="h6" gutterBottom><BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.SYSTEM_EVENTS()}</Typography>
+                    <Typography variant="h6" gutterBottom>
+                      <BarChartIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                      {LL.METRICS.SYSTEM_EVENTS()}
+                    </Typography>
                     <ResponsiveContainer width="100%" height={220}>
                       <BarChart data={authSystemData}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -727,7 +925,9 @@ export const Metrics = () => {
                         <YAxis allowDecimals={false} />
                         <RechartsTooltip />
                         <Bar dataKey="value" radius={[4, 4, 0, 0]} name={LL.METRICS.EVENTS()}>
-                          {authSystemData.map((_, i) => <Cell key={i} fill={CHART_COLORS[(i + 6) % CHART_COLORS.length]} />)}
+                          {authSystemData.map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[(i + 6) % CHART_COLORS.length]} />
+                          ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
@@ -736,7 +936,10 @@ export const Metrics = () => {
                 {uncaughtErrorData.length > 0 && (
                   <Card sx={{ flex: 1 }}>
                     <CardContent>
-                      <Typography variant="h6" gutterBottom><ErrorIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />{LL.METRICS.ERROR_SOURCES()}</Typography>
+                      <Typography variant="h6" gutterBottom>
+                        <ErrorIcon sx={{ mr: 1, verticalAlign: 'bottom' }} />
+                        {LL.METRICS.ERROR_SOURCES()}
+                      </Typography>
                       <ResponsiveContainer width="100%" height={220}>
                         <BarChart data={uncaughtErrorData} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" />
@@ -759,7 +962,21 @@ export const Metrics = () => {
             <CardContent>
               <Stack direction="row" sx={{ justifyContent: 'flex-end', mb: 1 }}>
                 <Tooltip title={LL.METRICS.EXPORT_CSV()}>
-                  <IconButton size="small" onClick={() => exportToCsv(recentEvents.map((m) => ({ event: m.event, entity_type: m.entity_type ?? '', entity_id: m.entity_id ?? '', device_id: (m.metadata as Record<string, string> | undefined)?.device_id ?? '', created_at: m.created_at })), 'recent_events.csv')}>
+                  <IconButton
+                    size="small"
+                    onClick={() =>
+                      exportToCsv(
+                        recentEvents.map((m) => ({
+                          event: m.event,
+                          entity_type: m.entity_type ?? '',
+                          entity_id: m.entity_id ?? '',
+                          device_id: (m.metadata as Record<string, string> | undefined)?.device_id ?? '',
+                          created_at: m.created_at,
+                        })),
+                        'recent_events.csv',
+                      )
+                    }
+                  >
                     <DownloadIcon fontSize="small" />
                   </IconButton>
                 </Tooltip>
@@ -781,18 +998,27 @@ export const Metrics = () => {
                       return (
                         <TableRow key={m.id} hover>
                           <TableCell sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{new Date(m.created_at).toLocaleString()}</TableCell>
-                          <TableCell><Chip label={m.event} size="small" variant="outlined" /></TableCell>
+                          <TableCell>
+                            <Chip label={m.event} size="small" variant="outlined" />
+                          </TableCell>
                           <TableCell>{m.entity_type ?? '—'}</TableCell>
                           <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{m.entity_id ?? '—'}</TableCell>
                           <TableCell>
                             {devId ? (
                               <Tooltip title={devId}>
-                                <Chip label={devId.slice(0, 8) + '…'} size="small" variant="outlined" clickable
+                                <Chip
+                                  label={devId.slice(0, 8) + '…'}
+                                  size="small"
+                                  variant="outlined"
+                                  clickable
                                   onClick={() => setDeviceIdFilter(devId === deviceIdFilter ? '' : devId)}
                                   color={devId === deviceIdFilter ? 'primary' : 'default'}
-                                  sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }} />
+                                  sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}
+                                />
                               </Tooltip>
-                            ) : '—'}
+                            ) : (
+                              '—'
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -811,7 +1037,10 @@ export const Metrics = () => {
 // ── Shared sub-components ──────────────────────────────────────────────────────
 
 const SectionTitle = ({ children }: { children: ReactNode }) => (
-  <Typography variant="overline" sx={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: 1.5, color: 'text.secondary', display: 'block', pt: 1 }}>
+  <Typography
+    variant="overline"
+    sx={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: 1.5, color: 'text.secondary', display: 'block', pt: 1 }}
+  >
     {children}
   </Typography>
 );
@@ -823,8 +1052,12 @@ const SummaryCard = ({ icon, label, value, color }: { icon: ReactNode; label: st
       <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
         <Box sx={{ color, display: 'flex' }}>{icon}</Box>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 700 }}>{value}</Typography>
-          <Typography variant="caption" color="text.secondary">{label}</Typography>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>
+            {value}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {label}
+          </Typography>
         </Box>
       </Stack>
     </CardContent>

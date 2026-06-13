@@ -175,7 +175,7 @@ belonging to account `12345` will never receive messages from account `67890`.
 ## Environment variables
 
 | Variable | Default | Description                    |
-|----------|---------|--------------------------------|
+| -------- | ------- | ------------------------------ |
 | `PORT`   | `9001`  | TCP port the server listens on |
 
 ---
@@ -185,14 +185,13 @@ belonging to account `12345` will never receive messages from account `67890`.
 ### Client → Server
 
 | Message                                 | When          | Description                                |
-|-----------------------------------------|---------------|--------------------------------------------|
+| --------------------------------------- | ------------- | ------------------------------------------ |
 | `{ action: "auth", account: <number> }` | First message | Authenticate with an account number        |
 | Any JSON                                | After auth    | Relayed to all peers with the same account |
 
 ### Server → Client
 
 | Message                                  | Description               |
-|------------------------------------------|---------------------------|
+| ---------------------------------------- | ------------------------- |
 | `{ type: "auth_ok", account: <number> }` | Authentication successful |
 | `{ type: "error", error: "..." }`        | Protocol error            |
-

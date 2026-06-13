@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { broadcastContent, setWindowStyleResolver } from '@/utils/presentationBridge';
@@ -10,7 +10,14 @@ import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
 import { useGetWindows, useUpdateWindows, WindowConfig } from '@/store/windowSlice';
 import { useGetPresentationSettings } from '@/store/presentationSlice';
-import { setActiveItemIndex, setActiveBlockIndex, setActiveItemAndBlock, setWsConnectedCount, setWsMidiSyncAt, setWsOperatorConnected } from '@/store/presentationSlice';
+import {
+  setActiveItemIndex,
+  setActiveBlockIndex,
+  setActiveItemAndBlock,
+  setWsConnectedCount,
+  setWsMidiSyncAt,
+  setWsOperatorConnected,
+} from '@/store/presentationSlice';
 import { useGetShow } from '@/store/showSlice';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSessionQuery } from '@/api/session.api';
@@ -81,21 +88,49 @@ export const usePresentationSync = (): void => {
 
   // Called when a musician broadcasts their position — only applied when
   // midiTrackingMaster === 'midi' (operator follows the MIDI musician).
-  const handleMusicianSync = useCallback((state: WsOperatorIncomingSync) => {
-    if (midiTrackingMasterRef.current !== 'midi') return;
-    const hasItem = typeof state.activeItemIndex === 'number';
-    const hasBlock = typeof state.activeBlockIndex === 'number';
-    if (hasItem && hasBlock) {
-      dispatch(setActiveItemAndBlock({ itemIndex: state.activeItemIndex!, blockIndex: state.activeBlockIndex! }));
-    } else if (hasItem) {
-      dispatch(setActiveItemIndex(state.activeItemIndex!));
-    } else if (hasBlock) {
-      dispatch(setActiveBlockIndex(state.activeBlockIndex!));
-    }
-  }, [dispatch]);
+  const handleMusicianSync = useCallback(
+    (state: WsOperatorIncomingSync) => {
+      if (midiTrackingMasterRef.current !== 'midi') return;
+      const hasItem = typeof state.activeItemIndex === 'number';
+      const hasBlock = typeof state.activeBlockIndex === 'number';
+      if (hasItem && hasBlock) {
+        dispatch(setActiveItemAndBlock({ itemIndex: state.activeItemIndex!, blockIndex: state.activeBlockIndex! }));
+      } else if (hasItem) {
+        dispatch(setActiveItemIndex(state.activeItemIndex!));
+      } else if (hasBlock) {
+        dispatch(setActiveBlockIndex(state.activeBlockIndex!));
+      }
+    },
+    [dispatch],
+  );
+
+  // Counter incremented whenever a peer requests the current state — forces a re-broadcast
+  // even if nothing in the presentation has changed.
+  const [forceBroadcastCount, setForceBroadcastCount] = useState(0);
+  const handleGetState = useCallback(() => {
+    // Reset the dedup key so the next effect run always sends the current state.
+    lastKeyRef.current = '';
+    setForceBroadcastCount((c) => c + 1);
+  }, []);
+
+  // Listen for a custom DOM event dispatched by Footer (or other renderers) after
+  // presentation windows are opened/restored, so they get content immediately.
+  useEffect(() => {
+    const handler = () => {
+      lastKeyRef.current = '';
+      setForceBroadcastCount((c) => c + 1);
+    };
+    window.addEventListener('presenter:force-broadcast', handler);
+    return () => window.removeEventListener('presenter:force-broadcast', handler);
+  }, []);
 
   // Operator WebSocket connection to the relay server
-  const { broadcast: wsBroadcast, connected: wsOperatorConnected, connectedCount, lastMidiSyncAt } = useWsOperator(wsUrl, wsAccount, handleMusicianSync);
+  const {
+    broadcast: wsBroadcast,
+    connected: wsOperatorConnected,
+    connectedCount,
+    lastMidiSyncAt,
+  } = useWsOperator(wsUrl, wsAccount, handleMusicianSync, handleGetState);
 
   // Also listen for direct Electron IPC musician sync (bypasses WS relay, works offline / same machine)
   useEffect(() => {
@@ -106,9 +141,11 @@ export const usePresentationSync = (): void => {
         handleMusicianSync(msg.data);
       }
     });
-    return () => { if (typeof cleanup === 'function') cleanup(); };
-  // handleMusicianSync is stable (useCallback with [dispatch])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      if (typeof cleanup === 'function') cleanup();
+    };
+    // handleMusicianSync is stable (useCallback with [dispatch])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Keep Redux in sync with the WS peer count, connection state and last midi-sync timestamp.
@@ -344,8 +381,9 @@ export const usePresentationSync = (): void => {
         copyright: cb.copyright,
         authors: cb.authors,
         showLicenseNumber: showLicenseNumber,
-        license: `${LL.AUTH.LICENSE()}: #${cb.licenseNumber}`,
-        showCopyright: cb.contentType === 'song' && !!cb.copyright && nav.activeBlockIndex >= cb.blocks.length,
+        license: cb.licenseNumber ? `${LL.AUTH.LICENSE()}: #${cb.licenseNumber}` : undefined,
+        showCopyright:
+          cb.contentType === 'song' && (!!cb.copyright || !!cb.authors || !!cb.title) && nav.activeBlockIndex >= cb.blocks.length,
         mediaSubType: cb.activeItem?.mediaSubType,
         mediaPath: resolveMediaUrl(cb.activeItem?.mediaPath),
         mediaColor: cb.activeItem?.mediaColor,
@@ -417,6 +455,8 @@ export const usePresentationSync = (): void => {
     activeItem?.mediaBlur,
     activeItem?.mediaAutoplay,
     activeItem?.mediaLoop,
+    forceBroadcastCount,
+    // Peer requested current state — force a re-broadcast even if nothing changed.
     wsBroadcast,
   ]);
 

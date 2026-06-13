@@ -529,6 +529,27 @@ export const MusicianPage = () => {
     [handleManualNav, pdfViewer, syncMode, operatorActiveBlockIndex, dispatch, broadcastMidiSync],
   );
 
+  /**
+   * Called when the user taps a mapped-block rectangle in the PDF view (MIDI sync mode only).
+   * Navigates to the first occurrence of the block name in the current song order.
+   * If the block is not in the order it is silently ignored.
+   */
+  const handleMappingBlockClick = useCallback(
+    (blockName: string) => {
+      if (syncMode !== 'midi') return;
+      const idx = lyricsBlocksRef.current.findIndex((b) => b.name === blockName);
+      if (idx < 0) return; // block not in current order — no navigation
+      dispatch(setPresentationBlockIndex(idx));
+      broadcastMidiSync({
+        activeItemIndex: activeItemIndexRef.current,
+        activeBlockIndex: idx,
+        activeLineIndex: 0,
+        songNumber: activeSongNumberRef.current,
+      });
+    },
+    [syncMode, dispatch, broadcastMidiSync],
+  );
+
   const handleOrderTagSelect = useCallback(
     (_name: string, orderIndex: number) => {
       if (syncMode !== 'midi') return;
@@ -637,11 +658,13 @@ export const MusicianPage = () => {
     return operatorWsSongNumber === activeSongNumber;
   }, [syncMode, operatorItemIndex, activeItemIndex, operatorWsSongNumber, activeSongNumber]);
 
-  const isSynced =
-    (syncMode === 'operator' || syncMode === 'midi') && blockIndicator && operatorSongMatchesMusician;
+  const isSynced = (syncMode === 'operator' || syncMode === 'midi') && blockIndicator && operatorSongMatchesMusician;
 
   const showMismatchDetected =
-    !!operatorWsShowTitle && !!currentShow?.title && operatorWsShowTitle !== currentShow.title && dismissedMismatchShowTitle !== operatorWsShowTitle;
+    !!operatorWsShowTitle &&
+    !!currentShow?.title &&
+    operatorWsShowTitle !== currentShow.title &&
+    dismissedMismatchShowTitle !== operatorWsShowTitle;
 
   const applyOperatorShow = useCallback(async () => {
     if (!operatorWsShowTitle || !availableShows?.shows) return;
@@ -691,11 +714,7 @@ export const MusicianPage = () => {
           {LL.SHOWS.UPDATE_AVAILABLE()}
         </Alert>
       </Snackbar>{' '}
-      <Snackbar
-        open={showMismatchDetected}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        sx={{ top: { xs: 72, sm: 80 } }}
-      >
+      <Snackbar open={showMismatchDetected} anchorOrigin={{ vertical: 'top', horizontal: 'center' }} sx={{ top: { xs: 72, sm: 80 } }}>
         <Alert
           severity="warning"
           action={
@@ -821,7 +840,10 @@ export const MusicianPage = () => {
               if (churchToolsEnabled && activeSong && !ctSongId) {
                 void searchCtSongs({ q: activeSong.title, limit: 1 }).then((res) => {
                   const first = res.data?.songs?.[0];
-                  if (first) { setCtSongId(first.id); setCtSongName(first.name); }
+                  if (first) {
+                    setCtSongId(first.id);
+                    setCtSongName(first.name);
+                  }
                 });
               }
               setPdfUploadOpen(true);
@@ -911,6 +933,7 @@ export const MusicianPage = () => {
               isSynced={isSynced}
               activeBlockIndex={operatorActiveBlockIndex}
               orderedBlockNames={lyricsBlocks.map((block) => block.name)}
+              onMappingClick={syncMode === 'midi' && !annotateMode ? handleMappingBlockClick : undefined}
             />
           ) : isSongItem && activeSong ? (
             /* Lyrics fallback for songs without PDFs */

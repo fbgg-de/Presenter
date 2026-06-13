@@ -15,9 +15,7 @@ export const PATH_TO_HTML: Record<string, string> = {
   '/login': 'login.html',
 };
 
-const HTML_TO_PATH: Record<string, string> = Object.fromEntries(
-  Object.entries(PATH_TO_HTML).map(([path, html]) => [html, path]),
-);
+const HTML_TO_PATH: Record<string, string> = Object.fromEntries(Object.entries(PATH_TO_HTML).map(([path, html]) => [html, path]));
 
 /**
  * Returns the OIDC redirect URL for a given logical path (e.g. '/notes', '/admin').
@@ -27,7 +25,9 @@ const HTML_TO_PATH: Record<string, string> = Object.fromEntries(
  */
 export const getOidcRedirectUrl = (logicalPath: string): string => {
   const origin = isElectronApp()
-    ? String(getSetting('backendUrl') ?? '').trim().replace(/\/+$/, '')
+    ? String(getSetting('backendUrl') ?? '')
+        .trim()
+        .replace(/\/+$/, '')
     : window.location.origin;
   // Guard: ensure the path always starts with '/' so concatenation is safe.
   // Without this, `origin + 'notes'` would produce `.de/notes` → `.denotes`.
@@ -37,7 +37,9 @@ export const getOidcRedirectUrl = (logicalPath: string): string => {
 
 /** Returns the configured backend origin (scheme + host), used by the main process to identify OIDC callbacks. */
 export const getBackendOrigin = (): string => {
-  return String(getSetting('backendUrl') ?? '').trim().replace(/\/+$/, '');
+  return String(getSetting('backendUrl') ?? '')
+    .trim()
+    .replace(/\/+$/, '');
 };
 
 /**

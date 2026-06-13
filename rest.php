@@ -35,7 +35,13 @@ session_start();
 OidcClient::tryRefreshSession(300);
 
 if (!isset($_SESSION['authType']) || empty($_SESSION['authType'])) {
-    if (!in_array($restClass, ['Session', 'Accounts'])) {
+    // Allow unauthenticated log writes so the early-error-capture script (and
+    // any client-side error reporter) can POST diagnostic messages even when
+    // the user has no valid session (e.g. blank-page scenarios on iOS).
+    // GET (read) and DELETE (clear) still require admin auth — only write is open.
+    $isAnonymousLogWrite = $restClass === 'Log' && $_SERVER['REQUEST_METHOD'] === 'POST';
+
+    if (!in_array($restClass, ['Session', 'Accounts']) && !$isAnonymousLogWrite) {
         (new Response())->error(401, 'permission denied for accessing "/rest/' . $restClass . '"');
     }
 }

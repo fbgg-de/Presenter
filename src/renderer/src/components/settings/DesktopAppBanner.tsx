@@ -98,10 +98,14 @@ export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopApp
 
   const osLabel = (o: DetectedOs) => {
     switch (o) {
-      case 'windows': return LL.DESKTOP_APP.OS_WINDOWS();
-      case 'macos': return LL.DESKTOP_APP.OS_MACOS();
-      case 'linux': return LL.DESKTOP_APP.OS_LINUX();
-      default: return o;
+      case 'windows':
+        return LL.DESKTOP_APP.OS_WINDOWS();
+      case 'macos':
+        return LL.DESKTOP_APP.OS_MACOS();
+      case 'linux':
+        return LL.DESKTOP_APP.OS_LINUX();
+      default:
+        return o;
     }
   };
 

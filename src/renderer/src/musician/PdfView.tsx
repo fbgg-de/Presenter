@@ -53,6 +53,11 @@ interface PdfViewProps {
   activeBlockIndex?: number;
   /** Ordered block names for the active song (includes duplicates). */
   orderedBlockNames?: string[];
+  /**
+   * Called when a mapped-block rectangle is clicked in the PDF view.
+   * Only active in MIDI sync mode with annotation mode disabled.
+   */
+  onMappingClick?: (blockName: string) => void;
 }
 
 const getRemainingConsecutiveCount = (orderedBlockNames: string[], activeBlockIndex: number): number => {
@@ -92,6 +97,7 @@ const BlockAreaOverlays = ({
   scrollKey,
   orderedBlockNames,
   activeBlockIndex,
+  onMappingClick,
 }: {
   mappings: PdfAreaMapping[];
   pageNum: number;
@@ -103,6 +109,8 @@ const BlockAreaOverlays = ({
   scrollKey: string;
   orderedBlockNames: string[];
   activeBlockIndex: number;
+  /** When provided, rectangles become clickable (MIDI sync mode). Disabled in annotate mode. */
+  onMappingClick?: (blockName: string) => void;
 }) => {
   const activeOverlayRef = useRef<HTMLDivElement | null>(null);
 
@@ -145,7 +153,7 @@ const BlockAreaOverlays = ({
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scrollKey]);
 
   const pageMappings = mappings.filter((m) => m.page === pageNum && m.region);
@@ -159,10 +167,12 @@ const BlockAreaOverlays = ({
         const isNext = isSynced && m.blockName === nextBlockName && !isActive;
         // opacity levels: active=1, next=0.6, idle (synced)=0.2, not synced=0
         const opacity = !isSynced ? 0 : isActive ? 1 : isNext ? 0.6 : 0.2;
+        const clickable = !!onMappingClick;
         return (
           <Box
             key={m.blockName}
             ref={isActive ? activeOverlayRef : undefined}
+            onClick={clickable ? () => onMappingClick!(m.blockName) : undefined}
             sx={{
               position: 'absolute',
               left: `${r.x}%`,
@@ -171,12 +181,10 @@ const BlockAreaOverlays = ({
               height: `${r.height}%`,
               borderLeft: isActive ? '4px solid' : '3px solid',
               borderColor: isActive ? 'primary.main' : isNext ? 'warning.main' : 'text.primary',
-              backgroundColor: isActive
-                ? 'rgba(25,118,210,0.12)'
-                : isNext
-                  ? 'rgba(237,108,2,0.08)'
-                  : 'rgba(0,0,0,0.06)',
-              pointerEvents: 'none',
+              backgroundColor: isActive ? 'rgba(25,118,210,0.12)' : isNext ? 'rgba(237,108,2,0.08)' : 'rgba(0,0,0,0.06)',
+              zIndex: 10,
+              pointerEvents: clickable ? 'auto' : 'none',
+              cursor: clickable ? 'pointer' : 'default',
               boxSizing: 'border-box',
               opacity,
               transition: 'opacity 0.2s ease-in-out, border-color 0.2s ease-in-out, background-color 0.2s ease-in-out',
@@ -266,6 +274,7 @@ export const PdfView = ({
   isSynced,
   activeBlockIndex,
   orderedBlockNames = [],
+  onMappingClick,
 }: PdfViewProps) => {
   const localContainerRef = useRef<HTMLDivElement>(null);
   // Stable panel refs using useRef — never recreated
@@ -655,6 +664,7 @@ export const PdfView = ({
                               scrollKey={`${activeBlockIndex ?? 0}-${activeBlockAreaMapping?.blockName ?? ''}-${activeBlockAreaMapping?.page ?? 0}`}
                               orderedBlockNames={orderedBlockNames}
                               activeBlockIndex={activeBlockIndex ?? -1}
+                              onMappingClick={onMappingClick}
                             />
                           )}
                         </Box>

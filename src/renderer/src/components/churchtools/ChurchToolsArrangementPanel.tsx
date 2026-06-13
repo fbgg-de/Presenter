@@ -139,29 +139,10 @@ export const ChurchToolsArrangementPanel = ({ ctSongId, songName }: ChurchToolsA
                     }
                     secondary={
                       <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
-                        {arr.key && (
-                          <Chip
-                            label={arr.key}
-                            size="small"
-                            color="primary"
-                            sx={{ height: 16, fontSize: '0.65rem' }}
-                          />
-                        )}
-                        {arr.beat && (
-                          <Chip
-                            label={arr.beat}
-                            size="small"
-                            variant="outlined"
-                            sx={{ height: 16, fontSize: '0.65rem' }}
-                          />
-                        )}
+                        {arr.key && <Chip label={arr.key} size="small" color="primary" sx={{ height: 16, fontSize: '0.65rem' }} />}
+                        {arr.beat && <Chip label={arr.beat} size="small" variant="outlined" sx={{ height: 16, fontSize: '0.65rem' }} />}
                         {arr.tempo && (
-                          <Chip
-                            label={`${arr.tempo} BPM`}
-                            size="small"
-                            variant="outlined"
-                            sx={{ height: 16, fontSize: '0.65rem' }}
-                          />
+                          <Chip label={`${arr.tempo} BPM`} size="small" variant="outlined" sx={{ height: 16, fontSize: '0.65rem' }} />
                         )}
                       </Stack>
                     }
@@ -173,11 +154,7 @@ export const ChurchToolsArrangementPanel = ({ ctSongId, songName }: ChurchToolsA
               {isExpanded && hasFiles && (
                 <Box sx={{ pl: 3, pr: 1, pb: 1 }}>
                   {arr.files.map((file) => (
-                    <Stack
-                      key={file.filename}
-                      direction="row"
-                      sx={{ alignItems: 'center', justifyContent: 'space-between', py: 0.25 }}
-                    >
+                    <Stack key={file.filename} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', py: 0.25 }}>
                       <Typography variant="caption" noWrap sx={{ flex: 1, color: 'text.secondary' }}>
                         {file.filename}
                       </Typography>
@@ -205,7 +182,3 @@ export const ChurchToolsArrangementPanel = ({ ctSongId, songName }: ChurchToolsA
     </Stack>
   );
 };
-
-
-
-

@@ -8,6 +8,7 @@ import { existsSync } from 'fs';
 import { pathToFileURL } from 'url';
 import { PresentationWindowManager } from './windows';
 import type { WindowConfig, MusicianViewConfig, PresentationContentIPC, SettingsDiff } from '../shared/types';
+import { storeCredentials, getCredentials, deleteCredentials, isEncryptionAvailable } from './credentials';
 
 export const registerIpcHandlers = (windowManager: PresentationWindowManager) => {
   // ── Basic window controls ──
@@ -360,5 +361,24 @@ export const registerIpcHandlers = (windowManager: PresentationWindowManager) =>
 
   ipcMain.handle('install-update', () => {
     autoUpdater.quitAndInstall(false, true);
+  });
+
+  // ── Secure credential storage (Electron only, safeStorage) ──
+
+  ipcMain.handle('is-encryption-available', () => {
+    return isEncryptionAvailable();
+  });
+
+  ipcMain.handle('store-credentials', (_event, username: string, password: string) => {
+    return storeCredentials(username, password);
+  });
+
+  ipcMain.handle('get-credential-username', () => {
+    return getCredentials()?.username ?? null;
+  });
+
+  ipcMain.handle('delete-credentials', () => {
+    deleteCredentials();
+    return true;
   });
 };

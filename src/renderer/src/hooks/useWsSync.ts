@@ -58,7 +58,10 @@ export const useWsSync = ({ url, account, enabled, onStateUpdate }: UseWsSyncOpt
       setStatus('connecting');
 
       ws.onopen = () => {
-        if (stopped) { ws.close(); return; }
+        if (stopped) {
+          ws.close();
+          return;
+        }
         setStatus('connecting');
         try {
           ws.send(JSON.stringify({ action: 'auth', account }));

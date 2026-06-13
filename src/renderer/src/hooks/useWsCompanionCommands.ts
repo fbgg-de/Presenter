@@ -41,9 +41,7 @@ export const useWsCompanionCommands = () => {
 
   const currentSongNumber = songsOrder[activeItemIndex];
   const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
-  const orderName = useAppSelector((state) =>
-    currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default',
-  );
+  const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
   const showItemCount = currentShow?.order?.length ?? songsOrder.length;
 

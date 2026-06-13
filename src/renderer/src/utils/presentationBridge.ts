@@ -59,6 +59,12 @@ export function adoptElectronWindow(id: string, config: WindowConfig): void {
     closed: false,
     isElectron: true,
   });
+
+  // Push the last known content immediately so the window doesn't stay blank
+  // after a renderer reload (race between data loading and window adoption).
+  if (lastBroadcastContent) {
+    setTimeout(() => sendContent(id, lastBroadcastContent!), 100);
+  }
 }
 
 /**

@@ -51,12 +51,7 @@ export const QuickOrderDialog = ({ open, song, initialOrderName, onClose, onSave
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      fullWidth
-      maxWidth="md"
-    >
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
       <DialogTitle>{LL.MUSICIAN.ITEM_EDIT_ORDER()}</DialogTitle>
       <DialogContent>
         <SongOrderEditor
@@ -83,9 +78,3 @@ export const QuickOrderDialog = ({ open, song, initialOrderName, onClose, onSave
     </Dialog>
   );
 };
-
-
-
-
-
-

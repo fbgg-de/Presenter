@@ -155,10 +155,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const { data: availableStyles = [] } = useGetStylesQuery();
 
   // ChurchTools: fetch arrangements when a CT song is selected
-  const { data: ctSongDetail } = useGetChurchToolsSongQuery(
-    { ctSongId: ctSongId! },
-    { skip: ctSongId === null },
-  );
+  const { data: ctSongDetail } = useGetChurchToolsSongQuery({ ctSongId: ctSongId! }, { skip: ctSongId === null });
 
   /**
    * Import a ChurchTools song into the local library, then add it to the show.
@@ -206,9 +203,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     } catch (err) {
       console.error('Failed to import ChurchTools song:', err);
       const serverMessage =
-        err != null && typeof err === 'object' && 'data' in err
-          ? String((err as { data?: { message?: string } }).data?.message ?? '')
-          : '';
+        err != null && typeof err === 'object' && 'data' in err ? String((err as { data?: { message?: string } }).data?.message ?? '') : '';
       const isDuplicate = serverMessage.toLowerCase().includes('already exists');
       setImportErrorMsg(
         `${name}: ${isDuplicate ? LL.SONGS.IMPORT_ERROR_DUPLICATE() : LL.SONGS.IMPORT_ERROR()}${serverMessage && !isDuplicate ? ` (${serverMessage})` : ''}`,
@@ -924,6 +919,9 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         onClose={() => setKeySubmenuAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: { sx: { maxHeight: '60vh', overflowY: 'auto' } },
+        }}
       >
         <MenuItem onClick={() => handleItemSetKey(undefined)} sx={{ fontSize: '0.85rem' }}>
           <em>None</em>
@@ -941,6 +939,9 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         onClose={() => setOrderSubmenuAnchor(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: { sx: { maxHeight: '60vh', overflowY: 'auto', touchAction: 'pan-y' } },
+        }}
       >
         {menuItemOrders.map((order) => (
           <MenuItem

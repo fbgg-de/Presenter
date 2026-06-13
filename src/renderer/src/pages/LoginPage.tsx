@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Box, Button, Card, CardContent, Divider, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { Security as SecurityIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
@@ -53,6 +53,10 @@ export const LoginPage = () => {
   // The saved account is restored once the accounts list has loaded and the value is validated.
   const [selectedLicense, setSelectedLicense] = useState<Account>('');
 
+  // Track whether the current selection was auto-restored from settings (vs. manually chosen).
+  // Only when auto-restored do we trigger the automatic OIDC redirect in Electron.
+  const autoRestoredRef = useRef(false);
+
   // Restore saved account after accounts have loaded and validated
   useEffect(() => {
     if (accountsLoading || !accounts) {
@@ -78,8 +82,10 @@ export const LoginPage = () => {
       }
       if (lastSelectedAccount === 'admin') {
         setSelectedLicense('admin');
+        autoRestoredRef.current = true;
       } else if (typeof lastSelectedAccount === 'number' && accounts.some((a) => a.license === lastSelectedAccount)) {
         setSelectedLicense(lastSelectedAccount);
+        autoRestoredRef.current = true;
       } else {
         updateSetting('lastSelectedAccount', '');
       }
@@ -124,7 +130,23 @@ export const LoginPage = () => {
 
   const [errorText, setErrorText] = useState<string | null>(null);
 
+  // ── Auto-proceed in Electron when last account was auto-restored ──
+  // Once the OIDC URL is ready and the account was restored from saved settings,
+  // automatically redirect without requiring the user to click the Login button.
+  useEffect(() => {
+    if (!isElectronApp() || !autoRestoredRef.current) return;
+    if (isAdminSelected && !adminOidcLoading && adminOidcUrlData?.url) {
+      autoRestoredRef.current = false;
+      openUrl(adminOidcUrlData.url);
+    } else if (isTenantSelected && !oidcLoading && oidcUrlData?.url) {
+      autoRestoredRef.current = false;
+      openUrl(oidcUrlData.url);
+    }
+  }, [isAdminSelected, isTenantSelected, adminOidcLoading, oidcLoading, adminOidcUrlData, oidcUrlData]);
+
   const onSelectLicense = (value: Account) => {
+    // User manually selected — disable auto-proceed
+    autoRestoredRef.current = false;
     setSelectedLicense(value);
     setErrorText(null);
 

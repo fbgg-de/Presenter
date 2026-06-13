@@ -68,8 +68,7 @@ const churchToolsApi = presenterApi.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useSearchChurchToolsSongsQuery, useLazySearchChurchToolsSongsQuery, useGetChurchToolsSongQuery } =
-  churchToolsApi;
+export const { useSearchChurchToolsSongsQuery, useLazySearchChurchToolsSongsQuery, useGetChurchToolsSongQuery } = churchToolsApi;
 
 /**
  * Build a browser-facing download URL for a ChurchTools arrangement file.
@@ -77,4 +76,3 @@ export const { useSearchChurchToolsSongsQuery, useLazySearchChurchToolsSongsQuer
  */
 export const buildCtFileDownloadUrl = (ctSongId: number, arrangementId: number, filename: string): string =>
   `/rest/ChurchToolsSongs/${ctSongId}/${arrangementId}/download/${encodeURIComponent(filename)}`;
-

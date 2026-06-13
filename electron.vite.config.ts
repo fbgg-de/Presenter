@@ -1,8 +1,8 @@
-import { resolve } from 'path';
+﻿import { resolve } from 'path';
 import { defineConfig } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import { rendererAliases, rendererInputs, sharedServerConfig } from './vite.shared';
-
+import { errorFallbackPlugin } from './vite.plugin.error-fallback';
 export default defineConfig({
   main: {
     build: {
@@ -52,6 +52,6 @@ export default defineConfig({
       },
     },
     server: sharedServerConfig,
-    plugins: [react()],
+    plugins: [react(), errorFallbackPlugin()],
   },
 });

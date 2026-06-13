@@ -143,10 +143,7 @@ export const LyricsView = ({
         {lyricsBlocks.map((block: { name: string; lines: string[] }, blockIndex: number) => {
           const isActiveBlock = isSynced && blockIndex === operatorActiveBlockIndex;
           const activeBlockName = lyricsBlocks[operatorActiveBlockIndex]?.name;
-          const isNextBlock =
-            isSynced &&
-            blockIndex === operatorActiveBlockIndex + 1 &&
-            block.name !== activeBlockName;
+          const isNextBlock = isSynced && blockIndex === operatorActiveBlockIndex + 1 && block.name !== activeBlockName;
           return (
             <Box
               key={blockIndex}

@@ -3,6 +3,8 @@ import { useAppSelector, useAppDispatch } from '@/store';
 import { setCurrentShow, useGetShow } from '@/store/showSlice';
 import { loadShowSongs } from '@/store/songsSlice';
 import { useGetShowsQuery } from '@/api/shows.api';
+import { useGetSessionQuery } from '@/api/session.api';
+import { useGetSettings } from '@/store/settingsSlice';
 import type { Show } from '@/api/shows.api';
 
 const POLL_INTERVAL_MS = 30_000;
@@ -32,9 +34,17 @@ export const useShowUpdatePoller = () => {
   const { serverSnapshot } = useAppSelector((s) => s.show);
   const [updateAvailable, setUpdateAvailable] = useState(false);
 
+  // Gate polling on authentication — re-uses the cached session result so no
+  // extra network request is made.  Without this guard, the Shows query fires
+  // immediately on mount (because currentShow persists in localStorage) and
+  // produces a 401 while the user is still on the login page.
+  const { offlineMode } = useGetSettings();
+  const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const isAuthenticated = offlineMode || session?.isAuthenticated === true;
+
   const { data: polledShowsData } = useGetShowsQuery(
     { limit: 9999, page: 0 },
-    { pollingInterval: POLL_INTERVAL_MS, skip: !currentShow || isShowSelectorOpen },
+    { pollingInterval: POLL_INTERVAL_MS, skip: !currentShow || isShowSelectorOpen || !isAuthenticated },
   );
 
   useEffect(() => {
@@ -63,4 +73,3 @@ export const useShowUpdatePoller = () => {
 
   return { updateAvailable, reloadShow, dismiss };
 };
-

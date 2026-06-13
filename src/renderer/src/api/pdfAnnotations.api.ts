@@ -127,10 +127,22 @@ const pdfAnnotationsApi = presenterApi.injectEndpoints({
       invalidatesTags: (_res, _err, arg) => [{ type: 'PdfAnnotations', id: `${arg.songNumber}-${arg.filename}` }],
     }),
 
-    /** Update an annotation's position (x, y) — used for text relocation */
+    /** Update an annotation's position and optionally its content/style (used for drag-to-relocate and double-click text editing) */
     updateAnnotation: build.mutation<
-      ApiSuccess<{ message: string; id: number; x: number; y: number }>,
-      { songNumber: number; filename: string; annotationId: number; x: number; y: number }
+      ApiSuccess<{ message: string; id: number }>,
+      {
+        songNumber: number;
+        filename: string;
+        annotationId: number;
+        x: number;
+        y: number;
+        /** Optional: update the annotation colour (text edit) */
+        color?: string;
+        /** Optional: update opacity (text edit) */
+        opacity?: number;
+        /** Optional: update the JSON data payload (text content / font style) */
+        data?: AnnotationData;
+      }
     >({
       query: ({ songNumber, annotationId, ...body }) => ({
         url: `rest/PdfAnnotations/${songNumber}/${annotationId}`,

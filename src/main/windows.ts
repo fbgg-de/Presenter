@@ -112,6 +112,31 @@ export class PresentationWindowManager {
       if (config.fullscreen) {
         win.setFullScreen(true);
       }
+      // Re-send the last known presentation content so the window doesn't show
+      // a black screen (happens when windows are restored on startup).
+      // A short delay lets the React app bootstrap before the IPC payload arrives.
+      if (this.lastBroadcastContent) {
+        const lastContent = this.lastBroadcastContent;
+        setTimeout(() => {
+          const m = this.windows.get(id);
+          if (m && !m.browserWindow.isDestroyed()) {
+            const wc: PresentationContentIPC = {
+              ...lastContent,
+              displayMode: config.displayMode || lastContent.displayMode,
+              languages:
+                config.languages !== 'all'
+                  ? config.languages.split(',').map((l) => l.trim())
+                  : lastContent.languages,
+              streamLines: config.streamLines || lastContent.streamLines,
+              hideText: config.hideText || lastContent.hideText,
+              hideBackground: config.hideBackground || lastContent.hideBackground,
+              windowName: config.name || lastContent.windowName,
+            };
+            m.lastSentPayload = null; // reset dedup so the payload is always sent
+            this._sendContent(m, wc);
+          }
+        }, 300);
+      }
     });
 
     // Debounce bounds notifications (move/resize fire many times during drag)

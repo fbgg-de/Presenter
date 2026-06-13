@@ -190,7 +190,7 @@ const ControlSong = () => {
   // Use 'auto' (not 'smooth') — smooth-scrolls stack up under fast key auto-repeat
   // and animations get cancelled mid-flight, making the controller appear to lag.
   useEffect(() => {
-    selectedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    selectedRef.current?.scrollIntoView({ behavior: 'auto', block: 'nearest' });
   }, [activeBlockIndex]);
 
   // Memoize blocks so getBlocks isn't called on every line-index change

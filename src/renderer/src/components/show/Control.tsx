@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { Stack, Typography, IconButton, Tooltip } from '@mui/material';
+import { Stack, Box, Typography, IconButton, Tooltip } from '@mui/material';
 import { MusicNote as MusicNoteIcon, Image as ImageIcon, Videocam as VideocamIcon, MenuBook as MenuBookIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import ControlSong from '@/components/show/ControlSong';
@@ -170,8 +170,8 @@ const Control = ({
   }
 
   return (
-    <Stack sx={{ flexGrow: 1, overflow: 'hidden' }}>
-      <Stack sx={{ flexGrow: 1, overflow: 'auto' }}>{renderControl}</Stack>
+    <Stack sx={{ flexGrow: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+      {renderControl}
       {!mediaVideoUrl && <VideoControlBar variant="general" videoSources={videoSources} showIfNoLocalSources={!localHasVideos} />}
       {perWindowRows.map((w) => (
         <VideoControlBar

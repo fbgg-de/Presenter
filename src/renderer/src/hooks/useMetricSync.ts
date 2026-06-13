@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useMetrics } from './useMetrics';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSessionQuery } from '@/api/session.api';
 import { peekQueue } from '@/utils/metricQueue';
 
 /**
@@ -10,22 +11,33 @@ import { peekQueue } from '@/utils/metricQueue';
  * It watches:
  *   1. The browser's `navigator.onLine` / `online` event.
  *   2. The Redux `offlineMode` flag (toggled by the user or ConnectivityChecker).
+ *
+ * Flushing is intentionally skipped until the session is confirmed as
+ * authenticated so that queued metrics never trigger a 401 while on the
+ * login page or during the initial session-check round-trip.
  */
 export const useMetricSync = () => {
   const { flushQueue } = useMetrics();
   const { offlineMode } = useGetSettings();
+
+  // Re-use the cached session result — no extra network request.
+  const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const isAuthenticated = offlineMode || session?.isAuthenticated === true;
+
   const prevOfflineRef = useRef(offlineMode);
 
-  // Flush when offlineMode transitions true → false
+  // Flush when offlineMode transitions true → false (and authenticated)
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (prevOfflineRef.current && !offlineMode) {
       void flushQueue();
     }
     prevOfflineRef.current = offlineMode;
-  }, [offlineMode, flushQueue]);
+  }, [offlineMode, flushQueue, isAuthenticated]);
 
-  // Also flush on browser online event and on mount (in case queue has entries)
+  // Also flush on browser online event and on mount (only when authenticated)
   useEffect(() => {
+    if (!isAuthenticated) return;
     const handleOnline = () => {
       if (peekQueue().length > 0) void flushQueue();
     };
@@ -33,5 +45,5 @@ export const useMetricSync = () => {
     // Flush on mount in case we came back online before the hook mounted
     handleOnline();
     return () => window.removeEventListener('online', handleOnline);
-  }, [flushQueue]);
+  }, [flushQueue, isAuthenticated]);
 };

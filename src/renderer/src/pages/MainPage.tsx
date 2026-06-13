@@ -1,5 +1,16 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import { Stack, Box, useMediaQuery, useTheme, BottomNavigation, BottomNavigationAction, Paper, Snackbar, Alert, Button } from '@mui/material';
+import {
+  Stack,
+  Box,
+  useMediaQuery,
+  useTheme,
+  BottomNavigation,
+  BottomNavigationAction,
+  Paper,
+  Snackbar,
+  Alert,
+  Button,
+} from '@mui/material';
 import { ViewList as ShowListIcon, TouchApp as ControlIcon } from '@mui/icons-material';
 import Footer from '@/components/layout/Footer';
 import Sidebar, { type SidebarHandle } from '@/components/layout/Sidebar';
@@ -19,7 +30,7 @@ import { useMetrics } from '@/hooks/useMetrics';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
 import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
-import { useGetAccountSettingsQuery } from '@/api/session.api';
+import { useGetAccountSettingsQuery, useGetSessionQuery } from '@/api/session.api';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 
 export const MainPage = () => {
@@ -38,11 +49,18 @@ export const MainPage = () => {
   // ── Show update polling ──────────────────────────────────────────────
   const { updateAvailable: showUpdateAvailable, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
 
+  // Gate all authenticated queries on confirmed session status.
+  // MainPage hooks run immediately on mount — before <RequireAuth> has a chance
+  // to block the children render — so we must guard them here explicitly.
+  // useGetSessionQuery re-uses the cached result from RequireAuth (no extra request).
+  const { offlineMode } = useGetSettings();
+  const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const isAuthenticated = offlineMode || session?.isAuthenticated === true;
+
   // Sync server-side account settings (global style) into local Redux store.
   // Skipped in offline mode — globalStyleId persists in localStorage from the
   // last online session and is loaded into the Redux store on startup.
-  const { offlineMode } = useGetSettings();
-  const { data: accountSettings } = useGetAccountSettingsQuery(undefined, { skip: offlineMode });
+  const { data: accountSettings } = useGetAccountSettingsQuery(undefined, { skip: !isAuthenticated || offlineMode });
   const updateSetting = useUpdateSetting();
   useEffect(() => {
     if (accountSettings?.defaultStyleId !== undefined) {
@@ -58,13 +76,17 @@ export const MainPage = () => {
   useWsCompanionCommands();
   useBroadcastCompanionState();
 
-  // On mount: if a show was restored from localStorage, load its songs
+  // On mount: if a show was restored from localStorage, load its songs.
+  // Guard on isAuthenticated so the songs API is not called before the session
+  // check completes (the show is persisted in localStorage, so currentShow is
+  // truthy immediately — without this guard the effect fires unauthenticated).
   useEffect(() => {
+    if (!isAuthenticated) return;
     if (!initialLoadDone.current && currentShow && !isShowSelectorOpen) {
       initialLoadDone.current = true;
       void dispatch(loadShowSongs(currentShow));
     }
-  }, [currentShow, isShowSelectorOpen]);
+  }, [currentShow, isShowSelectorOpen, isAuthenticated]);
 
   const handleShowSelected = async (show: Show | null, isNew: boolean, override?: boolean) => {
     if (show) {
@@ -127,7 +149,7 @@ export const MainPage = () => {
           {isMobile ? (
             // ── Mobile layout ──────────────────────────────────────────────
             <>
-              <Stack sx={{ flexGrow: 1, overflow: 'hidden' }}>
+              <Stack sx={{ flexGrow: 1, overflow: 'hidden', minHeight: 0 }}>
                 {/* Sidebar (show list) */}
                 <Box sx={{ display: mobileTab === 0 ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
                   <Sidebar ref={sidebarRef} />
@@ -135,9 +157,18 @@ export const MainPage = () => {
                 {/* Control (song/item control) */}
                 <Box sx={{ display: mobileTab === 1 ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
                   <Control
-                    onOpenSearch={() => { setMobileTab(0); sidebarRef.current?.openSearch(); }}
-                    onOpenMediaBrowser={(subType) => { setMobileTab(0); sidebarRef.current?.openMediaBrowser(subType); }}
-                    onOpenBiblePicker={() => { setMobileTab(0); sidebarRef.current?.openBiblePicker(); }}
+                    onOpenSearch={() => {
+                      setMobileTab(0);
+                      sidebarRef.current?.openSearch();
+                    }}
+                    onOpenMediaBrowser={(subType) => {
+                      setMobileTab(0);
+                      sidebarRef.current?.openMediaBrowser(subType);
+                    }}
+                    onOpenBiblePicker={() => {
+                      setMobileTab(0);
+                      sidebarRef.current?.openBiblePicker();
+                    }}
                   />
                 </Box>
               </Stack>
@@ -152,7 +183,7 @@ export const MainPage = () => {
           ) : (
             // ── Desktop layout ─────────────────────────────────────────────
             <>
-              <Stack direction="row" sx={{ flexGrow: 1, overflow: 'hidden' }}>
+              <Stack direction="row" sx={{ flexGrow: 1, overflow: 'hidden', minHeight: 0 }}>
                 <Sidebar ref={sidebarRef} />
                 <Control
                   onOpenSearch={() => sidebarRef.current?.openSearch()}

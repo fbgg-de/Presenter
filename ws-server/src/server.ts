@@ -21,6 +21,12 @@ interface AuthedClient {
 
 const clients = new Set<AuthedClient>();
 
+/**
+ * Last known musician_sync state per account.
+ * Replayed to new clients on auth so they immediately see current operator position.
+ */
+const lastSyncPerAccount = new Map<number, string>();
+
 /** Send the current peer count for an account to all its authenticated clients. */
 function broadcastPeerCount(account: number) {
   if (account === -1) return;
@@ -99,12 +105,32 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       ws.send(JSON.stringify({ type: 'auth_ok', account: client.account, count: accountPeers, others: Math.max(0, accountPeers - 1) }));
       // Notify all account peers (including this new client) of the updated count
       broadcastPeerCount(client.account);
+
+      // Replay last known operator state so new clients don't start blank
+      const cached = lastSyncPerAccount.get(client.account);
+      if (cached) {
+        try {
+          ws.send(cached);
+        } catch {
+          /* ignore */
+        }
+      }
       return;
     }
 
     // ── Relay to same-account peers ─────────────────────────────────────────
     const payload = data.toString();
     let relayed = 0;
+
+    // Cache musician_sync so new clients can be replayed on auth
+    try {
+      const parsed = JSON.parse(payload) as Record<string, unknown>;
+      if (parsed.action === 'musician_sync' && parsed.data) {
+        lastSyncPerAccount.set(client.account, payload);
+      }
+    } catch {
+      /* ignore */
+    }
 
     for (const peer of clients) {
       if (peer === client) continue;

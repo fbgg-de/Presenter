@@ -137,7 +137,7 @@ export const UnifiedSearch = ({
 
   // For unified search, use the unified endpoint
   const { data: unifiedResults, isFetching: unifiedFetching } = useUnifiedSearchQuery(
-    { q: debouncedQuery, type: (activeType === '' || activeType === 'churchtools') ? undefined : activeType },
+    { q: debouncedQuery, type: activeType === '' || activeType === 'churchtools' ? undefined : activeType },
     { skip: !isSearching || songsOnly || isCtSearch },
   );
 

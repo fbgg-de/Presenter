@@ -255,7 +255,7 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
           </IconButton>
         </Stack>
       </DialogTitle>
-       <DialogContent sx={{ p: 0 }}>
+      <DialogContent sx={{ p: 0 }}>
         <Stack>
           {/* ── Top toolbar: enabled switch + target window + connection icon ── */}
           <Stack
@@ -265,7 +265,9 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
           >
             <FormControlLabel
               sx={{ m: 0 }}
-              control={<Switch size="small" checked={companionCommandsEnabled} onChange={(_, checked) => void handleToggleEnabled(checked)} />}
+              control={
+                <Switch size="small" checked={companionCommandsEnabled} onChange={(_, checked) => void handleToggleEnabled(checked)} />
+              }
               label={
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
                   {LL.COMPANION.ENABLED()}
@@ -299,7 +301,11 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
             <Tooltip title={LL.COMPANION.CONNECTIONS({ count: clientCount })}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <WifiTetheringIcon fontSize="small" color={clientCount > 0 ? 'success' : 'disabled'} />
-                <Typography variant="body2" color={clientCount > 0 ? 'success.main' : 'text.disabled'} sx={{ fontWeight: 500, minWidth: 12 }}>
+                <Typography
+                  variant="body2"
+                  color={clientCount > 0 ? 'success.main' : 'text.disabled'}
+                  sx={{ fontWeight: 500, minWidth: 12 }}
+                >
                   {clientCount}
                 </Typography>
               </Box>
@@ -381,7 +387,13 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
                     ))}
                   </Select>
                 </FormControl>
-                <Button size="small" startIcon={<CopyIcon />} variant="outlined" onClick={() => void handleCopyConnectionUrl()} disabled={!selectedWsUrl}>
+                <Button
+                  size="small"
+                  startIcon={<CopyIcon />}
+                  variant="outlined"
+                  onClick={() => void handleCopyConnectionUrl()}
+                  disabled={!selectedWsUrl}
+                >
                   {copiedUrl ? LL.COMPANION.COPIED() : LL.COMPANION.COPY_URL()}
                 </Button>
               </>

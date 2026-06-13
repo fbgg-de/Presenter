@@ -101,8 +101,8 @@ class AdminAccounts extends RestController
         $req->params->checkNumeric('license');
 
         $license = $req->params->getAsInt('license');
-        $mail = $req->params->get('mail', null);
-        $name = $req->params->get('name', null);
+        $mail = $req->params->get('mail', null, false);
+        $name = $req->params->get('name', null, false);
         $active = $req->params->has('active') ? $req->params->getAsBool('active') : null;
         $churchToolsUrl = $req->params->has('churchToolsUrl') ? $req->params->get('churchToolsUrl', null) : false;
         $churchToolsToken = $req->params->has('churchToolsToken') ? $req->params->get('churchToolsToken', null) : false;

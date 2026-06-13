@@ -75,10 +75,13 @@ export interface FrontendAPI {
   getWsServerInfo: () => Promise<{ hosts: string[]; port: number; clientCount: number; commandHandlingEnabled: boolean }>;
   setWsCommandHandlingEnabled: (enabled: boolean) => Promise<boolean>;
   onWsClientCount: (callback: (data: { count: number }) => void) => (() => void) | void;
-  onWsLastCommand: (callback: (data: { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number }) => void) =>
-    (() => void) | void;
+  onWsLastCommand: (
+    callback: (data: { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number }) => void,
+  ) => (() => void) | void;
   onWsNavigationAction: (callback: (data: { action: string; payload?: Record<string, unknown> }) => void) => (() => void) | void;
-  onWsVideoAction: (callback: (data: { action: string; target?: string; payload?: Record<string, unknown> }) => void) => (() => void) | void;
+  onWsVideoAction: (
+    callback: (data: { action: string; target?: string; payload?: Record<string, unknown> }) => void,
+  ) => (() => void) | void;
   wsBroadcastState: (data: Record<string, unknown>) => void;
 
   // ── Auto-updater ──
@@ -91,6 +94,12 @@ export interface FrontendAPI {
 
   // ── Backend origin (for OIDC callback detection) ──
   setBackendOrigin: (origin: string) => void;
+
+  // ── Secure credential storage (Electron only) ──
+  isEncryptionAvailable: () => Promise<boolean>;
+  storeCredentials: (username: string, password: string) => Promise<boolean>;
+  getCredentialUsername: () => Promise<string | null>;
+  deleteCredentials: () => Promise<boolean>;
 
   // ── Musician IPC sync ──
   musicianSyncToOperator: (data: unknown) => void;

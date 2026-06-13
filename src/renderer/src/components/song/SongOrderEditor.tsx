@@ -1,21 +1,18 @@
-import { useState, PropsWithChildren } from 'react';
+import { useState } from 'react';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import {
   Box,
   Button,
   Chip,
+  Fab,
   FormControl,
   IconButton,
   MenuItem,
+  Popover,
   Select,
-  SpeedDial,
-  SpeedDialIcon,
   Stack,
   Typography,
-  Zoom,
-  styled,
 } from '@mui/material';
-import type { ZoomProps } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
 import AddOrderDialog from './AddOrderDialog';
@@ -36,27 +33,6 @@ type SongOrderEditorProps = {
   selectedOrderIndex?: number;
 };
 
-const SpeedDialBlock = styled(SpeedDial)`
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 32px;
-  & .MuiFab-root {
-    width: 32px;
-    height: 32px;
-    min-height: 32px;
-  }
-  & .MuiSpeedDial-actions {
-    white-space: nowrap;
-  }
-`;
-
-const Animation = (props: PropsWithChildren<ZoomProps & { key?: number | string; delay: number }>) => (
-  <Zoom key={props.key} in={props.in} timeout={300} style={{ transitionDelay: `${props.delay}ms` }}>
-    {props.children}
-  </Zoom>
-);
-
 const AddBlock = (props: {
   options: string[];
   index: number;
@@ -64,30 +40,50 @@ const AddBlock = (props: {
   onSelect: (name: string, index: number) => void;
 }) => {
   const { options, index, selectedBlockName, onSelect } = props;
-  const [open, setOpen] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
 
   return (
     <Box sx={{ height: 32, width: 32, position: 'relative', zIndex: 9999 }}>
-      <SpeedDialBlock
-        open={open}
-        onClose={() => setOpen(false)}
-        onClick={() => setOpen(!open)}
-        ariaLabel="add block"
-        icon={<SpeedDialIcon icon={<AddIcon />} />}
+      <Fab
+        size="small"
+        color="primary"
+        aria-label="add block"
+        onClick={(e) => setAnchorEl(e.currentTarget)}
+        sx={{ width: 32, height: 32, minHeight: 32 }}
       >
-        {options.map((blockName, i) => (
-          <Animation key={`${blockName}-${index}-${i}`} in={open} timeout={300} delay={i * 30}>
+        <AddIcon fontSize="small" />
+      </Fab>
+      <Popover
+        open={!!anchorEl}
+        anchorEl={anchorEl}
+        onClose={() => setAnchorEl(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(${Math.max(1, Math.ceil(options.length / 8))}, 1fr)`,
+            p: 1,
+            gap: 0.5,
+          }}
+        >
+          {options.map((blockName, i) => (
             <Button
+              key={`${blockName}-${i}`}
               variant="contained"
+              size="small"
               color={blockName === selectedBlockName ? 'secondary' : 'primary'}
-              sx={{ margin: '2px' }}
-              onClick={() => onSelect(blockName, index)}
+              onClick={() => {
+                onSelect(blockName, index);
+                setAnchorEl(null);
+              }}
             >
               {blockName}
             </Button>
-          </Animation>
-        ))}
-      </SpeedDialBlock>
+          ))}
+        </Box>
+      </Popover>
     </Box>
   );
 };

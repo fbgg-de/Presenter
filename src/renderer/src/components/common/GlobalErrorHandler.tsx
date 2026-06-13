@@ -43,7 +43,9 @@ export const GlobalErrorHandler = ({ boundaryError }: { boundaryError?: Error | 
       // Also persist to server log
       const browserDetails = getBrowserDetails();
       const logMessage = `[CLIENT_ERROR] [${info.source ?? 'unknown'}] ${info.message}${info.stack ? ` | Stack: ${info.stack.slice(0, 800)}` : ''} | Browser: ${browserDetails}`;
-      logClientError({ message: logMessage }).catch(() => {/* best-effort */});
+      logClientError({ message: logMessage }).catch(() => {
+        /* best-effort */
+      });
 
       if (errorBoundaryNotification) {
         setNotification(info);

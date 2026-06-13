@@ -231,6 +231,8 @@ export const PdfAnnotationToolbar = ({
   const dragOffsetRef = useRef<Point | null>(null);
   /** Live position of the text being dragged (percentage coords) */
   const [dragTextPos, setDragTextPos] = useState<Point | null>(null);
+  /** ID of the text annotation currently being edited via double-click */
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const [selectedIconFilename, setSelectedIconFilename] = useState<string | null>(null);
   const [iconSize, setIconSize] = useState(ICON_BASE_SIZE);
@@ -268,6 +270,9 @@ export const PdfAnnotationToolbar = ({
       setTool('draw');
     } else {
       setTool('none');
+      setEditingTextId(null);
+      setTextPosition(null);
+      setTextInput('');
     }
   }, [editMode]);
 
@@ -286,10 +291,10 @@ export const PdfAnnotationToolbar = ({
       skip: !songNumber || !filename,
       // Poll every 30 seconds so annotations added by other devices appear
       // without requiring a local mutation to trigger a refresh.
-      pollingInterval: 30000,
+      pollingInterval: editMode ? 5000 : 30000,
     },
   );
-  const allAnnotations = (annotationsData as AnnotationDto[] | undefined) ?? [];
+  const allAnnotations = annotationsData ?? [];
 
   // Register the refetch function with the parent so external callers (e.g. the
   // floating toolbar) can trigger an immediate reload without owning the query.
@@ -501,6 +506,8 @@ export const PdfAnnotationToolbar = ({
           };
           setDragTextPos({ ...hitText.position });
         } else {
+          // Clicking on empty space: cancel any active editing and create a new anchor
+          setEditingTextId(null);
           setTextPosition(coords);
           setActiveDrawPage(pageNum);
           // Auto-focus the text input after a short delay so it renders first
@@ -727,6 +734,7 @@ export const PdfAnnotationToolbar = ({
           };
           setDragTextPos({ ...hitText.position });
         } else {
+          setEditingTextId(null);
           setTextPosition(coords);
           setActiveDrawPage(pageNum);
           setTimeout(() => textInputRef.current?.focus(), 50);
@@ -872,7 +880,23 @@ export const PdfAnnotationToolbar = ({
 
   // -- Text annotation confirmation --
   const handleTextConfirm = useCallback(() => {
-    if (textInput.trim() && textPosition) {
+    if (!textInput.trim() || !textPosition) return;
+
+    if (editingTextId && songNumber && filename) {
+      // Edit mode: update the existing annotation in-place
+      updateAnnotation({
+        songNumber,
+        filename,
+        annotationId: Number(editingTextId),
+        x: textPosition.x,
+        y: textPosition.y,
+        color,
+        opacity: toolOpacity,
+        data: { text: textInput.trim(), fontSize, fontBold, fontItalic, fontUnderline },
+      });
+      setEditingTextId(null);
+    } else {
+      // Create mode: add new annotation
       saveAnnotation({
         tool: 'text',
         page: activeDrawPage,
@@ -880,21 +904,73 @@ export const PdfAnnotationToolbar = ({
         y: textPosition.y,
         color,
         opacity: toolOpacity,
-        data: {
-          text: textInput.trim(),
-          fontSize,
-          fontBold,
-          fontItalic,
-          fontUnderline,
-        },
+        data: { text: textInput.trim(), fontSize, fontBold, fontItalic, fontUnderline },
       });
-      setTextInput('');
-      setTextPosition(null);
     }
-  }, [textInput, textPosition, activeDrawPage, color, toolOpacity, fontSize, fontBold, fontItalic, fontUnderline, saveAnnotation]);
+    setTextInput('');
+    setTextPosition(null);
+  }, [
+    editingTextId,
+    textInput,
+    textPosition,
+    activeDrawPage,
+    color,
+    toolOpacity,
+    fontSize,
+    fontBold,
+    fontItalic,
+    fontUnderline,
+    saveAnnotation,
+    updateAnnotation,
+    songNumber,
+    filename,
+  ]);
+
+  /**
+   * Double-click on a text annotation: enter edit mode.
+   * Populates the text input and all style controls with the annotation's current values.
+   */
+  const handleCanvasDoubleClick = useCallback(
+    (e: MouseEvent<HTMLCanvasElement>) => {
+      if (!editMode || tool !== 'text') return;
+      const pageNum = getPageFromCanvas(e.currentTarget);
+      const coords = getCoordsFromClient(e.clientX, e.clientY, pageNum);
+      if (!coords) return;
+
+      const hitText = activeLayerAnnotations
+        .filter((a) => a.tool === 'text' && a.page === pageNum && a.position && a.text)
+        .reverse()
+        .find((ann) => {
+          const fs = ann.fontSize ?? 14;
+          const approxWidth = ann.text!.length * fs * 0.06;
+          const approxHeight = fs * 0.12;
+          return (
+            coords.x >= ann.position!.x - 1 &&
+            coords.x <= ann.position!.x + approxWidth + 1 &&
+            coords.y >= ann.position!.y - approxHeight &&
+            coords.y <= ann.position!.y + 1
+          );
+        });
+
+      if (!hitText || !hitText.position) return;
+
+      // Populate all toolbar controls with the annotation's current values
+      setEditingTextId(hitText.id);
+      setTextInput(hitText.text ?? '');
+      setTextPosition({ ...hitText.position });
+      setActiveDrawPage(pageNum);
+      setColor(hitText.color);
+      setToolOpacity(hitText.opacity ?? 1.0);
+      setFontSize(hitText.fontSize ?? 14);
+      setFontBold(hitText.fontBold ?? false);
+      setFontItalic(hitText.fontItalic ?? false);
+      setFontUnderline(hitText.fontUnderline ?? false);
+      setTimeout(() => textInputRef.current?.focus(), 50);
+    },
+    [editMode, tool, activeLayerAnnotations, getPageFromCanvas, getCoordsFromClient],
+  );
 
   const handleClearLayer = useCallback(async () => {
-    setClearConfirmOpen(false);
     if (!songNumber || !filename) return;
     try {
       await clearLayerMutation({ songNumber, filename, layer: activeLayerKey }).unwrap();
@@ -1353,6 +1429,7 @@ export const PdfAnnotationToolbar = ({
             onMouseMove={editMode ? handleCanvasMouseMove : undefined}
             onMouseUp={editMode ? handleCanvasMouseUp : undefined}
             onMouseLeave={editMode ? handleCanvasMouseLeave : undefined}
+            onDoubleClick={editMode ? handleCanvasDoubleClick : undefined}
             onTouchStart={editMode ? handleCanvasTouchStart : undefined}
             onTouchMove={editMode ? handleCanvasTouchMove : undefined}
             onTouchEnd={editMode ? handleCanvasTouchEnd : undefined}
@@ -1414,7 +1491,7 @@ export const PdfAnnotationToolbar = ({
                 sx={{ flex: 1, minWidth: 120, '& .MuiInputBase-input': { py: 0.5, fontSize: '0.8rem' } }}
               />
               <Button size="small" variant="contained" onClick={handleTextConfirm} disabled={!textInput.trim() || !textPosition}>
-                {LL.ANNOTATION.TEXT_ADD()}
+                {editingTextId ? LL.COMMON.APPLY() : LL.ANNOTATION.TEXT_ADD()}
               </Button>
               <Divider orientation="vertical" flexItem />
               <Tooltip title={LL.ANNOTATION.BOLD()}>

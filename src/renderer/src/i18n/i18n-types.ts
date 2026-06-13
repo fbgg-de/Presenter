@@ -249,6 +249,63 @@ type RootTranslation = {
 		 * P​l​e​a​s​e​ ​t​r​y​ ​l​o​g​g​i​n​g​ ​i​n​ ​a​g​a​i​n​.
 		 */
 		PLEASE_TRY_AGAIN: string
+		/**
+		 * S​a​v​e​d​ ​C​r​e​d​e​n​t​i​a​l​s
+		 */
+		SAVED_CREDENTIALS: string
+		/**
+		 * S​a​v​e​d​ ​f​o​r​:​ ​{​u​s​e​r​n​a​m​e​}
+		 * @param {unknown} username
+		 */
+		CREDENTIALS_SAVED_FOR: RequiredParams<'username'>
+		/**
+		 * U​s​e​r​n​a​m​e​ ​/​ ​E​m​a​i​l
+		 */
+		CREDENTIALS_USERNAME: string
+		/**
+		 * P​a​s​s​w​o​r​d
+		 */
+		CREDENTIALS_PASSWORD: string
+		/**
+		 * S​a​v​e​ ​c​r​e​d​e​n​t​i​a​l​s​ ​f​o​r​ ​a​u​t​o​-​f​i​l​l
+		 */
+		CREDENTIALS_SAVE_BUTTON: string
+		/**
+		 * S​a​v​e​ ​c​r​e​d​e​n​t​i​a​l​s
+		 */
+		CREDENTIALS_SAVE: string
+		/**
+		 * C​l​e​a​r
+		 */
+		CREDENTIALS_CLEAR: string
+		/**
+		 * C​a​n​c​e​l
+		 */
+		CREDENTIALS_CANCEL: string
+		/**
+		 * C​r​e​d​e​n​t​i​a​l​s​ ​a​r​e​ ​e​n​c​r​y​p​t​e​d​ ​w​i​t​h​ ​O​S​-​l​e​v​e​l​ ​k​e​y​ ​p​r​o​t​e​c​t​i​o​n​ ​a​n​d​ ​s​t​o​r​e​d​ ​o​n​l​y​ ​o​n​ ​t​h​i​s​ ​d​e​v​i​c​e​.
+		 */
+		CREDENTIALS_HINT: string
+		/**
+		 * U​p​d​a​t​e​ ​c​r​e​d​e​n​t​i​a​l​s
+		 */
+		CREDENTIALS_UPDATE: string
+		/**
+		 * C​r​e​d​e​n​t​i​a​l​s​ ​s​a​v​e​d​.
+		 */
+		CREDENTIALS_SAVED_OK: string
+		/**
+		 * S​t​o​r​e​d​ ​c​r​e​d​e​n​t​i​a​l​s​ ​a​r​e​ ​u​s​e​d​ ​t​o​ ​a​u​t​o​-​f​i​l​l​ ​t​h​e​ ​i​d​e​n​t​i​t​y​ ​p​r​o​v​i​d​e​r​ ​l​o​g​i​n​ ​p​a​g​e​.​ ​T​h​e​ ​p​a​s​s​w​o​r​d​ ​f​i​e​l​d​ ​i​s​ ​a​l​w​a​y​s​ ​b​l​a​n​k​ ​—​ ​e​n​t​e​r​ ​a​ ​n​e​w​ ​v​a​l​u​e​ ​t​o​ ​s​a​v​e​ ​o​r​ ​u​p​d​a​t​e​.
+		 */
+		CREDENTIALS_DESCRIPTION: string
+		/**
+		 * A​u​t​o​-​s​u​b​m​i​t​ ​l​o​g​i​n​ ​f​o​r​m
+		 */
+		CREDENTIALS_AUTO_LOGIN: string
+		/**
+		 * A​u​t​o​m​a​t​i​c​a​l​l​y​ ​s​u​b​m​i​t​ ​t​h​e​ ​i​d​e​n​t​i​t​y​ ​p​r​o​v​i​d​e​r​ ​f​o​r​m​ ​5​0​0​ ​m​s​ ​a​f​t​e​r​ ​c​r​e​d​e​n​t​i​a​l​s​ ​a​r​e​ ​f​i​l​l​e​d​ ​i​n​.
+		 */
+		CREDENTIALS_AUTO_LOGIN_HINT: string
 	}
 	ERRORS: {
 		/**
@@ -4043,6 +4100,14 @@ type RootTranslation = {
 		 */
 		NO_MAPPINGS_YET: string
 		/**
+		 * S​n​a​p​ ​t​o​ ​e​d​g​e​s
+		 */
+		SNAP_TO_EDGES: string
+		/**
+		 * E​d​i​t​ ​m​a​p​p​i​n​g
+		 */
+		EDIT_MAPPING: string
+		/**
 		 * S​a​v​e​ ​M​a​p​p​i​n​g​s
 		 */
 		SAVE_MAPPINGS: string
@@ -4628,6 +4693,62 @@ export type TranslationFunctions = {
 		 * Please try logging in again.
 		 */
 		PLEASE_TRY_AGAIN: () => LocalizedString
+		/**
+		 * Saved Credentials
+		 */
+		SAVED_CREDENTIALS: () => LocalizedString
+		/**
+		 * Saved for: {username}
+		 */
+		CREDENTIALS_SAVED_FOR: (arg: { username: unknown }) => LocalizedString
+		/**
+		 * Username / Email
+		 */
+		CREDENTIALS_USERNAME: () => LocalizedString
+		/**
+		 * Password
+		 */
+		CREDENTIALS_PASSWORD: () => LocalizedString
+		/**
+		 * Save credentials for auto-fill
+		 */
+		CREDENTIALS_SAVE_BUTTON: () => LocalizedString
+		/**
+		 * Save credentials
+		 */
+		CREDENTIALS_SAVE: () => LocalizedString
+		/**
+		 * Clear
+		 */
+		CREDENTIALS_CLEAR: () => LocalizedString
+		/**
+		 * Cancel
+		 */
+		CREDENTIALS_CANCEL: () => LocalizedString
+		/**
+		 * Credentials are encrypted with OS-level key protection and stored only on this device.
+		 */
+		CREDENTIALS_HINT: () => LocalizedString
+		/**
+		 * Update credentials
+		 */
+		CREDENTIALS_UPDATE: () => LocalizedString
+		/**
+		 * Credentials saved.
+		 */
+		CREDENTIALS_SAVED_OK: () => LocalizedString
+		/**
+		 * Stored credentials are used to auto-fill the identity provider login page. The password field is always blank — enter a new value to save or update.
+		 */
+		CREDENTIALS_DESCRIPTION: () => LocalizedString
+		/**
+		 * Auto-submit login form
+		 */
+		CREDENTIALS_AUTO_LOGIN: () => LocalizedString
+		/**
+		 * Automatically submit the identity provider form 500 ms after credentials are filled in.
+		 */
+		CREDENTIALS_AUTO_LOGIN_HINT: () => LocalizedString
 	}
 	ERRORS: {
 		/**
@@ -8362,6 +8483,14 @@ export type TranslationFunctions = {
 		 * No mappings yet. Draw on the PDF to create mappings.
 		 */
 		NO_MAPPINGS_YET: () => LocalizedString
+		/**
+		 * Snap to edges
+		 */
+		SNAP_TO_EDGES: () => LocalizedString
+		/**
+		 * Edit mapping
+		 */
+		EDIT_MAPPING: () => LocalizedString
 		/**
 		 * Save Mappings
 		 */

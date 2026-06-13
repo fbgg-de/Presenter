@@ -74,14 +74,17 @@ const api = {
     ipcRenderer.on('ws-client-count', handler);
     return () => ipcRenderer.removeListener('ws-client-count', handler);
   },
-  onWsLastCommand: (callback: (data: { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number }) => void) => {
+  onWsLastCommand: (
+    callback: (data: { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number }) => void,
+  ) => {
     const handler = (_event: Electron.IpcRendererEvent, data: unknown) =>
       callback(data as { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number });
     ipcRenderer.on('ws-last-command', handler);
     return () => ipcRenderer.removeListener('ws-last-command', handler);
   },
   onWsNavigationAction: (callback: (data: { action: string; payload?: Record<string, unknown> }) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { action: string; payload?: Record<string, unknown> });
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) =>
+      callback(data as { action: string; payload?: Record<string, unknown> });
     ipcRenderer.on('ws-navigation-action', handler);
     return () => ipcRenderer.removeListener('ws-navigation-action', handler);
   },
@@ -134,6 +137,12 @@ const api = {
 
   // ── Backend origin (for OIDC callback detection in main process) ──
   setBackendOrigin: (origin: string) => ipcRenderer.send('set-backend-origin', origin),
+
+  // ── Secure credential storage (Electron only) ──
+  isEncryptionAvailable: () => electronAPI.ipcRenderer.invoke('is-encryption-available'),
+  storeCredentials: (username: string, password: string) => electronAPI.ipcRenderer.invoke('store-credentials', username, password),
+  getCredentialUsername: () => electronAPI.ipcRenderer.invoke('get-credential-username'),
+  deleteCredentials: () => electronAPI.ipcRenderer.invoke('delete-credentials'),
 
   // ── Musician IPC sync — lets the musician window push navigation state
   //    directly to the operator window via the main process (bypasses WS relay) ──

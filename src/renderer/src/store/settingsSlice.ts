@@ -15,6 +15,7 @@ type TrackingMaster = 'operator' | 'midi';
 
 export interface SettingsState {
   autoCheckUpdates: boolean;
+  autoLogin: boolean;
   backendUrl: string;
   bibleTranslation: string;
   cachedStyles: object[];
@@ -69,6 +70,7 @@ export interface SettingsState {
 
 const defaultState: SettingsState = {
   autoCheckUpdates: true,
+  autoLogin: false,
   backendUrl: '',
   bibleTranslation: 'ESV',
   cachedStyles: [],
@@ -80,7 +82,12 @@ const defaultState: SettingsState = {
   defaultNewVerseName: 'Vers 1',
   defaultVerseName: 'Vers 1',
   desktopAppDismissed: false,
-  deviceId: crypto.randomUUID(),
+  // crypto.randomUUID() requires a secure context (HTTPS / localhost).
+  // Guard against HTTP deployments (common on local networks) and older iOS Safari (<15.4).
+  deviceId:
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `device-${Date.now()}-${Math.random().toString(36).slice(2)}`,
   globalStyleId: 0,
   hideTransitionDuration: 300,
   hideTransitionMode: 'cut',

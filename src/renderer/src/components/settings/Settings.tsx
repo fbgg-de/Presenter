@@ -42,6 +42,7 @@ import { exportSettings, importSettings, applyImportedSettings } from '@/utils/s
 import { CompanionHelper } from '@/components/settings/CompanionHelper';
 import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
 import { AutoUpdaterSection } from '@/components/settings/AutoUpdaterSection';
+import { CredentialsSection } from '@/components/settings/CredentialsSection';
 import { isElectronApp } from '@/utils';
 
 type SettingConfig = {
@@ -353,6 +354,8 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                   {groupName === 'Keyboard' && <KeyboardMappingEditor />}
                   {/* AutoUpdater — inside Electron group */}
                   {groupName === 'Electron' && isElectronApp() && <AutoUpdaterSection />}
+                  {/* Saved credentials (OIDC auto-fill) — inside Electron group */}
+                  {groupName === 'Electron' && isElectronApp() && <CredentialsSection />}
                   {/* Privacy description — inside Privacy group */}
                   {groupName === 'Privacy' && (
                     <Stack spacing={0.75} sx={{ pb: 0.5 }}>

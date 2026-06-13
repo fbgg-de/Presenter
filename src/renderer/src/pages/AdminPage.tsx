@@ -74,54 +74,54 @@ export const AdminPage = () => {
       ) : (
         <Card sx={{ mb: 3 }}>
           <CardContent sx={{ overflow: 'visible' }}>
-          <Stack sx={{ gap: 3 }}>
-            {/* Header */}
-            <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <Typography variant="h4">{LL.ADMIN.PANEL()}</Typography>
-              <Button variant="outlined" color="error" startIcon={<LogoutIcon />} onClick={handleLogout}>
-                {LL.AUTH.LOGOUT()}
-              </Button>
+            <Stack sx={{ gap: 3 }}>
+              {/* Header */}
+              <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h4">{LL.ADMIN.PANEL()}</Typography>
+                <Button variant="outlined" color="error" startIcon={<LogoutIcon />} onClick={handleLogout}>
+                  {LL.AUTH.LOGOUT()}
+                </Button>
+              </Stack>
+
+              {/* Sticky tab bar */}
+              <Box
+                sx={{
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 10,
+                  bgcolor: 'background.paper',
+                  mx: -3,
+                  px: 3,
+                  borderBottom: 1,
+                  borderColor: 'divider',
+                }}
+              >
+                <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
+                  <Tab label={LL.ADMIN.ACCOUNTS()} />
+                  <Tab label={LL.ADMIN.OIDC_PROVIDERS()} />
+                  <Tab label={LL.METRICS.METRICS()} />
+                  <Tab label={LL.ADMIN_LOGS.NAV_TITLE()} />
+                  <Tab
+                    label={LL.ADMIN.DATABASE()}
+                    icon={
+                      migrationStatus && migrationStatus.pendingCount > 0 ? (
+                        <Chip label={migrationStatus.pendingCount} color="warning" size="small" />
+                      ) : undefined
+                    }
+                    iconPosition="end"
+                  />
+                  <Tab label={LL.ADMIN.CONFIG()} />
+                </Tabs>
+              </Box>
+
+              {/* Tab content */}
+              {activeTab === 0 && <Accounts />}
+              {activeTab === 1 && <Providers />}
+              {activeTab === 2 && <Metrics />}
+              {activeTab === 3 && <Logs />}
+              {activeTab === 4 && <Database />}
+              {activeTab === 5 && <Config />}
             </Stack>
-
-            {/* Sticky tab bar */}
-            <Box
-              sx={{
-                position: 'sticky',
-                top: 0,
-                zIndex: 10,
-                bgcolor: 'background.paper',
-                mx: -3,
-                px: 3,
-                borderBottom: 1,
-                borderColor: 'divider',
-              }}
-            >
-              <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
-                <Tab label={LL.ADMIN.ACCOUNTS()} />
-                <Tab label={LL.ADMIN.OIDC_PROVIDERS()} />
-                <Tab label={LL.METRICS.METRICS()} />
-                <Tab label={LL.ADMIN_LOGS.NAV_TITLE()} />
-                <Tab
-                  label={LL.ADMIN.DATABASE()}
-                  icon={
-                    migrationStatus && migrationStatus.pendingCount > 0 ? (
-                      <Chip label={migrationStatus.pendingCount} color="warning" size="small" />
-                    ) : undefined
-                  }
-                  iconPosition="end"
-                />
-                <Tab label={LL.ADMIN.CONFIG()} />
-              </Tabs>
-            </Box>
-
-            {/* Tab content */}
-            {activeTab === 0 && <Accounts />}
-            {activeTab === 1 && <Providers />}
-            {activeTab === 2 && <Metrics />}
-            {activeTab === 3 && <Logs />}
-            {activeTab === 4 && <Database />}
-            {activeTab === 5 && <Config />}
-          </Stack>
           </CardContent>
         </Card>
       )}

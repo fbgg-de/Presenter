@@ -20,8 +20,7 @@ export const wsActionTrigger = {
 
 const ACTIVE_ACTION_RESET_MS = 400;
 
-const countPrimaryLines = (lines: string[]): number =>
-  lines.filter((l) => !SONG_TRANSLATION_LINE_REGEX.test(l)).length;
+const countPrimaryLines = (lines: string[]): number => lines.filter((l) => !SONG_TRANSLATION_LINE_REGEX.test(l)).length;
 
 export const useBroadcastCompanionState = () => {
   const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack } = useGetPresentationSettings();
@@ -29,9 +28,7 @@ export const useBroadcastCompanionState = () => {
   const { currentShow } = useGetShow();
 
   const currentSongNumber = songsOrder[activeItemIndex];
-  const orderName = useAppSelector((state) =>
-    currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default',
-  );
+  const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
   const showItemCount = currentShow?.order?.length ?? songsOrder.length;
 
@@ -124,4 +121,3 @@ export const useBroadcastCompanionState = () => {
     };
   }, []);
 };
-

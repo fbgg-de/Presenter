@@ -195,7 +195,13 @@ try {
     ];
     $redirectUrl = $_SESSION['redirect'] ?? '/';
     unset($_SESSION['redirect']);
-    Logging::info('OIDC login successful for user: ' . $sub . ($license ? ' (license ' . $license . ')' : ' (admin)'));
+    // Log the effective cookie parameters for iOS/session debugging
+    $cookieParams = session_get_cookie_params();
+    Logging::info('OIDC login successful for user: ' . $sub . ($license ? ' (license ' . $license . ')' : ' (admin)')
+        . ' | cookie: secure=' . ($cookieParams['secure'] ? 'true' : 'false')
+        . ', samesite=' . ($cookieParams['samesite'] ?? 'n/a')
+        . ', lifetime=' . $cookieParams['lifetime']
+        . ' | UA: ' . ($_SERVER['HTTP_USER_AGENT'] ?? 'unknown'));
     MetricsHelper::record('login', $isAdminLogin ? null : $license, ['method' => 'oidc', 'admin' => $isAdminLogin]);
 
     header('Location: ' . $redirectUrl);

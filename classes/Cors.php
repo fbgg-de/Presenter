@@ -47,6 +47,13 @@ class Cors
      *
      * Without this, the default SameSite=Lax blocks the cookie on cross-origin
      * API calls even though CORS headers allow the request itself.
+     *
+     * The Secure flag is always set to true when the connection is over HTTPS.
+     * iOS Safari 16+ (and modern browsers in general) will not reliably store or
+     * send cookies that lack the Secure flag on HTTPS pages — particularly when
+     * the cookie was set during a cross-site redirect chain (such as an OIDC
+     * callback from an external identity provider).  Without Secure=true the
+     * session cookie is silently dropped and every subsequent API call returns 401.
      */
     public static function configureSession(): void
     {
@@ -56,6 +63,10 @@ class Cors
 
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
         $isCrossOrigin = self::isAllowedOrigin($origin);
+
+        // Always set Secure=true when the connection arrives over HTTPS.
+        // Detect HTTPS directly and also honour common reverse-proxy headers.
+        $isHttps = self::isHttps();
 
         // Keep the session alive for 30 days so users stay logged in across restarts.
         $lifetime = 30 * 24 * 60 * 60; // 30 days in seconds
@@ -69,21 +80,47 @@ class Cors
                 'lifetime' => $lifetime,
                 'path'     => '/',
                 'domain'   => '',
-                'secure'   => true,
+                'secure'   => true,  // SameSite=None mandates Secure=true
                 'httponly' => true,
                 'samesite' => 'None',
             ]);
         } else {
-            // Same-origin — use Lax which is the safe default; still persist 30 days.
+            // Same-origin — Lax is the safe default; still persist 30 days.
+            // Set Secure=true on HTTPS so iOS Safari (ITP) reliably stores and
+            // sends the cookie after the OIDC redirect chain.
             session_set_cookie_params([
                 'lifetime' => $lifetime,
                 'path'     => '/',
                 'domain'   => '',
-                'secure'   => false,
+                'secure'   => $isHttps,
                 'httponly' => true,
                 'samesite' => 'Lax',
             ]);
         }
+    }
+
+    /**
+     * Returns true when the current request arrived over HTTPS.
+     * Checks the standard $_SERVER['HTTPS'] flag and common reverse-proxy
+     * headers (X-Forwarded-Proto, X-Forwarded-SSL) so it works whether the
+     * PHP process terminates TLS directly or sits behind nginx/Apache.
+     */
+    private static function isHttps(): bool
+    {
+        if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+            return true;
+        }
+        if (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            return true;
+        }
+        if (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+            return true;
+        }
+        // Fallback: trust BASE_URL if defined (set to https:// in production config)
+        if (defined('BASE_URL') && str_starts_with(BASE_URL, 'https://')) {
+            return true;
+        }
+        return false;
     }
 
     private static function isAllowedOrigin(string $origin): bool

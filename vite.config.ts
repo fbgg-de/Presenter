@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Standalone Vite config for browser-only (PHP deployment) builds.
  * Used by `build:deploy` script. Outputs to `dist/` for Apache/Nginx hosting.
  *
@@ -11,15 +11,13 @@ import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import react from '@vitejs/plugin-react';
 import { rendererAliases, rendererInputs, sharedServerConfig } from './vite.shared';
-
+import { errorFallbackPlugin } from './vite.plugin.error-fallback';
 const root = resolve(__dirname, 'src/renderer');
 const dist = 'dist';
 const distApp = 'dist-app';
 const outDir = resolve(__dirname, dist);
 const INSTALLER_EXTS = new Set(['.exe', '.dmg', '.AppImage', '.deb', '.snap', '.rpm', '.pkg']);
-
 const src = (path: string) => `../../${path}`;
-
 export default defineConfig({
   root,
   resolve: {
@@ -28,6 +26,7 @@ export default defineConfig({
   build: {
     outDir,
     emptyOutDir: true,
+    target: ['es2020', 'chrome87', 'safari14', 'firefox78', 'edge88'],
     rollupOptions: {
       input: rendererInputs,
     },
@@ -35,6 +34,7 @@ export default defineConfig({
   server: sharedServerConfig,
   plugins: [
     react(),
+    errorFallbackPlugin(),
     viteStaticCopy({
       targets: [
         { src: src('api/*'), dest: outDir },
@@ -42,19 +42,12 @@ export default defineConfig({
         { src: src('src/renderer/src/assets/icon.ico'), dest: outDir, rename: { name: 'favicon.ico', stripBase: 2 } },
         { src: src('src/renderer/src/assets/icon.svg'), dest: outDir, rename: { name: 'favicon.svg', stripBase: 2 } },
         {
-          src: [
-            src('.htaccess'),
-            src('config-sample.php'),
-            // src('install.sql'),
-            src('oidc.php'),
-            src('rest.php'),
-          ],
+          src: [src('.htaccess'), src('config-sample.php'), src('oidc.php'), src('rest.php')],
           dest: dist,
         },
         ...(() => {
           const srcDir = resolve(__dirname, distApp);
           if (!existsSync(srcDir)) return [];
-
           return readdirSync(srcDir)
             .filter((f) => INSTALLER_EXTS.has(extname(f)))
             .map((file) => {
@@ -63,10 +56,7 @@ export default defineConfig({
               return {
                 src: src(`${distApp}/${file}`),
                 dest: `${outDir}/app`,
-                rename: {
-                  name: stripped + ext,
-                  stripBase: 1,
-                },
+                rename: { name: stripped + ext, stripBase: 1 },
               };
             });
         })(),
