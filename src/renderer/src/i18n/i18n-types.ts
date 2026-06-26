@@ -821,6 +821,29 @@ type RootTranslation = {
 		 */
 		CONFIRM_DELETE_MESSAGE: RequiredParams<'number' | 'title'>
 		/**
+		 * S​e​t​ ​C​C​L​I​ ​n​u​m​b​e​r
+		 */
+		SET_CCLI: string
+		/**
+		 * A​s​s​i​g​n​ ​a​ ​C​C​L​I​ ​n​u​m​b​e​r​ ​t​o​ ​"​{​t​i​t​l​e​}​"​ ​(​c​u​r​r​e​n​t​l​y​ ​#​{​n​u​m​b​e​r​}​)​.​ ​T​h​e​ ​s​o​n​g​ ​a​n​d​ ​e​v​e​r​y​ ​s​h​o​w​ ​t​h​a​t​ ​u​s​e​s​ ​i​t​ ​w​i​l​l​ ​b​e​ ​u​p​d​a​t​e​d​ ​t​o​ ​t​h​e​ ​n​e​w​ ​n​u​m​b​e​r​.
+		 * @param {unknown} number
+		 * @param {unknown} title
+		 */
+		SET_CCLI_DESC: RequiredParams<'number' | 'title'>
+		/**
+		 * C​C​L​I​ ​n​u​m​b​e​r
+		 */
+		CCLI_NUMBER: string
+		/**
+		 * E​n​t​e​r​ ​a​ ​v​a​l​i​d​ ​C​C​L​I​ ​n​u​m​b​e​r​ ​(​{​m​i​n​}​ ​o​r​ ​h​i​g​h​e​r​)
+		 * @param {unknown} min
+		 */
+		CCLI_INVALID: RequiredParams<'min'>
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​s​e​t​ ​t​h​e​ ​C​C​L​I​ ​n​u​m​b​e​r
+		 */
+		CCLI_FAILED: string
+		/**
 		 * A​d​d​ ​s​o​n​g
 		 */
 		ADD: string
@@ -1007,6 +1030,11 @@ type RootTranslation = {
 		 */
 		UPDATE_AVAILABLE: string
 		/**
+		 * U​p​d​a​t​e​d​ ​{​t​i​m​e​}
+		 * @param {unknown} time
+		 */
+		UPDATE_AVAILABLE_AT: RequiredParams<'time'>
+		/**
 		 * R​e​l​o​a​d
 		 */
 		UPDATE_AVAILABLE_ACTION: string
@@ -1014,6 +1042,30 @@ type RootTranslation = {
 		 * C​C​L​I​ ​r​e​p​o​r​t
 		 */
 		CCLI_REPORT: string
+		/**
+		 * L​i​n​k​ ​t​o​ ​C​h​u​r​c​h​T​o​o​l​s​ ​e​v​e​n​t​ ​(​o​p​t​i​o​n​a​l​)
+		 */
+		LINK_EVENT: string
+		/**
+		 * N​o​ ​e​v​e​n​t
+		 */
+		NO_EVENT: string
+		/**
+		 * S​o​n​g​s​ ​s​y​n​c​e​d​ ​t​o​ ​C​h​u​r​c​h​T​o​o​l​s​ ​e​v​e​n​t
+		 */
+		EVENT_SYNCED: string
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​s​y​n​c​ ​s​o​n​g​s​ ​t​o​ ​t​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​e​v​e​n​t
+		 */
+		EVENT_SYNC_FAILED: string
+		/**
+		 * L​o​a​d​ ​e​a​r​l​i​e​r​ ​e​v​e​n​t​s
+		 */
+		EVENTS_LOAD_EARLIER: string
+		/**
+		 * L​o​a​d​ ​m​o​r​e​ ​e​v​e​n​t​s
+		 */
+		EVENTS_LOAD_MORE: string
 	}
 	SHOW_ITEMS: {
 		/**
@@ -2188,6 +2240,22 @@ type RootTranslation = {
 		 * D​e​e​p​ ​S​e​a​r​c​h​ ​(​l​y​r​i​c​s​)
 		 */
 		DEEP: string
+		/**
+		 * O​p​e​n​ ​s​o​n​g​ ​l​i​b​r​a​r​y​…
+		 */
+		OPEN_LIBRARY: string
+		/**
+		 * O​p​e​n​ ​m​e​d​i​a​ ​l​i​b​r​a​r​y​…
+		 */
+		OPEN_MEDIA_LIBRARY: string
+		/**
+		 * I​n​c​l​u​d​e​ ​C​h​u​r​c​h​T​o​o​l​s
+		 */
+		INCLUDE_CHURCHTOOLS: string
+		/**
+		 * A​l​s​o​ ​s​u​g​g​e​s​t​ ​s​o​n​g​s​ ​f​r​o​m​ ​t​h​e​ ​C​C​L​I​ ​S​o​n​g​S​e​l​e​c​t​ ​c​a​t​a​l​o​g​u​e
+		 */
+		INCLUDE_CHURCHTOOLS_HINT: string
 	}
 	CHURCH_TOOLS: {
 		/**
@@ -2254,6 +2322,14 @@ type RootTranslation = {
 		 * C​h​u​r​c​h​T​o​o​l​s​ ​A​r​r​a​n​g​e​m​e​n​t​s
 		 */
 		SONG_DETAIL_TITLE: string
+		/**
+		 * C​h​u​r​c​h​ ​l​i​b​r​a​r​y
+		 */
+		SOURCE_LIBRARY: string
+		/**
+		 * C​C​L​I​ ​S​o​n​g​S​e​l​e​c​t
+		 */
+		SOURCE_CCLI: string
 	}
 	KEYBOARD: {
 		/**
@@ -3418,6 +3494,138 @@ type RootTranslation = {
 		 * S​y​s​t​e​m​ ​&​ ​A​u​t​h
 		 */
 		SECTION_SYSTEM: string
+		/**
+		 * A​c​c​o​u​n​t​s
+		 */
+		SECTION_ACCOUNTS: string
+		/**
+		 * A​c​t​i​v​e​ ​A​c​c​o​u​n​t​s
+		 */
+		ACTIVE_ACCOUNTS: string
+		/**
+		 * A​c​t​i​v​e​ ​A​c​c​o​u​n​t​s​ ​O​v​e​r​ ​T​i​m​e
+		 */
+		ACTIVE_ACCOUNTS_OVER_TIME: string
+		/**
+		 * T​o​p​ ​A​c​c​o​u​n​t​s​ ​b​y​ ​E​v​e​n​t​s
+		 */
+		TOP_ACCOUNTS: string
+		/**
+		 * E​v​e​n​t​s​ ​b​y​ ​A​c​c​o​u​n​t​ ​O​v​e​r​ ​T​i​m​e
+		 */
+		EVENTS_BY_ACCOUNT: string
+		/**
+		 * A​c​c​o​u​n​t​ ​A​c​t​i​v​i​t​y
+		 */
+		ACCOUNT_ACTIVITY: string
+		/**
+		 * T​o​p​ ​F​e​a​t​u​r​e
+		 */
+		TOP_FEATURE: string
+		/**
+		 * T​r​e​n​d
+		 */
+		TREND: string
+		/**
+		 * F​i​r​s​t​ ​S​e​e​n
+		 */
+		FIRST_SEEN: string
+		/**
+		 * L​a​s​t​ ​A​c​t​i​v​e
+		 */
+		LAST_ACTIVE: string
+		/**
+		 * D​e​v​i​c​e​s
+		 */
+		DEVICES: string
+		/**
+		 * O​t​h​e​r
+		 */
+		OTHER: string
+		/**
+		 * S​o​n​g​ ​L​i​f​e​c​y​c​l​e​ ​O​v​e​r​ ​T​i​m​e
+		 */
+		SONG_LIFECYCLE: string
+		/**
+		 * S​o​n​g​s​ ​C​r​e​a​t​e​d
+		 */
+		SONGS_CREATED: string
+		/**
+		 * S​o​n​g​s​ ​C​h​a​n​g​e​d
+		 */
+		SONGS_CHANGED: string
+		/**
+		 * I​m​p​o​r​t​ ​S​o​u​r​c​e​s
+		 */
+		SONG_IMPORT_SOURCES: string
+		/**
+		 * C​h​a​n​g​e​s​ ​b​y​ ​O​r​i​g​i​n
+		 */
+		SONG_CHANGES_BY: string
+		/**
+		 * C​C​L​I​ ​R​e​n​u​m​b​e​r​s​ ​(​o​k​ ​/​ ​f​a​i​l​e​d​)
+		 */
+		SONG_RENUMBERS: string
+		/**
+		 * W​i​n​d​o​w​s
+		 */
+		SECTION_WINDOWS: string
+		/**
+		 * D​i​s​p​l​a​y​ ​M​o​d​e​s
+		 */
+		WINDOW_MODES: string
+		/**
+		 * R​e​s​o​l​u​t​i​o​n​s
+		 */
+		WINDOW_RESOLUTIONS: string
+		/**
+		 * F​u​l​l​s​c​r​e​e​n​ ​v​s​ ​W​i​n​d​o​w​e​d
+		 */
+		WINDOW_FULLSCREEN: string
+		/**
+		 * R​e​c​e​n​t​ ​W​i​n​d​o​w​ ​C​o​n​f​i​g​u​r​a​t​i​o​n​s
+		 */
+		WINDOW_CONFIGS: string
+		/**
+		 * N​a​m​e
+		 */
+		COL_NAME: string
+		/**
+		 * M​o​d​e
+		 */
+		COL_MODE: string
+		/**
+		 * R​e​s​o​l​u​t​i​o​n
+		 */
+		COL_RESOLUTION: string
+		/**
+		 * P​o​s​i​t​i​o​n
+		 */
+		COL_POSITION: string
+		/**
+		 * F​u​l​l​s​c​r​e​e​n
+		 */
+		COL_FULLSCREEN: string
+		/**
+		 * F​r​a​m​e​l​e​s​s
+		 */
+		COL_FRAMELESS: string
+		/**
+		 * O​n​ ​T​o​p
+		 */
+		COL_ALWAYS_ON_TOP: string
+		/**
+		 * C​h​a​n​g​e​ ​F​r​e​q​u​e​n​c​y
+		 */
+		SETTING_CHANGE_FREQUENCY: string
+		/**
+		 * C​o​n​f​i​g​u​r​e​d​ ​V​a​l​u​e​s​ ​(​p​e​r​ ​d​e​v​i​c​e​)
+		 */
+		SETTING_VALUES: string
+		/**
+		 * S​e​t​t​i​n​g
+		 */
+		SETTING_LABEL: string
 	}
 	COMPANION: {
 		/**
@@ -3989,6 +4197,34 @@ type RootTranslation = {
 		 * D​r​a​g​ ​&​ ​d​r​o​p​ ​P​D​F​ ​f​i​l​e​s​ ​h​e​r​e​,​ ​o​r​ ​c​l​i​c​k​ ​t​o​ ​b​r​o​w​s​e
 		 */
 		DRAG_DROP: string
+		/**
+		 * I​m​p​o​r​t​ ​c​h​o​r​d​ ​c​h​a​r​t​ ​f​r​o​m​ ​C​C​L​I
+		 */
+		IMPORT_CHORDS: string
+		/**
+		 * C​h​o​r​d​ ​c​h​a​r​t​ ​i​m​p​o​r​t​e​d​ ​f​r​o​m​ ​C​C​L​I
+		 */
+		IMPORT_CHORDS_SUCCESS: string
+		/**
+		 * N​o​ ​c​h​o​r​d​ ​c​h​a​r​t​ ​i​s​ ​a​v​a​i​l​a​b​l​e​ ​f​o​r​ ​t​h​i​s​ ​s​o​n​g​ ​o​n​ ​C​C​L​I
+		 */
+		IMPORT_CHORDS_NONE: string
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​i​m​p​o​r​t​ ​t​h​e​ ​c​h​o​r​d​ ​c​h​a​r​t​ ​f​r​o​m​ ​C​C​L​I
+		 */
+		IMPORT_CHORDS_ERROR: string
+		/**
+		 * I​m​p​o​r​t
+		 */
+		CHORDS_IMPORT: string
+		/**
+		 * d​e​f​a​u​l​t
+		 */
+		CHORDS_DEFAULT: string
+		/**
+		 * C​o​l​u​m​n​s
+		 */
+		CHORDS_COLUMNS: string
 		/**
 		 * I​m​p​o​r​t​ ​P​D​F
 		 */
@@ -5250,6 +5486,26 @@ export type TranslationFunctions = {
 		 */
 		CONFIRM_DELETE_MESSAGE: (arg: { number: unknown, title: unknown }) => LocalizedString
 		/**
+		 * Set CCLI number
+		 */
+		SET_CCLI: () => LocalizedString
+		/**
+		 * Assign a CCLI number to "{title}" (currently #{number}). The song and every show that uses it will be updated to the new number.
+		 */
+		SET_CCLI_DESC: (arg: { number: unknown, title: unknown }) => LocalizedString
+		/**
+		 * CCLI number
+		 */
+		CCLI_NUMBER: () => LocalizedString
+		/**
+		 * Enter a valid CCLI number ({min} or higher)
+		 */
+		CCLI_INVALID: (arg: { min: unknown }) => LocalizedString
+		/**
+		 * Could not set the CCLI number
+		 */
+		CCLI_FAILED: () => LocalizedString
+		/**
 		 * Add song
 		 */
 		ADD: () => LocalizedString
@@ -5434,6 +5690,10 @@ export type TranslationFunctions = {
 		 */
 		UPDATE_AVAILABLE: () => LocalizedString
 		/**
+		 * Updated {time}
+		 */
+		UPDATE_AVAILABLE_AT: (arg: { time: unknown }) => LocalizedString
+		/**
 		 * Reload
 		 */
 		UPDATE_AVAILABLE_ACTION: () => LocalizedString
@@ -5441,6 +5701,30 @@ export type TranslationFunctions = {
 		 * CCLI report
 		 */
 		CCLI_REPORT: () => LocalizedString
+		/**
+		 * Link to ChurchTools event (optional)
+		 */
+		LINK_EVENT: () => LocalizedString
+		/**
+		 * No event
+		 */
+		NO_EVENT: () => LocalizedString
+		/**
+		 * Songs synced to ChurchTools event
+		 */
+		EVENT_SYNCED: () => LocalizedString
+		/**
+		 * Could not sync songs to the ChurchTools event
+		 */
+		EVENT_SYNC_FAILED: () => LocalizedString
+		/**
+		 * Load earlier events
+		 */
+		EVENTS_LOAD_EARLIER: () => LocalizedString
+		/**
+		 * Load more events
+		 */
+		EVENTS_LOAD_MORE: () => LocalizedString
 	}
 	SHOW_ITEMS: {
 		/**
@@ -6611,6 +6895,22 @@ export type TranslationFunctions = {
 		 * Deep Search (lyrics)
 		 */
 		DEEP: () => LocalizedString
+		/**
+		 * Open song library…
+		 */
+		OPEN_LIBRARY: () => LocalizedString
+		/**
+		 * Open media library…
+		 */
+		OPEN_MEDIA_LIBRARY: () => LocalizedString
+		/**
+		 * Include ChurchTools
+		 */
+		INCLUDE_CHURCHTOOLS: () => LocalizedString
+		/**
+		 * Also suggest songs from the CCLI SongSelect catalogue
+		 */
+		INCLUDE_CHURCHTOOLS_HINT: () => LocalizedString
 	}
 	CHURCH_TOOLS: {
 		/**
@@ -6677,6 +6977,14 @@ export type TranslationFunctions = {
 		 * ChurchTools Arrangements
 		 */
 		SONG_DETAIL_TITLE: () => LocalizedString
+		/**
+		 * Church library
+		 */
+		SOURCE_LIBRARY: () => LocalizedString
+		/**
+		 * CCLI SongSelect
+		 */
+		SOURCE_CCLI: () => LocalizedString
 	}
 	KEYBOARD: {
 		/**
@@ -7827,6 +8135,138 @@ export type TranslationFunctions = {
 		 * System & Auth
 		 */
 		SECTION_SYSTEM: () => LocalizedString
+		/**
+		 * Accounts
+		 */
+		SECTION_ACCOUNTS: () => LocalizedString
+		/**
+		 * Active Accounts
+		 */
+		ACTIVE_ACCOUNTS: () => LocalizedString
+		/**
+		 * Active Accounts Over Time
+		 */
+		ACTIVE_ACCOUNTS_OVER_TIME: () => LocalizedString
+		/**
+		 * Top Accounts by Events
+		 */
+		TOP_ACCOUNTS: () => LocalizedString
+		/**
+		 * Events by Account Over Time
+		 */
+		EVENTS_BY_ACCOUNT: () => LocalizedString
+		/**
+		 * Account Activity
+		 */
+		ACCOUNT_ACTIVITY: () => LocalizedString
+		/**
+		 * Top Feature
+		 */
+		TOP_FEATURE: () => LocalizedString
+		/**
+		 * Trend
+		 */
+		TREND: () => LocalizedString
+		/**
+		 * First Seen
+		 */
+		FIRST_SEEN: () => LocalizedString
+		/**
+		 * Last Active
+		 */
+		LAST_ACTIVE: () => LocalizedString
+		/**
+		 * Devices
+		 */
+		DEVICES: () => LocalizedString
+		/**
+		 * Other
+		 */
+		OTHER: () => LocalizedString
+		/**
+		 * Song Lifecycle Over Time
+		 */
+		SONG_LIFECYCLE: () => LocalizedString
+		/**
+		 * Songs Created
+		 */
+		SONGS_CREATED: () => LocalizedString
+		/**
+		 * Songs Changed
+		 */
+		SONGS_CHANGED: () => LocalizedString
+		/**
+		 * Import Sources
+		 */
+		SONG_IMPORT_SOURCES: () => LocalizedString
+		/**
+		 * Changes by Origin
+		 */
+		SONG_CHANGES_BY: () => LocalizedString
+		/**
+		 * CCLI Renumbers (ok / failed)
+		 */
+		SONG_RENUMBERS: () => LocalizedString
+		/**
+		 * Windows
+		 */
+		SECTION_WINDOWS: () => LocalizedString
+		/**
+		 * Display Modes
+		 */
+		WINDOW_MODES: () => LocalizedString
+		/**
+		 * Resolutions
+		 */
+		WINDOW_RESOLUTIONS: () => LocalizedString
+		/**
+		 * Fullscreen vs Windowed
+		 */
+		WINDOW_FULLSCREEN: () => LocalizedString
+		/**
+		 * Recent Window Configurations
+		 */
+		WINDOW_CONFIGS: () => LocalizedString
+		/**
+		 * Name
+		 */
+		COL_NAME: () => LocalizedString
+		/**
+		 * Mode
+		 */
+		COL_MODE: () => LocalizedString
+		/**
+		 * Resolution
+		 */
+		COL_RESOLUTION: () => LocalizedString
+		/**
+		 * Position
+		 */
+		COL_POSITION: () => LocalizedString
+		/**
+		 * Fullscreen
+		 */
+		COL_FULLSCREEN: () => LocalizedString
+		/**
+		 * Frameless
+		 */
+		COL_FRAMELESS: () => LocalizedString
+		/**
+		 * On Top
+		 */
+		COL_ALWAYS_ON_TOP: () => LocalizedString
+		/**
+		 * Change Frequency
+		 */
+		SETTING_CHANGE_FREQUENCY: () => LocalizedString
+		/**
+		 * Configured Values (per device)
+		 */
+		SETTING_VALUES: () => LocalizedString
+		/**
+		 * Setting
+		 */
+		SETTING_LABEL: () => LocalizedString
 	}
 	COMPANION: {
 		/**
@@ -8383,6 +8823,34 @@ export type TranslationFunctions = {
 		 * Drag & drop PDF files here, or click to browse
 		 */
 		DRAG_DROP: () => LocalizedString
+		/**
+		 * Import chord chart from CCLI
+		 */
+		IMPORT_CHORDS: () => LocalizedString
+		/**
+		 * Chord chart imported from CCLI
+		 */
+		IMPORT_CHORDS_SUCCESS: () => LocalizedString
+		/**
+		 * No chord chart is available for this song on CCLI
+		 */
+		IMPORT_CHORDS_NONE: () => LocalizedString
+		/**
+		 * Could not import the chord chart from CCLI
+		 */
+		IMPORT_CHORDS_ERROR: () => LocalizedString
+		/**
+		 * Import
+		 */
+		CHORDS_IMPORT: () => LocalizedString
+		/**
+		 * default
+		 */
+		CHORDS_DEFAULT: () => LocalizedString
+		/**
+		 * Columns
+		 */
+		CHORDS_COLUMNS: () => LocalizedString
 		/**
 		 * Import PDF
 		 */

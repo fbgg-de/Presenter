@@ -1,4 +1,4 @@
-import { Children, memo, cloneElement, isValidElement, useState, ReactElement, PropsWithChildren } from 'react';
+import { Children, memo, cloneElement, isValidElement, useState, ReactElement, ReactNode, PropsWithChildren } from 'react';
 import { List, ListProps } from '@mui/material';
 import styled from '@emotion/styled';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor, TouchSensor, KeyboardSensor, DragOverlay } from '@dnd-kit/core';
@@ -9,6 +9,8 @@ export type DraggableListProps = PropsWithChildren<
   ListProps & {
     onDragEnd?: (event: DragEndEvent) => void;
     onItemsChanged?: (source: number, destination: number) => void;
+    /** Static, non-draggable content rendered inside the list after the last item. */
+    footer?: ReactNode;
   }
 >;
 
@@ -65,7 +67,7 @@ const SortableItem = ({ id, child }: { id: string; child: any }) => {
 };
 
 const DraggableList = memo((props: DraggableListProps) => {
-  const { onDragEnd, onItemsChanged, children, ...listProps } = props;
+  const { onDragEnd, onItemsChanged, children, footer, ...listProps } = props;
 
   const childArray = Children.toArray(children);
 
@@ -111,6 +113,7 @@ const DraggableList = memo((props: DraggableListProps) => {
             {childArray.map((child, index) => (
               <SortableItem key={items[index]} id={items[index]} child={child} />
             ))}
+            {footer}
           </List>
         </SortableContext>
         <DragOverlay dropAnimation={{ duration: 150 }}>
@@ -122,5 +125,7 @@ const DraggableList = memo((props: DraggableListProps) => {
     </>
   );
 });
+
+DraggableList.displayName = 'DraggableList';
 
 export default DraggableList;

@@ -27,11 +27,14 @@ import {
   Search as SearchIcon,
   SortByAlpha as SortByAlphaIcon,
   Tag as SortByNumberIcon,
+  Numbers as CcliIcon,
 } from '@mui/icons-material';
-import { useGetSongsAllQuery, useDeleteSongMutation } from '@/api/songs.api';
+import { useGetSongsAllQuery, useDeleteSongMutation, useRenumberSongMutation } from '@/api/songs.api';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { SongListItem } from '@/api/songs.api';
+import { SONG_CUSTOM_NUMBER_LIMIT } from '@/song';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useMetrics } from '@/hooks/useMetrics';
 
 type SortOrder = 'lexicographic' | 'numeric';
 
@@ -52,6 +55,39 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
 
   const { data: allSongs, isLoading } = useGetSongsAllQuery({ order: sortOrder });
   const [deleteSong, { isLoading: isDeleting }] = useDeleteSongMutation();
+  const [renumberSong, { isLoading: isRenumbering }] = useRenumberSongMutation();
+  const { trackEvent } = useMetrics();
+
+  // "Set CCLI number" dialog (custom songs only).
+  const [ccliSong, setCcliSong] = useState<SongListItem | null>(null);
+  const [ccliInput, setCcliInput] = useState('');
+  const [ccliError, setCcliError] = useState<string | null>(null);
+
+  const handleSetCcli = async () => {
+    if (!ccliSong) return;
+    const newNumber = parseInt(ccliInput.trim(), 10);
+    if (!Number.isInteger(newNumber) || newNumber < SONG_CUSTOM_NUMBER_LIMIT) {
+      setCcliError(LL.SONGS.CCLI_INVALID({ min: SONG_CUSTOM_NUMBER_LIMIT }));
+      return;
+    }
+    const oldNumber = ccliSong.songNumber;
+    try {
+      const res = await renumberSong({ oldNumber, newNumber }).unwrap();
+      trackEvent('song_renumbered', 'song', String(newNumber), {
+        ok: true,
+        oldNumber,
+        newNumber,
+        showsUpdated: res.showsUpdated ?? 0,
+      });
+      setCcliSong(null);
+      setCcliInput('');
+      setCcliError(null);
+    } catch (err) {
+      const msg = err != null && typeof err === 'object' && 'data' in err ? (err as { data?: { message?: string } }).data?.message : '';
+      trackEvent('song_renumbered', 'song', String(oldNumber), { ok: false, oldNumber, newNumber, error: msg || 'error' });
+      setCcliError(msg || LL.SONGS.CCLI_FAILED());
+    }
+  };
 
   const filteredSongs = allSongs?.filter(
     (song) =>
@@ -64,6 +100,7 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
     if (songToDelete) {
       try {
         await deleteSong({ songNumber: songToDelete.songNumber }).unwrap();
+        trackEvent('song_deleted', 'song', String(songToDelete.songNumber));
         setDeleteConfirmOpen(false);
         setSongToDelete(null);
       } catch (error) {
@@ -136,21 +173,40 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
                   key={song.songNumber}
                   disablePadding
                   secondaryAction={
-                    showDeleteFromDb ? (
-                      <Tooltip title={LL.COMMON.DELETE()}>
-                        <IconButton
-                          edge="end"
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSongToDelete(song);
-                            setDeleteConfirmOpen(true);
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    ) : undefined
+                    <Stack direction="row" spacing={0.5}>
+                      {/* Custom songs can be promoted to a CCLI number. */}
+                      {song.songNumber < SONG_CUSTOM_NUMBER_LIMIT && (
+                        <Tooltip title={LL.SONGS.SET_CCLI()}>
+                          <IconButton
+                            edge="end"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCcliSong(song);
+                              setCcliInput('');
+                              setCcliError(null);
+                            }}
+                          >
+                            <CcliIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {showDeleteFromDb && (
+                        <Tooltip title={LL.COMMON.DELETE()}>
+                          <IconButton
+                            edge="end"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSongToDelete(song);
+                              setDeleteConfirmOpen(true);
+                            }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Stack>
                   }
                 >
                   <ListItemButton onClick={() => onSongSelected(song)} sx={{ gap: 1.5, py: 0.75 }}>
@@ -248,6 +304,41 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
           </Button>
           <Button onClick={handleDelete} color="error" variant="contained" disabled={isDeleting}>
             {isDeleting ? <CircularProgress size={20} /> : LL.COMMON.DELETE()}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Set CCLI number (renumber a custom song) */}
+      <Dialog open={!!ccliSong} onClose={() => !isRenumbering && setCcliSong(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>{LL.SONGS.SET_CCLI()}</DialogTitle>
+        <DialogContent>
+          <Stack spacing={1.5} sx={{ pt: 0.5 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {LL.SONGS.SET_CCLI_DESC({ title: ccliSong?.title || '', number: ccliSong?.songNumber || 0 })}
+            </Typography>
+            <TextField
+              autoFocus
+              size="small"
+              type="number"
+              label={LL.SONGS.CCLI_NUMBER()}
+              value={ccliInput}
+              onChange={(e) => {
+                setCcliInput(e.target.value);
+                setCcliError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && ccliInput.trim() && !isRenumbering) handleSetCcli();
+              }}
+              error={!!ccliError}
+              helperText={ccliError ?? undefined}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCcliSong(null)} disabled={isRenumbering}>
+            {LL.COMMON.CANCEL()}
+          </Button>
+          <Button onClick={handleSetCcli} variant="contained" disabled={isRenumbering || !ccliInput.trim()}>
+            {isRenumbering ? <CircularProgress size={20} /> : LL.COMMON.SAVE()}
           </Button>
         </DialogActions>
       </Dialog>

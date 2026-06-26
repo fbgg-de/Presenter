@@ -31,6 +31,7 @@ const DB = [
 
 const SEARCH_RESULT_LIMIT = 10;
 const CUSTOM_NUMBER_LIMIT = 10000;
+const CUSTOM_NUMBER_SYNC = false;
 
 // OIDC Configuration
 const OIDC = [

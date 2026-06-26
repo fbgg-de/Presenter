@@ -37,12 +37,13 @@ import {
   setActiveBlockIndex as setPresentationBlockIndex,
 } from '@/store/presentationSlice';
 import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
+import { formatRelativeTime } from '@/utils/relativeTime';
 import { useWsSync } from '@/hooks/useWsSync';
 import { useWsOperator } from '@/hooks/useWsOperator';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useGetSessionQuery } from '@/api/session.api';
 import { useUpdateSongMutation } from '@/api/songs.api';
-import { useSaveShowMutation, useGetShowsQuery } from '@/api/shows.api';
+import { useSaveShowMutation, useGetShowQuery } from '@/api/shows.api';
 import { SongOrderEditor } from '@/components/song/SongOrderEditor';
 import { useLazySearchChurchToolsSongsQuery } from '@/api/churchtools.api';
 
@@ -57,7 +58,7 @@ export const MusicianPage = () => {
   const NAV_MARGIN = 36;
 
   const { palette } = useTheme();
-  const { LL } = useI18nContext();
+  const { LL, locale } = useI18nContext();
   const {
     musicianName,
     musicianBand,
@@ -134,8 +135,9 @@ export const MusicianPage = () => {
   const annotationRefetchRef = useRef<(() => void) | null>(null);
 
   // ── Show update polling ──────────────────────────────────────────────
-  const { updateAvailable: showUpdateAvailable2, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
-  const { data: availableShows } = useGetShowsQuery({ limit: 9999, page: 0 });
+  const { updateAvailable: showUpdateAvailable2, updatedAt: showUpdatedAt, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
+  // Only fetch the operator's show (by title) when following it — not the whole show library.
+  const { data: operatorShowData } = useGetShowQuery({ title: operatorWsShowTitle ?? '' }, { skip: !operatorWsShowTitle });
   // Keep the snackbar driven by the hook
   useEffect(() => {
     if (showUpdateAvailable2) setShowUpdateAvailable(true);
@@ -590,10 +592,12 @@ export const MusicianPage = () => {
       }).unwrap();
 
       dispatch(updateSongInStore(updatedSong));
+      trackEvent('song_updated', 'song', String(updatedSong.songNumber), { via: 'order' });
       dispatch(setCurrentSongOrder({ songNumber: updatedSong.songNumber, orderName: trimmedName }));
       dispatch(updateShowItem({ index: activeItemIndex, item: { order: trimmedName } }));
 
       const nextShowOrder = showItems.map((showItem, idx) => (idx === activeItemIndex ? { ...showItem, order: trimmedName } : showItem));
+      // Omit eventId so the backend preserves the existing ChurchTools event link.
       await saveShowMutation({
         title: currentShow.title,
         order: nextShowOrder,
@@ -667,15 +671,15 @@ export const MusicianPage = () => {
     dismissedMismatchShowTitle !== operatorWsShowTitle;
 
   const applyOperatorShow = useCallback(async () => {
-    if (!operatorWsShowTitle || !availableShows?.shows) return;
-    const operatorShow = availableShows.shows.find((show) => show.title === operatorWsShowTitle);
-    if (!operatorShow) return;
+    if (!operatorWsShowTitle) return;
+    const operatorShow = operatorShowData?.shows?.[0];
+    if (!operatorShow || operatorShow.title !== operatorWsShowTitle) return;
     dispatch(setCurrentShow(operatorShow));
     await dispatch(loadShowSongs(operatorShow));
     setActiveItemIndex(0);
     updateMusicianSetting('musicianLastItemIndex', 0);
     setDismissedMismatchShowTitle(null);
-  }, [operatorWsShowTitle, availableShows?.shows, dispatch, updateMusicianSetting]);
+  }, [operatorWsShowTitle, operatorShowData?.shows, dispatch, updateMusicianSetting]);
 
   // ── Render ───────────────────────────────────────────────────────
   return (
@@ -712,6 +716,7 @@ export const MusicianPage = () => {
           }}
         >
           {LL.SHOWS.UPDATE_AVAILABLE()}
+          {showUpdatedAt ? ` · ${LL.SHOWS.UPDATE_AVAILABLE_AT({ time: formatRelativeTime(showUpdatedAt, locale) })}` : ''}
         </Alert>
       </Snackbar>{' '}
       <Snackbar open={showMismatchDetected} anchorOrigin={{ vertical: 'top', horizontal: 'center' }} sx={{ top: { xs: 72, sm: 80 } }}>
@@ -746,7 +751,6 @@ export const MusicianPage = () => {
             trackEvent('modal_opened', undefined, undefined, { modal: 'area_mapping' });
             setAreaMappingOpen(true);
           }}
-          ctSongId={ctSongId}
           ctSongName={ctSongName}
         />
       )}

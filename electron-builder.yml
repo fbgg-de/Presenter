@@ -5,11 +5,27 @@ directories:
   output: dist-app
 files:
   - '!**/.vscode/*'
-  - '!src/*'
+  - '!dist/**'
+  - '!src/**'
+  - '!api/**'
+  - '!classes/**'
+  - '!ws-server/**'
+  - '!sng/**'
+  - '!scripts/**'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
+  - '!vite.config.ts'
+  - '!vite.shared.ts'
+  - '!vite.plugin.error-fallback.ts'
   - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml,.yarnrc.yml}'
+  - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json,tsconfig.node.tsbuildinfo,tsconfig.web.tsbuildinfo}'
+  - '!*.php'
+  - '!*.phar'
+  - '!*.sql'
+  - '!*.md'
+  - '!*.log'
+  - '!churchtools.openapi.json'
+  - '!requirements.md'
 asarUnpack:
   - resources/**
 win:

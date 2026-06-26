@@ -29,13 +29,14 @@ import PresentationSyncHost from '@/components/layout/PresentationSyncHost';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
+import { formatRelativeTime } from '@/utils/relativeTime';
 import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
 import { useGetAccountSettingsQuery, useGetSessionQuery } from '@/api/session.api';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 
 export const MainPage = () => {
   const dispatch = useAppDispatch();
-  const { LL } = useI18nContext();
+  const { LL, locale } = useI18nContext();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [mobileTab, setMobileTab] = useState(0); // 0 = show list / sidebar, 1 = control
@@ -47,7 +48,7 @@ export const MainPage = () => {
   const sidebarRef = useRef<SidebarHandle>(null);
 
   // ── Show update polling ──────────────────────────────────────────────
-  const { updateAvailable: showUpdateAvailable, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
+  const { updateAvailable: showUpdateAvailable, updatedAt: showUpdatedAt, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
 
   // Gate all authenticated queries on confirmed session status.
   // MainPage hooks run immediately on mount — before <RequireAuth> has a chance
@@ -98,6 +99,8 @@ export const MainPage = () => {
             title: show.title,
             order: orderToSave,
             styleId: override ? (currentShow?.styleId ?? null) : (show.styleId ?? null),
+            eventId: (override ? currentShow?.eventId : show.eventId) ?? null,
+            eventName: (override ? currentShow?.eventName : show.eventName) ?? null,
           }).unwrap();
         } catch (error) {
           console.error('Failed to create new show:', error);
@@ -137,6 +140,7 @@ export const MainPage = () => {
           onClose={dismissShowUpdate}
         >
           {LL.SHOWS.UPDATE_AVAILABLE()}
+          {showUpdatedAt ? ` · ${LL.SHOWS.UPDATE_AVAILABLE_AT({ time: formatRelativeTime(showUpdatedAt, locale) })}` : ''}
         </Alert>
       </Snackbar>
       {!isShowSelectorOpen && (

@@ -188,42 +188,29 @@ class Song extends RestController
             $orderValue = json_encode($initialOrder);
         }
 
+        // Upsert: update the song when it exists, otherwise create the row. The child `blocks`
+        // rows have a FK to `songs`, so the parent must exist before insertBlocks() runs — a plain
+        // UPDATE silently affects 0 rows for a missing song and the block insert then fails (1452).
         $stmt = self::prepare('
-			UPDATE `songs`
-			SET `authors` = ?,
-			    `copyright` = ?
-			WHERE `songnumber` = ?
-			AND `account` = ?
+			INSERT INTO `songs` (`account`, `songnumber`, `title`, `initialOrder`, `order`, `authors`, `copyright`)
+			VALUES (?, ?, ?, ?, ?, ?, ?)
+			ON DUPLICATE KEY UPDATE
+				`title` = VALUES(`title`),
+				`initialOrder` = VALUES(`initialOrder`),
+				`order` = VALUES(`order`),
+				`authors` = VALUES(`authors`),
+				`copyright` = VALUES(`copyright`)
 		');
 
         $stmt->bind_param(
-            'ssii',
-            $authors,
-            $copyright,
+            'iisssss',
+            $account,
             $songNumber,
-            $account
-        )->execute()->close();
-
-        $stmt = self::prepare('
-			UPDATE `songs`
-			SET `title` = ?,
-			    `initialOrder` = ?,
-			    `order` = ?,
-			    `authors` = ?,
-			    `copyright` = ?
-			WHERE `songnumber` = ?
-			AND `account` = ?
-		');
-
-        $stmt->bind_param(
-            'sssssii',
             $title,
             join(self::SEPARATOR_ORDER, $initialOrder),
             $orderValue,
             $authors,
-            $copyright,
-            $songNumber,
-            $account
+            $copyright
         )->execute()->close();
 
         $this->insertBlocks($account, $songNumber, $blocks);

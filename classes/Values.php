@@ -16,6 +16,15 @@ class Values
         return isset($this->values[$attribute]);
     }
 
+    /**
+     * Whether the attribute was supplied at all (distinguishes an explicit null from an absent
+     * key — unlike {@see has()}, which is isset-based and false for null values).
+     */
+    public function provided(string $attribute): bool
+    {
+        return array_key_exists($attribute, $this->values);
+    }
+
     public function hasPath(string $name, bool $checkValue = true): bool
     {
         foreach ($this->values as $key => $value) {

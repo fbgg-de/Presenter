@@ -41,8 +41,12 @@ if (!isset($_SESSION['authType']) || empty($_SESSION['authType'])) {
     // GET (read) and DELETE (clear) still require admin auth — only write is open.
     $isAnonymousLogWrite = $restClass === 'Log' && $_SERVER['REQUEST_METHOD'] === 'POST';
 
-    if (!in_array($restClass, ['Session', 'Accounts']) && !$isAnonymousLogWrite) {
-        (new Response())->error(401, 'permission denied for accessing "/rest/' . $restClass . '"');
+    if (!in_array($restClass, ['Session', 'Accounts', 'ValidateToken']) && !$isAnonymousLogWrite) {
+        // An unauthenticated request to a protected endpoint is an *expected*
+        // condition (e.g. a device whose session lapsed still polling /rest/Shows
+        // or /rest/PdfAnnotations). It is a normal 401 HTTP outcome, not a server
+        // fault — don't log it, or the error log fills with permission-denied noise.
+        (new Response())->error(401, 'permission denied for accessing "/rest/' . $restClass . '"', false);
     }
 }
 

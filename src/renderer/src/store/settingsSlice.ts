@@ -31,6 +31,8 @@ export interface SettingsState {
   globalStyleId: number;
   hideTransitionDuration: number;
   hideTransitionMode: Transition;
+  /** When ChurchTools is enabled, include CCLI SongSelect results in the unified search. Persisted. */
+  includeChurchToolsResults: boolean;
   keyboardMapping: Record<string, { enabled: boolean; key: string }>;
   keyboardNavigationBlocks: boolean;
   keyboardNavigationLines: boolean;
@@ -91,6 +93,7 @@ const defaultState: SettingsState = {
   globalStyleId: 0,
   hideTransitionDuration: 300,
   hideTransitionMode: 'cut',
+  includeChurchToolsResults: true,
   keyboardMapping: {},
   keyboardNavigationBlocks: true,
   keyboardNavigationLines: true,

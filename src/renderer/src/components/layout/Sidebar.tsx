@@ -9,6 +9,7 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
+  Skeleton,
   Snackbar,
   Stack,
   Typography,
@@ -73,9 +74,8 @@ import { useSaveShowMutation } from '@/api/shows.api';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
 import { useLazyGetSongQuery, useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
-import { useGetChurchToolsSongQuery } from '@/api/churchtools.api';
-import type { CtSongDetail } from '@/api/churchtools.api';
 import { useMetrics } from '@/hooks/useMetrics';
+import { useCcliSongImport } from '@/hooks/useCcliSongImport';
 import { loadShowSongs } from '@/store/songsSlice';
 import { StyleEditor } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
@@ -123,10 +123,9 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [windowManagerOpen, setWindowManagerOpen] = useState(false);
   /** Error message shown when a song file import fails. */
   const [importErrorMsg, setImportErrorMsg] = useState<string | null>(null);
+  /** Result notification for the ChurchTools event-agenda sync on save. */
+  const [syncMsg, setSyncMsg] = useState<{ severity: 'success' | 'warning'; text: string } | null>(null);
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<null | HTMLElement>(null);
-  /** ChurchTools: selected song for the arrangement panel */
-  const [ctSongId, setCtSongId] = useState<number | null>(null);
-  const [ctSongName, setCtSongName] = useState<string>('');
 
   const { data: session } = useGetSessionQuery();
   const bibleEnabled = session?.settings?.bibleEnabled ?? false;
@@ -152,68 +151,34 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [saveShowMutation] = useSaveShowMutation();
   const [createSongMutation] = useCreateSongMutation();
   const [updateSongMutation] = useUpdateSongMutation();
+  const importCcliSong = useCcliSongImport();
+  // True while a CCLI SongSelect import is resolving — drives a placeholder row in the list.
+  const [isImportingCcli, setIsImportingCcli] = useState(false);
   const { data: availableStyles = [] } = useGetStylesQuery();
 
-  // ChurchTools: fetch arrangements when a CT song is selected
-  const { data: ctSongDetail } = useGetChurchToolsSongQuery({ ctSongId: ctSongId! }, { skip: ctSongId === null });
-
   /**
-   * Import a ChurchTools song into the local library, then add it to the show.
-   * Uses the CT song data (name, author, copyright, CCLI) to pre-populate the song.
-   * If the song (by CCLI) is already in the library, adds it directly without re-importing.
+   * Import a CCLI SongSelect suggestion into the local library and add it to the show.
+   * The CCLI number is used as the song number; if a song with that CCLI number already
+   * exists locally it is added directly without re-importing. Author/copyright come from
+   * the search result; lyrics (when available) are resolved via the CCLI detail endpoint.
    */
-  const handleChurchToolsSongSelected = async (selectedCtSongId: number, name: string, detail?: CtSongDetail) => {
-    const ccliNumber = detail?.ccli ? parseInt(detail.ccli, 10) : undefined;
-
-    // Check if a song with this CCLI is already in the local store
-    if (ccliNumber && ccliNumber > 0) {
-      const existing = Object.values(songs).find((s) => (s as ISong & { ccliNumber?: number }).ccliNumber === ccliNumber);
-      if (existing) {
-        dispatch(addToSongsOrder(existing.songNumber));
-        dispatch(addShowItem({ type: 'song', songNumber: existing.songNumber, order: 'Default' }));
-        setOpenSongSearch(false);
-        return;
-      }
-    }
-
-    try {
-      const result = await createSongMutation({
-        title: name,
-        authors: detail?.author ?? '',
-        copyright: detail?.copyright ?? '',
-        initialOrder: [],
-        order: { Default: [] },
-        blocks: {},
-        ...(ccliNumber && ccliNumber > 0 ? { songNumber: ccliNumber } : {}),
-      }).unwrap();
-
-      const savedSong = new Song({
-        songNumber: result.songNumber,
-        title: name,
-        authors: detail?.author ?? '',
-        copyright: detail?.copyright ?? '',
-        initialOrder: [],
-        order: { Default: [] },
-        blocks: {},
-      });
-
-      dispatch(addSongToStore(savedSong));
-      dispatch(addToSongsOrder(savedSong.songNumber));
-      dispatch(addShowItem({ type: 'song', songNumber: savedSong.songNumber, order: 'Default' }));
-    } catch (err) {
-      console.error('Failed to import ChurchTools song:', err);
-      const serverMessage =
-        err != null && typeof err === 'object' && 'data' in err ? String((err as { data?: { message?: string } }).data?.message ?? '') : '';
-      const isDuplicate = serverMessage.toLowerCase().includes('already exists');
-      setImportErrorMsg(
-        `${name}: ${isDuplicate ? LL.SONGS.IMPORT_ERROR_DUPLICATE() : LL.SONGS.IMPORT_ERROR()}${serverMessage && !isDuplicate ? ` (${serverMessage})` : ''}`,
-      );
-    }
-
-    // Store the CT song context so the arrangement panel can be shown
-    setCtSongId(selectedCtSongId);
-    setCtSongName(name);
+  const handleChurchToolsSongSelected = async (
+    ccliNumber: number,
+    name: string,
+    meta?: { author?: string | null; copyright?: string | null },
+  ) => {
     setOpenSongSearch(false);
+    setIsImportingCcli(true);
+    try {
+      const res = await importCcliSong(ccliNumber, name, meta);
+      if (!res.ok) {
+        setImportErrorMsg(
+          `${name}: ${res.isDuplicate ? LL.SONGS.IMPORT_ERROR_DUPLICATE() : LL.SONGS.IMPORT_ERROR()}${res.serverMessage && !res.isDuplicate ? ` (${res.serverMessage})` : ''}`,
+        );
+      }
+    } finally {
+      setIsImportingCcli(false);
+    }
   };
 
   // Item context menu state
@@ -249,12 +214,25 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const handleSaveShow = async () => {
     if (!currentShow) return;
     try {
-      await saveShowMutation({
+      // Don't send eventId here — this isn't where the event link is chosen, so omitting it
+      // lets the backend preserve the existing link (only the event picker dialogs change it).
+      // The save endpoint reconciles the linked event's agenda itself (every save → in sync).
+      const result = await saveShowMutation({
         title: currentShow.title,
         order: currentShow.order,
+        styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
       trackEvent('show_saved', 'show', currentShow.title);
+
+      const eventSync = result.eventSync;
+      if (eventSync) {
+        setSyncMsg(
+          eventSync.ok
+            ? { severity: 'success', text: LL.SHOWS.EVENT_SYNCED() }
+            : { severity: 'warning', text: LL.SHOWS.EVENT_SYNC_FAILED() },
+        );
+      }
     } catch (error) {
       console.error('Failed to save show:', error);
     }
@@ -328,7 +306,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
           }),
         );
 
-        trackEvent('song_selected', 'song', String(songToAdd.songNumber));
+        trackEvent('song_selected', 'song', String(songToAdd.songNumber), { title: songToAdd.title });
         setOpenSongSearch(false);
       }
     } catch (error) {
@@ -371,6 +349,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
             title: show.title,
             order: orderToSave,
             styleId: override ? (currentShow?.styleId ?? null) : (show.styleId ?? null),
+            eventId: (override ? currentShow?.eventId : show.eventId) ?? null,
+            eventName: (override ? currentShow?.eventName : show.eventName) ?? null,
           }).unwrap();
         } catch (error) {
           console.error('Failed to create new show:', error);
@@ -422,6 +402,9 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         dispatch(addSongToStore(savedSong));
         dispatch(addToSongsOrder(savedSong.songNumber));
         dispatch(addShowItem({ type: 'song', songNumber: savedSong.songNumber, order: 'Default' }));
+        trackEvent('song_imported', 'song', String(result.songNumber), {
+          source: file.name.endsWith('.sng') ? 'sng' : 'ccli_txt',
+        });
       } catch (err) {
         console.error('Failed to upload imported song:', err);
         const serverMessage =
@@ -547,6 +530,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const saveCurrentShow = async (orderOverride?: ShowItem[]) => {
     if (!currentShow) return;
     try {
+      // Omit eventId so the backend preserves the existing ChurchTools event link
+      // (this auto-save fires on reorder/key changes, not when choosing an event).
       await saveShowMutation({
         title: currentShow.title,
         order: orderOverride ?? currentShow.order,
@@ -594,6 +579,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     }).unwrap();
 
     dispatch(updateSongInStore(updatedSong));
+    trackEvent('song_updated', 'song', String(updatedSong.songNumber), { via: 'order' });
     dispatch(setCurrentSongOrderAction({ songNumber: updatedSong.songNumber, orderName }));
     dispatch(updateShowItem({ index: quickOrderContext.itemIndex, item: { order: orderName } }));
     const nextShowOrder = showItems.map((showItem, idx) =>
@@ -637,6 +623,17 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       >
         <Alert severity="error" onClose={() => setImportErrorMsg(null)} sx={{ width: '100%' }}>
           {importErrorMsg}
+        </Alert>
+      </Snackbar>
+      {/* ChurchTools event sync notification */}
+      <Snackbar
+        open={syncMsg !== null}
+        autoHideDuration={6000}
+        onClose={() => setSyncMsg(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={syncMsg?.severity ?? 'success'} onClose={() => setSyncMsg(null)} sx={{ width: '100%' }}>
+          {syncMsg?.text}
         </Alert>
       </Snackbar>
       <Settings open={openSettings} setOpen={setOpenSettings} />
@@ -704,8 +701,13 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
                 setOpenSongSearch(false);
                 setOpenSongLibrary(true);
               }}
+              onOpenMediaBrowser={() => {
+                setOpenSongSearch(false);
+                setMediaBrowserPickType('any');
+                setOpenMediaBrowser(true);
+              }}
               churchToolsEnabled={churchToolsEnabled}
-              onSelectChurchToolsSong={(id, name) => void handleChurchToolsSongSelected(id, name, ctSongDetail)}
+              onSelectChurchToolsSong={(id, name, meta) => void handleChurchToolsSongSelected(id, name, meta)}
             />
           </Box>
         ) : (
@@ -1016,6 +1018,15 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       </Menu>
       <DraggableList
         sx={{ overflow: 'auto' }}
+        footer={
+          // Placeholder row while a CCLI SongSelect import resolves (it can take a moment).
+          isImportingCcli ? (
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 3, py: 1 }}>
+              <Skeleton variant="circular" width={20} height={20} />
+              <Skeleton variant="text" sx={{ flex: 1, fontSize: '1rem' }} />
+            </Stack>
+          ) : undefined
+        }
         onItemsChanged={(source, destination) => {
           dispatch(reorderShowItems({ source, destination }));
 

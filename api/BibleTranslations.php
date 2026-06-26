@@ -10,8 +10,10 @@ class BibleTranslations extends RestController
 
     protected function get(Request &$req, Response &$res): never
     {
-        if (!defined('BIBLE_API') || empty(BIBLE_API['base_url'])) {
-            $res->error(503, 'Bible API is not configured. Please configure BIBLE_API in config.php.');
+        // Bible feature disabled (or unconfigured) — return an empty list quietly so the
+        // client doesn't trigger a 502 (and error-log spam) against an unconfigured API.
+        if (!defined('BIBLE_API') || !is_array(BIBLE_API) || empty(BIBLE_API['enabled']) || empty(BIBLE_API['base_url'])) {
+            $res->success([]);
         }
 
         $lang = $req->query->get('lang', null, false);

@@ -436,7 +436,14 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
       displayMode: newCfg.displayMode,
       width: newCfg.width,
       height: newCfg.height,
+      left: selectedScreen?.bounds.x,
+      top: selectedScreen?.bounds.y,
+      screen: selectedScreen?.label,
       fullscreen: newCfg.fullscreen,
+      frameless: newCfg.frameless,
+      transparent: newCfg.transparent,
+      alwaysOnTop: newCfg.alwaysOnTop,
+      styleId: newCfg.styleId || undefined,
     });
     setCreateExpanded(false);
     getOpenWindows()

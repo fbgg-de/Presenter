@@ -3,6 +3,7 @@ import type { ApiSuccess } from './base.api';
 
 export type MetricEvent = {
   id: number;
+  account?: number;
   user_sub?: string;
   event: string;
   entity_type?: string;

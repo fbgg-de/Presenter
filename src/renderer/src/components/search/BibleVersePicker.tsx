@@ -21,6 +21,7 @@ import { MenuBook as MenuBookIcon, Add as AddIcon, Close as CloseIcon } from '@m
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetBibleVersesQuery, useGetBibleTranslationsQuery } from '@/api/bible.api';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSessionQuery } from '@/api/session.api';
 
 interface BibleVersePickerProps {
   open: boolean;
@@ -32,18 +33,21 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
   const { LL } = useI18nContext();
 
   const { bibleTranslation } = useGetSettings();
+  const { data: session } = useGetSessionQuery();
+  const bibleEnabled = session?.settings?.bibleEnabled ?? false;
 
   const [reference, setReference] = useState('');
   const [translation, setTranslation] = useState(bibleTranslation);
   const [languageFilter, setLanguageFilter] = useState('');
   const [shouldFetch, setShouldFetch] = useState(false);
 
-  // Fetch translations list
+  // Fetch translations list — only when the picker is open and the Bible API is enabled,
+  // so we never hit the (possibly unconfigured) API when the feature is off.
   const {
     data: translations,
     isLoading: translationsLoading,
     error: translationsError,
-  } = useGetBibleTranslationsQuery(languageFilter ? { lang: languageFilter } : undefined);
+  } = useGetBibleTranslationsQuery(languageFilter ? { lang: languageFilter } : undefined, { skip: !open || !bibleEnabled });
 
   // Fetch verse only when user clicks search
   const {

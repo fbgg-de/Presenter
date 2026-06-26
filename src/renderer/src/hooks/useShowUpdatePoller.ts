@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setCurrentShow, useGetShow } from '@/store/showSlice';
 import { loadShowSongs } from '@/store/songsSlice';
-import { useGetShowsQuery } from '@/api/shows.api';
+import { useGetShowsRevisionQuery, useLazyGetShowQuery } from '@/api/shows.api';
 import { useGetSessionQuery } from '@/api/session.api';
 import { useGetSettings } from '@/store/settingsSlice';
 import type { Show } from '@/api/shows.api';
@@ -20,50 +20,83 @@ const normalizeOrderSig = (show: Show | null | undefined): string => {
 };
 
 /**
- * Polls the server every 30 s for changes to the currently loaded show.
- * When the server version of the show's order differs from the local snapshot
- * (i.e. what was last loaded from the server), the returned `updateAvailable`
- * flag is set to `true`.
+ * Polls the server every 30 s for changes to the currently loaded show and flags when
+ * *someone else* changed it on the server.
  *
- * Calling `reloadShow()` applies the server version and resets the flag.
- * Calling `dismiss()` clears the flag without reloading.
+ * To keep the background poll cheap, it hits the lightweight `ShowsRevision` feed
+ * (title + date only) rather than downloading every show's full `order` payload. The
+ * full show is fetched **only when the server timestamp actually changes** — and then
+ * its order is compared against our snapshot to tell our own save apart from a foreign
+ * edit (so saving your own show never raises the banner).
+ *
+ * - `updateAvailable` — a newer, foreign version exists on the server.
+ * - `updatedAt`        — the server timestamp of the loaded show (for relative display).
+ * - `reloadShow()`     — apply the server version and reset the flag.
+ * - `dismiss()`        — clear the flag without reloading.
  */
 export const useShowUpdatePoller = () => {
   const dispatch = useAppDispatch();
   const { currentShow, isShowSelectorOpen } = useGetShow();
   const { serverSnapshot } = useAppSelector((s) => s.show);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
-  // Gate polling on authentication — re-uses the cached session result so no
-  // extra network request is made.  Without this guard, the Shows query fires
-  // immediately on mount (because currentShow persists in localStorage) and
-  // produces a 401 while the user is still on the login page.
+  // The server timestamp last observed for the current show (avoids re-fetching the
+  // full show unless it actually changed).
+  const lastSeenDateRef = useRef<string | null>(null);
+  const currentTitleRef = useRef<string | null>(null);
+
   const { offlineMode } = useGetSettings();
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
   const isAuthenticated = offlineMode || session?.isAuthenticated === true;
 
-  const { data: polledShowsData } = useGetShowsQuery(
-    { limit: 9999, page: 0 },
-    { pollingInterval: POLL_INTERVAL_MS, skip: !currentShow || isShowSelectorOpen || !isAuthenticated },
-  );
+  const { data: revisionData } = useGetShowsRevisionQuery(undefined, {
+    pollingInterval: POLL_INTERVAL_MS,
+    skip: !currentShow || isShowSelectorOpen || !isAuthenticated,
+  });
+  const [fetchShow] = useLazyGetShowQuery();
+
+  // Reset the baseline when the loaded show changes.
+  useEffect(() => {
+    if (currentShow?.title !== currentTitleRef.current) {
+      currentTitleRef.current = currentShow?.title ?? null;
+      lastSeenDateRef.current = null;
+      setUpdateAvailable(false);
+      setUpdatedAt(null);
+    }
+  }, [currentShow?.title]);
 
   useEffect(() => {
-    if (!currentShow || !polledShowsData) return;
-    const polledShow: Show | undefined = polledShowsData.shows?.find((s: Show) => s.title === currentShow.title);
-    if (!polledShow) return;
+    if (!currentShow || !revisionData) return;
+    const rev = revisionData.shows?.find((r) => r.title === currentShow.title);
+    if (!rev) return;
 
-    const polledSig = normalizeOrderSig(polledShow);
-    const snapshotSig = normalizeOrderSig(serverSnapshot ?? currentShow);
-    if (polledSig !== snapshotSig) {
-      setUpdateAvailable(true);
-    }
-  }, [polledShowsData, currentShow, serverSnapshot]);
+    setUpdatedAt(rev.date ?? null);
+
+    // Server timestamp unchanged since we last looked → nothing to do (cheap path).
+    if (rev.date === lastSeenDateRef.current) return;
+    lastSeenDateRef.current = rev.date ?? null;
+
+    // Timestamp changed — fetch just this show and classify our own save vs a foreign edit.
+    fetchShow({ title: currentShow.title })
+      .unwrap()
+      .then((data) => {
+        const polledShow = data.shows?.[0];
+        if (!polledShow) return;
+        const polledSig = normalizeOrderSig(polledShow);
+        const snapshotSig = normalizeOrderSig(serverSnapshot ?? currentShow);
+        setUpdateAvailable(polledSig !== snapshotSig);
+      })
+      .catch(() => {});
+  }, [revisionData, currentShow, serverSnapshot, fetchShow]);
 
   const reloadShow = async () => {
     setUpdateAvailable(false);
-    if (!currentShow || !polledShowsData) return;
-    const polled: Show | undefined = polledShowsData.shows?.find((s: Show) => s.title === currentShow.title);
+    if (!currentShow) return;
+    const data = await fetchShow({ title: currentShow.title }).unwrap();
+    const polled: Show | undefined = data.shows?.[0];
     if (polled) {
+      lastSeenDateRef.current = polled.date ?? lastSeenDateRef.current;
       dispatch(setCurrentShow(polled));
       await dispatch(loadShowSongs(polled));
     }
@@ -71,5 +104,5 @@ export const useShowUpdatePoller = () => {
 
   const dismiss = () => setUpdateAvailable(false);
 
-  return { updateAvailable, reloadShow, dismiss };
+  return { updateAvailable, updatedAt, reloadShow, dismiss };
 };

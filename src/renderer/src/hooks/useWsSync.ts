@@ -19,6 +19,8 @@ export interface WsSyncState {
   showTitle?: string;
   orderName?: string;
   contentType?: string;
+  blockName?: string;
+  blockLines?: Array<{ text: string; language?: string }>;
 }
 
 interface UseWsSyncOptions {

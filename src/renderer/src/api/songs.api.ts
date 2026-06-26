@@ -64,6 +64,19 @@ const songsApi = presenterApi.injectEndpoints({
         { type: 'Song', id: arg.songNumber },
       ],
     }),
+    /** Renumber a custom song to its CCLI id, migrating all show items + references. */
+    renumberSong: build.mutation<
+      ApiSuccess<{ message: string; oldNumber: number; newNumber: number; showsUpdated: number }>,
+      { oldNumber: number; newNumber: number }
+    >({
+      query: (body) => ({ url: 'rest/SongRenumber', method: 'POST', body }),
+      invalidatesTags: (_res, _err, arg) => [
+        { type: 'Songs', id: 'LIST' },
+        { type: 'Song', id: arg.oldNumber },
+        { type: 'Song', id: arg.newNumber },
+        { type: 'Shows', id: 'LIST' },
+      ],
+    }),
     songExists: build.query<ApiSuccess<{ exists: boolean; order: string }>, { songNumber: number }>({
       query: ({ songNumber }) => `rest/SongExists/${songNumber}`,
     }),
@@ -82,6 +95,7 @@ export const {
   useCreateSongMutation,
   useUpdateSongMutation,
   useDeleteSongMutation,
+  useRenumberSongMutation,
   useSongExistsQuery,
   useGetLanguageTagsQuery,
 } = songsApi;

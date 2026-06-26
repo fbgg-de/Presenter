@@ -117,7 +117,6 @@ class OidcClient
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode !== 200 || !$response) {
             throw new Exception('Token refresh failed (HTTP ' . $httpCode . ')');
@@ -176,13 +175,11 @@ class OidcClient
             } else {
                 // Load the provider from DB
                 require_once(__DIR__ . '/../classes/DB.php');
-                $db   = DB::getInstance();
-                $stmt = $db->prepare('SELECT * FROM `oidc_providers` WHERE `id` = ? AND `enabled` = 1 LIMIT 1');
-                $stmt->bind_param('i', $providerId);
-                $stmt->execute();
-                $result   = $stmt->get_result();
-                $provider = $result->fetch_assoc();
-                $stmt->close();
+                DB::prepare('SELECT * FROM `oidc_providers` WHERE `id` = ? AND `enabled` = 1 LIMIT 1')
+                  ->bind_param('i', $providerId)
+                  ->execute()
+                  ->fetchOne($provider)
+                  ->close();
 
                 if (!$provider) {
                     return false;

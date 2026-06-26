@@ -312,6 +312,18 @@ class Pdfs extends RestController
         }
 
         rename($oldPath, $newPath);
+
+        // Move the filename-keyed metadata (area mappings + annotations) with the file, otherwise
+        // it is orphaned and lost when a PDF is renamed (e.g. promoting/demoting the default).
+        $account = intval($_SESSION['account']);
+        $sn      = intval($songNumber);
+        $oldBase = basename($oldName);
+        $newBase = basename($newName);
+        foreach (['pdf_area_mappings', 'pdf_annotations'] as $table) {
+            self::prepare("UPDATE `{$table}` SET `filename` = ? WHERE `account` = ? AND `songnumber` = ? AND `filename` = ?")
+                ->bind_param('siis', $newBase, $account, $sn, $oldBase)->execute()->close();
+        }
+
         $res->success(['message' => 'Renamed ' . $oldName . ' to ' . $newName]);
     }
 

@@ -10,8 +10,9 @@ class BibleVerses extends RestController
 
     protected function get(Request &$req, Response &$res): never
     {
-        if (!defined('BIBLE_API') || empty(BIBLE_API['base_url'])) {
-            $res->error(503, 'Bible API is not configured. Please configure BIBLE_API in config.php.');
+        // Bible feature disabled (or unconfigured) — fail quietly without logging.
+        if (!defined('BIBLE_API') || !is_array(BIBLE_API) || empty(BIBLE_API['enabled']) || empty(BIBLE_API['base_url'])) {
+            $res->error(503, 'Bible API is disabled', false);
         }
 
         $ref = urldecode($req->path->get(0, ''));

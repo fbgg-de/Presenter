@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo, type DragEvent, type ChangeEvent } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect, type DragEvent, type ChangeEvent } from 'react';
 import {
   Alert,
   Box,
@@ -22,6 +22,7 @@ import {
   MenuItem,
   Paper,
   Select,
+  Skeleton,
   Stack,
   TextField,
   Tooltip,
@@ -38,13 +39,16 @@ import {
   InsertDriveFile as FileIcon,
   CheckCircle as ActiveIcon,
   PictureInPicture as MappingIcon,
+  MusicNote as MusicNoteIcon,
+  Download as DownloadIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useListPdfsQuery, useUploadPdfMutation, useDeletePdfMutation, useRenamePdfMutation, type PdfFileInfo } from '@/api/pdfs.api';
+import { useImportCcliChordsMutation, useLazyGetChurchToolsCcliDetailQuery } from '@/api/churchtools.api';
 import { MUSICAL_KEYS } from '@/utils/orderKeyUtils';
+import { SONG_CUSTOM_NUMBER_LIMIT } from '@/song';
 import { formatDateTime, formatFileSize } from '@/utils';
 import { useMetrics } from '@/hooks/useMetrics';
-import { ChurchToolsArrangementPanel } from '@/components/churchtools/ChurchToolsArrangementPanel';
 import { useGetSessionQuery } from '@/api/session.api';
 
 /**
@@ -69,9 +73,7 @@ interface PdfUploadModalProps {
   onSelectPdf?: (filename: string | null) => void;
   /** Called to open the area mapping editor for a specific PDF */
   onOpenAreaMapping?: () => void;
-  /** ChurchTools song ID — when provided the arrangement panel is shown */
-  ctSongId?: number | null;
-  /** ChurchTools song name */
+  /** ChurchTools song name — used as the title when importing the chord chart from CCLI */
   ctSongName?: string;
 }
 
@@ -83,7 +85,6 @@ export const PdfUploadModal = ({
   selectedPdf,
   onSelectPdf,
   onOpenAreaMapping,
-  ctSongId,
   ctSongName,
 }: PdfUploadModalProps) => {
   const { LL } = useI18nContext();
@@ -110,6 +111,84 @@ export const PdfUploadModal = ({
   const [uploadPdf, { isLoading: isUploading }] = useUploadPdfMutation();
   const [deletePdf, { isLoading: isDeleting }] = useDeletePdfMutation();
   const [renamePdf] = useRenamePdfMutation();
+
+  // CCLI chord-chart download — only for CCLI-imported songs (which use the CCLI number as
+  // their song number), when ChurchTools is configured.
+  const isCcliSong = songNumber >= SONG_CUSTOM_NUMBER_LIMIT;
+  const [importChords] = useImportCcliChordsMutation();
+  const [fetchCcliDetail] = useLazyGetChurchToolsCcliDetailQuery();
+  const [chordKey, setChordKey] = useState('');
+  const [defaultKey, setDefaultKey] = useState('');
+  const [chordColumns, setChordColumns] = useState(2);
+  const [chordDefault, setChordDefault] = useState(false);
+  const [chordLoading, setChordLoading] = useState(false);
+  const [chordMsg, setChordMsg] = useState<{ severity: 'success' | 'info' | 'error'; text: string } | null>(null);
+  // Resolving the CCLI detail (for the default key) takes a moment; track it for the skeleton.
+  const [chordDetailLoading, setChordDetailLoading] = useState(false);
+  // A CCLI song with no default key has no chord sheet on CCLI → don't offer the import.
+  const [chordAvailable, setChordAvailable] = useState(true);
+
+  // For CCLI songs, resolve the song's default key once the modal opens and preselect it.
+  useEffect(() => {
+    if (!open || !isCcliSong || !churchToolsEnabled) return;
+    let cancelled = false;
+    setChordDetailLoading(true);
+    setChordAvailable(true);
+    (async () => {
+      try {
+        const detail = await fetchCcliDetail({ songNumber }, true).unwrap();
+        if (cancelled) return;
+        const k = detail.key ?? '';
+        setDefaultKey(k);
+        setChordKey((prev) => (prev === '' ? k : prev));
+        // No key in the CCLI metadata means CCLI has no chord sheet for this song.
+        setChordAvailable(!!k);
+      } catch {
+        // Unknown — keep offering the import (best-effort; the backend reports if unavailable).
+        if (!cancelled) setChordAvailable(true);
+      } finally {
+        if (!cancelled) setChordDetailLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, isCcliSong, churchToolsEnabled, songNumber, fetchCcliDetail]);
+
+  const handleDownloadChords = async () => {
+    setChordLoading(true);
+    setChordMsg(null);
+    let key = chordKey;
+    let title = ctSongName ?? '';
+    // When no key was explicitly chosen (or the title is unknown), resolve them from CCLI.
+    if (key === '' || title === '') {
+      try {
+        const detail = await fetchCcliDetail({ songNumber }, false).unwrap();
+        if (key === '') key = detail.key ?? '';
+        if (title === '') title = detail.name ?? '';
+      } catch {
+        /* fall through with what we have; backend defaults the key */
+      }
+    }
+    try {
+      const res = await importChords({ songNumber, title, key, columns: chordColumns, markDefault: chordDefault }).unwrap();
+      trackEvent('ccli_chords_imported', 'pdf', String(songNumber), {
+        key: key || 'original',
+        columns: chordColumns,
+        default: chordDefault,
+        filename: res.filename,
+      });
+      setChordMsg({ severity: 'success', text: LL.PDF.IMPORT_CHORDS_SUCCESS() });
+    } catch (err) {
+      const status = (err as { status?: number }).status;
+      setChordMsg({
+        severity: status === 404 ? 'info' : 'error',
+        text: status === 404 ? LL.PDF.IMPORT_CHORDS_NONE() : LL.PDF.IMPORT_CHORDS_ERROR(),
+      });
+    } finally {
+      setChordLoading(false);
+    }
+  };
 
   const existingFilenames = useMemo(() => pdfs.map((p) => p.filename.toLowerCase()), [pdfs]);
 
@@ -185,10 +264,31 @@ export const PdfUploadModal = ({
     const key = detectKeyFromFilename(pdf.filename);
     const newName = key ? `Default-${key}.pdf` : 'Default.pdf';
     if (pdf.filename === newName) return;
+
+    // Demote a former default to a non-default name, keeping its own key as the trailing
+    // segment (so it stays detectable) and bumping the label for uniqueness.
+    const taken = new Set(pdfs.map((p) => p.filename.toLowerCase()));
+    const demotedName = (ownKey: string | undefined): string => {
+      const keySuffix = ownKey ? `-${ownKey}` : '';
+      let n = 0;
+      let name = `Chords${keySuffix}.pdf`;
+      while (taken.has(name.toLowerCase())) {
+        n += 1;
+        name = `Chords${n}${keySuffix}.pdf`;
+      }
+      taken.add(name.toLowerCase());
+      return name;
+    };
+
     try {
+      // Demote every other current default (regardless of key) so exactly one default remains.
+      const oldDefaults = pdfs.filter((p) => p.filename !== pdf.filename && p.filename.toLowerCase().startsWith('default'));
+      for (const old of oldDefaults) {
+        await renamePdf({ songNumber, oldName: old.filename, newName: demotedName(detectKeyFromFilename(old.filename)) }).unwrap();
+      }
       await renamePdf({ songNumber, oldName: pdf.filename, newName }).unwrap();
     } catch (err) {
-      console.error('Failed to rename PDF:', err);
+      console.error('Failed to set default PDF:', err);
     }
   };
 
@@ -411,6 +511,83 @@ export const PdfUploadModal = ({
             </List>
           )}
 
+          {/* Import the CCLI chord chart straight into the song's PDFs (CCLI songs only). */}
+          {churchToolsEnabled && isCcliSong && (
+            <Paper variant="outlined" sx={{ p: 1.5 }}>
+              <Stack spacing={1.5}>
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                  <MusicNoteIcon fontSize="small" color="action" />
+                  <Typography variant="subtitle2">{LL.PDF.IMPORT_CHORDS()}</Typography>
+                </Stack>
+                {chordDetailLoading ? (
+                  // Resolving the song's CCLI metadata (default key / availability) — show a skeleton.
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Skeleton variant="rounded" width={130} height={40} />
+                    <Skeleton variant="rounded" width={100} height={40} />
+                    <Skeleton variant="rounded" width={120} height={24} />
+                    <Skeleton variant="rounded" width={110} height={36} />
+                  </Stack>
+                ) : !chordAvailable ? (
+                  // No default key in the CCLI metadata → CCLI has no chord sheet; don't offer the import.
+                  <Alert severity="info" sx={{ py: 0.5 }}>
+                    {LL.PDF.IMPORT_CHORDS_NONE()}
+                  </Alert>
+                ) : (
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+                    <FormControl size="small" sx={{ minWidth: 130 }}>
+                      <InputLabel>{LL.PDF.KEY_LABEL()}</InputLabel>
+                      <Select value={chordKey} label={LL.PDF.KEY_LABEL()} onChange={(e) => setChordKey(e.target.value)}>
+                        {defaultKey !== '' && !MUSICAL_KEYS.includes(defaultKey) && (
+                          <MenuItem value={defaultKey}>
+                            {defaultKey} ({LL.PDF.CHORDS_DEFAULT()})
+                          </MenuItem>
+                        )}
+                        {MUSICAL_KEYS.map((k) => (
+                          <MenuItem key={k} value={k}>
+                            {k}
+                            {k === defaultKey ? ` (${LL.PDF.CHORDS_DEFAULT()})` : ''}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControl size="small" sx={{ minWidth: 100 }}>
+                      <InputLabel>{LL.PDF.CHORDS_COLUMNS()}</InputLabel>
+                      <Select
+                        value={chordColumns}
+                        label={LL.PDF.CHORDS_COLUMNS()}
+                        onChange={(e) => setChordColumns(Number(e.target.value))}
+                      >
+                        {[1, 2, 3].map((c) => (
+                          <MenuItem key={c} value={c}>
+                            {c}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormControlLabel
+                      control={<Checkbox checked={chordDefault} onChange={(e) => setChordDefault(e.target.checked)} size="small" />}
+                      label={<Typography variant="body2">{LL.PDF.MARK_DEFAULT()}</Typography>}
+                      sx={{ mr: 0 }}
+                    />
+                    <Button
+                      variant="outlined"
+                      startIcon={chordLoading ? <CircularProgress size={14} /> : <DownloadIcon />}
+                      onClick={handleDownloadChords}
+                      disabled={chordLoading}
+                    >
+                      {LL.PDF.CHORDS_IMPORT()}
+                    </Button>
+                  </Stack>
+                )}
+                {chordMsg && (
+                  <Alert severity={chordMsg.severity} onClose={() => setChordMsg(null)} sx={{ py: 0.5 }}>
+                    {chordMsg.text}
+                  </Alert>
+                )}
+              </Stack>
+            </Paper>
+          )}
+
           <Divider />
 
           {/* Import section — always available inline */}
@@ -567,13 +744,6 @@ export const PdfUploadModal = ({
           </Paper>
         </Stack>
       </DialogContent>
-      {/* ChurchTools arrangement panel */}
-      {churchToolsEnabled && ctSongId != null && ctSongName && (
-        <>
-          <Divider />
-          <ChurchToolsArrangementPanel ctSongId={ctSongId} songName={ctSongName} />
-        </>
-      )}
       <DialogActions>
         <Button onClick={handleClose}>{LL.COMMON.CLOSE()}</Button>
       </DialogActions>

@@ -96,6 +96,7 @@ export const presenterApi = createApi({
     'Song',
     'Songs',
     'Styles',
+    'ViewerToken',
   ],
   endpoints: () => ({}),
 });

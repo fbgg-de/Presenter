@@ -35,6 +35,7 @@ import { SONG_BLOCK_SEPARATOR, Song } from '@/song';
 import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { addSongToStore, updateSongInStore } from '@/store/songsSlice';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useMetrics } from '@/hooks/useMetrics';
 
 type Block = { name: string; lines: string[] };
 
@@ -85,6 +86,7 @@ export const SongEditor = (props: {
 
   const [createSongMutation] = useCreateSongMutation();
   const [updateSongMutation] = useUpdateSongMutation();
+  const { trackEvent } = useMetrics();
 
   const { open, setOpen, song, onSongCreated } = props;
 
@@ -203,6 +205,7 @@ export const SongEditor = (props: {
           blocks: newSong.blocks,
         }).unwrap();
         dispatch(updateSongInStore(newSong));
+        trackEvent('song_updated', 'song', String(newSong.songNumber), { via: 'editor' });
       } else {
         const result = await createSongMutation({
           songNumber: 0,
@@ -215,6 +218,7 @@ export const SongEditor = (props: {
         }).unwrap();
         const savedSong = new Song({ ...newSong, songNumber: result.songNumber });
         dispatch(addSongToStore(savedSong));
+        trackEvent('song_created', 'song', String(result.songNumber), { via: 'editor' });
         onSongCreated?.(savedSong);
       }
       setIsDirty(false);

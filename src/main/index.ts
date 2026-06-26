@@ -17,6 +17,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 
 const boundsFile = join(app.getPath('userData'), 'window-bounds.json');
 const cookiesFile = join(app.getPath('userData'), 'session-cookies.json');
+const backendOriginFile = join(app.getPath('userData'), 'backend-origin.json');
 // Sidecar file mirroring `presenter_media_path` from renderer localStorage so
 // that the media server can be started BEFORE the renderer has finished
 // loading. Without this the very first /list request from MediaBrowser races
@@ -82,10 +83,31 @@ const saveWindowBounds = (bounds: WindowBoundsData) => {
 
 const saveSessionCookies = async (): Promise<void> => {
   try {
-    const cookies = await session.defaultSession.cookies.get({});
+    // Only save cookies that belong to the presenter backend — never save IDP /
+    // SAML / third-party cookies because restoring them causes "Lost
+    // authentication state" errors on the next login attempt.
+    let allowedHost: string | null = null;
+    try {
+      if (existsSync(backendOriginFile)) {
+        const raw = JSON.parse(readFileSync(backendOriginFile, 'utf-8')) as { origin?: string };
+        if (raw.origin) allowedHost = new URL(raw.origin).hostname;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    const allCookies = await session.defaultSession.cookies.get({});
+    const cookies = allowedHost
+      ? allCookies.filter((c) => {
+          const domain = c.domain?.replace(/^\./, '') ?? '';
+          return domain === allowedHost || domain.endsWith(`.${allowedHost}`);
+        })
+      : []; // if backend origin is unknown, save nothing rather than saving IDP cookies
+
     const dir = app.getPath('userData');
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     writeFileSync(cookiesFile, JSON.stringify(cookies), 'utf-8');
+    console.log(`[Cookies] Saved ${cookies.length} backend cookie(s)`);
   } catch (err) {
     console.error('[Cookies] Failed to save session cookies:', err);
   }
@@ -448,6 +470,16 @@ ipcMain.on('ws-broadcast-state', (_event, data: Record<string, unknown>) => {
 // Renderer reports the configured backend URL so will-navigate can identify callbacks
 ipcMain.on('set-backend-origin', (_event, origin: string) => {
   backendOrigin = origin;
+  // Persist so saveSessionCookies knows which domain to keep
+  if (origin) {
+    try {
+      const dir = app.getPath('userData');
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+      writeFileSync(backendOriginFile, JSON.stringify({ origin }), 'utf-8');
+    } catch {
+      /* ignore */
+    }
+  }
 });
 
 // Auto-start media server when main window finishes loading and a media path is configured
@@ -548,6 +580,9 @@ app.whenReady().then(async () => {
 
   // Restore session cookies saved from the previous run so the user stays
   // logged in without re-entering credentials every time.
+  // Clear any pre-existing stale cookies first (removes lingering IDP/SAML
+  // cookies from old sessions that would cause "Lost authentication state").
+  await session.defaultSession.clearStorageData({ storages: ['cookies'] });
   await restoreSessionCookies();
 
   // Default open or close DevTools by F12 in development

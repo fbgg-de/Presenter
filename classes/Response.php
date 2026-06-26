@@ -92,7 +92,17 @@ class Response
         return $this;
     }
 
-    public function error(int $code = 500, string $message = ''): never
+    /**
+     * Send an error response.
+     *
+     * @param int $code HTTP status code.
+     * @param string $message Human-readable message (defaults to the status text).
+     * @param bool $log Whether to write the error to the log. Pass false for
+     *                  *expected* client conditions (e.g. an unauthenticated
+     *                  request to a protected endpoint) so they don't flood the
+     *                  error log — those are normal HTTP outcomes, not faults.
+     */
+    public function error(int $code = 500, string $message = '', bool $log = true): never
     {
         if (!$message) {
             $message = match ($code) {
@@ -106,8 +116,10 @@ class Response
             };
         }
 
-        require_once(__DIR__ . '/Logging.php');
-        Logging::error('(E' . $code . ') ' . $message, 2);
+        if ($log) {
+            require_once(__DIR__ . '/Logging.php');
+            Logging::error('(E' . $code . ') ' . $message, 2);
+        }
 
         $this->status($code)->end(['message' => $message]);
     }

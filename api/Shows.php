@@ -1,6 +1,7 @@
 <?php
 
 require_once(__DIR__ . '/RestController.php');
+require_once(__DIR__ . '/../classes/ChurchToolsCcli.php');
 
 class Shows extends RestController
 {
@@ -9,6 +10,9 @@ class Shows extends RestController
         $account = $req->account;
         $limit = $req->path->getAsInt('0', 10);
         $offset = $req->path->getAsInt('1', 0) * $limit;
+        // Optional single-show fetch by title — avoids loading the whole library just to look up
+        // one show (used by the update poller and the musician follow-operator sync).
+        $title = $req->query->get('title', '', false);
 
         $result = [
             "limit" => $limit,
@@ -17,16 +21,25 @@ class Shows extends RestController
             "shows" => []
         ];
 
-        $stmt = self::prepare('
-			SELECT `title`, `order`, `date`, `style_id`
+        if ($title !== '') {
+            $stmt = self::prepare('
+			SELECT `title`, `order`, `date`, `style_id`, `event_id`, `event_name`
+			FROM `shows`
+			WHERE `account` = ? AND `title` = ?
+			LIMIT 1
+		');
+            $stmt->bind_param('is', $account, $title)->execute();
+        } else {
+            $stmt = self::prepare('
+			SELECT `title`, `order`, `date`, `style_id`, `event_id`, `event_name`
 			FROM `shows`
 			WHERE `account` = ?
 			ORDER BY `date` DESC
 			LIMIT ?
 			OFFSET ?
 		');
-
-        $stmt->bind_param('iii', $account, $limit, $offset)->execute();
+            $stmt->bind_param('iii', $account, $limit, $offset)->execute();
+        }
         $stmt->fetchAll($rows);
         $stmt->close();
 
@@ -40,7 +53,9 @@ class Shows extends RestController
                 'title' => $row['title'],
                 'order' => is_array($decoded) ? $decoded : [],
                 'date' => $row['date'],
-                'styleId' => $row['style_id'] ? (int)$row['style_id'] : null
+                'styleId' => $row['style_id'] ? (int)$row['style_id'] : null,
+                'eventId' => $row['event_id'] !== null ? (int)$row['event_id'] : null,
+                'eventName' => $row['event_name'] ?? null
             ];
         }
 
@@ -56,6 +71,12 @@ class Shows extends RestController
         $order = $req->params->getAsArray('order');
         $styleIdRaw = $req->params->get('styleId', null, false);
         $styleId = ($styleIdRaw === null || $styleIdRaw === '' || (int)$styleIdRaw === 0) ? null : (int)$styleIdRaw;
+        $eventIdRaw = $req->params->get('eventId', null, false);
+        $eventId = ($eventIdRaw === null || $eventIdRaw === '' || (int)$eventIdRaw === 0) ? null : (int)$eventIdRaw;
+        $eventName = $req->params->get('eventName', null, false);
+        // Only touch the event link when the caller actually sent `eventId` — a save that omits it
+        // (e.g. a reorder/auto-save) must NOT clear the show's ChurchTools event association.
+        $updateEvent = $req->params->provided('eventId');
 
         // Validate order doesn't contain invalid song numbers
         foreach ($order as $item) {
@@ -70,23 +91,105 @@ class Shows extends RestController
             $res->error(400, 'Failed to encode order as JSON: ' . json_last_error_msg());
         }
 
-        $stmt = self::prepare('
+        // Preserve the existing event link on update unless the caller explicitly sent eventId.
+        $eventUpdate = $updateEvent
+            ? "`event_id` = VALUES(`event_id`),\n\t\t\t\t\t`event_name` = VALUES(`event_name`),\n\t\t\t\t\t"
+            : '';
+        $stmt = self::prepare("
 				INSERT INTO `shows` (
-					`account`, `title`, `order`, `style_id`
+					`account`, `title`, `order`, `style_id`, `event_id`, `event_name`
 				) VALUES (
-					?, ?, ?, ?
+					?, ?, ?, ?, ?, ?
 				)
 				ON DUPLICATE KEY UPDATE
 					`order` = VALUES(`order`),
 					`style_id` = VALUES(`style_id`),
-					`date` = CURRENT_TIMESTAMP
-			');
+					{$eventUpdate}`date` = CURRENT_TIMESTAMP
+			");
 
-        $stmt->bind_param('issi', $account, $title, $orderValue, $styleId)->execute()->close();
+        $stmt->bind_param('issiis', $account, $title, $orderValue, $styleId, $eventId, $eventName)->execute()->close();
+
+        // If the show is linked to a ChurchTools event, reconcile that event's agenda with the
+        // show's songs on EVERY save — so add/remove/reorder all stay in sync, not just reassign.
+        $eventSync = $this->syncEventAgendaIfLinked($account, $title, $order);
 
         $res->success([
-            'message' => 'show "' . $title . '" successfully uploaded'
+            'message'   => 'show "' . $title . '" successfully uploaded',
+            'eventSync' => $eventSync,
         ]);
+    }
+
+    /**
+     * Reconcile the linked ChurchTools event's agenda with the show's songs (best-effort — never
+     * fails the save). Returns the sync result, or null when the show isn't linked / CT is off.
+     */
+    private function syncEventAgendaIfLinked(int $account, string $title, array $order): ?array
+    {
+        // The event link may have been preserved (not sent) — read it from the DB.
+        $row = null;
+        $stmt = self::prepare('SELECT `event_id` FROM `shows` WHERE `account` = ? AND `title` = ?');
+        $stmt->bind_param('is', $account, $title)->execute()->fetchOne($row)->close();
+        $eventId = ($row && $row['event_id'] !== null) ? (int)$row['event_id'] : 0;
+        if ($eventId <= 0) {
+            return null;
+        }
+
+        $cfg = $this->getCtConfig($account);
+        if ($cfg === null) {
+            return null;
+        }
+
+        // Song numbers from the show order (items are objects after JSON decode).
+        $songNumbers = [];
+        foreach ($order as $item) {
+            $type = is_object($item) ? ($item->type ?? null) : (is_array($item) ? ($item['type'] ?? null) : null);
+            $num  = is_object($item) ? ($item->songNumber ?? null) : (is_array($item) ? ($item['songNumber'] ?? null) : null);
+            if ($type === 'song' && $num !== null) {
+                $songNumbers[] = (int)$num;
+            }
+        }
+
+        try {
+            $details = $this->fetchSongDetails($account, $songNumbers);
+            return ChurchToolsCcli::syncEventAgenda($eventId, $songNumbers, $details, $cfg);
+        } catch (\Throwable $e) {
+            require_once(__DIR__ . '/../classes/Logging.php');
+            Logging::debug('Shows: event agenda sync failed: ' . $e->getMessage());
+            return ['ok' => false, 'synced' => 0, 'reason' => 'exception'];
+        }
+    }
+
+    /** Load title/authors/copyright/ccli_number for the given song numbers, keyed by song number. */
+    private function fetchSongDetails(int $account, array $songNumbers): array
+    {
+        $details = [];
+        $nums    = array_values(array_filter(array_map('intval', $songNumbers)));
+        if (count($nums) === 0) {
+            return $details;
+        }
+        $placeholders = implode(',', array_fill(0, count($nums), '?'));
+        $types        = 'i' . str_repeat('i', count($nums));
+        $stmt = self::prepare("SELECT `songnumber`, `title`, `authors`, `copyright`, `ccli_number` FROM `songs` WHERE `account` = ? AND `songnumber` IN ({$placeholders})");
+        $stmt->bind_param($types, $account, ...$nums)->execute()->fetchAll($rows)->close();
+        foreach ($rows as $r) {
+            $details[(int)$r['songnumber']] = $r;
+        }
+        return $details;
+    }
+
+    /** Load the account's ChurchTools config (url + token), or null if not configured. */
+    private function getCtConfig(int $account): ?array
+    {
+        if (!$account) {
+            return null;
+        }
+        $row = null;
+        $stmt = self::prepare('SELECT `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
+        $stmt->bind_param('i', $account)->execute()->fetchOne($row)->close();
+        if (!$row || empty($row['church_tools_url']) || empty($row['church_tools_token'])) {
+            return null;
+        }
+        return ['url' => $row['church_tools_url'], 'token' => $row['church_tools_token']];
     }
 
     protected function delete(Request &$req, Response &$res): never

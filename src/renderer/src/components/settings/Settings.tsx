@@ -43,6 +43,7 @@ import { CompanionHelper } from '@/components/settings/CompanionHelper';
 import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
 import { AutoUpdaterSection } from '@/components/settings/AutoUpdaterSection';
 import { CredentialsSection } from '@/components/settings/CredentialsSection';
+import { ViewerTokenSection } from '@/components/settings/ViewerTokenSection';
 import { isElectronApp } from '@/utils';
 
 type SettingConfig = {
@@ -346,6 +347,8 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                       </Box>
                     </Stack>
                   )}
+                  {/* Viewer Token — inside General group */}
+                  {groupName === 'General' && !settings.offlineMode && <ViewerTokenSection />}
                   {/* Regular setting rows */}
                   {(groups[groupName] ?? []).map((config) => (
                     <SettingRow key={config.key} config={config} value={settings[config.key] as string} />

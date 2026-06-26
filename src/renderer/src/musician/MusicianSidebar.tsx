@@ -13,6 +13,7 @@ import {
   ListItemText,
   Menu,
   MenuItem,
+  Skeleton,
   Stack,
   Tooltip,
   Typography,
@@ -48,6 +49,9 @@ import DraggableList from '@/components/show/DraggableList';
 import { useGetMusicianSettings } from '@/store/musicianSlice';
 import { useUpdateSongMutation } from '@/api/songs.api';
 import { QuickOrderDialog } from '@/components/song/QuickOrderDialog';
+import { useMetrics } from '@/hooks/useMetrics';
+import { useCcliSongImport } from '@/hooks/useCcliSongImport';
+import { useGetSessionQuery } from '@/api/session.api';
 
 const SIDEBAR_WIDTH = 350;
 
@@ -103,6 +107,12 @@ export const MusicianSidebar = ({
 
   const [saveShowMutation] = useSaveShowMutation();
   const [updateSongMutation] = useUpdateSongMutation();
+  const { trackEvent } = useMetrics();
+  const { data: session } = useGetSessionQuery();
+  const churchToolsEnabled = session?.settings?.churchToolsEnabled ?? false;
+  const importCcliSong = useCcliSongImport();
+  // True while a CCLI SongSelect import is resolving — drives a placeholder row in the list.
+  const [isImportingCcli, setIsImportingCcli] = useState(false);
 
   const getItemLabel = useCallback(
     (item: ShowItem, index: number): string => {
@@ -146,10 +156,29 @@ export const MusicianSidebar = ({
     setSearchOpen(false);
   };
 
+  const handleChurchToolsSongSelected = async (
+    ccliNumber: number,
+    name: string,
+    meta?: { author?: string | null; copyright?: string | null },
+  ) => {
+    setSearchOpen(false);
+    setIsImportingCcli(true);
+    try {
+      await importCcliSong(ccliNumber, name, meta);
+    } finally {
+      setIsImportingCcli(false);
+    }
+  };
+
   const handleSaveShow = async () => {
     if (!currentShow) return;
     try {
-      await saveShowMutation({ title: currentShow.title, order: currentShow.order, styleId: currentShow.styleId ?? null }).unwrap();
+      // Omit eventId so the backend preserves the existing ChurchTools event link.
+      await saveShowMutation({
+        title: currentShow.title,
+        order: currentShow.order,
+        styleId: currentShow.styleId ?? null,
+      }).unwrap();
       dispatch(setDirty(false));
     } catch (error) {
       console.error('Failed to save show:', error);
@@ -159,6 +188,7 @@ export const MusicianSidebar = ({
   const saveCurrentShow = async (orderOverride?: ShowItem[]) => {
     if (!currentShow) return;
     try {
+      // Omit eventId so the backend preserves the existing ChurchTools event link.
       await saveShowMutation({
         title: currentShow.title,
         order: orderOverride ?? currentShow.order,
@@ -230,6 +260,7 @@ export const MusicianSidebar = ({
     }).unwrap();
 
     dispatch(updateSongInStore(updatedSong));
+    trackEvent('song_updated', 'song', String(updatedSong.songNumber), { via: 'order' });
     dispatch(updateShowItem({ index: quickOrderContext.itemIndex, item: { order: orderName } }));
     const nextShowOrder = showItems.map((showItem, idx) =>
       idx === quickOrderContext.itemIndex ? { ...showItem, order: orderName } : showItem,
@@ -399,6 +430,8 @@ export const MusicianSidebar = ({
                     open={searchOpen}
                     onClose={() => setSearchOpen(false)}
                     onSelectSong={(songNumber) => handleSongSelected(songNumber)}
+                    churchToolsEnabled={churchToolsEnabled}
+                    onSelectChurchToolsSong={handleChurchToolsSongSelected}
                     songsOnly
                   />
                 </Box>
@@ -451,6 +484,15 @@ export const MusicianSidebar = ({
             <DraggableList
               dense
               sx={{ flex: 1, overflow: 'auto', pt: 0 }}
+              footer={
+                // Placeholder row while a CCLI SongSelect import resolves (it can take a moment).
+                isImportingCcli ? (
+                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 2, py: 1 }}>
+                    <Skeleton variant="circular" width={20} height={20} />
+                    <Skeleton variant="text" sx={{ flex: 1, fontSize: '1rem' }} />
+                  </Stack>
+                ) : undefined
+              }
               onItemsChanged={(source, destination) => {
                 dispatch(reorderShowItems({ source, destination }));
               }}

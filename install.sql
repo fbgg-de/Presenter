@@ -15,9 +15,11 @@ CREATE TABLE `account` (
   `musician_names` JSON DEFAULT NULL,
   `church_tools_url` VARCHAR(500) DEFAULT NULL,
   `church_tools_token` VARCHAR(500) DEFAULT NULL,
+  `viewer_token` VARCHAR(64) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `lastactivity` timestamp NOT NULL DEFAULT current_timestamp(),
-  PRIMARY KEY (`license`)
+  PRIMARY KEY (`license`),
+  UNIQUE KEY `uk_account_viewer_token` (`viewer_token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -119,6 +121,8 @@ CREATE TABLE `shows` (
   `date` timestamp NOT NULL DEFAULT current_timestamp(),
   `order` JSON NOT NULL,
   `style_id` INT DEFAULT NULL,
+  `event_id` INT DEFAULT NULL,
+  `event_name` VARCHAR(255) DEFAULT NULL,
   PRIMARY KEY (`account`,`title`),
   CONSTRAINT `fk_shows_account` FOREIGN KEY (`account`) REFERENCES `account` (`license`) ON DELETE CASCADE,
   CONSTRAINT `fk_shows_style` FOREIGN KEY (`style_id`) REFERENCES `styles` (`id`) ON DELETE SET NULL
@@ -221,7 +225,7 @@ CREATE TABLE IF NOT EXISTS `schema_version` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO `schema_version` (`version`, `description`) VALUES (14, 'Fresh install — all migrations included');
+INSERT INTO `schema_version` (`version`, `description`) VALUES (15, 'Fresh install — all migrations included');
 
 COMMIT;
 

@@ -574,6 +574,32 @@ class AdminMigrations extends RestController
                     }
                 },
             ],
+
+            15 => [
+                'description' => 'Add viewer_token column to account table for standalone viewer access',
+                'up' => function (mysqli $db) use ($columnExists) {
+                    if (!$columnExists('account', 'viewer_token')) {
+                        $db->query("ALTER TABLE `account` ADD COLUMN `viewer_token` VARCHAR(64) DEFAULT NULL");
+                        echo "Added column: account.viewer_token\n";
+                        $db->query("ALTER TABLE `account` ADD UNIQUE KEY `uk_account_viewer_token` (`viewer_token`)");
+                        echo "Added unique index: uk_account_viewer_token\n";
+                    }
+                },
+            ],
+
+            16 => [
+                'description' => 'Link shows to a ChurchTools event for agenda sync',
+                'up' => function (mysqli $db) use ($columnExists) {
+                    if (!$columnExists('shows', 'event_id')) {
+                        $db->query("ALTER TABLE `shows` ADD COLUMN `event_id` INT DEFAULT NULL");
+                        echo "Added column: shows.event_id\n";
+                    }
+                    if (!$columnExists('shows', 'event_name')) {
+                        $db->query("ALTER TABLE `shows` ADD COLUMN `event_name` VARCHAR(255) DEFAULT NULL");
+                        echo "Added column: shows.event_name\n";
+                    }
+                },
+            ],
         ];
     }
 }

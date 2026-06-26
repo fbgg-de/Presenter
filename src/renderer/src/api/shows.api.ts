@@ -39,6 +39,9 @@ export type Show = {
   order: ShowItem[];
   date?: string;
   styleId?: number;
+  /** Linked ChurchTools event id (for agenda sync), if any. */
+  eventId?: number | null;
+  eventName?: string | null;
 };
 
 export type ShowsResponse = {
@@ -57,7 +60,20 @@ const showsApi = presenterApi.injectEndpoints({
       },
       providesTags: [{ type: 'Shows', id: 'LIST' }],
     }),
-    saveShow: build.mutation<ApiSuccess<{ message: string }>, { title: string; order: ShowItem[]; styleId?: number | null }>({
+    /** Fetch a single show by title (avoids loading the whole library to look one up). */
+    getShow: build.query<ApiSuccess<ShowsResponse>, { title: string }>({
+      query: ({ title }) => `rest/Shows/1/0?title=${encodeURIComponent(title)}`,
+      providesTags: [{ type: 'Shows', id: 'LIST' }],
+    }),
+    /** Lightweight change-detection feed (title + date only) for background polling. */
+    getShowsRevision: build.query<ApiSuccess<{ shows: { title: string; date?: string }[]; count: number }>, void>({
+      query: () => 'rest/ShowsRevision',
+      providesTags: [{ type: 'Shows', id: 'LIST' }],
+    }),
+    saveShow: build.mutation<
+      ApiSuccess<{ message: string; eventSync?: { ok: boolean; synced: number; reason?: string } | null }>,
+      { title: string; order: ShowItem[]; styleId?: number | null; eventId?: number | null; eventName?: string | null }
+    >({
       query: (body) => ({ url: 'rest/Shows', method: 'POST', body }),
       invalidatesTags: [{ type: 'Shows', id: 'LIST' }],
     }),
@@ -69,4 +85,12 @@ const showsApi = presenterApi.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useGetShowsQuery, useSaveShowMutation, useDeleteShowMutation } = showsApi;
+export const {
+  useGetShowsQuery,
+  useLazyGetShowsQuery,
+  useGetShowQuery,
+  useLazyGetShowQuery,
+  useGetShowsRevisionQuery,
+  useSaveShowMutation,
+  useDeleteShowMutation,
+} = showsApi;

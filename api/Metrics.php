@@ -74,7 +74,7 @@ class Metrics extends RestController
         $values[] = $offset;
 
         $stmt = self::prepare("
-				SELECT `id`, `user_sub`, `event`, `entity_type`, `entity_id`, `metadata`, `created_at`
+				SELECT `id`, `account`, `user_sub`, `event`, `entity_type`, `entity_id`, `metadata`, `created_at`
 				FROM `metrics`
 				WHERE {$where}
 				ORDER BY `created_at` DESC

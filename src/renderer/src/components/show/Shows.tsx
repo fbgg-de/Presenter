@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type UIEvent } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -31,9 +31,12 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useGetShowsQuery, useDeleteShowMutation, useSaveShowMutation } from '@/api/shows.api';
+import { useGetShowsQuery, useLazyGetShowQuery, useDeleteShowMutation, useSaveShowMutation } from '@/api/shows.api';
 import type { Show } from '@/api/shows.api';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSessionQuery } from '@/api/session.api';
+import { type CtEvent } from '@/api/churchtools.api';
+import { EventPicker } from '@/components/show/EventPicker';
 import { SONG_CUSTOM_NUMBER_LIMIT } from '@/song';
 import ccliIcon from '@/assets/ccli.svg';
 
@@ -45,9 +48,10 @@ interface ShowsProps {
   currentShowTitle?: string;
 }
 
-// Function to resolve date/time variables in template
-const resolveShowTemplate = (template: string): string => {
-  const now = new Date();
+// Function to resolve date/time variables in template (defaults to now, or a given date —
+// e.g. a linked ChurchTools event's date).
+const resolveShowTemplate = (template: string, date?: Date): string => {
+  const now = date ?? new Date();
 
   const replacements: Record<string, string> = {
     yyyy: now.getFullYear().toString(),
@@ -79,16 +83,43 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [newShowTitle, setNewShowTitle] = useState('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<CtEvent | null>(null);
+  // Whether the user has manually edited the title (stops auto-resolving from the template).
+  const [titleEdited, setTitleEdited] = useState(false);
+
   const [showToDelete, setShowToDelete] = useState<string | null>(null);
   const [confirmOverride, setConfirmOverride] = useState<Show | null>(null);
   const [showToRename, setShowToRename] = useState<Show | null>(null);
   const [renameTitle, setRenameTitle] = useState('');
+  const [renameEvent, setRenameEvent] = useState<CtEvent | null>(null);
+  // Infinite scroll: start with 10 shows, load 10 more each time the list is scrolled to the end.
+  const SHOWS_PAGE_SIZE = 10;
+  const [visibleCount, setVisibleCount] = useState(SHOWS_PAGE_SIZE);
 
-  const { data: showsData, isLoading, refetch } = useGetShowsQuery({ limit: 9999, page: 0 });
+  const { data: session } = useGetSessionQuery();
+  const churchToolsEnabled = session?.settings?.churchToolsEnabled ?? false;
+
+  const { data: showsData, isLoading, isFetching, refetch } = useGetShowsQuery({ limit: visibleCount, page: 0 });
   const [deleteShowMutation] = useDeleteShowMutation();
   const [saveShowMutation] = useSaveShowMutation();
+  const [fetchShow] = useLazyGetShowQuery();
 
-  const shows = showsData?.shows ?? [];
+  // Buffer the list so growing the limit (load-more) doesn't blank it out while the new page loads.
+  const [shows, setShows] = useState<Show[]>([]);
+  useEffect(() => {
+    if (showsData?.shows) setShows(showsData.shows);
+  }, [showsData]);
+
+  // A full page came back → there may be more to load.
+  const hasMoreShows = shows.length >= visibleCount;
+
+  const handleShowsScroll = (e: UIEvent<HTMLUListElement>) => {
+    if (!hasMoreShows || isFetching) return;
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 80) {
+      setVisibleCount((c) => c + SHOWS_PAGE_SIZE);
+    }
+  };
 
   const getCcliSongNumbers = (show: Show): number[] =>
     Array.from(
@@ -112,15 +143,21 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
       setIsCreatingNew(false);
       setNewShowTitle('');
       setSelectedShow(null);
+      setSelectedEvent(null);
+      setTitleEdited(false);
+      setVisibleCount(SHOWS_PAGE_SIZE);
     }
   }, [open]);
 
-  // Generate default show title from template when creating new show
+  // Generate the default show title from the template. When an event is linked, resolve
+  // date placeholders against the event's date so the title follows the selected event —
+  // unless the user has manually edited the title.
   useEffect(() => {
-    if (isCreatingNew && !newShowTitle) {
-      setNewShowTitle(resolveShowTemplate(showSaveFormat));
+    if (isCreatingNew && !titleEdited) {
+      const eventDate = selectedEvent?.startDate ? new Date(selectedEvent.startDate) : undefined;
+      setNewShowTitle(resolveShowTemplate(showSaveFormat, eventDate));
     }
-  }, [isCreatingNew, showSaveFormat]);
+  }, [isCreatingNew, selectedEvent, showSaveFormat, titleEdited]);
 
   const handleSelectShow = (show: Show) => {
     setSelectedShow(show);
@@ -133,19 +170,32 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
     }
   };
 
-  const handleCreateOrOverride = () => {
-    if (!newShowTitle.trim()) return;
+  const handleCreateOrOverride = async () => {
+    const title = newShowTitle.trim();
+    if (!title) return;
 
-    // Check if show already exists
-    const existingShow = shows.find((s) => s.title === newShowTitle.trim());
+    // Reliable existence check — the loaded list is paginated, so confirm against the server
+    // before creating (the save is an upsert and would silently overwrite a hidden show).
+    let existingShow = shows.find((s) => s.title === title);
+    if (!existingShow) {
+      try {
+        const res = await fetchShow({ title }).unwrap();
+        existingShow = res.shows?.[0];
+      } catch {
+        /* treat as not found */
+      }
+    }
+
     if (existingShow) {
       // Show confirmation dialog for override
       setConfirmOverride(existingShow);
     } else {
-      // Create new show
+      // Create new show, optionally linked to a ChurchTools event for agenda sync.
       const newShow: Show = {
-        title: newShowTitle.trim(),
+        title,
         order: [],
+        eventId: selectedEvent?.id ?? null,
+        eventName: selectedEvent?.name ?? null,
       };
       onShowSelected(newShow, true, false);
       setNewShowTitle('');
@@ -182,23 +232,37 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
   };
 
   const handleRenameShow = async () => {
-    if (!showToRename || !renameTitle.trim() || renameTitle === showToRename.title) {
+    if (!showToRename || !renameTitle.trim()) {
+      return;
+    }
+    const titleChanged = renameTitle.trim() !== showToRename.title;
+    const eventChanged = (renameEvent?.id ?? null) !== (showToRename.eventId ?? null);
+    if (!titleChanged && !eventChanged) {
+      setShowToRename(null);
       return;
     }
 
     try {
-      // Delete old show
-      await deleteShowMutation({ title: showToRename.title }).unwrap();
+      // Renaming changes the primary key, so delete the old row first.
+      if (titleChanged) {
+        await deleteShowMutation({ title: showToRename.title }).unwrap();
+      }
 
-      // Create new show with same content but new name
+      // Upsert with the (possibly new) title, content, and event link.
       await saveShowMutation({
         title: renameTitle.trim(),
         order: showToRename.order,
         styleId: showToRename.styleId ?? null,
+        eventId: renameEvent?.id ?? null,
+        eventName: renameEvent?.name ?? null,
       }).unwrap();
+
+      // The save endpoint reconciles the linked event's agenda automatically (the save above
+      // carries the new eventId), so no separate sync call is needed here.
 
       setShowToRename(null);
       setRenameTitle('');
+      setRenameEvent(null);
       refetch();
     } catch (error) {
       console.error('Failed to rename show:', error);
@@ -252,7 +316,10 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                 label={LL.COMMON.TITLE()}
                 fullWidth
                 value={newShowTitle}
-                onChange={(e) => setNewShowTitle(e.target.value)}
+                onChange={(e) => {
+                  setTitleEdited(true);
+                  setNewShowTitle(e.target.value);
+                }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && newShowTitle.trim()) {
                     handleCreateOrOverride();
@@ -260,10 +327,22 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                 }}
                 placeholder={LL.SHOWS.PLACEHOLDER()}
               />
+
+              {/* Optionally link to a ChurchTools event — songs sync to its agenda on save. */}
+              {churchToolsEnabled && (
+                <Box>
+                  <Typography variant="subtitle2" gutterBottom>
+                    {LL.SHOWS.LINK_EVENT()}
+                  </Typography>
+                  <Paper variant="outlined">
+                    <EventPicker value={selectedEvent} onChange={setSelectedEvent} />
+                  </Paper>
+                </Box>
+              )}
             </Stack>
           ) : (
             <Stack spacing={2}>
-              {isLoading ? (
+              {isLoading && shows.length === 0 ? (
                 <Box
                   sx={{
                     display: 'flex',
@@ -303,7 +382,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                     {LL.SHOWS.SELECT_PROMPT()}
                   </Typography>
                   <Paper variant="outlined">
-                    <List sx={{ maxHeight: 450, overflow: 'auto' }}>
+                    <List sx={{ maxHeight: 450, overflow: 'auto' }} onScroll={handleShowsScroll}>
                       {shows.map((show, index) => {
                         const isCurrentShow = !!(currentShowTitle && show.title === currentShowTitle);
                         const isSelected = selectedShow?.title === show.title;
@@ -350,6 +429,11 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                                       e.stopPropagation();
                                       setShowToRename(show);
                                       setRenameTitle(show.title);
+                                      setRenameEvent(
+                                        show.eventId
+                                          ? { id: show.eventId, name: show.eventName ?? `#${show.eventId}`, startDate: null }
+                                          : null,
+                                      );
                                     }}
                                   >
                                     <EditIcon fontSize="small" />
@@ -429,6 +513,11 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                           </ListItem>
                         );
                       })}
+                      {isFetching && shows.length > 0 && (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 1.5 }}>
+                          <CircularProgress size={22} />
+                        </Box>
+                      )}
                     </List>
                   </Paper>
                 </>
@@ -538,7 +627,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
           </Button>
         </DialogActions>
       </Dialog>
-      {/* Rename dialog */}
+      {/* Edit dialog — rename + (re)link a ChurchTools event */}
       <Dialog open={!!showToRename} onClose={() => setShowToRename(null)} maxWidth="xs" fullWidth>
         <DialogTitle>{LL.SHOWS.RENAME_DIALOG_TITLE()}</DialogTitle>
         <DialogContent>
@@ -555,10 +644,26 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
               }
             }}
           />
+          {churchToolsEnabled && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                {LL.SHOWS.LINK_EVENT()}
+              </Typography>
+              <Paper variant="outlined">
+                <EventPicker value={renameEvent} onChange={setRenameEvent} />
+              </Paper>
+            </Box>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowToRename(null)}>{LL.COMMON.CANCEL()}</Button>
-          <Button onClick={handleRenameShow} variant="contained" disabled={!renameTitle.trim() || renameTitle === showToRename?.title}>
+          <Button
+            onClick={handleRenameShow}
+            variant="contained"
+            disabled={
+              !renameTitle.trim() || (renameTitle === showToRename?.title && (renameEvent?.id ?? null) === (showToRename?.eventId ?? null))
+            }
+          >
             {LL.COMMON.SAVE()}
           </Button>
         </DialogActions>

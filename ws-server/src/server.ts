@@ -1,17 +1,27 @@
 /**
  * Presenter WebSocket Relay Server
  *
- * Each client must send an auth message as the first message after connecting:
- *   { "action": "auth", "account": <number> }
+ * Each client must send an auth message as the first message after connecting.
+ * Two auth modes are supported:
+ *
+ *   { "action": "auth", "account": <number> }          — direct account number
+ *   { "action": "auth", "token":   "<hex64>" }         — viewer token (resolved
+ *                                                          via BACKEND_URL)
  *
  * Only authenticated clients are kept. Messages are relayed only to other
  * clients that share the same account number.
+ *
+ * Environment variables:
+ *   PORT         — WebSocket listen port (default: 9001)
+ *   BACKEND_URL  — Base URL of the PHP backend, e.g. https://presenter.example.com
+ *                  Required for token-based auth.
  */
 
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 
-const PORT = Number(process.env.PORT ?? 9001);
+const PORT        = Number(process.env.PORT ?? 9001);
+const BACKEND_URL = (process.env.BACKEND_URL ?? '').replace(/\/$/, '');
 
 interface AuthedClient {
   ws: WebSocket;
@@ -20,6 +30,44 @@ interface AuthedClient {
 }
 
 const clients = new Set<AuthedClient>();
+
+/**
+ * Resolve a viewer token to an account number by calling the PHP backend.
+ * Returns the account number on success, or null if the token is invalid.
+ */
+async function resolveToken(token: string): Promise<number | null> {
+  if (!BACKEND_URL) {
+    console.warn('[WS Relay] BACKEND_URL not set — token auth unavailable');
+    return null;
+  }
+  const url = `${BACKEND_URL}/rest/ValidateToken?token=${encodeURIComponent(token)}`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const body = await res.text();
+    if (!res.ok) {
+      console.warn(`[WS Relay] ValidateToken HTTP ${res.status}: ${body.slice(0, 200)}`);
+      return null;
+    }
+    let json: Record<string, unknown>;
+    try {
+      json = JSON.parse(body) as Record<string, unknown>;
+    } catch {
+      console.warn('[WS Relay] ValidateToken response is not JSON:', body.slice(0, 200));
+      return null;
+    }
+    // Response::success() returns the array directly: { "account": 123 }
+    const account = json?.account;
+    if (typeof account !== 'number') {
+      console.warn('[WS Relay] ValidateToken unexpected response shape:', JSON.stringify(json).slice(0, 200));
+      return null;
+    }
+    console.log(`[WS Relay] Token resolved to account ${account}`);
+    return account;
+  } catch (err) {
+    console.error('[WS Relay] Token validation request failed:', (err as Error).message, 'URL:', url);
+    return null;
+  }
+}
 
 /**
  * Last known musician_sync state per account.
@@ -68,13 +116,13 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     authTimer: null,
   };
 
-  // Give the client 5 seconds to authenticate
+  // Give the client 10 seconds to authenticate (token validation involves an HTTP call)
   client.authTimer = setTimeout(() => {
     if (client.account === -1) {
       console.warn(`[WS Relay] Closing unauthenticated connection from ${ip}`);
       ws.close(4001, 'Authentication timeout');
     }
-  }, 5000);
+  }, 10000);
 
   ws.on('message', (data) => {
     let msg: Record<string, unknown>;
@@ -87,34 +135,51 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 
     // ── Auth handshake ──────────────────────────────────────────────────────
     if (client.account === -1) {
-      if (msg.action !== 'auth' || typeof msg.account !== 'number') {
-        ws.send(JSON.stringify({ type: 'error', error: 'First message must be auth: { action: "auth", account: <number> }' }));
+      if (msg.action !== 'auth') {
+        ws.send(JSON.stringify({ type: 'error', error: 'First message must be an auth message.' }));
         ws.close(4002, 'Authentication required');
         return;
       }
 
-      if (client.authTimer) {
-        clearTimeout(client.authTimer);
-        client.authTimer = null;
-      }
-
-      client.account = msg.account as number;
-      clients.add(client);
-
-      const accountPeers = [...clients].filter((c) => c.account === client.account).length;
-      ws.send(JSON.stringify({ type: 'auth_ok', account: client.account, count: accountPeers, others: Math.max(0, accountPeers - 1) }));
-      // Notify all account peers (including this new client) of the updated count
-      broadcastPeerCount(client.account);
-
-      // Replay last known operator state so new clients don't start blank
-      const cached = lastSyncPerAccount.get(client.account);
-      if (cached) {
-        try {
-          ws.send(cached);
-        } catch {
-          /* ignore */
+      const finishAuth = (account: number) => {
+        if (client.authTimer) {
+          clearTimeout(client.authTimer);
+          client.authTimer = null;
         }
+        client.account = account;
+        clients.add(client);
+
+        const accountPeers = [...clients].filter((c) => c.account === client.account).length;
+        ws.send(JSON.stringify({ type: 'auth_ok', account: client.account, count: accountPeers, others: Math.max(0, accountPeers - 1) }));
+        broadcastPeerCount(client.account);
+
+        const cached = lastSyncPerAccount.get(client.account);
+        if (cached) {
+          try { ws.send(cached); } catch { /* ignore */ }
+        }
+      };
+
+      // ── Token auth ────────────────────────────────────────────────────────
+      if (typeof msg.token === 'string') {
+        resolveToken(msg.token as string).then((account) => {
+          if (account === null) {
+            ws.send(JSON.stringify({ type: 'auth_error', error: 'Invalid or inactive viewer token.' }));
+            ws.close(4003, 'Invalid token');
+          } else {
+            finishAuth(account);
+          }
+        });
+        return;
       }
+
+      // ── Direct account number auth ────────────────────────────────────────
+      if (typeof msg.account !== 'number') {
+        ws.send(JSON.stringify({ type: 'error', error: 'Provide account number or viewer token: { action: "auth", account: <number> } or { action: "auth", token: "<hex>" }' }));
+        ws.close(4002, 'Authentication required');
+        return;
+      }
+
+      finishAuth(msg.account as number);
       return;
     }
 

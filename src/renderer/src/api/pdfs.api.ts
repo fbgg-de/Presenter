@@ -98,9 +98,17 @@ const pdfsApi = presenterApi.injectEndpoints({
         }
         if (arg.key) {
           const k = lower(arg.key);
-          const match = names.find((n) => lower(n).includes(k));
-          if (match) return { data: { filename: match, total } };
+          // Prefer an exact "…-<key>.pdf" suffix (so key C doesn't match a "C#" chart);
+          // fall back to a looser substring match for legacy filenames.
+          const exact = names.find((n) => lower(n).endsWith(`-${k}.pdf`));
+          if (exact) return { data: { filename: exact, total } };
+          const loose = names.find((n) => lower(n).includes(k));
+          if (loose) return { data: { filename: loose, total } };
         }
+        // No musician/order/key match → use the song's default chart ("Default.pdf" /
+        // "Default-<key>.pdf") in preference to any other file (its name may not sort first).
+        const def = names.find((n) => lower(n).startsWith('default'));
+        if (def) return { data: { filename: def, total } };
         return { data: { filename: names[0], total } };
       },
       providesTags: (_res, _err, arg) => [{ type: 'Pdfs', id: arg.songNumber }],
