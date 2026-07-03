@@ -65,7 +65,8 @@ import {
   getHasRestoredSavedWindows,
   markRestoredSavedWindows,
 } from '@/utils/presentationBridge';
-import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
+import { useGetSettings } from '@/store/settingsSlice';
+import { useGetMusicianSettings, useUpdateMusicianSetting } from '@/store/musicianSlice';
 
 const ConnectedWebsocketClients = ({
   wsClientCount,
@@ -122,9 +123,10 @@ const Footer = () => {
     wsOperatorConnected,
   } = useGetPresentationSettings();
   const { windowConfigs: savedConfigs } = useGetWindows();
-  const { windowFooterVisible, restoreWindowsOnStart, midiTrackingMaster } = useGetSettings();
+  const { windowFooterVisible, restoreWindowsOnStart } = useGetSettings();
+  const { midiTrackingMaster } = useGetMusicianSettings();
   const updateWindowSetting = useUpdateWindows();
-  const updateSetting = useUpdateSetting();
+  const updateMusicianSetting = useUpdateMusicianSetting();
 
   const MIDI_ACTIVE_TTL_MS = 10_000;
   const [midiSyncActive, setMidiSyncActive] = useState(false);
@@ -976,7 +978,7 @@ const Footer = () => {
                       size="small"
                       color="success"
                       variant={midiSyncActive || midiTrackingMaster === 'midi' ? 'filled' : 'outlined'}
-                      onClick={() => updateSetting('midiTrackingMaster', midiTrackingMaster === 'midi' ? 'operator' : 'midi')}
+                      onClick={() => updateMusicianSetting('midiTrackingMaster', midiTrackingMaster === 'midi' ? 'operator' : 'midi')}
                       sx={{
                         alignSelf: 'center',
                         fontSize: '0.7rem',
@@ -1051,7 +1053,7 @@ const Footer = () => {
                     size="small"
                     color="success"
                     variant={midiSyncActive || midiTrackingMaster === 'midi' ? 'filled' : 'outlined'}
-                    onClick={() => updateSetting('midiTrackingMaster', midiTrackingMaster === 'midi' ? 'operator' : 'midi')}
+                    onClick={() => updateMusicianSetting('midiTrackingMaster', midiTrackingMaster === 'midi' ? 'operator' : 'midi')}
                     sx={{
                       alignSelf: 'center',
                       fontSize: '0.7rem',

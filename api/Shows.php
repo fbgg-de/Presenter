@@ -23,7 +23,7 @@ class Shows extends RestController
 
         if ($title !== '') {
             $stmt = self::prepare('
-			SELECT `title`, `order`, `date`, `style_id`, `event_id`, `event_name`
+			SELECT `title`, `order`, `groups`, `date`, `style_id`, `event_id`, `event_name`
 			FROM `shows`
 			WHERE `account` = ? AND `title` = ?
 			LIMIT 1
@@ -31,7 +31,7 @@ class Shows extends RestController
             $stmt->bind_param('is', $account, $title)->execute();
         } else {
             $stmt = self::prepare('
-			SELECT `title`, `order`, `date`, `style_id`, `event_id`, `event_name`
+			SELECT `title`, `order`, `groups`, `date`, `style_id`, `event_id`, `event_name`
 			FROM `shows`
 			WHERE `account` = ?
 			ORDER BY `date` DESC
@@ -49,9 +49,11 @@ class Shows extends RestController
                 require_once(__DIR__ . '/../classes/Logging.php');
                 Logging::warning('Shows: json_decode failed for show "' . $row['title'] . '", raw value: ' . substr($row['order'], 0, 200));
             }
+            $groups = isset($row['groups']) ? json_decode($row['groups'], true) : null;
             $result["shows"][] = [
                 'title' => $row['title'],
                 'order' => is_array($decoded) ? $decoded : [],
+                'groups' => is_array($groups) ? $groups : null,
                 'date' => $row['date'],
                 'styleId' => $row['style_id'] ? (int)$row['style_id'] : null,
                 'eventId' => $row['event_id'] !== null ? (int)$row['event_id'] : null,
@@ -91,23 +93,30 @@ class Shows extends RestController
             $res->error(400, 'Failed to encode order as JSON: ' . json_last_error_msg());
         }
 
+        // Item groups (optional). Stored as a JSON array; null when the caller doesn't send them.
+        $groups = $req->params->getAsArray('groups', []);
+        $groupsValue = $req->params->provided('groups') ? json_encode($groups) : null;
+
         // Preserve the existing event link on update unless the caller explicitly sent eventId.
         $eventUpdate = $updateEvent
             ? "`event_id` = VALUES(`event_id`),\n\t\t\t\t\t`event_name` = VALUES(`event_name`),\n\t\t\t\t\t"
             : '';
+        // Only overwrite `groups` when the caller sent them (preserve on order-only saves).
+        $groupsUpdate = $req->params->provided('groups') ? "`groups` = VALUES(`groups`),
+					" : '';
         $stmt = self::prepare("
 				INSERT INTO `shows` (
-					`account`, `title`, `order`, `style_id`, `event_id`, `event_name`
+					`account`, `title`, `order`, `groups`, `style_id`, `event_id`, `event_name`
 				) VALUES (
-					?, ?, ?, ?, ?, ?
+					?, ?, ?, ?, ?, ?, ?
 				)
 				ON DUPLICATE KEY UPDATE
 					`order` = VALUES(`order`),
-					`style_id` = VALUES(`style_id`),
+					{$groupsUpdate}`style_id` = VALUES(`style_id`),
 					{$eventUpdate}`date` = CURRENT_TIMESTAMP
 			");
 
-        $stmt->bind_param('issiis', $account, $title, $orderValue, $styleId, $eventId, $eventName)->execute()->close();
+        $stmt->bind_param('isssiis', $account, $title, $orderValue, $groupsValue, $styleId, $eventId, $eventName)->execute()->close();
 
         // If the show is linked to a ChurchTools event, reconcile that event's agenda with the
         // show's songs on EVERY save — so add/remove/reorder all stay in sync, not just reassign.

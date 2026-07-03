@@ -4,8 +4,24 @@ import type { ApiSuccess } from './base.api';
 export type ShowItemType = 'song' | 'media' | 'bible_verse';
 export type MediaSubType = 'image' | 'video' | 'color';
 
+/**
+ * A named, optionally-colored group that items can be organized into within a show. Groups are an
+ * additive layer over the flat `order`: every item carries a `groupId`, and items of a group are
+ * kept contiguous in `order`, in the same sequence as `Show.groups`.
+ */
+export type ShowGroup = {
+  id: string;
+  name: string;
+  /** Sidebar background tint (hex). Undefined = no tint. */
+  color?: string;
+  /** Persisted collapse state (collapsed hides the group's items in the sidebar). */
+  collapsed?: boolean;
+};
+
 export type ShowItem = {
   type: ShowItemType;
+  /** Id of the group this item belongs to (see Show.groups). Items without one fall into Default. */
+  groupId?: string;
   songNumber?: number;
   order?: string;
   key?: string;
@@ -37,6 +53,8 @@ export type ShowItem = {
 export type Show = {
   title: string;
   order: ShowItem[];
+  /** Ordered list of item groups (metadata + sequence). A Default group is ensured on load. */
+  groups?: ShowGroup[];
   date?: string;
   styleId?: number;
   /** Linked ChurchTools event id (for agenda sync), if any. */
@@ -72,7 +90,14 @@ const showsApi = presenterApi.injectEndpoints({
     }),
     saveShow: build.mutation<
       ApiSuccess<{ message: string; eventSync?: { ok: boolean; synced: number; reason?: string } | null }>,
-      { title: string; order: ShowItem[]; styleId?: number | null; eventId?: number | null; eventName?: string | null }
+      {
+        title: string;
+        order: ShowItem[];
+        groups?: ShowGroup[];
+        styleId?: number | null;
+        eventId?: number | null;
+        eventName?: string | null;
+      }
     >({
       query: (body) => ({ url: 'rest/Shows', method: 'POST', body }),
       invalidatesTags: [{ type: 'Shows', id: 'LIST' }],

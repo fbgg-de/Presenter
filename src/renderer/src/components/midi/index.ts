@@ -1,1 +1,1 @@
-﻿export * from './MidiLearnDialog';
+export * from './RemoteControlDialog';

@@ -284,6 +284,18 @@ const en = {
     EVENTS_LOAD_MORE: 'Load more events',
   },
 
+  SHOW_GROUPS: {
+    DEFAULT: 'Default',
+    ADD: 'Add group',
+    RENAME: 'Rename',
+    COLOR: 'Color',
+    NO_COLOR: 'No color',
+    MOVE_UP: 'Move up',
+    MOVE_DOWN: 'Move down',
+    DELETE: 'Delete group',
+    NAME: 'Group name',
+    MOVE_ITEM_TO: 'Move to group',
+  },
   SHOW_ITEMS: {
     TYPE_SONG: 'Song',
     TYPE_MEDIA: 'Media',
@@ -1231,6 +1243,13 @@ const en = {
     TOGGLE_TRACKING: 'Toggle Tracking Master',
     SYNC_ACTIVE: 'Musician sync active — click to follow',
     FOLLOW_MIDI_ACTIVE: 'Following MIDI musician — click to stop',
+  },
+
+  REMOTE: {
+    TITLE: 'Remote Control',
+    PRESS_KEY_FOR: 'Press a key for: {action}',
+    LEARN_MIDI: 'Map a MIDI button',
+    LEARN_KEY: 'Map a keyboard key',
   },
 
   CONNECTIVITY: {

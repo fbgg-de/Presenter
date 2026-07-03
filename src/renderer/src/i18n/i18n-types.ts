@@ -1067,6 +1067,48 @@ type RootTranslation = {
 		 */
 		EVENTS_LOAD_MORE: string
 	}
+	SHOW_GROUPS: {
+		/**
+		 * D​e​f​a​u​l​t
+		 */
+		DEFAULT: string
+		/**
+		 * A​d​d​ ​g​r​o​u​p
+		 */
+		ADD: string
+		/**
+		 * R​e​n​a​m​e
+		 */
+		RENAME: string
+		/**
+		 * C​o​l​o​r
+		 */
+		COLOR: string
+		/**
+		 * N​o​ ​c​o​l​o​r
+		 */
+		NO_COLOR: string
+		/**
+		 * M​o​v​e​ ​u​p
+		 */
+		MOVE_UP: string
+		/**
+		 * M​o​v​e​ ​d​o​w​n
+		 */
+		MOVE_DOWN: string
+		/**
+		 * D​e​l​e​t​e​ ​g​r​o​u​p
+		 */
+		DELETE: string
+		/**
+		 * G​r​o​u​p​ ​n​a​m​e
+		 */
+		NAME: string
+		/**
+		 * M​o​v​e​ ​t​o​ ​g​r​o​u​p
+		 */
+		MOVE_ITEM_TO: string
+	}
 	SHOW_ITEMS: {
 		/**
 		 * S​o​n​g
@@ -4604,6 +4646,25 @@ type RootTranslation = {
 		 */
 		FOLLOW_MIDI_ACTIVE: string
 	}
+	REMOTE: {
+		/**
+		 * R​e​m​o​t​e​ ​C​o​n​t​r​o​l
+		 */
+		TITLE: string
+		/**
+		 * P​r​e​s​s​ ​a​ ​k​e​y​ ​f​o​r​:​ ​{​a​c​t​i​o​n​}
+		 * @param {unknown} action
+		 */
+		PRESS_KEY_FOR: RequiredParams<'action'>
+		/**
+		 * M​a​p​ ​a​ ​M​I​D​I​ ​b​u​t​t​o​n
+		 */
+		LEARN_MIDI: string
+		/**
+		 * M​a​p​ ​a​ ​k​e​y​b​o​a​r​d​ ​k​e​y
+		 */
+		LEARN_KEY: string
+	}
 	CONNECTIVITY: {
 		/**
 		 * B​a​c​k​e​n​d​ ​U​n​r​e​a​c​h​a​b​l​e
@@ -5725,6 +5786,48 @@ export type TranslationFunctions = {
 		 * Load more events
 		 */
 		EVENTS_LOAD_MORE: () => LocalizedString
+	}
+	SHOW_GROUPS: {
+		/**
+		 * Default
+		 */
+		DEFAULT: () => LocalizedString
+		/**
+		 * Add group
+		 */
+		ADD: () => LocalizedString
+		/**
+		 * Rename
+		 */
+		RENAME: () => LocalizedString
+		/**
+		 * Color
+		 */
+		COLOR: () => LocalizedString
+		/**
+		 * No color
+		 */
+		NO_COLOR: () => LocalizedString
+		/**
+		 * Move up
+		 */
+		MOVE_UP: () => LocalizedString
+		/**
+		 * Move down
+		 */
+		MOVE_DOWN: () => LocalizedString
+		/**
+		 * Delete group
+		 */
+		DELETE: () => LocalizedString
+		/**
+		 * Group name
+		 */
+		NAME: () => LocalizedString
+		/**
+		 * Move to group
+		 */
+		MOVE_ITEM_TO: () => LocalizedString
 	}
 	SHOW_ITEMS: {
 		/**
@@ -9215,6 +9318,24 @@ export type TranslationFunctions = {
 		 * Following MIDI musician — click to stop
 		 */
 		FOLLOW_MIDI_ACTIVE: () => LocalizedString
+	}
+	REMOTE: {
+		/**
+		 * Remote Control
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Press a key for: {action}
+		 */
+		PRESS_KEY_FOR: (arg: { action: unknown }) => LocalizedString
+		/**
+		 * Map a MIDI button
+		 */
+		LEARN_MIDI: () => LocalizedString
+		/**
+		 * Map a keyboard key
+		 */
+		LEARN_KEY: () => LocalizedString
 	}
 	CONNECTIVITY: {
 		/**

@@ -38,10 +38,12 @@ import {
   MoreVert as MoreVertIcon,
   ChevronRight as ChevronRightIcon,
   FolderOpen as FolderOpenIcon,
+  Folder as FolderIcon,
+  CreateNewFolder as NewGroupIcon,
+  Circle as CircleIcon,
   FileUpload as FileUploadIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import DraggableList from '@/components/show/DraggableList';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { ISong } from '@/song';
 import { Song } from '@/song';
@@ -57,7 +59,28 @@ import { MediaBrowser } from '@/components/media/MediaBrowser';
 import { getShowItemIcon, getShowItemColor } from '@/utils/showItemIcons';
 import { UnifiedSearch } from '@/components/search/UnifiedSearch';
 import { useAppDispatch } from '@/store';
-import { setCurrentShow, addShowItem, removeShowItem, reorderShowItems, setDirty, updateShowItem, useGetShow } from '@/store/showSlice';
+import {
+  setCurrentShow,
+  addShowItem,
+  removeShowItem,
+  setDirty,
+  updateShowItem,
+  setShowGroups,
+  setOrderAndGroups,
+  useGetShow,
+} from '@/store/showSlice';
+import { ShowGroupList, GroupNameDialog } from '@/components/show/ShowGroupList';
+import {
+  genGroupId,
+  addGroup as addGroupUtil,
+  updateGroup,
+  toggleGroupCollapsed,
+  reorderGroups as reorderGroupsUtil,
+  deleteGroup as deleteGroupUtil,
+  moveItemFlat,
+  moveItemToGroup as moveItemToGroupUtil,
+  groupDisplayName,
+} from '@/utils/showGroups';
 import {
   addSongToStore,
   updateSongInStore,
@@ -136,6 +159,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   // Add menu
   const [addMenuAnchor, setAddMenuAnchor] = useState<null | HTMLElement>(null);
   const addMenuOpen = Boolean(addMenuAnchor);
+  // "Add group" dialog (opened from the add menu)
+  const [addGroupDialogOpen, setAddGroupDialogOpen] = useState(false);
 
   useImperativeHandle(ref, () => ({
     openShowSwitcher: () => setOpenShowSwitcher(true),
@@ -190,6 +215,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [itemStyleWinAnchor, setItemStyleWinAnchor] = useState<null | HTMLElement>(null);
   const [itemStyleStyleAnchor, setItemStyleStyleAnchor] = useState<null | HTMLElement>(null);
   const [itemStyleWindowName, setItemStyleWindowName] = useState<string>('');
+  // "Move to group" submenu (from the item context menu).
+  const [groupSubmenuAnchor, setGroupSubmenuAnchor] = useState<null | HTMLElement>(null);
   const [quickOrderDialogOpen, setQuickOrderDialogOpen] = useState(false);
   const [quickOrderContext, setQuickOrderContext] = useState<{ itemIndex: number; songNumber: number; orderName: string } | null>(null);
 
@@ -220,6 +247,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       const result = await saveShowMutation({
         title: currentShow.title,
         order: currentShow.order,
+        groups: currentShow.groups,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
@@ -348,6 +376,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
           await saveShowMutation({
             title: show.title,
             order: orderToSave,
+            groups: override ? currentShow?.groups : show.groups,
             styleId: override ? (currentShow?.styleId ?? null) : (show.styleId ?? null),
             eventId: (override ? currentShow?.eventId : show.eventId) ?? null,
             eventName: (override ? currentShow?.eventName : show.eventName) ?? null,
@@ -482,6 +511,138 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     }
   };
 
+  // ── Item group handlers ──
+  const groups = currentShow?.groups ?? [];
+
+  // Drag & drop: move an item within/across groups, keeping the presented item stable.
+  const handleMoveItem = (from: number, to: number, targetGroupId: string) => {
+    const res = moveItemFlat(showItems, from, to, targetGroupId, activeItemIndex);
+    if (res) {
+      dispatch(setOrderAndGroups({ order: res.order, groups }));
+      dispatch(setActiveItemIndex(res.activeIndex));
+    }
+  };
+
+  // Drag & drop: move a whole group block to another group's position.
+  const handleReorderGroup = (sourceId: string, targetId: string) => {
+    const res = reorderGroupsUtil(showItems, groups, sourceId, targetId, activeItemIndex);
+    if (res) {
+      dispatch(setOrderAndGroups({ order: res.order, groups: res.groups }));
+      dispatch(setActiveItemIndex(res.activeIndex));
+    }
+  };
+
+  const handleToggleGroupCollapse = (id: string) => dispatch(setShowGroups(toggleGroupCollapsed(groups, id)));
+  const handleAddGroup = (name: string) => dispatch(setShowGroups(addGroupUtil(groups, { id: genGroupId(), name, collapsed: false })));
+  const handleRenameGroup = (id: string, name: string) => dispatch(setShowGroups(updateGroup(groups, id, { name })));
+  const handleRecolorGroup = (id: string, color: string | undefined) => dispatch(setShowGroups(updateGroup(groups, id, { color })));
+
+  const handleDeleteGroup = (id: string) => {
+    const res = deleteGroupUtil(showItems, groups, id, activeItemIndex);
+    if (res) {
+      dispatch(setOrderAndGroups({ order: res.order, groups: res.groups }));
+      dispatch(setActiveItemIndex(res.activeIndex));
+    }
+  };
+
+  const handleMoveItemToGroup = (itemIndex: number, groupId: string) => {
+    const res = moveItemToGroupUtil(showItems, groups, itemIndex, groupId, activeItemIndex);
+    if (res) {
+      dispatch(setOrderAndGroups({ order: res.order, groups }));
+      dispatch(setActiveItemIndex(res.activeIndex));
+    }
+  };
+
+  // One item row in the sidebar. `i` is the item's index into the flat order.
+  const renderItemRow = (item: ShowItem, i: number) => {
+    const ItemIcon = getShowItemIcon(item.type, item.mediaSubType);
+    const itemColor = getShowItemColor(item.type);
+    const label = getItemLabel(item, i);
+
+    const isSong = item.type === 'song';
+    const itemParsed = parseOrderKey(item.order);
+    const itemKey = item.key || itemParsed.key;
+    const itemOrder = itemParsed.order;
+
+    return (
+      <ListItem
+        key={i}
+        disablePadding
+        onClick={() => {
+          if (songClick === 'click') dispatch(setActiveItemIndex(i));
+        }}
+        onDoubleClick={() => {
+          if (songClick === 'double-click') dispatch(setActiveItemIndex(i));
+        }}
+        secondaryAction={
+          <Stack
+            direction="row"
+            sx={{
+              gap: 0.5,
+              alignItems: 'center',
+            }}
+          >
+            {/* Read-only chips */}
+            {isSong && itemOrder && itemOrder !== 'Default' && (
+              <Chip
+                label={itemOrder}
+                size="small"
+                variant="outlined"
+                sx={{
+                  fontSize: '0.65rem',
+                  height: 20,
+                  maxWidth: 80,
+                  color: i === activeItemIndex ? '#fff' : undefined,
+                  borderColor: i === activeItemIndex ? 'rgba(255,255,255,0.5)' : undefined,
+                }}
+              />
+            )}
+            {isSong && itemKey && (
+              <Chip
+                label={itemKey}
+                size="small"
+                sx={{
+                  fontSize: '0.65rem',
+                  height: 20,
+                  backgroundColor: i === activeItemIndex ? 'rgba(255,255,255,0.3)' : 'primary.main',
+                  color: '#fff',
+                }}
+              />
+            )}
+            {/* Style badge */}
+            {item.styleId && (
+              <Tooltip title={availableStyles.find((s) => s.id === item.styleId)?.name || LL.STYLE.STYLE()}>
+                <PaletteIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : 'text.secondary', opacity: 0.7 }} />
+              </Tooltip>
+            )}
+            {/* Per-window style badge */}
+            {item.itemStyleByWindow && Object.values(item.itemStyleByWindow).some((v) => v != null) && (
+              <Tooltip title={LL.FOOTER.ITEM_STYLE()}>
+                <PaletteIcon
+                  fontSize="small"
+                  sx={{ color: i === activeItemIndex ? 'rgba(255,255,255,0.8)' : 'text.secondary', opacity: 0.8 }}
+                />
+              </Tooltip>
+            )}
+            {/* Context menu button */}
+            <IconButton edge="end" size="small" onClick={(e) => handleItemMenuOpen(e, i)}>
+              <MoreVertIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : undefined }} />
+            </IconButton>
+          </Stack>
+        }
+        sx={{
+          ...(i === activeItemIndex ? { background: palette.primary.main } : {}),
+          '&.dragging': { background: palette.primary.dark },
+        }}
+      >
+        <ListItemIcon sx={{ minWidth: 36, pl: 1 }}>
+          <ItemIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : itemColor }} />
+        </ListItemIcon>
+        <ListItemButton sx={{ pl: 0.5 }}>{label}</ListItemButton>
+      </ListItem>
+    );
+  };
+
   // ── Item context menu handlers ──
   const handleItemMenuOpen = (event: MouseEvent<HTMLElement>, index: number) => {
     event.stopPropagation();
@@ -497,6 +658,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     setItemStyleWinAnchor(null);
     setItemStyleStyleAnchor(null);
     setItemStyleWindowName('');
+    setGroupSubmenuAnchor(null);
   };
 
   const handleItemSetStyleForWindow = (styleId: number | null) => {
@@ -535,6 +697,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       await saveShowMutation({
         title: currentShow.title,
         order: orderOverride ?? currentShow.order,
+        groups: currentShow.groups,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
@@ -760,7 +923,26 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
                   <ListItemText>{LL.SHOW_ITEMS.ADD_BIBLE_VERSE()}</ListItemText>
                 </MenuItem>
               )}
+              <Divider />
+              <MenuItem
+                disabled={!currentShow}
+                onClick={() => {
+                  setAddMenuAnchor(null);
+                  setAddGroupDialogOpen(true);
+                }}
+              >
+                <ListItemIcon>
+                  <NewGroupIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>{LL.SHOW_GROUPS.ADD()}</ListItemText>
+              </MenuItem>
             </Menu>
+            <GroupNameDialog
+              open={addGroupDialogOpen}
+              title={LL.SHOW_GROUPS.ADD()}
+              onClose={() => setAddGroupDialogOpen(false)}
+              onSubmit={handleAddGroup}
+            />
 
             {isDirty && (
               <Tooltip title={LL.SHOWS.SAVE()}>
@@ -905,7 +1087,17 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
-        {menuItem?.type === 'song' && <Divider />}
+        {/* Move to group submenu (only when there's more than one group) */}
+        {groups.length > 1 && (
+          <MenuItem onClick={(e) => setGroupSubmenuAnchor(e.currentTarget)}>
+            <ListItemIcon>
+              <FolderIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{LL.SHOW_GROUPS.MOVE_ITEM_TO()}</ListItemText>
+            <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
+          </MenuItem>
+        )}
+        <Divider />
         {/* Delete */}
         <MenuItem onClick={handleItemRemove}>
           <ListItemIcon>
@@ -913,6 +1105,25 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
           </ListItemIcon>
           <ListItemText sx={{ color: 'error.main' }}>{LL.MUSICIAN.ITEM_DELETE()}</ListItemText>
         </MenuItem>
+      </Menu>
+      {/* Move-to-group submenu */}
+      <Menu anchorEl={groupSubmenuAnchor} open={!!groupSubmenuAnchor} onClose={() => setGroupSubmenuAnchor(null)}>
+        {groups
+          .filter((g) => g.id !== (itemMenuIndex >= 0 ? showItems[itemMenuIndex]?.groupId : undefined))
+          .map((g) => (
+            <MenuItem
+              key={g.id}
+              onClick={() => {
+                if (itemMenuIndex >= 0) handleMoveItemToGroup(itemMenuIndex, g.id);
+                handleItemMenuClose();
+              }}
+            >
+              <ListItemIcon>
+                <CircleIcon fontSize="small" sx={{ color: g.color || 'text.disabled' }} />
+              </ListItemIcon>
+              <ListItemText>{groupDisplayName(g, LL.SHOW_GROUPS.DEFAULT())}</ListItemText>
+            </MenuItem>
+          ))}
       </Menu>
       {/* Key submenu */}
       <Menu
@@ -1016,194 +1227,109 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
           </MenuItem>
         ))}
       </Menu>
-      <DraggableList
-        sx={{ overflow: 'auto' }}
-        footer={
-          // Placeholder row while a CCLI SongSelect import resolves (it can take a moment).
-          isImportingCcli ? (
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 3, py: 1 }}>
-              <Skeleton variant="circular" width={20} height={20} />
-              <Skeleton variant="text" sx={{ flex: 1, fontSize: '1rem' }} />
-            </Stack>
-          ) : undefined
-        }
-        onItemsChanged={(source, destination) => {
-          dispatch(reorderShowItems({ source, destination }));
-
-          // Update active item index to follow the dragged item
-          if (source === activeItemIndex) {
-            dispatch(setActiveItemIndex(destination));
-          } else if (source > activeItemIndex && destination <= activeItemIndex) {
-            dispatch(setActiveItemIndex(activeItemIndex + 1));
-          } else if (source < activeItemIndex && destination >= activeItemIndex) {
-            dispatch(setActiveItemIndex(activeItemIndex - 1));
-          }
-        }}
-      >
-        {showItems.length === 0 && (
-          <Stack
-            spacing={1.5}
-            sx={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexGrow: 1,
-              p: 3,
-              textAlign: 'center',
-            }}
-          >
-            <FileUploadIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
-            <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
-              {LL.SHOW_ITEMS.EMPTY_HINT_TITLE()}
-            </Typography>
-
-            {/* Interactive hint line */}
-            <Typography variant="body2" color="text.disabled" component="div" sx={{ lineHeight: 2 }}>
-              {/* "Load a show" */}
-              <Box
-                component="span"
-                onClick={() => setOpenShowSwitcher(true)}
-                sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline', '&:hover': { opacity: 0.8 } }}
-              >
-                {LL.SHOW_ITEMS.EMPTY_HINT_LOAD_SHOW()}
-              </Box>
-              {', '}
-              {/* "search for songs" */}
-              <Box
-                component="span"
-                onClick={() => setOpenSongSearch(true)}
-                sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline', '&:hover': { opacity: 0.8 } }}
-              >
-                {LL.SHOW_ITEMS.EMPTY_HINT_SEARCH()}
-              </Box>
-              {', '}
-              {LL.SHOW_ITEMS.EMPTY_HINT_OR()} {/* "add items" with the + icon */}
-              <Box
-                component="span"
-                onClick={(e: MouseEvent<HTMLSpanElement>) => setAddMenuAnchor(e.currentTarget)}
-                sx={{
-                  color: 'primary.main',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  '&:hover': { opacity: 0.8 },
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <AddIcon sx={{ fontSize: 14, verticalAlign: 'middle', mb: '2px' }} /> {LL.SHOW_ITEMS.EMPTY_HINT_ADD()}
-              </Box>{' '}
-              {LL.SHOW_ITEMS.EMPTY_HINT_CCLI()}
-            </Typography>
-
-            <Box
-              component="label"
+      {showItems.length === 0 ? (
+        <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
+          {
+            <Stack
+              spacing={1.5}
               sx={{
-                mt: 1,
-                border: '2px dashed',
-                borderColor: 'divider',
-                borderRadius: 2,
-                px: 3,
-                py: 1.5,
-                cursor: 'pointer',
-                display: 'block',
-                '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexGrow: 1,
+                p: 3,
+                textAlign: 'center',
               }}
-              onClick={() => fileInputRef.current?.click()}
             >
-              <Typography variant="caption" color="text.disabled">
-                {LL.SHOW_ITEMS.EMPTY_HINT_DROP()}
+              <FileUploadIcon sx={{ fontSize: 40, color: 'text.disabled' }} />
+              <Typography variant="subtitle2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                {LL.SHOW_ITEMS.EMPTY_HINT_TITLE()}
               </Typography>
-              <input ref={fileInputRef} type="file" accept=".txt,.sng" multiple hidden onChange={handleFileInputChange} />
-            </Box>
-          </Stack>
-        )}
-        {showItems.map((item, i) => {
-          const ItemIcon = getShowItemIcon(item.type, item.mediaSubType);
-          const itemColor = getShowItemColor(item.type);
-          const label = getItemLabel(item, i);
 
-          const isSong = item.type === 'song';
-          const itemParsed = parseOrderKey(item.order);
-          const itemKey = item.key || itemParsed.key;
-          const itemOrder = itemParsed.order;
-
-          return (
-            <ListItem
-              key={i}
-              disablePadding
-              onClick={() => {
-                if (songClick === 'click') dispatch(setActiveItemIndex(i));
-              }}
-              onDoubleClick={() => {
-                if (songClick === 'double-click') dispatch(setActiveItemIndex(i));
-              }}
-              secondaryAction={
-                <Stack
-                  direction="row"
+              {/* Interactive hint line */}
+              <Typography variant="body2" color="text.disabled" component="div" sx={{ lineHeight: 2 }}>
+                {/* "Load a show" */}
+                <Box
+                  component="span"
+                  onClick={() => setOpenShowSwitcher(true)}
+                  sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline', '&:hover': { opacity: 0.8 } }}
+                >
+                  {LL.SHOW_ITEMS.EMPTY_HINT_LOAD_SHOW()}
+                </Box>
+                {', '}
+                {/* "search for songs" */}
+                <Box
+                  component="span"
+                  onClick={() => setOpenSongSearch(true)}
+                  sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline', '&:hover': { opacity: 0.8 } }}
+                >
+                  {LL.SHOW_ITEMS.EMPTY_HINT_SEARCH()}
+                </Box>
+                {', '}
+                {LL.SHOW_ITEMS.EMPTY_HINT_OR()} {/* "add items" with the + icon */}
+                <Box
+                  component="span"
+                  onClick={(e: MouseEvent<HTMLSpanElement>) => setAddMenuAnchor(e.currentTarget)}
                   sx={{
-                    gap: 0.5,
-                    alignItems: 'center',
+                    color: 'primary.main',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    '&:hover': { opacity: 0.8 },
+                    whiteSpace: 'nowrap',
                   }}
                 >
-                  {/* Read-only chips */}
-                  {isSong && itemOrder && itemOrder !== 'Default' && (
-                    <Chip
-                      label={itemOrder}
-                      size="small"
-                      variant="outlined"
-                      sx={{
-                        fontSize: '0.65rem',
-                        height: 20,
-                        maxWidth: 80,
-                        color: i === activeItemIndex ? '#fff' : undefined,
-                        borderColor: i === activeItemIndex ? 'rgba(255,255,255,0.5)' : undefined,
-                      }}
-                    />
-                  )}
-                  {isSong && itemKey && (
-                    <Chip
-                      label={itemKey}
-                      size="small"
-                      sx={{
-                        fontSize: '0.65rem',
-                        height: 20,
-                        backgroundColor: i === activeItemIndex ? 'rgba(255,255,255,0.3)' : 'primary.main',
-                        color: '#fff',
-                      }}
-                    />
-                  )}
-                  {/* Style badge */}
-                  {item.styleId && (
-                    <Tooltip title={availableStyles.find((s) => s.id === item.styleId)?.name || LL.STYLE.STYLE()}>
-                      <PaletteIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : 'text.secondary', opacity: 0.7 }} />
-                    </Tooltip>
-                  )}
-                  {/* Per-window style badge */}
-                  {item.itemStyleByWindow && Object.values(item.itemStyleByWindow).some((v) => v != null) && (
-                    <Tooltip title={LL.FOOTER.ITEM_STYLE()}>
-                      <PaletteIcon
-                        fontSize="small"
-                        sx={{ color: i === activeItemIndex ? 'rgba(255,255,255,0.8)' : 'text.secondary', opacity: 0.8 }}
-                      />
-                    </Tooltip>
-                  )}
-                  {/* Context menu button */}
-                  <IconButton edge="end" size="small" onClick={(e) => handleItemMenuOpen(e, i)}>
-                    <MoreVertIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : undefined }} />
-                  </IconButton>
+                  <AddIcon sx={{ fontSize: 14, verticalAlign: 'middle', mb: '2px' }} /> {LL.SHOW_ITEMS.EMPTY_HINT_ADD()}
+                </Box>{' '}
+                {LL.SHOW_ITEMS.EMPTY_HINT_CCLI()}
+              </Typography>
+
+              <Box
+                component="label"
+                sx={{
+                  mt: 1,
+                  border: '2px dashed',
+                  borderColor: 'divider',
+                  borderRadius: 2,
+                  px: 3,
+                  py: 1.5,
+                  cursor: 'pointer',
+                  display: 'block',
+                  '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Typography variant="caption" color="text.disabled">
+                  {LL.SHOW_ITEMS.EMPTY_HINT_DROP()}
+                </Typography>
+                <input ref={fileInputRef} type="file" accept=".txt,.sng" multiple hidden onChange={handleFileInputChange} />
+              </Box>
+            </Stack>
+          }
+        </Box>
+      ) : (
+        <Box sx={{ overflow: 'auto', flexGrow: 1 }}>
+          <ShowGroupList
+            order={showItems}
+            groups={groups}
+            renderItem={renderItemRow}
+            onMoveItem={handleMoveItem}
+            onToggleCollapse={handleToggleGroupCollapse}
+            editable
+            onRenameGroup={handleRenameGroup}
+            onRecolorGroup={handleRecolorGroup}
+            onReorderGroup={handleReorderGroup}
+            onDeleteGroup={handleDeleteGroup}
+            onAddGroup={handleAddGroup}
+            footer={
+              isImportingCcli ? (
+                <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 3, py: 1 }}>
+                  <Skeleton variant="circular" width={20} height={20} />
+                  <Skeleton variant="text" sx={{ flex: 1, fontSize: '1rem' }} />
                 </Stack>
-              }
-              sx={{
-                ...(i === activeItemIndex ? { background: palette.primary.main } : {}),
-                '&.dragging': { background: palette.primary.dark },
-              }}
-            >
-              <ListItemIcon sx={{ minWidth: 36, pl: 1 }}>
-                <ItemIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : itemColor }} />
-              </ListItemIcon>
-              <ListItemButton sx={{ pl: 0.5 }}>{label}</ListItemButton>
-            </ListItem>
-          );
-        })}
-      </DraggableList>
+              ) : undefined
+            }
+          />
+        </Box>
+      )}
     </Stack>
   );
 });

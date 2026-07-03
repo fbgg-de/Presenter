@@ -33,7 +33,17 @@ import {
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
-import { removeShowItem, updateShowItem, setDirty, reorderShowItems, setShowSelectorOpen, useGetShow } from '@/store/showSlice';
+import {
+  removeShowItem,
+  updateShowItem,
+  setDirty,
+  reorderShowItems,
+  setShowGroups,
+  setShowSelectorOpen,
+  useGetShow,
+} from '@/store/showSlice';
+import { ShowGroupList } from '@/components/show/ShowGroupList';
+import { toggleGroupCollapsed } from '@/utils/showGroups';
 import { addSongToStore, addToSongsOrder, useGetSongs } from '@/store/songsSlice';
 import { updateSongInStore } from '@/store/songsSlice';
 import { parseOrderKey, MUSICAL_KEYS } from '@/utils/orderKeyUtils';
@@ -45,7 +55,6 @@ import { UnifiedSearch } from '@/components/search/UnifiedSearch';
 import { Song } from '@/song';
 import type { ISong } from '@/song';
 import { getShowItemIcon, getShowItemColor } from '@/utils/showItemIcons';
-import DraggableList from '@/components/show/DraggableList';
 import { useGetMusicianSettings } from '@/store/musicianSlice';
 import { useUpdateSongMutation } from '@/api/songs.api';
 import { QuickOrderDialog } from '@/components/song/QuickOrderDialog';
@@ -127,6 +136,99 @@ export const MusicianSidebar = ({
     [songs],
   );
 
+  // ── Item groups (read-only here; the operator manages them) ──
+  const groups = currentShow?.groups ?? [];
+  // Non-editable mode only allows same-group moves, so the group tag never changes here.
+  const handleMoveItem = (from: number, to: number) => dispatch(reorderShowItems({ source: from, destination: to }));
+  const handleToggleGroupCollapse = (id: string) => dispatch(setShowGroups(toggleGroupCollapsed(groups, id)));
+
+  const renderItemRow = (item: ShowItem, i: number) => {
+    const itemParsed = parseOrderKey(item.order);
+    const itemKey = item.key || itemParsed.key;
+    const itemOrder = itemParsed.order;
+    const isActive = i === activeItemIndex;
+    const ItemIcon = getShowItemIcon(item.type, item.mediaSubType);
+    const itemColor = getShowItemColor(item.type);
+    return (
+      <ListItem key={i} disablePadding>
+        <ListItemButton
+          selected={isActive}
+          onClick={() => onSelectItem(i)}
+          dense
+          sx={{
+            ...(isActive ? { background: palette.primary.main, '&:hover': { background: palette.primary.dark } } : {}),
+          }}
+        >
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <ItemIcon fontSize="small" sx={{ color: isActive ? '#fff' : itemColor }} />
+          </ListItemIcon>
+          <ListItemText
+            primary={
+              <Typography variant="body2" noWrap sx={{ color: isActive ? '#fff' : undefined }}>
+                {getItemLabel(item, i)}
+              </Typography>
+            }
+          />
+          {itemOrder && itemOrder !== 'Default' && (
+            <Chip
+              label={itemOrder}
+              size="small"
+              variant="outlined"
+              sx={{
+                fontSize: '0.55rem',
+                height: 16,
+                maxWidth: 60,
+                ml: 0.5,
+                color: isActive ? '#fff' : undefined,
+                borderColor: isActive ? 'rgba(255,255,255,0.5)' : undefined,
+              }}
+            />
+          )}
+          {itemKey && (
+            <Chip
+              label={itemKey}
+              size="small"
+              sx={{
+                fontSize: '0.6rem',
+                height: 16,
+                ml: 0.5,
+                backgroundColor: isActive ? 'rgba(255,255,255,0.3)' : 'primary.main',
+                color: '#fff',
+              }}
+            />
+          )}
+          {musicianBlockIndicator && i === operatorActiveIndex && (
+            <Chip label="●" size="small" color="primary" sx={{ height: 16, fontSize: '0.6rem', ml: 0.25 }} />
+          )}
+          {item.type === 'song' && item.songNumber != null && pdfCounts && (pdfCounts[String(item.songNumber)] ?? 0) > 0 && (
+            <Tooltip title={LL.MUSICIAN.PDF_COUNT({ count: pdfCounts[String(item.songNumber)] })}>
+              <Chip
+                label={pdfCounts[String(item.songNumber)]}
+                deleteIcon={<PdfIcon sx={{ fontSize: '0.7rem !important' }} />}
+                onDelete={() => {
+                  /* noop — icon-only display */
+                }}
+                size="small"
+                variant="outlined"
+                sx={{
+                  height: 16,
+                  fontSize: '0.55rem',
+                  ml: 0.25,
+                  color: isActive ? '#fff' : undefined,
+                  borderColor: isActive ? 'rgba(255,255,255,0.5)' : undefined,
+                  '& .MuiChip-deleteIcon': { color: 'inherit', ml: '-2px' },
+                }}
+              />
+            </Tooltip>
+          )}
+          <IconButton size="small" onClick={(e) => handleItemMenuOpen(e, i)} sx={{ ml: 0.25, p: 0.25 }}>
+            <MoreVertIcon sx={{ fontSize: '1rem', color: isActive ? '#fff' : undefined }} />
+          </IconButton>
+        </ListItemButton>
+      </ListItem>
+    );
+  };
+
   const handleSongSelected = async (songNumber: number) => {
     try {
       const response = await fetch(`/rest/Song/${songNumber}`);
@@ -177,6 +279,7 @@ export const MusicianSidebar = ({
       await saveShowMutation({
         title: currentShow.title,
         order: currentShow.order,
+        groups: currentShow.groups,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
@@ -192,6 +295,7 @@ export const MusicianSidebar = ({
       await saveShowMutation({
         title: currentShow.title,
         order: orderOverride ?? currentShow.order,
+        groups: currentShow.groups,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
@@ -481,11 +585,13 @@ export const MusicianSidebar = ({
             <Divider />
 
             {/* Show items list */}
-            <DraggableList
-              dense
-              sx={{ flex: 1, overflow: 'auto', pt: 0 }}
+            <ShowGroupList
+              order={showItems}
+              groups={groups}
+              renderItem={renderItemRow}
+              onMoveItem={handleMoveItem}
+              onToggleCollapse={handleToggleGroupCollapse}
               footer={
-                // Placeholder row while a CCLI SongSelect import resolves (it can take a moment).
                 isImportingCcli ? (
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 2, py: 1 }}>
                     <Skeleton variant="circular" width={20} height={20} />
@@ -493,97 +599,7 @@ export const MusicianSidebar = ({
                   </Stack>
                 ) : undefined
               }
-              onItemsChanged={(source, destination) => {
-                dispatch(reorderShowItems({ source, destination }));
-              }}
-            >
-              {showItems.map((item, i) => {
-                const itemParsed = parseOrderKey(item.order);
-                const itemKey = item.key || itemParsed.key;
-                const itemOrder = itemParsed.order;
-                const isActive = i === activeItemIndex;
-                const ItemIcon = getShowItemIcon(item.type, item.mediaSubType);
-                const itemColor = getShowItemColor(item.type);
-                return (
-                  <ListItem key={i} disablePadding>
-                    <ListItemButton
-                      selected={isActive}
-                      onClick={() => onSelectItem(i)}
-                      dense
-                      sx={{
-                        ...(isActive ? { background: palette.primary.main, '&:hover': { background: palette.primary.dark } } : {}),
-                      }}
-                    >
-                      <ListItemIcon sx={{ minWidth: 32 }}>
-                        <ItemIcon fontSize="small" sx={{ color: isActive ? '#fff' : itemColor }} />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={
-                          <Typography variant="body2" noWrap sx={{ color: isActive ? '#fff' : undefined }}>
-                            {getItemLabel(item, i)}
-                          </Typography>
-                        }
-                      />
-                      {itemOrder && itemOrder !== 'Default' && (
-                        <Chip
-                          label={itemOrder}
-                          size="small"
-                          variant="outlined"
-                          sx={{
-                            fontSize: '0.55rem',
-                            height: 16,
-                            maxWidth: 60,
-                            ml: 0.5,
-                            color: isActive ? '#fff' : undefined,
-                            borderColor: isActive ? 'rgba(255,255,255,0.5)' : undefined,
-                          }}
-                        />
-                      )}
-                      {itemKey && (
-                        <Chip
-                          label={itemKey}
-                          size="small"
-                          sx={{
-                            fontSize: '0.6rem',
-                            height: 16,
-                            ml: 0.5,
-                            backgroundColor: isActive ? 'rgba(255,255,255,0.3)' : 'primary.main',
-                            color: '#fff',
-                          }}
-                        />
-                      )}
-                      {musicianBlockIndicator && i === operatorActiveIndex && (
-                        <Chip label="●" size="small" color="primary" sx={{ height: 16, fontSize: '0.6rem', ml: 0.25 }} />
-                      )}
-                      {item.type === 'song' && item.songNumber != null && pdfCounts && (pdfCounts[String(item.songNumber)] ?? 0) > 0 && (
-                        <Tooltip title={LL.MUSICIAN.PDF_COUNT({ count: pdfCounts[String(item.songNumber)] })}>
-                          <Chip
-                            label={pdfCounts[String(item.songNumber)]}
-                            deleteIcon={<PdfIcon sx={{ fontSize: '0.7rem !important' }} />}
-                            onDelete={() => {
-                              /* noop — icon-only display */
-                            }}
-                            size="small"
-                            variant="outlined"
-                            sx={{
-                              height: 16,
-                              fontSize: '0.55rem',
-                              ml: 0.25,
-                              color: isActive ? '#fff' : undefined,
-                              borderColor: isActive ? 'rgba(255,255,255,0.5)' : undefined,
-                              '& .MuiChip-deleteIcon': { color: 'inherit', ml: '-2px' },
-                            }}
-                          />
-                        </Tooltip>
-                      )}
-                      <IconButton size="small" onClick={(e) => handleItemMenuOpen(e, i)} sx={{ ml: 0.25, p: 0.25 }}>
-                        <MoreVertIcon sx={{ fontSize: '1rem', color: isActive ? '#fff' : undefined }} />
-                      </IconButton>
-                    </ListItemButton>
-                  </ListItem>
-                );
-              })}
-            </DraggableList>
+            />
           </Stack>
         </Drawer>
       </ClickAwayListener>

@@ -1,6 +1,9 @@
 import { useCallback } from 'react';
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { useAppDispatch, useAppSelector } from './hooks';
+import type { MidiAction } from '@/hooks/useMidi';
+
+type TrackingMaster = 'operator' | 'midi';
 
 const MUSICIAN_SETTINGS_KEY = 'presenter_musician_settings';
 
@@ -16,6 +19,12 @@ export interface MusicianState {
   musicianSyncMode: 'off' | 'operator' | 'midi';
   musicianSidebarOpen: boolean;
   musicianLastItemIndex: number;
+  /** Remote control: MIDI message key (e.g. "cc_64") → action. */
+  midiMappings: Record<string, MidiAction>;
+  /** Who drives block tracking on the operator side: the operator or the MIDI musician. */
+  midiTrackingMaster: TrackingMaster;
+  /** Remote control: keyboard combo (e.g. "Ctrl+ArrowRight") → action. */
+  musicianKeyboardMappings: Record<string, MidiAction>;
 }
 
 const defaultMusicianSettings: MusicianState = {
@@ -30,16 +39,18 @@ const defaultMusicianSettings: MusicianState = {
   musicianSyncMode: 'operator',
   musicianSidebarOpen: true,
   musicianLastItemIndex: 0,
+  midiMappings: {},
+  midiTrackingMaster: 'operator',
+  musicianKeyboardMappings: {},
 };
 
 let initialState: MusicianState = { ...defaultMusicianSettings };
 try {
   const settings = localStorage.getItem(MUSICIAN_SETTINGS_KEY);
-  if (settings) {
-    initialState = { ...defaultMusicianSettings, ...JSON.parse(settings) };
-    if ((initialState as unknown as { musicianSyncMode?: string }).musicianSyncMode === 'midi-ws') {
-      initialState.musicianSyncMode = 'midi';
-    }
+  const parsed: Partial<MusicianState> = settings ? JSON.parse(settings) : {};
+  initialState = { ...defaultMusicianSettings, ...parsed };
+  if ((parsed as { musicianSyncMode?: string }).musicianSyncMode === 'midi-ws') {
+    initialState.musicianSyncMode = 'midi';
   }
 } catch (e) {
   console.error('Failed to load musician settings', e);

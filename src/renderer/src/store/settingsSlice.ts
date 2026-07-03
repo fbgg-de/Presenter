@@ -1,6 +1,5 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { useAppSelector, useAppDispatch } from './hooks';
-import type { MidiAction } from '@/hooks/useMidi';
 import { useCallback } from 'react';
 
 export const SETTINGS_KEY = 'presenter_settings';
@@ -11,7 +10,6 @@ export type Account = number | 'admin' | '';
 type ClickBehaviour = 'click' | 'double-click';
 type Transition = 'cut' | 'fade';
 type Order = 'lexicographic' | 'numeric';
-type TrackingMaster = 'operator' | 'midi';
 
 export interface SettingsState {
   autoCheckUpdates: boolean;
@@ -40,8 +38,6 @@ export interface SettingsState {
   lastSelectedAccount?: Account;
   mediaPath: string;
   metricsEnabled: boolean;
-  midiMappings: Partial<Record<MidiAction, string>>;
-  midiTrackingMaster: TrackingMaster;
   nextLinePreview: boolean;
   nextLinePreviewColor: string;
   nextLineTranslation: boolean;
@@ -101,8 +97,6 @@ const defaultState: SettingsState = {
   lastSelectedAccount: '',
   mediaPath: '',
   metricsEnabled: true,
-  midiMappings: {},
-  midiTrackingMaster: 'operator',
   nextLinePreview: true,
   nextLinePreviewColor: '#AAAAAA',
   nextLineTranslation: true,

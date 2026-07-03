@@ -8,6 +8,7 @@ import { DEFAULT_STYLE, mergeStyles, type ResolvedStyle, resolveStyleCascade, re
 import { useGetStylesQuery } from '@/api/styles.api';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
+import { useGetMusicianSettings } from '@/store/musicianSlice';
 import { useGetWindows, useUpdateWindows, WindowConfig } from '@/store/windowSlice';
 import { useGetPresentationSettings } from '@/store/presentationSlice';
 import {
@@ -57,8 +58,8 @@ export const usePresentationSync = (): void => {
     offlineMode,
     cachedStyles,
     showLicenseNumber,
-    midiTrackingMaster,
   } = useGetSettings();
+  const { midiTrackingMaster } = useGetMusicianSettings();
 
   // Keep midiTrackingMaster in a ref so the WS callback always sees the latest value
   // without re-registering the callback (which would cause reconnects).

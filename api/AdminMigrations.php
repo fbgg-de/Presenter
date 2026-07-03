@@ -600,6 +600,16 @@ class AdminMigrations extends RestController
                     }
                 },
             ],
+
+            17 => [
+                'description' => 'Add shows.groups column for item groups',
+                'up' => function (mysqli $db) use ($columnExists) {
+                    if (!$columnExists('shows', 'groups')) {
+                        $db->query("ALTER TABLE `shows` ADD COLUMN `groups` JSON DEFAULT NULL");
+                        echo "Added column: shows.groups\n";
+                    }
+                },
+            ],
         ];
     }
 }

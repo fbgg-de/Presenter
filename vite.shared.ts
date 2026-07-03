@@ -29,7 +29,32 @@ export const electronRendererInputs: Record<string, string> = {
   presentation: resolve(__dirname, 'src/renderer/presentation.html'),
 };
 
+/**
+ * Backend target for the dev-server proxy.
+ * Defaults to the local PHP dev backend started by `yarn dev:backend`.
+ * Override with the VITE_DEV_BACKEND env var to develop against a deployed
+ * backend, e.g. `VITE_DEV_BACKEND=https://presenter.efsh.de`.
+ */
+const devBackend = process.env.VITE_DEV_BACKEND ?? 'http://localhost:8000';
+
+/**
+ * Paths are forwarded unchanged: Apache rewrites `/rest/*` → `rest.php/*`
+ * via .htaccess, and the local `php -S` backend does the same via
+ * `dev-router.php` (rest.php parses REQUEST_URI expecting a literal
+ * `rest` segment, so `/rest.php/*` URLs would fail).
+ */
+const proxyEntry = {
+  target: devBackend,
+  changeOrigin: true,
+  // Make backend cookies (PHP session) valid for the localhost dev origin
+  cookieDomainRewrite: '',
+};
+
 /** Shared dev-server config. */
 export const sharedServerConfig: UserConfig['server'] = {
   port: 5173,
+  proxy: {
+    '/rest': proxyEntry,
+    '/oidc': proxyEntry,
+  },
 };

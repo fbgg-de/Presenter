@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { Show, ShowItem } from '@/api/shows.api';
+import type { Show, ShowGroup, ShowItem } from '@/api/shows.api';
+import { DEFAULT_GROUP_ID, normalizeShowGroups } from '@/utils/showGroups';
 import { useAppSelector } from './hooks';
 
 const SHOW_STORAGE_KEY = 'presenter_show';
@@ -24,6 +25,14 @@ try {
   const settings = localStorage.getItem(SHOW_STORAGE_KEY);
   if (settings) {
     initialState = { ...defaultState, ...JSON.parse(settings) };
+    // Shows persisted before the groups feature (or coming from a backend without
+    // groups support) have no `groups`. Normalize here — setCurrentShow is NOT
+    // dispatched on reload, so without this the grouped list renders no items.
+    if (initialState.currentShow) {
+      const { order, groups } = normalizeShowGroups(initialState.currentShow.order ?? [], initialState.currentShow.groups);
+      initialState.currentShow.order = order;
+      initialState.currentShow.groups = groups;
+    }
   }
 } catch (e) {
   console.log('Failed to load show state from localStorage, using defaults', e);
@@ -34,11 +43,35 @@ export const showSlice = createSlice({
   initialState,
   reducers: {
     setCurrentShow: (state, action: PayloadAction<Show | null>) => {
-      state.currentShow = action.payload;
-      state.serverSnapshot = action.payload ? JSON.parse(JSON.stringify(action.payload)) : null;
+      let show = action.payload;
+      if (show) {
+        // Ensure a consistent grouping (Default group, every item assigned, contiguous layout).
+        // Copy instead of mutating: the payload may be a frozen object from the RTK Query cache.
+        const { order, groups } = normalizeShowGroups(show.order ?? [], show.groups);
+        show = { ...show, order, groups };
+      }
+      state.currentShow = show;
+      state.serverSnapshot = show ? JSON.parse(JSON.stringify(show)) : null;
       state.isDirty = false;
 
       localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+    },
+    /** Replace the show's group metadata (rename/recolor/collapse/add/remove). */
+    setShowGroups: (state, action: PayloadAction<ShowGroup[]>) => {
+      if (state.currentShow) {
+        state.currentShow.groups = action.payload;
+        state.isDirty = true;
+        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+      }
+    },
+    /** Replace both the flat order and the group metadata atomically (move group / move item / delete group). */
+    setOrderAndGroups: (state, action: PayloadAction<{ order: ShowItem[]; groups: ShowGroup[] }>) => {
+      if (state.currentShow) {
+        state.currentShow.order = action.payload.order;
+        state.currentShow.groups = action.payload.groups;
+        state.isDirty = true;
+        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+      }
     },
     updateShowOrder: (state, action: PayloadAction<ShowItem[]>) => {
       if (state.currentShow) {
@@ -56,14 +89,28 @@ export const showSlice = createSlice({
     },
     addShowItem: (state, action: PayloadAction<ShowItem>) => {
       if (state.currentShow) {
-        state.currentShow.order.push(action.payload);
+        const order = state.currentShow.order;
+        const groups = state.currentShow.groups;
+        const item = { ...action.payload };
+        // Append to the last group's block (keeps groups contiguous) unless a group is given.
+        if (!item.groupId) {
+          item.groupId = order.length > 0 ? order[order.length - 1].groupId : (groups?.[groups.length - 1]?.id ?? DEFAULT_GROUP_ID);
+        }
+        order.push(item);
         state.isDirty = true;
         localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
       }
     },
     insertShowItem: (state, action: PayloadAction<{ index: number; item: ShowItem }>) => {
       if (state.currentShow) {
-        state.currentShow.order.splice(action.payload.index, 0, action.payload.item);
+        const { index } = action.payload;
+        const order = state.currentShow.order;
+        const item = { ...action.payload.item };
+        // Inherit the group of the preceding (or following) neighbor so it stays contiguous.
+        if (!item.groupId) {
+          item.groupId = (order[index - 1] ?? order[index])?.groupId ?? DEFAULT_GROUP_ID;
+        }
+        order.splice(index, 0, item);
         state.isDirty = true;
         localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
       }
@@ -119,6 +166,8 @@ export default showSlice.reducer;
 
 export const {
   setCurrentShow,
+  setShowGroups,
+  setOrderAndGroups,
   updateShowOrder,
   setShowSelectorOpen,
   closeShowSelector,

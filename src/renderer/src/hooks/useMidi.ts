@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAppDispatch } from '@/store';
-import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
+import { useUpdateMusicianSetting, useGetMusicianSettings } from '@/store/musicianSlice';
 
 export type MidiAction = 'next_page' | 'prev_page' | 'next_song' | 'prev_song' | 'next_block' | 'prev_block' | 'toggle_tracking';
 
@@ -49,8 +49,8 @@ const midiMessageKey = (data: Uint8Array): string | null => {
 export const useMidi = ({ onAction, enabled = true }: UseMidiOptions) => {
   const dispatch = useAppDispatch();
 
-  const { midiMappings } = useGetSettings();
-  const updateSetting = useUpdateSetting();
+  const { midiMappings } = useGetMusicianSettings();
+  const updateSetting = useUpdateMusicianSetting();
 
   const [status, setStatus] = useState<MidiStatus>('disconnected');
   const [devices, setDevices] = useState<MidiDevice[]>([]);

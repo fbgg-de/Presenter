@@ -98,6 +98,7 @@ export const MainPage = () => {
           await saveShowMutation({
             title: show.title,
             order: orderToSave,
+            groups: override ? currentShow?.groups : show.groups,
             styleId: override ? (currentShow?.styleId ?? null) : (show.styleId ?? null),
             eventId: (override ? currentShow?.eventId : show.eventId) ?? null,
             eventName: (override ? currentShow?.eventName : show.eventName) ?? null,

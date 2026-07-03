@@ -291,6 +291,18 @@ const de: Translation = {
     EVENTS_LOAD_MORE: 'Weitere Termine laden',
   },
 
+  SHOW_GROUPS: {
+    DEFAULT: 'Standard',
+    ADD: 'Gruppe hinzufügen',
+    RENAME: 'Umbenennen',
+    COLOR: 'Farbe',
+    NO_COLOR: 'Keine Farbe',
+    MOVE_UP: 'Nach oben',
+    MOVE_DOWN: 'Nach unten',
+    DELETE: 'Gruppe löschen',
+    NAME: 'Gruppenname',
+    MOVE_ITEM_TO: 'In Gruppe verschieben',
+  },
   SHOW_ITEMS: {
     TYPE_SONG: 'Lied',
     TYPE_MEDIA: 'Medien',
@@ -1243,6 +1255,13 @@ const de: Translation = {
     TOGGLE_TRACKING: 'Tracking Master umschalten',
     SYNC_ACTIVE: 'Musiker-Sync aktiv — Klicken zum Folgen',
     FOLLOW_MIDI_ACTIVE: 'MIDI-Musiker wird gefolgt — Klicken zum Beenden',
+  },
+
+  REMOTE: {
+    TITLE: 'Fernsteuerung',
+    PRESS_KEY_FOR: 'Taste drücken für: {action}',
+    LEARN_MIDI: 'MIDI-Taste zuweisen',
+    LEARN_KEY: 'Tastatur-Taste zuweisen',
   },
 
   CONNECTIVITY: {

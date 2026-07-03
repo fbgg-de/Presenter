@@ -120,6 +120,7 @@ CREATE TABLE `shows` (
   `title` varchar(200) NOT NULL,
   `date` timestamp NOT NULL DEFAULT current_timestamp(),
   `order` JSON NOT NULL,
+  `groups` JSON DEFAULT NULL,
   `style_id` INT DEFAULT NULL,
   `event_id` INT DEFAULT NULL,
   `event_name` VARCHAR(255) DEFAULT NULL,

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useContext, createContext, SyntheticEvent } from 'react';
+import { useEffect, useState, useCallback, useContext, createContext, SyntheticEvent, type ReactNode } from 'react';
 import {
   Alert,
   Button,
@@ -36,8 +36,11 @@ export const useBackendConfig = () => useContext(BackendConfigContext);
  * - Uses the app's own RTK Query endpoints for testing — no manual fetch.
  * - Because `base.api.ts` resolves the URL dynamically per-request we can
  *   swap the localStorage value and re-dispatch without reloading.
+ *
+ * Children must be rendered inside this component so that `useBackendConfig`
+ * (BackendConfigContext) can open the dialog from anywhere in the app tree.
  */
-export const ConnectivityChecker = () => {
+export const ConnectivityChecker = ({ children }: { children?: ReactNode }) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
 
@@ -246,6 +249,7 @@ export const ConnectivityChecker = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      {children}
     </BackendConfigContext.Provider>
   );
 };

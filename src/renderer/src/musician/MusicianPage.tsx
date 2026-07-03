@@ -25,8 +25,9 @@ import { LyricsView } from './LyricsView';
 import { usePdfViewer } from './usePdfViewer';
 import { PdfUploadModal } from '@/components/pdf/PdfUploadModal';
 import { PdfAreaMappingEditor } from '@/components/pdf/PdfAreaMappingEditor';
-import { MidiLearnDialog } from '@/components/midi/MidiLearnDialog';
+import { RemoteControlDialog } from '@/components/midi/RemoteControlDialog';
 import { useMidi, type MidiAction } from '@/hooks/useMidi';
+import { useKeyboardRemote } from '@/hooks/useKeyboardRemote';
 import { loadShowSongs } from '@/store/songsSlice';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import { Song } from '@/song';
@@ -601,6 +602,7 @@ export const MusicianPage = () => {
       await saveShowMutation({
         title: currentShow.title,
         order: nextShowOrder,
+        groups: currentShow.groups,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
@@ -623,8 +625,12 @@ export const MusicianPage = () => {
   ]);
 
   // Always-on MIDI — MIDI is a local hardware input and should work regardless of
-  // the network sync mode. The MidiLearnDialog has its own separate useMidi instance.
+  // the network sync mode. The RemoteControlDialog has its own separate useMidi instance.
   useMidi({ onAction: handleMidiAction, enabled: true });
+
+  // Always-on keyboard remote — window-level listener, so the page owns the SINGLE
+  // instance and shares it with the RemoteControlDialog (a second one would double-fire).
+  const keyboardRemote = useKeyboardRemote({ onAction: handleMidiAction, enabled: true });
 
   const handleToggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => {
@@ -765,8 +771,8 @@ export const MusicianPage = () => {
           onSave={pdfViewer.handleSaveAreaMappings}
         />
       )}
-      {/* MIDI mapping dialog */}
-      <MidiLearnDialog open={midiOpen} onClose={() => setMidiOpen(false)} onAction={handleMidiAction} />
+      {/* Remote control (MIDI + keyboard) mapping dialog */}
+      <RemoteControlDialog open={midiOpen} onClose={() => setMidiOpen(false)} onAction={handleMidiAction} keyboard={keyboardRemote} />
       {/* Settings drawer */}
       <MusicianSettings
         open={settingsOpen}

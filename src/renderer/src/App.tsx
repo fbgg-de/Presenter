@@ -97,20 +97,21 @@ const App = () => {
       <TypesafeI18n key={locale} locale={locale}>
         <ErrorBoundary onError={(err: Error, _info: ErrorInfo) => setBoundaryError(err)}>
           <GlobalErrorHandler boundaryError={boundaryError} />
-          <ConnectivityChecker />
-          {!offlineMode && <SessionExpired />}
+          <ConnectivityChecker>
+            {!offlineMode && <SessionExpired />}
 
-          <BrowserRouter>
-            <Routes>
-              <Route path="/login" element={<HardRedirect to="/login" />} />
-              <Route path="/a/:licenseNumber" element={<AccountLoginRedirect />} />
-              <Route path="/unauthorized" element={<UnauthorizedPage />} />
-              <Route path="/admin" element={<HardRedirect to="/admin" />} />
-              <Route path="/admin/*" element={<HardRedirect to="/admin" />} />
-              <Route path="/notes" element={<HardRedirect to="/notes" />} />
-              <Route path="/*" element={<MainPage />} />
-            </Routes>
-          </BrowserRouter>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<HardRedirect to="/login" />} />
+                <Route path="/a/:licenseNumber" element={<AccountLoginRedirect />} />
+                <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                <Route path="/admin" element={<HardRedirect to="/admin" />} />
+                <Route path="/admin/*" element={<HardRedirect to="/admin" />} />
+                <Route path="/notes" element={<HardRedirect to="/notes" />} />
+                <Route path="/*" element={<MainPage />} />
+              </Routes>
+            </BrowserRouter>
+          </ConnectivityChecker>
         </ErrorBoundary>
       </TypesafeI18n>
     </ThemeProvider>

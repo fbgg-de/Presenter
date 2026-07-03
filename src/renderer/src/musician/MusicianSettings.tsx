@@ -242,7 +242,7 @@ export const MusicianSettings = ({
 
         <Setting
           icon={<MidiIcon fontSize="small" />}
-          label={LL.MIDI.SETTINGS()}
+          label={LL.REMOTE.TITLE()}
           onClick={() => {
             onOpenMidiSettings();
             onClose();

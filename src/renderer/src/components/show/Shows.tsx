@@ -252,6 +252,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
       await saveShowMutation({
         title: renameTitle.trim(),
         order: showToRename.order,
+        groups: showToRename.groups,
         styleId: showToRename.styleId ?? null,
         eventId: renameEvent?.id ?? null,
         eventName: renameEvent?.name ?? null,

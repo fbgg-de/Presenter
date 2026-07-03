@@ -24,12 +24,13 @@ const LoginApp = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <TypesafeI18n locale={uiLanguage}>
-        <ConnectivityChecker />
-        <BrowserRouter>
-          <Routes>
-            <Route path="*" element={<LoginPage />} />
-          </Routes>
-        </BrowserRouter>
+        <ConnectivityChecker>
+          <BrowserRouter>
+            <Routes>
+              <Route path="*" element={<LoginPage />} />
+            </Routes>
+          </BrowserRouter>
+        </ConnectivityChecker>
       </TypesafeI18n>
     </ThemeProvider>
   );
