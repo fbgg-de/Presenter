@@ -95,6 +95,9 @@ export interface FrontendAPI {
   // ── Backend origin (for OIDC callback detection) ──
   setBackendOrigin: (origin: string) => void;
 
+  // ── Auto-login preference mirror ──
+  setAutoLogin: (enabled: boolean) => void;
+
   // ── Secure credential storage (Electron only) ──
   isEncryptionAvailable: () => Promise<boolean>;
   storeCredentials: (username: string, password: string) => Promise<boolean>;

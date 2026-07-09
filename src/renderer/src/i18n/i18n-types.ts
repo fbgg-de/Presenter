@@ -1855,6 +1855,51 @@ type RootTranslation = {
 		 * S​h​o​w​ ​l​e​s​s
 		 */
 		GALLERY_COLLAPSE: string
+		/**
+		 * S​t​y​l​e​s
+		 */
+		OVERVIEW: string
+		/**
+		 * A​l​l​ ​s​t​y​l​e​s
+		 */
+		BACK_TO_OVERVIEW: string
+		/**
+		 * S​e​t​ ​a​s​ ​g​l​o​b​a​l​ ​s​t​y​l​e
+		 */
+		SET_GLOBAL: string
+		/**
+		 * R​e​m​o​v​e​ ​a​s​ ​g​l​o​b​a​l​ ​s​t​y​l​e
+		 */
+		UNSET_GLOBAL: string
+		/**
+		 * U​s​e​ ​f​o​r​ ​c​u​r​r​e​n​t​ ​s​h​o​w
+		 */
+		ASSIGN_SHOW: string
+		/**
+		 * R​e​m​o​v​e​ ​f​r​o​m​ ​c​u​r​r​e​n​t​ ​s​h​o​w
+		 */
+		UNASSIGN_SHOW: string
+		/**
+		 * {​c​o​u​n​t​}​ ​i​t​e​m​s
+		 * @param {unknown} count
+		 */
+		ITEMS_USING: RequiredParams<'count'>
+		/**
+		 * D​i​s​a​b​l​e​d
+		 */
+		DISABLED: string
+		/**
+		 * N​o​ ​s​t​y​l​e​s​ ​y​e​t​ ​—​ ​c​r​e​a​t​e​ ​y​o​u​r​ ​f​i​r​s​t​ ​s​t​y​l​e​ ​t​o​ ​d​e​s​i​g​n​ ​h​o​w​ ​y​o​u​r​ ​l​y​r​i​c​s​ ​a​r​e​ ​p​r​e​s​e​n​t​e​d​.
+		 */
+		EMPTY_HINT: string
+		/**
+		 * I​n​h​e​r​i​t​e​d
+		 */
+		INHERITED: string
+		/**
+		 * R​e​s​e​t​ ​—​ ​i​n​h​e​r​i​t​ ​t​h​i​s​ ​v​a​l​u​e​ ​a​g​a​i​n
+		 */
+		RESET_TO_INHERITED: string
 	}
 	FONT: {
 		/**
@@ -3181,6 +3226,34 @@ type RootTranslation = {
 		 * S​h​o​w​ ​v​i​d​e​o​ ​o​n​ ​a​l​l​ ​w​i​n​d​o​w​s
 		 */
 		SHOW_ALL: string
+		/**
+		 * A​l​l​ ​w​i​n​d​o​w​s
+		 */
+		ALL_WINDOWS: string
+		/**
+		 * P​l​a​y​ ​o​n​ ​a​l​l​ ​w​i​n​d​o​w​s
+		 */
+		PLAY_ALL: string
+		/**
+		 * P​a​u​s​e​ ​a​l​l​ ​w​i​n​d​o​w​s
+		 */
+		PAUSE_ALL: string
+		/**
+		 * S​t​o​p​ ​a​l​l​ ​w​i​n​d​o​w​s
+		 */
+		STOP_ALL: string
+		/**
+		 * V​i​d​e​o​ ​w​a​l​l​ ​s​y​n​c
+		 */
+		SYNC: string
+		/**
+		 * K​e​e​p​ ​a​l​l​ ​w​i​n​d​o​w​s​ ​t​i​m​e​-​s​y​n​c​e​d​ ​—​ ​s​h​o​w​ ​t​h​e​ ​s​a​m​e​ ​v​i​d​e​o​ ​i​n​ ​d​i​f​f​e​r​e​n​t​ ​c​r​o​p​s​ ​a​s​ ​a​ ​v​i​d​e​o​ ​w​a​l​l
+		 */
+		SYNC_HINT: string
+		/**
+		 * P​e​r​-​w​i​n​d​o​w​ ​c​o​n​t​r​o​l​s
+		 */
+		WINDOW_CONTROLS: string
 		/**
 		 * G​e​n​e​r​a​l
 		 */
@@ -6574,6 +6647,50 @@ export type TranslationFunctions = {
 		 * Show less
 		 */
 		GALLERY_COLLAPSE: () => LocalizedString
+		/**
+		 * Styles
+		 */
+		OVERVIEW: () => LocalizedString
+		/**
+		 * All styles
+		 */
+		BACK_TO_OVERVIEW: () => LocalizedString
+		/**
+		 * Set as global style
+		 */
+		SET_GLOBAL: () => LocalizedString
+		/**
+		 * Remove as global style
+		 */
+		UNSET_GLOBAL: () => LocalizedString
+		/**
+		 * Use for current show
+		 */
+		ASSIGN_SHOW: () => LocalizedString
+		/**
+		 * Remove from current show
+		 */
+		UNASSIGN_SHOW: () => LocalizedString
+		/**
+		 * {count} items
+		 */
+		ITEMS_USING: (arg: { count: unknown }) => LocalizedString
+		/**
+		 * Disabled
+		 */
+		DISABLED: () => LocalizedString
+		/**
+		 * No styles yet — create your first style to design how your lyrics are presented.
+		 */
+		EMPTY_HINT: () => LocalizedString
+		/**
+		 * Inherited
+		 */
+		INHERITED: () => LocalizedString
+		/**
+		 * Reset — inherit this value again
+		 */
+		RESET_TO_INHERITED: () => LocalizedString
 	}
 	FONT: {
 		/**
@@ -7884,6 +8001,34 @@ export type TranslationFunctions = {
 		 * Show video on all windows
 		 */
 		SHOW_ALL: () => LocalizedString
+		/**
+		 * All windows
+		 */
+		ALL_WINDOWS: () => LocalizedString
+		/**
+		 * Play on all windows
+		 */
+		PLAY_ALL: () => LocalizedString
+		/**
+		 * Pause all windows
+		 */
+		PAUSE_ALL: () => LocalizedString
+		/**
+		 * Stop all windows
+		 */
+		STOP_ALL: () => LocalizedString
+		/**
+		 * Video wall sync
+		 */
+		SYNC: () => LocalizedString
+		/**
+		 * Keep all windows time-synced — show the same video in different crops as a video wall
+		 */
+		SYNC_HINT: () => LocalizedString
+		/**
+		 * Per-window controls
+		 */
+		WINDOW_CONTROLS: () => LocalizedString
 		/**
 		 * General
 		 */

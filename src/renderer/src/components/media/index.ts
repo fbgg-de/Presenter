@@ -1,2 +1,2 @@
-﻿export * from './MediaBrowser';
-export * from './VideoControlBar';
+export * from './MediaBrowser';
+export * from './VideoControlPanel';

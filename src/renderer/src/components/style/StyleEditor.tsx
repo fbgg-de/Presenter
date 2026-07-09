@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback, useRef, ReactNode } from 'react';
+﻿import { useState, useEffect, useMemo, useCallback, useRef, ReactNode, CSSProperties } from 'react';
 import {
   Accordion,
   AccordionDetails,
@@ -8,15 +8,20 @@ import {
   Button,
   Chip,
   CircularProgress,
+  Divider,
   Drawer,
   FormControlLabel,
   IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
   MenuItem,
-  Popover,
   Select,
   Slider,
   Stack,
   Switch,
+  Tab,
+  Tabs,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -30,7 +35,10 @@ import {
   ContentCopy as DuplicateIcon,
   FolderOpen as FolderOpenIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
+  ArrowBack as BackIcon,
+  MoreVert as MoreIcon,
+  Public as GlobalIcon,
+  Slideshow as ShowIcon,
   ArrowUpward as MoveUpIcon,
   ArrowDownward as MoveDownIcon,
   DragIndicator as DragHandleIcon,
@@ -46,6 +54,7 @@ import {
   VerticalAlignBottom as VAlignBotIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
+  RestartAlt as ResetIcon,
   Bolt as ApplyIcon,
   Add as AddIcon,
   Image as ImageIcon,
@@ -57,8 +66,6 @@ import {
   Pause as PauseIcon,
   VolumeUp as VolumeUpIcon,
   VolumeOff as VolumeOffIcon,
-  UnfoldMore as UnfoldMoreIcon,
-  UnfoldLess as UnfoldLessIcon,
   Edit as EditIcon,
   Remove as RemoveIcon,
   GTranslate as TranslateIcon,
@@ -82,38 +89,108 @@ import CompactPositionPicker from '@/components/common/CompactPositionPicker';
 import { WEB_SAFE_FONTS } from '@/utils/styleUtils';
 import { resolveMediaUrl, probeMediaUrl, type MediaProbeStatus, invalidateMediaProbe } from '@/utils/mediaUrl';
 import { useGetLanguageTagsQuery } from '@/api/songs.api';
-import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
+import { useAppDispatch } from '@/store';
+import { useGetShow, setShowStyleId, setDirty } from '@/store/showSlice';
+import { useSaveShowMutation } from '@/api/shows.api';
+import { useUpdateAccountSettingsMutation } from '@/api/session.api';
 import { formatTime } from '@/utils';
 
-/** Helper: toggle-enabled property row — compact layout: switch | label | children in one line. */
+/**
+ * Property row for cascade-overridable style props. No per-row switch:
+ * - set here → label | control (right-aligned; `block` = own line) | subtle reset icon
+ * - inherited → label | "Inherited" caption + edit (pencil) button to override here
+ * `plainSwitch` keeps a real switch for genuine on/off settings (not cascade overrides).
+ */
 const StylePropRow = ({
   label,
   enabled,
   onToggle,
   children,
+  block = false,
+  plainSwitch = false,
 }: {
   label: string;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
   children: ReactNode;
-}) => (
-  <Stack
-    direction="row"
-    spacing={1}
-    sx={{
-      alignItems: 'center',
-      py: 0.5,
-    }}
-  >
-    <Switch size="small" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
-    <Typography variant="body2" sx={{ minWidth: 130, fontWeight: 500, opacity: enabled ? 1 : 0.5 }}>
-      {label}
-    </Typography>
-    <Box sx={{ flex: 1, opacity: enabled ? 1 : 0.4, pointerEvents: enabled ? 'auto' : 'none' }}>{children}</Box>
+  block?: boolean;
+  plainSwitch?: boolean;
+}) => {
+  const { LL } = useI18nContext();
+  return (
+    <Box sx={{ py: 0.25, px: 1, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minHeight: 38 }}>
+        {plainSwitch && <Switch size="small" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />}
+        <Typography
+          variant="body2"
+          onClick={() => onToggle(!enabled)}
+          sx={{ fontWeight: 500, opacity: enabled ? 1 : 0.6, cursor: 'pointer', userSelect: 'none', flexShrink: 0 }}
+        >
+          {label}
+        </Typography>
+        <Box sx={{ flexGrow: 1 }} />
+        {enabled && !block && <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', minWidth: 0 }}>{children}</Box>}
+        {!plainSwitch && enabled && (
+          <Tooltip title={LL.STYLE.RESET_TO_INHERITED()}>
+            <IconButton size="small" onClick={() => onToggle(false)} sx={{ ml: 0.5, opacity: 0.35, '&:hover': { opacity: 1 } }}>
+              <ResetIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
+        )}
+        {!plainSwitch && !enabled && (
+          <>
+            <Typography variant="caption" sx={{ color: 'text.disabled', userSelect: 'none' }}>
+              {LL.STYLE.INHERITED()}
+            </Typography>
+            <Tooltip title={LL.COMMON.EDIT()}>
+              <IconButton size="small" onClick={() => onToggle(true)} sx={{ ml: 0.5 }}>
+                <EditIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Tooltip>
+          </>
+        )}
+        {plainSwitch && !block && !enabled && <Box sx={{ opacity: 0.4, pointerEvents: 'none' }}>{children}</Box>}
+      </Stack>
+      {block && enabled && <Box sx={{ pl: 0.5, pb: 0.75 }}>{children}</Box>}
+    </Box>
+  );
+};
+
+/** Indented wrap-row for sub-controls that belong to the row above (image/video options). */
+const SubControlsRow = ({ children }: { children: ReactNode }) => (
+  <Stack direction="row" spacing={2} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', pl: 2, py: 0.5, rowGap: 1 }}>
+    {children}
   </Stack>
 );
 
-/** Compact media row: same layout as StylePropRow — switch | label 130px | thumb + input + browse */
+/** Flat paper panel grouping related properties — matches the Song Editor's panel look. */
+const PropCard = ({ title, span = false, children }: { title?: string; span?: boolean; children: ReactNode }) => (
+  <Stack
+    spacing={0.25}
+    sx={{
+      borderRadius: 1,
+      p: '10px 15px',
+      minWidth: 0,
+      gridColumn: span ? '1 / -1' : undefined,
+      bgcolor: 'background.paper',
+    }}
+  >
+    {title && (
+      <Typography variant="overline" sx={{ color: 'text.secondary', lineHeight: 1.6, px: 0.5 }}>
+        {title}
+      </Typography>
+    )}
+    {children}
+  </Stack>
+);
+
+/** Single-column stack of property cards — the form column is narrow next to the large preview. */
+const CardGrid = ({ children }: { children: ReactNode }) => (
+  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 1.5, alignItems: 'start' }}>{children}</Box>
+);
+
+/** Media path row: switch | label on top, thumb + path input + browse on its own line. */
 const MediaPropRow = ({
   label,
   enabled,
@@ -131,28 +208,8 @@ const MediaPropRow = ({
   onBrowse: () => void;
   thumbType: 'image' | 'video';
 }) => (
-  <Stack
-    direction="row"
-    spacing={1}
-    sx={{
-      alignItems: 'center',
-      py: 0.5,
-    }}
-  >
-    <Switch size="small" checked={enabled} onChange={(e) => onToggle(e.target.checked)} />
-    <Typography variant="body2" sx={{ minWidth: 130, fontWeight: 500, opacity: enabled ? 1 : 0.5 }}>
-      {label}
-    </Typography>
-    <Box
-      sx={{
-        flex: 1,
-        opacity: enabled ? 1 : 0.4,
-        pointerEvents: enabled ? 'auto' : 'none',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 0.75,
-      }}
-    >
+  <StylePropRow label={label} enabled={enabled} onToggle={onToggle} block>
+    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
       {value && <MediaThumb url={value} type={thumbType} />}
       <TextField
         size="small"
@@ -167,27 +224,8 @@ const MediaPropRow = ({
           <FolderOpenIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-    </Box>
-  </Stack>
-);
-
-/** Section wrapper using MUI Accordion for collapsible groups. */
-const Section = ({ title, defaultExpanded = true, children }: { title: string; defaultExpanded?: boolean; children: ReactNode }) => (
-  <Accordion defaultExpanded={defaultExpanded} disableGutters elevation={0} sx={{ '&:before': { display: 'none' } }}>
-    <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ background: (t) => t.palette.action.hover, borderRadius: 1 }}>
-      <Typography
-        variant="subtitle2"
-        sx={{
-          fontWeight: 700,
-        }}
-      >
-        {title}
-      </Typography>
-    </AccordionSummary>
-    <AccordionDetails>
-      <Stack spacing={1}>{children}</Stack>
-    </AccordionDetails>
-  </Accordion>
+    </Stack>
+  </StylePropRow>
 );
 
 /** Per-language typography settings editor with per-property enable toggles. */
@@ -253,6 +291,7 @@ const LanguageStyleEditor = ({
         <CssUnitInput value={entry.letterSpacing || '0px'} onChange={(v) => onChange({ letterSpacing: v })} />
       </StylePropRow>
       <StylePropRow
+        block
         label={LL.STYLE.TEXT_SHADOW()}
         enabled={entry.textShadowEnabled ?? false}
         onToggle={(e) => onChange({ textShadowEnabled: e })}
@@ -286,6 +325,7 @@ const LanguageStyleEditor = ({
         </Stack>
       </StylePropRow>
       <StylePropRow
+        block
         label={LL.STYLE.TEXT_STROKE()}
         enabled={entry.textStrokeEnabled ?? false}
         onToggle={(e) => onChange({ textStrokeEnabled: e })}
@@ -328,6 +368,7 @@ const LanguageStyleEditor = ({
         />
       </StylePropRow>
       <StylePropRow
+        block
         label={LL.STYLE.NEXT_LINE_PREVIEW()}
         enabled={entry.nextLinePreviewEnabled ?? false}
         onToggle={(e) => onChange({ nextLinePreviewEnabled: e })}
@@ -531,6 +572,29 @@ const FontFamilyEditor = ({
   );
 };
 
+/**
+ * CSS overrides for one language tag, mirroring the presentation's per-language styling.
+ * Falls back to the default ('') entry when the tag has no own entry. `fontScale` shrinks
+ * viewport-relative font sizes for the small preview canvas.
+ */
+const languageEntryCss = (entries: LanguageStyleEntry[] | undefined, tag: string, fontScale = 1): CSSProperties => {
+  const entry = entries?.find((e) => e.language.toLowerCase() === tag) ?? entries?.find((e) => e.language === '');
+  if (!entry) return {};
+  const css: CSSProperties = {};
+  if (entry.fontColorEnabled && entry.fontColor) css.color = entry.fontColor;
+  if (entry.fontSizeEnabled && entry.fontSize) css.fontSize = fontScale === 1 ? entry.fontSize : `calc(${entry.fontSize} * ${fontScale})`;
+  if (entry.fontStyleEnabled) {
+    if (entry.fontBold) css.fontWeight = 'bold';
+    if (entry.fontItalic) css.fontStyle = 'italic';
+    if (entry.fontUnderline) css.textDecoration = 'underline';
+  }
+  if (entry.letterSpacingEnabled && entry.letterSpacing) css.letterSpacing = entry.letterSpacing;
+  if (entry.textShadowEnabled && entry.textShadow) css.textShadow = `${entry.textShadow} ${entry.textShadowColor || 'rgba(0,0,0,0.5)'}`;
+  if (entry.textStrokeEnabled && entry.textStroke) (css as Record<string, unknown>).WebkitTextStroke = entry.textStroke;
+  if (entry.opacityEnabled && entry.opacity !== undefined) css.opacity = entry.opacity;
+  return css;
+};
+
 const createEmptyStyleData = (): StyleData => ({
   backgroundColor: { enabled: true, value: '#000000' },
   fontFamily: { enabled: true, value: 'Roboto' },
@@ -598,14 +662,17 @@ type WindowOverride = { window_name: string; override_style_id: number };
 const LAST_EDITED_STYLE_KEY = 'presenter_last_edited_style_id';
 
 /** Small 16:9 canvas that renders a mini-preview of a style. */
-const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew?: boolean }) => {
+export const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew?: boolean }) => {
   const resolved = useMemo(() => {
     if (!style) return DEFAULT_STYLE;
     return mergeStyles(DEFAULT_STYLE, resolveStyleData(style.data));
   }, [style]);
-  const containerCssRaw = useMemo(() => styleToContainerCss(resolved), [resolved]);
   // Exclude padding so the thumb's 16:9 aspect-ratio box is not offset by style padding
-  const { padding: _thumbPadding, ...containerCss } = containerCssRaw as ReturnType<typeof styleToContainerCss> & { padding?: string };
+  const containerCss = useMemo(() => {
+    const css: Record<string, unknown> = { ...styleToContainerCss(resolved) };
+    delete css.padding;
+    return css;
+  }, [resolved]);
   const textCss = useMemo(() => styleToTextCss(resolved), [resolved]);
   const bgImgSrc = resolved.backgroundImage ? resolveMediaUrl(resolved.backgroundImage) : undefined;
   const bgVideoSrc = resolved.backgroundVideo ? resolveMediaUrl(resolved.backgroundVideo) : undefined;
@@ -724,88 +791,6 @@ const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew?: bool
   );
 };
 
-/** Gallery-style selector: one row by default, expandable to 4 rows. */
-const StyleGallery = ({
-  styles,
-  selectedId,
-  onSelect,
-  LL,
-}: {
-  styles: StyleEntity[];
-  selectedId: number | 'new';
-  onSelect: (id: number | 'new') => void;
-  LL: ReturnType<typeof useI18nContext>['LL'];
-}) => {
-  const [expanded, setExpanded] = useState(false);
-  // Each card ~120px wide; show as many as fit in one row, cap visible rows
-  const maxRows = expanded ? 4 : 1;
-  const CARD_W = 120;
-  const GAP = 8;
-
-  const items: Array<{ id: number | 'new'; style?: StyleEntity; label: string }> = [
-    { id: 'new', label: `+ ${LL.STYLE.NEW()}` },
-    ...styles.map((s) => ({ id: s.id, style: s, label: s.name })),
-  ];
-
-  return (
-    <Stack spacing={0.5}>
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(auto-fill, minmax(${CARD_W}px, 1fr))`,
-          gap: `${GAP}px`,
-          maxHeight: maxRows * ((CARD_W * 9) / 16 + 28 + GAP) + GAP,
-          overflow: 'hidden',
-          transition: 'max-height 0.3s ease',
-        }}
-      >
-        {items.map((item) => (
-          <Box
-            key={item.id}
-            onClick={() => onSelect(item.id)}
-            sx={{
-              cursor: 'pointer',
-              borderRadius: 1,
-              border: 2,
-              borderColor: selectedId === item.id ? 'primary.main' : 'divider',
-              overflow: 'hidden',
-              transition: 'border-color 0.15s',
-              '&:hover': { borderColor: selectedId === item.id ? 'primary.main' : 'action.selected' },
-            }}
-          >
-            <StyleGalleryThumb style={item.style} isNew={item.id === 'new'} />
-            <Typography
-              variant="caption"
-              noWrap
-              sx={{
-                display: 'block',
-                textAlign: 'center',
-                px: 0.5,
-                py: 0.25,
-                fontWeight: selectedId === item.id ? 700 : 400,
-                bgcolor: selectedId === item.id ? 'primary.main' : 'transparent',
-                color: selectedId === item.id ? 'primary.contrastText' : 'text.secondary',
-              }}
-            >
-              {item.label}
-            </Typography>
-          </Box>
-        ))}
-      </Box>
-      {items.length > 4 && (
-        <Button
-          size="small"
-          onClick={() => setExpanded((e) => !e)}
-          startIcon={expanded ? <UnfoldLessIcon /> : <UnfoldMoreIcon />}
-          sx={{ alignSelf: 'center' }}
-        >
-          {expanded ? LL.STYLE.GALLERY_COLLAPSE() : LL.STYLE.GALLERY_EXPAND()}
-        </Button>
-      )}
-    </Stack>
-  );
-};
-
 export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) => {
   const { LL } = useI18nContext();
   const { data: styles = [] } = useGetStylesQuery();
@@ -814,19 +799,35 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   const [updateStyleMutation] = useUpdateStyleMutation();
   const [deleteStyleMutation] = useDeleteStyleMutation();
 
+  // Assignment context: global style (settings + account) and current show
+  const { globalStyleId, offlineMode } = useGetSettings();
+  const updateSetting = useUpdateSetting();
+  const [updateAccountSettings] = useUpdateAccountSettingsMutation();
+  const { currentShow } = useGetShow();
+  const dispatch = useAppDispatch();
+  const [saveShowMutation] = useSaveShowMutation();
+
+  /** 'overview' = manage/assign styles in a card grid; 'edit' = full editor with live preview. */
+  const [view, setView] = useState<'overview' | 'edit'>('overview');
+  const [cardMenu, setCardMenu] = useState<{ anchor: HTMLElement; style: StyleEntity } | null>(null);
+
   const [selectedStyleId, setSelectedStyleId] = useState<number | 'new'>('new');
   const [styleName, setStyleName] = useState<string>(LL.STYLE.NEW());
   const [styleEnabled, setStyleEnabled] = useState(true);
   const [styleData, setStyleData] = useState<StyleData>(createEmptyStyleData());
   const [windowOverrides, setWindowOverrides] = useState<WindowOverride[]>([]);
   const [isDirty, setIsDirty] = useState(false);
-  const [showRawCss, setShowRawCss] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [renamePopoverAnchor, setRenamePopoverAnchor] = useState<HTMLElement | null>(null);
-  const [renameValue, setRenameValue] = useState('');
+  const [nameEditing, setNameEditing] = useState(false);
+  /** Active settings tab in the edit view (Background / Text / Languages / Copyright / CSS). */
+  const [editTab, setEditTab] = useState(0);
+
+  // Language-section UI state (lifted here so the section can render conditionally)
+  const [addLangInput, setAddLangInput] = useState('');
+  const langDragIndexRef = useRef<number | null>(null);
+  const [langDragOver, setLangDragOver] = useState<number | null>(null);
 
   // Preview layer visibility & video controls
-  const [previewOpen, setPreviewOpen] = useState(false);
   const [previewImageHidden, setPreviewImageHidden] = useState(false);
   const [previewVideoHidden, setPreviewVideoHidden] = useState(false);
   const [previewVideoHovered, setPreviewVideoHovered] = useState(false);
@@ -883,52 +884,80 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
     setIsDirty(false);
   }, []);
 
+  // On open: jump straight into the editor when a style id was requested,
+  // otherwise land on the overview.
   useEffect(() => {
-    if (open && editStyleId) {
-      setSelectedStyleId(editStyleId);
+    if (!open) return;
+    setNameEditing(false);
+    if (editStyleId) {
       const found = styles.find((s) => s.id === editStyleId);
-      if (found) loadStyleEntity(found);
-    }
-  }, [open, editStyleId, styles, loadStyleEntity]);
-
-  useEffect(() => {
-    if (open && !editStyleId) {
-      // Load last-edited style from localStorage
-      const lastId = parseInt(localStorage.getItem(LAST_EDITED_STYLE_KEY) || '0', 10);
-      const lastEdited = lastId ? styles.find((s) => s.id === lastId) : undefined;
-      if (lastEdited) {
-        setSelectedStyleId(lastEdited.id);
-        loadStyleEntity(lastEdited);
-      } else if (styles.length > 0) {
-        setSelectedStyleId(styles[0].id);
-        loadStyleEntity(styles[0]);
-      } else {
-        setSelectedStyleId('new');
-        setStyleName(LL.STYLE.NEW());
-        setStyleData(createEmptyStyleData());
-        setWindowOverrides([]);
-        setStyleEnabled(true);
+      if (found) {
+        setSelectedStyleId(found.id);
+        loadStyleEntity(found);
+        setView('edit');
+        return;
       }
-      setIsDirty(false);
     }
+    setView('overview');
+    setIsDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, editStyleId]);
 
-  const handleStyleSelect = (id: number | 'new') => {
+  /** Open a style in the editor view. */
+  const openEdit = (style: StyleEntity) => {
+    setSelectedStyleId(style.id);
+    localStorage.setItem(LAST_EDITED_STYLE_KEY, String(style.id));
+    loadStyleEntity(style);
+    setNameEditing(false);
+    setEditTab(0);
+    setView('edit');
+  };
+
+  /** Start a fresh style in the editor view. */
+  const openCreate = () => {
+    setSelectedStyleId('new');
+    setStyleName(LL.STYLE.NEW());
+    setStyleData(createEmptyStyleData());
+    setWindowOverrides([]);
+    setStyleEnabled(true);
+    setIsDirty(false);
+    setNameEditing(true);
+    setEditTab(0);
+    setView('edit');
+  };
+
+  const backToOverview = () => {
     if (isDirty && !confirm(LL.STYLE.UNSAVED_PROMPT())) return;
-    setSelectedStyleId(id);
-    if (id !== 'new') localStorage.setItem(LAST_EDITED_STYLE_KEY, String(id));
-    if (id === 'new') {
-      setStyleName(LL.STYLE.NEW());
-      setStyleData(createEmptyStyleData());
-      setWindowOverrides([]);
-      setStyleEnabled(true);
-      setIsDirty(false);
-    } else {
-      const found = styles.find((s) => s.id === id);
-      if (found) loadStyleEntity(found);
+    setIsDirty(false);
+    setView('overview');
+  };
+
+  // ── Assignments ──
+  /** Make a style the global default (mirrors the selector in Settings, incl. account sync). */
+  const handleSetGlobal = (id: number | null) => {
+    updateSetting('globalStyleId', id ?? 0);
+    if (!offlineMode) updateAccountSettings({ defaultStyleId: id });
+  };
+
+  /** Assign/unassign a style to the current show and persist the show right away. */
+  const handleAssignShow = async (id: number | null) => {
+    if (!currentShow) return;
+    dispatch(setShowStyleId(id ?? undefined));
+    try {
+      await saveShowMutation({
+        title: currentShow.title,
+        order: currentShow.order,
+        groups: currentShow.groups,
+        styleId: id,
+      }).unwrap();
+      dispatch(setDirty(false));
+    } catch (error) {
+      console.error('Failed to save show style assignment:', error);
     }
   };
+
+  /** How many items of the current show use a style directly. */
+  const itemUsageCount = (id: number): number => (currentShow?.order ?? []).filter((it) => it.styleId === id).length;
 
   const updateProp = useCallback(<K extends keyof StyleData>(key: K, value: StyleData[K]) => {
     setStyleData((prev) => ({ ...prev, [key]: value }));
@@ -1059,11 +1088,8 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
       if (!confirm(LL.STYLE.DELETE_CONFIRM())) return;
       try {
         await deleteStyleMutation({ id: selectedStyleId }).unwrap();
-        setSelectedStyleId('new');
-        setStyleName(LL.STYLE.NEW());
-        setStyleData(createEmptyStyleData());
-        setWindowOverrides([]);
         setIsDirty(false);
+        setView('overview');
       } catch (error) {
         console.error('Failed to delete style:', error);
       }
@@ -1076,6 +1102,8 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
     padding?: string;
   };
   const previewTextCss = useMemo(() => styleToTextCss(resolvedPreview), [resolvedPreview]);
+  // Per-language overrides for the German sample line in the preview (scaled like the base text)
+  const previewGermanCss = useMemo(() => languageEntryCss(resolvedPreview.languageStyles, 'de', 0.45), [resolvedPreview]);
 
   const bgImageVal = getProp<string>('backgroundImage').value || '';
   const bgVideoVal = getProp<string>('backgroundVideo').value || '';
@@ -1094,1391 +1122,1539 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
         }}
       />
       <Drawer open={open} anchor="right" onClose={onClose}>
-        <Stack sx={{ width: 'min(98vw, 900px)', height: '100%' }}>
-          {/* Header */}
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{
-              alignItems: 'center',
-              p: 2,
-              borderBottom: 1,
-              borderColor: 'divider',
-            }}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 700 }}>
-              {LL.STYLE.EDITOR()}
-            </Typography>
-            {isDirty && <Chip label={LL.STYLE.UNSAVED()} size="small" color="warning" />}
-            {statusMessage && <Chip label={statusMessage} size="small" color="success" />}
-            <Box
-              sx={{
-                flexGrow: 1,
-              }}
-            />
-            <IconButton onClick={onClose}>
-              <CloseIcon />
-            </IconButton>
-          </Stack>
-
-          {/* Style gallery selector */}
-          <Box sx={{ px: 2, pt: 1.5, pb: 1, borderBottom: 1, borderColor: 'divider' }}>
-            <StyleGallery styles={styles} selectedId={selectedStyleId} onSelect={handleStyleSelect} LL={LL} />
-            {/* Style name with inline actions */}
-            <Stack
-              direction="row"
-              spacing={0.5}
-              sx={{
-                alignItems: 'center',
-                mt: 1,
-              }}
-            >
-              {selectedStyleId === 'new' ? (
-                <TextField
-                  size="small"
-                  autoFocus
-                  value={styleName}
-                  onChange={(e) => {
-                    setStyleName(e.target.value);
-                    setIsDirty(true);
-                  }}
-                  placeholder={LL.STYLE.NAME()}
-                  label={LL.STYLE.NAME()}
-                  sx={{ flex: 1 }}
-                />
-              ) : (
-                <Typography
-                  variant="subtitle2"
-                  noWrap
-                  sx={{
-                    fontWeight: 700,
-                    flex: 1,
-                  }}
-                >
-                  {styleName}
+        <Stack sx={{ width: 'min(96vw, 1360px)', height: '100%' }}>
+          {view === 'overview' && (
+            <>
+              {/* ── Overview: manage & assign styles ── */}
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
+                <Typography variant="h5" sx={{ fontWeight: 700 }}>
+                  {LL.STYLE.OVERVIEW()}
                 </Typography>
-              )}
-              {selectedStyleId !== 'new' && (
-                <>
-                  <Tooltip title={LL.STYLE.RENAME()}>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setRenameValue(styleName);
-                        setRenamePopoverAnchor(e.currentTarget);
-                      }}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={LL.STYLE.DUPLICATE()}>
-                    <IconButton size="small" onClick={handleDuplicate}>
-                      <DuplicateIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={LL.COMMON.DELETE()}>
-                    <IconButton size="small" color="error" onClick={handleDelete}>
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                </>
-              )}
-            </Stack>
-            {/* Rename popover */}
-            <Popover
-              open={Boolean(renamePopoverAnchor)}
-              anchorEl={renamePopoverAnchor}
-              onClose={() => setRenamePopoverAnchor(null)}
-              anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-            >
-              <Stack direction="row" spacing={0.5} sx={{ p: 1 }}>
-                <TextField
-                  size="small"
-                  autoFocus
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      setStyleName(renameValue);
-                      setIsDirty(true);
-                      setRenamePopoverAnchor(null);
-                    }
-                  }}
-                  placeholder={LL.STYLE.NAME()}
-                  sx={{ width: 220 }}
-                />
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={() => {
-                    setStyleName(renameValue);
-                    setIsDirty(true);
-                    setRenamePopoverAnchor(null);
-                  }}
-                >
-                  {LL.COMMON.SAVE()}
+                <Box sx={{ flexGrow: 1 }} />
+                <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
+                  {LL.STYLE.NEW()}
                 </Button>
+                <IconButton onClick={onClose}>
+                  <CloseIcon />
+                </IconButton>
               </Stack>
-            </Popover>
-          </Box>
 
-          {/* Scrollable form */}
-          <Stack sx={{ flex: 1, overflow: 'auto', p: 2 }} spacing={1}>
-            <Section title={LL.STYLE.SECTION_BACKGROUND()}>
-              {/* Background color — always available as a base layer */}
-              <StylePropRow
-                label={LL.STYLE.BACKGROUND_COLOR()}
-                enabled={getProp<string>('backgroundColor').enabled}
-                onToggle={(e) => togglePropEnabled('backgroundColor', e)}
-              >
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  sx={{
-                    alignItems: 'center',
-                  }}
-                >
-                  <ColorSwatchButton
-                    value={getProp<string>('backgroundColor').value || '#000000'}
-                    onChange={(c) => updateProp('backgroundColor', { enabled: true, value: c })}
-                  />
-                  <Button
-                    size="small"
-                    variant={getProp<string>('backgroundColor').value === 'transparent' ? 'contained' : 'outlined'}
-                    onClick={() => updateProp('backgroundColor', { enabled: true, value: 'transparent' })}
-                    sx={{ fontSize: '0.7rem', py: 0.25, px: 1, minWidth: 0 }}
-                  >
-                    {LL.STYLE.BACKGROUND_TRANSPARENT()}
-                  </Button>
-                </Stack>
-              </StylePropRow>
-
-              {/* Image — compact: toggle + path input in one row */}
-              <MediaPropRow
-                label={LL.STYLE.BACKGROUND_IMAGE()}
-                enabled={bgImageEnabled}
-                onToggle={(e) => {
-                  togglePropEnabled('backgroundImage', e);
-                  if (e) updateProp('backgroundImage', { enabled: true, value: bgImageVal });
-                }}
-                value={bgImageVal}
-                onChange={(v) => updateProp('backgroundImage', { enabled: true, value: v })}
-                onBrowse={handlePickImage}
-                thumbType="image"
-              />
-              <StylePropRow
-                label={LL.STYLE.BACKGROUND_IMAGE_NONE()}
-                enabled={!!styleData.suppressBackgroundImage}
-                onToggle={(e) => {
-                  setStyleData((prev) => ({ ...prev, suppressBackgroundImage: e }));
-                  setIsDirty(true);
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: 'text.secondary',
-                  }}
-                >
-                  Overrides inherited image
-                </Typography>
-              </StylePropRow>
-              {bgImageEnabled && (
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  sx={{
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    pl: '184px',
-                    py: 0.5,
-                  }}
-                >
-                  <Select
-                    size="small"
-                    value={getProp<string>('backgroundSize').value || 'cover'}
-                    onChange={(e) => updateProp('backgroundSize', { enabled: true, value: e.target.value as never })}
-                    sx={{ width: 120 }}
-                  >
-                    <MenuItem value="cover">Cover</MenuItem>
-                    <MenuItem value="contain">Contain</MenuItem>
-                    <MenuItem value="100% auto">Fit W</MenuItem>
-                    <MenuItem value="auto 100%">Fit H</MenuItem>
-                    <MenuItem value="auto">Original</MenuItem>
-                  </Select>
-                  <CompactPositionPicker
-                    value={getProp<string>('backgroundPosition').value || 'center'}
-                    onChange={(v) => updateProp('backgroundPosition', { enabled: true, value: v })}
-                  />
-                  <Stack
-                    spacing={0}
-                    sx={{
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: 'text.secondary',
-                      }}
-                    >
-                      {LL.STYLE.BG_ZOOM()}
-                    </Typography>
-                    <Slider
-                      size="small"
-                      min={100}
-                      max={200}
-                      step={5}
-                      value={getProp<number>('backgroundZoom').value || 100}
-                      onChange={(_, val) => updateProp('backgroundZoom', { enabled: true, value: val as number })}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={(v) => `${v}%`}
-                      sx={{ width: 80 }}
-                    />
-                  </Stack>
-                  <Stack
-                    spacing={0}
-                    sx={{
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: 'text.secondary',
-                      }}
-                    >
-                      {LL.STYLE.BG_BLUR()}
-                    </Typography>
-                    <Slider
-                      size="small"
-                      min={0}
-                      max={40}
-                      step={1}
-                      value={getProp<number>('backgroundBlur').value || 0}
-                      onChange={(_, val) => updateProp('backgroundBlur', { enabled: true, value: val as number })}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={(v) => `${v}px`}
-                      sx={{ width: 80 }}
-                    />
-                  </Stack>
-                </Stack>
-              )}
-
-              {/* Video — compact: toggle + path input in one row */}
-              <MediaPropRow
-                label={LL.STYLE.BACKGROUND_VIDEO()}
-                enabled={bgVideoEnabled}
-                onToggle={(e) => {
-                  togglePropEnabled('backgroundVideo', e);
-                  if (e) updateProp('backgroundVideo', { enabled: true, value: bgVideoVal });
-                }}
-                value={bgVideoVal}
-                onChange={(v) => updateProp('backgroundVideo', { enabled: true, value: v })}
-                onBrowse={handlePickVideo}
-                thumbType="video"
-              />
-              <StylePropRow
-                label={LL.STYLE.BACKGROUND_VIDEO_NONE()}
-                enabled={!!styleData.suppressBackgroundVideo}
-                onToggle={(e) => {
-                  setStyleData((prev) => ({ ...prev, suppressBackgroundVideo: e }));
-                  setIsDirty(true);
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  sx={{
-                    color: 'text.secondary',
-                  }}
-                >
-                  Overrides inherited video
-                </Typography>
-              </StylePropRow>
-              {bgVideoEnabled && (
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  sx={{
-                    alignItems: 'center',
-                    flexWrap: 'wrap',
-                    pl: '184px',
-                    py: 0.5,
-                  }}
-                >
-                  <Select
-                    size="small"
-                    value={getProp<string>('backgroundVideoSize').value || 'cover'}
-                    onChange={(e) => updateProp('backgroundVideoSize', { enabled: true, value: e.target.value as never })}
-                    sx={{ width: 120 }}
-                  >
-                    <MenuItem value="cover">Cover</MenuItem>
-                    <MenuItem value="contain">Contain</MenuItem>
-                    <MenuItem value="100% auto">Fit W</MenuItem>
-                    <MenuItem value="auto 100%">Fit H</MenuItem>
-                    <MenuItem value="auto">Original</MenuItem>
-                  </Select>
-                  <CompactPositionPicker
-                    value={getProp<string>('backgroundVideoPosition').value || 'center'}
-                    onChange={(v) => updateProp('backgroundVideoPosition', { enabled: true, value: v })}
-                  />
-                  <Stack
-                    spacing={0}
-                    sx={{
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: 'text.secondary',
-                      }}
-                    >
-                      {LL.STYLE.BG_ZOOM()}
-                    </Typography>
-                    <Slider
-                      size="small"
-                      min={100}
-                      max={200}
-                      step={5}
-                      value={getProp<number>('backgroundVideoZoom').value || 100}
-                      onChange={(_, val) => updateProp('backgroundVideoZoom', { enabled: true, value: val as number })}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={(v) => `${v}%`}
-                      sx={{ width: 80 }}
-                    />
-                  </Stack>
-                  <Stack
-                    spacing={0}
-                    sx={{
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: 'text.secondary',
-                      }}
-                    >
-                      {LL.STYLE.BG_BLUR()}
-                    </Typography>
-                    <Slider
-                      size="small"
-                      min={0}
-                      max={40}
-                      step={1}
-                      value={getProp<number>('backgroundVideoBlur').value || 0}
-                      onChange={(_, val) => updateProp('backgroundVideoBlur', { enabled: true, value: val as number })}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={(v) => `${v}px`}
-                      sx={{ width: 80 }}
-                    />
-                  </Stack>
-                  <Stack
-                    spacing={0}
-                    sx={{
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
-                      sx={{
-                        color: 'text.secondary',
-                      }}
-                    >
-                      {LL.VIDEO.VOLUME()}
-                    </Typography>
-                    <Slider
-                      size="small"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={getProp<number>('backgroundVideoVolume').value ?? 1}
-                      onChange={(_, val) => updateProp('backgroundVideoVolume', { enabled: true, value: val as number })}
-                      valueLabelDisplay="auto"
-                      valueLabelFormat={(v) => `${Math.round((v as number) * 100)}%`}
-                      sx={{ width: 80 }}
-                    />
-                  </Stack>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        size="small"
-                        checked={getProp<boolean>('backgroundVideoAutoplay').value !== false}
-                        onChange={(e) => updateProp('backgroundVideoAutoplay', { enabled: true, value: e.target.checked })}
-                      />
-                    }
-                    label={<Typography variant="caption">{LL.VIDEO.AUTOPLAY()}</Typography>}
-                    sx={{ ml: 0 }}
-                  />
-                </Stack>
-              )}
-            </Section>
-
-            <Section title={LL.STYLE.SECTION_GENERAL()}>
-              <StylePropRow
-                label={LL.STYLE.VIDEO_EASE_IN()}
-                enabled={getProp<number>('backgroundVideoEaseIn').enabled}
-                onToggle={(e) => togglePropEnabled('backgroundVideoEaseIn', e)}
-              >
-                <Slider
-                  size="small"
-                  min={0}
-                  max={5}
-                  step={0.5}
-                  value={getProp<number>('backgroundVideoEaseIn').value || 0}
-                  onChange={(_, val) => updateProp('backgroundVideoEaseIn', { enabled: true, value: val as number })}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(v) => `${v}s`}
-                  sx={{ width: 120 }}
-                />
-              </StylePropRow>
-              <StylePropRow
-                label={LL.STYLE.VIDEO_EASE_OUT()}
-                enabled={getProp<number>('backgroundVideoEaseOut').enabled}
-                onToggle={(e) => togglePropEnabled('backgroundVideoEaseOut', e)}
-              >
-                <Slider
-                  size="small"
-                  min={0}
-                  max={5}
-                  step={0.5}
-                  value={getProp<number>('backgroundVideoEaseOut').value || 0}
-                  onChange={(_, val) => updateProp('backgroundVideoEaseOut', { enabled: true, value: val as number })}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(v) => `${v}s`}
-                  sx={{ width: 120 }}
-                />
-              </StylePropRow>
-            </Section>
-
-            <Section title={LL.STYLE.SECTION_PARAGRAPH()}>
-              <StylePropRow
-                label={LL.STYLE.FONT_FAMILY()}
-                enabled={getProp<string>('fontFamily').enabled || getProp<string[]>('fontFallback').enabled}
-                onToggle={(e) => {
-                  togglePropEnabled('fontFamily', e);
-                  togglePropEnabled('fontFallback', e);
-                }}
-              >
-                <FontFamilyEditor
-                  primary={getProp<string>('fontFamily').value || 'Arial'}
-                  fallbacks={getProp<string[]>('fontFallback').value || []}
-                  onPrimaryChange={(font) => updateProp('fontFamily', { enabled: true, value: font })}
-                  onFallbacksChange={(list) => updateProp('fontFallback', { enabled: true, value: list })}
-                />
-              </StylePropRow>
-              <StylePropRow
-                label={LL.STYLE.ALIGNMENT()}
-                enabled={getProp<string>('textAlign').enabled || getProp<string>('verticalAlign').enabled}
-                onToggle={(e) => {
-                  togglePropEnabled('textAlign', e);
-                  togglePropEnabled('verticalAlign', e);
-                }}
-              >
-                <Stack
-                  direction="row"
-                  spacing={1.5}
-                  sx={{
-                    alignItems: 'center',
-                  }}
-                >
-                  <ToggleButtonGroup
-                    size="small"
-                    exclusive
-                    value={getProp<string>('textAlign').value || 'center'}
-                    onChange={(_, val) => val && updateProp('textAlign', { enabled: true, value: val })}
-                  >
-                    <ToggleButton value="left">
-                      <AlignLeftIcon />
-                    </ToggleButton>
-                    <ToggleButton value="center">
-                      <AlignCenterIcon />
-                    </ToggleButton>
-                    <ToggleButton value="right">
-                      <AlignRightIcon />
-                    </ToggleButton>
-                    <ToggleButton value="justify">
-                      <AlignJustifyIcon />
-                    </ToggleButton>
-                  </ToggleButtonGroup>
-                  <Box sx={{ width: 1, height: 28, bgcolor: 'divider' }} />
-                  <ToggleButtonGroup
-                    size="small"
-                    exclusive
-                    value={getProp<string>('verticalAlign').value || 'center'}
-                    onChange={(_, val) => val && updateProp('verticalAlign', { enabled: true, value: val })}
-                  >
-                    <Tooltip title={LL.STYLE.VERTICAL_ALIGN() + ': Top'}>
-                      <ToggleButton value="top">
-                        <VAlignTopIcon />
-                      </ToggleButton>
-                    </Tooltip>
-                    <Tooltip title={LL.STYLE.VERTICAL_ALIGN() + ': Center'}>
-                      <ToggleButton value="center">
-                        <VAlignMidIcon />
-                      </ToggleButton>
-                    </Tooltip>
-                    <Tooltip title={LL.STYLE.VERTICAL_ALIGN() + ': Bottom'}>
-                      <ToggleButton value="bottom">
-                        <VAlignBotIcon />
-                      </ToggleButton>
-                    </Tooltip>
-                  </ToggleButtonGroup>
-                </Stack>
-              </StylePropRow>
-              <StylePropRow
-                label={LL.STYLE.TRANSFORM()}
-                enabled={getProp<string>('textTransform').enabled}
-                onToggle={(e) => togglePropEnabled('textTransform', e)}
-              >
-                <Select
-                  size="small"
-                  value={getProp<string>('textTransform').value || 'none'}
-                  onChange={(e) => updateProp('textTransform', { enabled: true, value: e.target.value as never })}
-                  sx={{ width: 150 }}
-                >
-                  <MenuItem value="none">None</MenuItem>
-                  <MenuItem value="uppercase">UPPERCASE</MenuItem>
-                  <MenuItem value="lowercase">lowercase</MenuItem>
-                  <MenuItem value="capitalize">Capitalize</MenuItem>
-                </Select>
-              </StylePropRow>
-              <StylePropRow
-                label={LL.STYLE.LINE_HEIGHT()}
-                enabled={getProp<string>('lineHeight').enabled}
-                onToggle={(e) => togglePropEnabled('lineHeight', e)}
-              >
-                <CssUnitInput
-                  value={getProp<string>('lineHeight').value || '1.4'}
-                  onChange={(v) => updateProp('lineHeight', { enabled: true, value: v })}
-                  units={['em', 'px', 'rem', '%']}
-                />
-              </StylePropRow>
-              <StylePropRow
-                label={LL.STYLE.PADDING()}
-                enabled={getProp<string>('padding').enabled}
-                onToggle={(e) => togglePropEnabled('padding', e)}
-              >
-                {(() => {
-                  const raw = getProp<string>('padding').value || '5% 10%';
-                  const parts = raw.split(/\s+/);
-                  const pV = parts[0] || '5%';
-                  const pH = parts[1] || parts[0] || '10%';
-                  return (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{
-                        alignItems: 'flex-start',
-                      }}
-                    >
-                      <CssUnitInput
-                        value={pV}
-                        onChange={(v) => updateProp('padding', { enabled: true, value: `${v} ${pH}` })}
-                        label="Vertical"
-                      />
-                      <CssUnitInput
-                        value={pH}
-                        onChange={(v) => updateProp('padding', { enabled: true, value: `${pV} ${v}` })}
-                        label="Horizontal"
-                      />
-                    </Stack>
-                  );
-                })()}
-              </StylePropRow>
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{
-                  alignItems: 'center',
-                  py: 0.5,
-                }}
-              >
-                <Switch
-                  size="small"
-                  checked={styleData.hideText || false}
-                  onChange={(e) => {
-                    setStyleData((prev) => ({ ...prev, hideText: e.target.checked }));
-                    setIsDirty(true);
-                  }}
-                />
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {styleData.hideText ? (
-                    <VisibilityOffIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
-                  ) : (
-                    <VisibilityIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
-                  )}
-                  {LL.STYLE.HIDE_TEXT()}
-                </Typography>
-              </Stack>
-            </Section>
-
-            {/* Language/Translation section — per-language typography */}
-            {(() => {
-              const langStyles: LanguageStyleEntry[] = getProp<LanguageStyleEntry[]>('languageStyles').value || [{ language: '' }];
-              const updateLangEntry = (idx: number, patch: Partial<LanguageStyleEntry>) => {
-                const updated = [...langStyles];
-                updated[idx] = { ...updated[idx], ...patch };
-                updateProp('languageStyles', { enabled: true, value: updated });
-              };
-              const addLang = (tag: string) => {
-                if (langStyles.some((e) => e.language === tag)) return;
-                updateProp('languageStyles', { enabled: true, value: [...langStyles, { language: tag }] });
-              };
-              const removeLang = (idx: number) => {
-                const updated = langStyles.filter((_, i) => i !== idx);
-                updateProp('languageStyles', { enabled: true, value: updated.length ? updated : [{ language: '' }] });
-              };
-              const moveLang = (idx: number, direction: -1 | 1) => {
-                // All entries (including default) can be reordered freely
-                const newIdx = idx + direction;
-                if (newIdx < 0 || newIdx >= langStyles.length) return;
-                const reordered = [...langStyles];
-                [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
-                updateProp('languageStyles', { enabled: true, value: reordered });
-              };
-              // Ensure there is always at least a default entry
-              const entries = langStyles.some((e) => e.language === '') ? langStyles : [{ language: '' }, ...langStyles];
-              const [addLangInput, setAddLangInput] = useState('');
-              // Drag-and-drop state
-              const dragIndexRef = useRef<number | null>(null);
-              const [dragOver, setDragOver] = useState<number | null>(null);
-
-              return (
-                <Section title={LL.STYLE.SECTION_TYPOGRAPHY()} defaultExpanded={false}>
-                  {entries.map((entry, idx) => {
-                    const isDefault = entry.language === '';
-                    const canMoveUp = idx > 0;
-                    const canMoveDown = idx < entries.length - 1;
+              <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
+                {styles.length === 0 && (
+                  <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', my: 3 }}>
+                    {LL.STYLE.EMPTY_HINT()}
+                  </Typography>
+                )}
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 2 }}>
+                  {styles.map((s) => {
+                    const isGlobal = s.id === globalStyleId;
+                    const isShowStyle = s.id === currentShow?.styleId;
+                    const usage = itemUsageCount(s.id);
                     return (
-                      <Accordion
-                        key={entry.language || 'default'}
-                        defaultExpanded={idx === 0}
-                        disableGutters
-                        elevation={0}
-                        draggable
-                        onDragStart={() => {
-                          dragIndexRef.current = idx;
-                        }}
-                        onDragOver={(e) => {
-                          e.preventDefault();
-                          setDragOver(idx);
-                        }}
-                        onDragLeave={() => setDragOver(null)}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          setDragOver(null);
-                          const from = dragIndexRef.current;
-                          if (from === null || from === idx) return;
-                          const reordered = [...langStyles];
-                          const [item] = reordered.splice(from, 1);
-                          reordered.splice(idx, 0, item);
-                          updateProp('languageStyles', { enabled: true, value: reordered });
-                          dragIndexRef.current = null;
-                        }}
+                      <Box
+                        key={s.id}
+                        onClick={() => openEdit(s)}
                         sx={{
+                          borderRadius: 1.5,
                           border: 1,
-                          borderColor: dragOver === idx ? 'primary.main' : 'divider',
-                          borderRadius: 1,
-                          '&:before': { display: 'none' },
-                          mb: 0.5,
-                          opacity: dragIndexRef.current === idx ? 0.5 : 1,
+                          borderColor: 'divider',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          transition: 'border-color 0.15s, box-shadow 0.15s',
+                          '&:hover': { borderColor: 'primary.main', boxShadow: 3 },
                         }}
                       >
-                        <AccordionSummary
-                          expandIcon={<ExpandMoreIcon />}
-                          sx={{ bgcolor: isDefault ? 'action.hover' : 'background.paper', borderRadius: 1 }}
-                        >
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            sx={{
-                              alignItems: 'center',
-                              flex: 1,
-                              mr: 1,
-                            }}
-                          >
-                            <DragHandleIcon fontSize="small" sx={{ color: 'action.active', cursor: 'grab', mr: 0.5 }} />
-                            <TranslateIcon fontSize="small" color={isDefault ? 'primary' : 'action'} />
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                fontWeight: 600,
-                                flexGrow: 1,
-                              }}
-                            >
-                              {isDefault ? LL.STYLE.LANG_DEFAULT() : entry.language.toUpperCase()}
+                        <StyleGalleryThumb style={s} />
+                        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'flex-start', px: 1, py: 0.75 }}>
+                          <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography variant="subtitle2" noWrap sx={{ fontWeight: 600 }}>
+                              {s.name}
                             </Typography>
-                            {entry.fontColor && (
-                              <Box
-                                sx={{
-                                  width: 14,
-                                  height: 14,
-                                  borderRadius: 0.5,
-                                  bgcolor: entry.fontColor,
-                                  border: '1px solid',
-                                  borderColor: 'divider',
-                                  flexShrink: 0,
-                                }}
-                              />
+                            {(isGlobal || isShowStyle || usage > 0 || !s.enabled) && (
+                              <Stack direction="row" useFlexGap sx={{ flexWrap: 'wrap', gap: 0.5 }}>
+                                {isGlobal && (
+                                  <Chip
+                                    size="small"
+                                    color="primary"
+                                    icon={<GlobalIcon />}
+                                    label={LL.STYLE.LEVEL_GLOBAL()}
+                                    sx={{ height: 20 }}
+                                  />
+                                )}
+                                {isShowStyle && (
+                                  <Chip
+                                    size="small"
+                                    color="secondary"
+                                    icon={<ShowIcon />}
+                                    label={LL.STYLE.LEVEL_SHOW()}
+                                    sx={{ height: 20 }}
+                                  />
+                                )}
+                                {usage > 0 && (
+                                  <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    label={LL.STYLE.ITEMS_USING({ count: usage })}
+                                    sx={{ height: 20 }}
+                                  />
+                                )}
+                                {!s.enabled && <Chip size="small" label={LL.STYLE.DISABLED()} sx={{ height: 20 }} />}
+                              </Stack>
                             )}
                           </Stack>
-                          {!isDefault && (
-                            <Stack direction="row" spacing={0} onClick={(e) => e.stopPropagation()}>
-                              <Tooltip title={LL.STYLE.LANG_MOVE_UP()}>
-                                <span>
-                                  <IconButton component="div" size="small" disabled={!canMoveUp} onClick={() => moveLang(idx, -1)}>
-                                    <MoveUpIcon fontSize="small" />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                              <Tooltip title={LL.STYLE.LANG_MOVE_DOWN()}>
-                                <span>
-                                  <IconButton component="div" size="small" disabled={!canMoveDown} onClick={() => moveLang(idx, 1)}>
-                                    <MoveDownIcon fontSize="small" />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                              <Tooltip title={LL.STYLE.LANG_REMOVE()}>
-                                <IconButton component="div" size="small" onClick={() => removeLang(idx)} color="error">
-                                  <RemoveIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </Stack>
-                          )}
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <LanguageStyleEditor entry={entry} onChange={(patch) => updateLangEntry(idx, patch)} LL={LL} />
-                        </AccordionDetails>
-                      </Accordion>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCardMenu({ anchor: e.currentTarget, style: s });
+                            }}
+                          >
+                            <MoreIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </Box>
                     );
                   })}
-                  {/* Add language row + show other languages */}
-                  <Stack
-                    direction="row"
-                    spacing={1}
+                  {/* New style card */}
+                  <Box
+                    onClick={openCreate}
                     sx={{
-                      alignItems: 'center',
-                      mt: 1,
+                      borderRadius: 1.5,
+                      border: '2px dashed',
+                      borderColor: 'divider',
+                      overflow: 'hidden',
+                      cursor: 'pointer',
+                      transition: 'border-color 0.15s',
+                      '&:hover': { borderColor: 'primary.main' },
                     }}
                   >
-                    <Autocomplete
-                      freeSolo
-                      options={knownLanguageTags.filter((t) => !entries.some((e) => e.language === t.toLowerCase()))}
-                      inputValue={addLangInput}
-                      onInputChange={(_, v) => setAddLangInput(v)}
-                      size="small"
-                      sx={{ width: 150 }}
-                      renderInput={(params) => <TextField {...params} label={LL.STYLE.LANG_TAG()} size="small" />}
-                    />
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<AddIcon />}
-                      disabled={!addLangInput.trim()}
-                      onClick={() => {
-                        addLang(addLangInput.trim().toLowerCase());
-                        setAddLangInput('');
-                      }}
-                    >
-                      {LL.STYLE.LANG_ADD()}
-                    </Button>
-                    <Box sx={{ flexGrow: 1 }} />
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          size="small"
-                          checked={styleData.showAllLanguages ?? false}
-                          onChange={(e) => {
-                            setStyleData((prev) => ({ ...prev, showAllLanguages: e.target.checked }));
-                            setIsDirty(true);
-                          }}
-                        />
-                      }
-                      label={<Typography variant="caption">{LL.STYLE.SHOW_OTHER_LANGUAGES()}</Typography>}
-                      sx={{ ml: 0 }}
-                    />
-                  </Stack>
-                </Section>
-              );
-            })()}
+                    <StyleGalleryThumb isNew />
+                    <Typography variant="subtitle2" sx={{ textAlign: 'center', color: 'text.secondary', py: 0.75 }}>
+                      + {LL.STYLE.NEW()}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
 
-            <Section title={LL.STYLE.SECTION_COPYRIGHT()} defaultExpanded={false}>
-              {/* 1. Font */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_FONT()}
-                enabled={getProp<string>('copyrightFontFamily').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightFontFamily', e)}
-              >
-                <FontFamilyEditor
-                  primary={getProp<string>('copyrightFontFamily').value || 'Arial'}
-                  fallbacks={[]}
-                  onPrimaryChange={(font) => updateProp('copyrightFontFamily', { enabled: true, value: font })}
-                  onFallbacksChange={() => {}}
-                />
-              </StylePropRow>
-              {/* 2. Padding */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_PADDING()}
-                enabled={getProp<string>('copyrightPadding').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightPadding', e)}
-              >
-                {(() => {
-                  const raw = getProp<string>('copyrightPadding').value || '2vh 4vw';
-                  const parts = raw.split(/\s+/);
-                  const pV = parts[0] || '2vh';
-                  const pH = parts[1] || parts[0] || '4vw';
-                  return (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      sx={{
-                        alignItems: 'flex-start',
-                      }}
-                    >
-                      <CssUnitInput
-                        value={pV}
-                        onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${v} ${pH}` })}
-                        label="Vertical"
-                      />
-                      <CssUnitInput
-                        value={pH}
-                        onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${pV} ${v}` })}
-                        label="Horizontal"
-                      />
-                    </Stack>
-                  );
-                })()}
-              </StylePropRow>
-              {/* 3. Alignment */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_ALIGNMENT()}
-                enabled={getProp<string>('copyrightTextAlign').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightTextAlign', e)}
-              >
-                <ToggleButtonGroup
-                  size="small"
-                  exclusive
-                  value={getProp<string>('copyrightTextAlign').value || 'center'}
-                  onChange={(_, val) => val && updateProp('copyrightTextAlign', { enabled: true, value: val })}
-                >
-                  <ToggleButton value="left">
-                    <AlignLeftIcon />
-                  </ToggleButton>
-                  <ToggleButton value="center">
-                    <AlignCenterIcon />
-                  </ToggleButton>
-                  <ToggleButton value="right">
-                    <AlignRightIcon />
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </StylePropRow>
-              {/* 4. Opacity */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_OPACITY()}
-                enabled={getProp<number>('copyrightOpacity').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightOpacity', e)}
-              >
-                <Slider
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={getProp<number>('copyrightOpacity').value ?? 1}
-                  onChange={(_, v) => updateProp('copyrightOpacity', { enabled: true, value: v as number })}
-                  valueLabelDisplay="auto"
-                  valueLabelFormat={(v) => `${Math.round((v as number) * 100)}%`}
-                  sx={{ width: 200 }}
-                />
-              </StylePropRow>
-              {/* 5. Title Font Size */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_TITLE_SIZE()}
-                enabled={getProp<string>('copyrightTitleFontSize').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightTitleFontSize', e)}
-              >
-                <CssUnitInput
-                  value={getProp<string>('copyrightTitleFontSize').value || '2.5vh'}
-                  onChange={(v) => updateProp('copyrightTitleFontSize', { enabled: true, value: v })}
-                />
-              </StylePropRow>
-              {/* 6. Title Text Style */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_TITLE_BOLD_ITALIC()}
-                enabled={
-                  getProp<boolean>('copyrightTitleFontBold').enabled ||
-                  getProp<boolean>('copyrightTitleFontItalic').enabled ||
-                  getProp<boolean>('copyrightTitleFontUnderline').enabled
-                }
-                onToggle={(e) => {
-                  togglePropEnabled('copyrightTitleFontBold', e);
-                  togglePropEnabled('copyrightTitleFontItalic', e);
-                  togglePropEnabled('copyrightTitleFontUnderline', e);
-                }}
-              >
-                <ToggleButtonGroup size="small">
-                  <ToggleButton
-                    value="bold"
-                    selected={getProp<boolean>('copyrightTitleFontBold').value || false}
-                    onClick={() =>
-                      updateProp('copyrightTitleFontBold', { enabled: true, value: !getProp<boolean>('copyrightTitleFontBold').value })
-                    }
-                  >
-                    <BoldIcon />
-                  </ToggleButton>
-                  <ToggleButton
-                    value="italic"
-                    selected={getProp<boolean>('copyrightTitleFontItalic').value || false}
-                    onClick={() =>
-                      updateProp('copyrightTitleFontItalic', { enabled: true, value: !getProp<boolean>('copyrightTitleFontItalic').value })
-                    }
-                  >
-                    <ItalicIcon />
-                  </ToggleButton>
-                  <ToggleButton
-                    value="underline"
-                    selected={getProp<boolean>('copyrightTitleFontUnderline').value || false}
-                    onClick={() =>
-                      updateProp('copyrightTitleFontUnderline', {
-                        enabled: true,
-                        value: !getProp<boolean>('copyrightTitleFontUnderline').value,
-                      })
-                    }
-                  >
-                    <UnderlineIcon />
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </StylePropRow>
-              {/* 7. Title Spacing */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_TITLE_SPACING()}
-                enabled={getProp<string>('copyrightTitleSpacing').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightTitleSpacing', e)}
-              >
-                <CssUnitInput
-                  value={getProp<string>('copyrightTitleSpacing').value || '0.5vh'}
-                  onChange={(v) => updateProp('copyrightTitleSpacing', { enabled: true, value: v })}
-                />
-              </StylePropRow>
-              {/* 8. Show Song Number in Title */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_SHOW_SONG_NUMBER()}
-                enabled={getProp<boolean>('copyrightShowSongNumber').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightShowSongNumber', e)}
-              >
-                <Switch
-                  size="small"
-                  checked={getProp<boolean>('copyrightShowSongNumber').value || false}
-                  onChange={(e) => updateProp('copyrightShowSongNumber', { enabled: true, value: e.target.checked })}
-                />
-              </StylePropRow>
-              {/* 9. Size */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_SIZE()}
-                enabled={getProp<string>('copyrightFontSize').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightFontSize', e)}
-              >
-                <CssUnitInput
-                  value={getProp<string>('copyrightFontSize').value || '2vh'}
-                  onChange={(v) => updateProp('copyrightFontSize', { enabled: true, value: v })}
-                />
-              </StylePropRow>
-              {/* 10. Color */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_COLOR()}
-                enabled={getProp<string>('copyrightFontColor').enabled}
-                onToggle={(e) => togglePropEnabled('copyrightFontColor', e)}
-              >
-                <ColorSwatchButton
-                  value={getProp<string>('copyrightFontColor').value || '#FFFFFF'}
-                  onChange={(c) => updateProp('copyrightFontColor', { enabled: true, value: c })}
-                />
-              </StylePropRow>
-              {/* 11. Text Style (Bold / Italic / Underline) */}
-              <StylePropRow
-                label={LL.STYLE.COPYRIGHT_BOLD_ITALIC()}
-                enabled={
-                  getProp<boolean>('copyrightFontBold').enabled ||
-                  getProp<boolean>('copyrightFontItalic').enabled ||
-                  getProp<boolean>('copyrightFontUnderline').enabled
-                }
-                onToggle={(e) => {
-                  togglePropEnabled('copyrightFontBold', e);
-                  togglePropEnabled('copyrightFontItalic', e);
-                  togglePropEnabled('copyrightFontUnderline', e);
-                }}
-              >
-                <ToggleButtonGroup size="small">
-                  <ToggleButton
-                    value="bold"
-                    selected={getProp<boolean>('copyrightFontBold').value || false}
-                    onClick={() => updateProp('copyrightFontBold', { enabled: true, value: !getProp<boolean>('copyrightFontBold').value })}
-                  >
-                    <BoldIcon />
-                  </ToggleButton>
-                  <ToggleButton
-                    value="italic"
-                    selected={getProp<boolean>('copyrightFontItalic').value || false}
-                    onClick={() =>
-                      updateProp('copyrightFontItalic', { enabled: true, value: !getProp<boolean>('copyrightFontItalic').value })
-                    }
-                  >
-                    <ItalicIcon />
-                  </ToggleButton>
-                  <ToggleButton
-                    value="underline"
-                    selected={getProp<boolean>('copyrightFontUnderline').value || false}
-                    onClick={() =>
-                      updateProp('copyrightFontUnderline', { enabled: true, value: !getProp<boolean>('copyrightFontUnderline').value })
-                    }
-                  >
-                    <UnderlineIcon />
-                  </ToggleButton>
-                </ToggleButtonGroup>
-              </StylePropRow>
-            </Section>
-
-            <Section title={LL.STYLE.SECTION_CUSTOM_CSS()} defaultExpanded={false}>
-              {' '}
-              <Stack
-                direction="row"
-                spacing={1}
-                sx={{
-                  alignItems: 'center',
-                }}
-              >
-                <Switch checked={showRawCss} onChange={(e) => setShowRawCss(e.target.checked)} size="small" />
-                <Typography variant="body2">{LL.STYLE.CUSTOM_CSS()}</Typography>
-                <Box
-                  sx={{
-                    flexGrow: 1,
+              {/* Card action menu */}
+              <Menu anchorEl={cardMenu?.anchor ?? null} open={!!cardMenu} onClose={() => setCardMenu(null)}>
+                <MenuItem
+                  onClick={() => {
+                    if (cardMenu) openEdit(cardMenu.style);
+                    setCardMenu(null);
                   }}
-                />
-                <Tooltip title="Insert current style settings as CSS">
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<CodeIcon />}
+                >
+                  <ListItemIcon>
+                    <EditIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{LL.COMMON.EDIT()}</ListItemText>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    const st = cardMenu?.style;
+                    setCardMenu(null);
+                    if (st) void createStyleMutation({ name: `${st.name} (copy)`, enabled: st.enabled, data: st.data });
+                  }}
+                >
+                  <ListItemIcon>
+                    <DuplicateIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText>{LL.STYLE.DUPLICATE()}</ListItemText>
+                </MenuItem>
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    const st = cardMenu?.style;
+                    setCardMenu(null);
+                    if (st) handleSetGlobal(st.id === globalStyleId ? null : st.id);
+                  }}
+                >
+                  <ListItemIcon>
+                    <GlobalIcon fontSize="small" color={cardMenu?.style.id === globalStyleId ? 'primary' : undefined} />
+                  </ListItemIcon>
+                  <ListItemText>{cardMenu?.style.id === globalStyleId ? LL.STYLE.UNSET_GLOBAL() : LL.STYLE.SET_GLOBAL()}</ListItemText>
+                </MenuItem>
+                {currentShow && (
+                  <MenuItem
                     onClick={() => {
-                      const generated = generateCssFromStyleData(styleData);
-                      setStyleData((prev) => ({ ...prev, css: prev.css ? `${prev.css}\n\n${generated}` : generated }));
-                      setShowRawCss(true);
+                      const st = cardMenu?.style;
+                      setCardMenu(null);
+                      if (st) void handleAssignShow(st.id === currentShow.styleId ? null : st.id);
+                    }}
+                  >
+                    <ListItemIcon>
+                      <ShowIcon fontSize="small" color={cardMenu?.style.id === currentShow.styleId ? 'secondary' : undefined} />
+                    </ListItemIcon>
+                    <ListItemText>
+                      {cardMenu?.style.id === currentShow.styleId ? LL.STYLE.UNASSIGN_SHOW() : LL.STYLE.ASSIGN_SHOW()}
+                    </ListItemText>
+                  </MenuItem>
+                )}
+                <Divider />
+                <MenuItem
+                  onClick={() => {
+                    const st = cardMenu?.style;
+                    setCardMenu(null);
+                    if (st && confirm(LL.STYLE.DELETE_CONFIRM())) void deleteStyleMutation({ id: st.id });
+                  }}
+                >
+                  <ListItemIcon>
+                    <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} />
+                  </ListItemIcon>
+                  <ListItemText sx={{ color: 'error.main' }}>{LL.COMMON.DELETE()}</ListItemText>
+                </MenuItem>
+              </Menu>
+            </>
+          )}
+
+          {view === 'edit' && (
+            <>
+              {/* ── Editor header ── */}
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+                <Tooltip title={LL.STYLE.BACK_TO_OVERVIEW()}>
+                  <IconButton onClick={backToOverview}>
+                    <BackIcon />
+                  </IconButton>
+                </Tooltip>
+                {nameEditing || selectedStyleId === 'new' ? (
+                  <TextField
+                    size="small"
+                    autoFocus
+                    value={styleName}
+                    onChange={(e) => {
+                      setStyleName(e.target.value);
                       setIsDirty(true);
                     }}
-                  >
-                    Insert as CSS
-                  </Button>
-                </Tooltip>
-              </Stack>
-              {showRawCss && (
-                <TextField
-                  multiline
-                  rows={6}
-                  fullWidth
-                  value={styleData.css || ''}
-                  onChange={(e) => {
-                    setStyleData((prev) => ({ ...prev, css: e.target.value }));
-                    setIsDirty(true);
+                    onBlur={() => setNameEditing(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') setNameEditing(false);
+                    }}
+                    label={LL.STYLE.NAME()}
+                    sx={{ width: 280 }}
+                  />
+                ) : (
+                  <Tooltip title={LL.STYLE.RENAME()}>
+                    <Typography
+                      variant="h6"
+                      noWrap
+                      onClick={() => setNameEditing(true)}
+                      sx={{ fontWeight: 700, cursor: 'text', maxWidth: 380 }}
+                    >
+                      {styleName}
+                    </Typography>
+                  </Tooltip>
+                )}
+                {isDirty && <Chip label={LL.STYLE.UNSAVED()} size="small" color="warning" />}
+                {statusMessage && <Chip label={statusMessage} size="small" color="success" />}
+                <Box sx={{ flexGrow: 1 }} />
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<SaveIcon />}
+                  onClick={handleSave}
+                  disabled={!isDirty && selectedStyleId !== 'new'}
+                >
+                  {selectedStyleId === 'new' ? LL.STYLE.CREATE() : LL.COMMON.SAVE()}
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  color="success"
+                  startIcon={<ApplyIcon />}
+                  onClick={async () => {
+                    const id = await handleSave();
+                    if (id != null) setStatusMessage(LL.STYLE.APPLIED());
                   }}
-                  placeholder=".presentation-line { /* custom styles */ }"
-                  sx={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-                />
-              )}
-            </Section>
-          </Stack>
+                  disabled={!isDirty && selectedStyleId !== 'new'}
+                >
+                  {LL.STYLE.SAVE_AND_APPLY()}
+                </Button>
+                {selectedStyleId !== 'new' && (
+                  <>
+                    <Tooltip title={LL.STYLE.DUPLICATE()}>
+                      <IconButton size="small" onClick={handleDuplicate}>
+                        <DuplicateIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={LL.COMMON.DELETE()}>
+                      <IconButton size="small" color="error" onClick={handleDelete}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                )}
+                <IconButton onClick={onClose}>
+                  <CloseIcon />
+                </IconButton>
+              </Stack>
 
-          {/* ── Live preview — collapsible, default collapsed ── */}
-          <Box sx={{ borderTop: 1, borderColor: 'divider', flexShrink: 0, bgcolor: (t) => t.palette.action.hover }}>
-            {/* Header row — not a button itself, so icon buttons won't be nested inside a button */}
-            <Stack
-              direction="row"
-              spacing={0.5}
-              onClick={() => setPreviewOpen((v) => !v)}
-              sx={{
-                alignItems: 'center',
-                px: 2,
-                py: 1,
-                cursor: 'pointer',
-                userSelect: 'none',
-              }}
-            >
-              <Typography
-                variant="subtitle2"
-                sx={{
-                  fontWeight: 700,
-                  flex: 1,
-                }}
-              >
-                Preview — {styleName}
-              </Typography>
-              {resolvedPreview.backgroundImage && (
-                <Tooltip title={previewImageHidden ? LL.STYLE.PREVIEW_SHOW_IMAGE() : LL.STYLE.PREVIEW_HIDE_IMAGE()}>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewImageHidden((h) => !h);
-                    }}
-                    color={previewImageHidden ? 'warning' : 'default'}
+              {/* ── Editor body: settings left, live preview right ── */}
+              <Stack direction="row" sx={{ flex: 1, minHeight: 0 }}>
+                {/* Settings — one topic per tab keeps the form approachable */}
+                <Stack sx={{ flex: 1, minWidth: 0 }}>
+                  <Tabs
+                    value={editTab}
+                    onChange={(_, v) => setEditTab(v as number)}
+                    variant="scrollable"
+                    allowScrollButtonsMobile
+                    sx={{ borderBottom: 1, borderColor: 'divider', px: 1, flexShrink: 0, minHeight: 42 }}
                   >
-                    <ImageIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-              {resolvedPreview.backgroundVideo && (
-                <Tooltip title={previewVideoHidden ? LL.STYLE.PREVIEW_SHOW_VIDEO() : LL.STYLE.PREVIEW_HIDE_VIDEO()}>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPreviewVideoHidden((h) => !h);
-                    }}
-                    color={previewVideoHidden ? 'warning' : 'default'}
-                  >
-                    <VideoIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              )}
-              {previewOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-            </Stack>
-            {previewOpen && (
-              <Box sx={{ px: '20%', py: 1 }}>
-                <Box
+                    <Tab label={LL.STYLE.SECTION_BACKGROUND()} sx={{ minHeight: 42 }} />
+                    <Tab label={LL.STYLE.SECTION_PARAGRAPH()} sx={{ minHeight: 42 }} />
+                    <Tab label={LL.STYLE.SECTION_TYPOGRAPHY()} sx={{ minHeight: 42 }} />
+                    <Tab label={LL.STYLE.SECTION_COPYRIGHT()} sx={{ minHeight: 42 }} />
+                    <Tab label={LL.STYLE.SECTION_CUSTOM_CSS()} sx={{ minHeight: 42 }} />
+                  </Tabs>
+                  {/* Scrollable tab panel */}
+                  <Stack sx={{ flex: 1, overflow: 'auto', px: 2.5, py: 2 }} spacing={0.25}>
+                    {editTab === 0 && (
+                      <CardGrid>
+                        {/* Background color — always available as a base layer */}
+                        <PropCard span>
+                          <StylePropRow
+                            label={LL.STYLE.BACKGROUND_COLOR()}
+                            enabled={getProp<string>('backgroundColor').enabled}
+                            onToggle={(e) => togglePropEnabled('backgroundColor', e)}
+                          >
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              sx={{
+                                alignItems: 'center',
+                              }}
+                            >
+                              <ColorSwatchButton
+                                value={getProp<string>('backgroundColor').value || '#000000'}
+                                onChange={(c) => updateProp('backgroundColor', { enabled: true, value: c })}
+                              />
+                              <Button
+                                size="small"
+                                variant={getProp<string>('backgroundColor').value === 'transparent' ? 'contained' : 'outlined'}
+                                onClick={() => updateProp('backgroundColor', { enabled: true, value: 'transparent' })}
+                                sx={{ fontSize: '0.7rem', py: 0.25, px: 1, minWidth: 0 }}
+                              >
+                                {LL.STYLE.BACKGROUND_TRANSPARENT()}
+                              </Button>
+                            </Stack>
+                          </StylePropRow>
+                        </PropCard>
+
+                        {/* Image layer */}
+                        <PropCard>
+                          <MediaPropRow
+                            label={LL.STYLE.BACKGROUND_IMAGE()}
+                            enabled={bgImageEnabled}
+                            onToggle={(e) => {
+                              togglePropEnabled('backgroundImage', e);
+                              if (e) updateProp('backgroundImage', { enabled: true, value: bgImageVal });
+                            }}
+                            value={bgImageVal}
+                            onChange={(v) => updateProp('backgroundImage', { enabled: true, value: v })}
+                            onBrowse={handlePickImage}
+                            thumbType="image"
+                          />
+                          <StylePropRow
+                            plainSwitch
+                            label={LL.STYLE.BACKGROUND_IMAGE_NONE()}
+                            enabled={!!styleData.suppressBackgroundImage}
+                            onToggle={(e) => {
+                              setStyleData((prev) => ({ ...prev, suppressBackgroundImage: e }));
+                              setIsDirty(true);
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: 'text.secondary',
+                              }}
+                            >
+                              Overrides inherited image
+                            </Typography>
+                          </StylePropRow>
+                          {bgImageEnabled && (
+                            <SubControlsRow>
+                              <Select
+                                size="small"
+                                value={getProp<string>('backgroundSize').value || 'cover'}
+                                onChange={(e) => updateProp('backgroundSize', { enabled: true, value: e.target.value as never })}
+                                sx={{ width: 120 }}
+                              >
+                                <MenuItem value="cover">Cover</MenuItem>
+                                <MenuItem value="contain">Contain</MenuItem>
+                                <MenuItem value="100% auto">Fit W</MenuItem>
+                                <MenuItem value="auto 100%">Fit H</MenuItem>
+                                <MenuItem value="auto">Original</MenuItem>
+                              </Select>
+                              <CompactPositionPicker
+                                value={getProp<string>('backgroundPosition').value || 'center'}
+                                onChange={(v) => updateProp('backgroundPosition', { enabled: true, value: v })}
+                              />
+                              <Stack
+                                spacing={0}
+                                sx={{
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: 'text.secondary',
+                                  }}
+                                >
+                                  {LL.STYLE.BG_ZOOM()}
+                                </Typography>
+                                <Slider
+                                  size="small"
+                                  min={100}
+                                  max={200}
+                                  step={5}
+                                  value={getProp<number>('backgroundZoom').value || 100}
+                                  onChange={(_, val) => updateProp('backgroundZoom', { enabled: true, value: val as number })}
+                                  valueLabelDisplay="auto"
+                                  valueLabelFormat={(v) => `${v}%`}
+                                  sx={{ width: 80 }}
+                                />
+                              </Stack>
+                              <Stack
+                                spacing={0}
+                                sx={{
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: 'text.secondary',
+                                  }}
+                                >
+                                  {LL.STYLE.BG_BLUR()}
+                                </Typography>
+                                <Slider
+                                  size="small"
+                                  min={0}
+                                  max={40}
+                                  step={1}
+                                  value={getProp<number>('backgroundBlur').value || 0}
+                                  onChange={(_, val) => updateProp('backgroundBlur', { enabled: true, value: val as number })}
+                                  valueLabelDisplay="auto"
+                                  valueLabelFormat={(v) => `${v}px`}
+                                  sx={{ width: 80 }}
+                                />
+                              </Stack>
+                            </SubControlsRow>
+                          )}
+                        </PropCard>
+
+                        {/* Video layer */}
+                        <PropCard>
+                          <MediaPropRow
+                            label={LL.STYLE.BACKGROUND_VIDEO()}
+                            enabled={bgVideoEnabled}
+                            onToggle={(e) => {
+                              togglePropEnabled('backgroundVideo', e);
+                              if (e) updateProp('backgroundVideo', { enabled: true, value: bgVideoVal });
+                            }}
+                            value={bgVideoVal}
+                            onChange={(v) => updateProp('backgroundVideo', { enabled: true, value: v })}
+                            onBrowse={handlePickVideo}
+                            thumbType="video"
+                          />
+                          <StylePropRow
+                            plainSwitch
+                            label={LL.STYLE.BACKGROUND_VIDEO_NONE()}
+                            enabled={!!styleData.suppressBackgroundVideo}
+                            onToggle={(e) => {
+                              setStyleData((prev) => ({ ...prev, suppressBackgroundVideo: e }));
+                              setIsDirty(true);
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: 'text.secondary',
+                              }}
+                            >
+                              Overrides inherited video
+                            </Typography>
+                          </StylePropRow>
+                          {bgVideoEnabled && (
+                            <SubControlsRow>
+                              <Select
+                                size="small"
+                                value={getProp<string>('backgroundVideoSize').value || 'cover'}
+                                onChange={(e) => updateProp('backgroundVideoSize', { enabled: true, value: e.target.value as never })}
+                                sx={{ width: 120 }}
+                              >
+                                <MenuItem value="cover">Cover</MenuItem>
+                                <MenuItem value="contain">Contain</MenuItem>
+                                <MenuItem value="100% auto">Fit W</MenuItem>
+                                <MenuItem value="auto 100%">Fit H</MenuItem>
+                                <MenuItem value="auto">Original</MenuItem>
+                              </Select>
+                              <CompactPositionPicker
+                                value={getProp<string>('backgroundVideoPosition').value || 'center'}
+                                onChange={(v) => updateProp('backgroundVideoPosition', { enabled: true, value: v })}
+                              />
+                              <Stack
+                                spacing={0}
+                                sx={{
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: 'text.secondary',
+                                  }}
+                                >
+                                  {LL.STYLE.BG_ZOOM()}
+                                </Typography>
+                                <Slider
+                                  size="small"
+                                  min={100}
+                                  max={200}
+                                  step={5}
+                                  value={getProp<number>('backgroundVideoZoom').value || 100}
+                                  onChange={(_, val) => updateProp('backgroundVideoZoom', { enabled: true, value: val as number })}
+                                  valueLabelDisplay="auto"
+                                  valueLabelFormat={(v) => `${v}%`}
+                                  sx={{ width: 80 }}
+                                />
+                              </Stack>
+                              <Stack
+                                spacing={0}
+                                sx={{
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: 'text.secondary',
+                                  }}
+                                >
+                                  {LL.STYLE.BG_BLUR()}
+                                </Typography>
+                                <Slider
+                                  size="small"
+                                  min={0}
+                                  max={40}
+                                  step={1}
+                                  value={getProp<number>('backgroundVideoBlur').value || 0}
+                                  onChange={(_, val) => updateProp('backgroundVideoBlur', { enabled: true, value: val as number })}
+                                  valueLabelDisplay="auto"
+                                  valueLabelFormat={(v) => `${v}px`}
+                                  sx={{ width: 80 }}
+                                />
+                              </Stack>
+                              <Stack
+                                spacing={0}
+                                sx={{
+                                  alignItems: 'center',
+                                }}
+                              >
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    color: 'text.secondary',
+                                  }}
+                                >
+                                  {LL.VIDEO.VOLUME()}
+                                </Typography>
+                                <Slider
+                                  size="small"
+                                  min={0}
+                                  max={1}
+                                  step={0.05}
+                                  value={getProp<number>('backgroundVideoVolume').value ?? 1}
+                                  onChange={(_, val) => updateProp('backgroundVideoVolume', { enabled: true, value: val as number })}
+                                  valueLabelDisplay="auto"
+                                  valueLabelFormat={(v) => `${Math.round((v as number) * 100)}%`}
+                                  sx={{ width: 80 }}
+                                />
+                              </Stack>
+                              <FormControlLabel
+                                control={
+                                  <Switch
+                                    size="small"
+                                    checked={getProp<boolean>('backgroundVideoAutoplay').value !== false}
+                                    onChange={(e) => updateProp('backgroundVideoAutoplay', { enabled: true, value: e.target.checked })}
+                                  />
+                                }
+                                label={<Typography variant="caption">{LL.VIDEO.AUTOPLAY()}</Typography>}
+                                sx={{ ml: 0 }}
+                              />
+                            </SubControlsRow>
+                          )}
+                          <Divider sx={{ my: 1 }} />
+                          <Typography variant="overline" sx={{ color: 'text.secondary', px: 0.5 }}>
+                            {LL.STYLE.SECTION_GENERAL()}
+                          </Typography>
+                          <StylePropRow
+                            label={LL.STYLE.VIDEO_EASE_IN()}
+                            enabled={getProp<number>('backgroundVideoEaseIn').enabled}
+                            onToggle={(e) => togglePropEnabled('backgroundVideoEaseIn', e)}
+                          >
+                            <Slider
+                              size="small"
+                              min={0}
+                              max={5}
+                              step={0.5}
+                              value={getProp<number>('backgroundVideoEaseIn').value || 0}
+                              onChange={(_, val) => updateProp('backgroundVideoEaseIn', { enabled: true, value: val as number })}
+                              valueLabelDisplay="auto"
+                              valueLabelFormat={(v) => `${v}s`}
+                              sx={{ width: 120 }}
+                            />
+                          </StylePropRow>
+                          <StylePropRow
+                            label={LL.STYLE.VIDEO_EASE_OUT()}
+                            enabled={getProp<number>('backgroundVideoEaseOut').enabled}
+                            onToggle={(e) => togglePropEnabled('backgroundVideoEaseOut', e)}
+                          >
+                            <Slider
+                              size="small"
+                              min={0}
+                              max={5}
+                              step={0.5}
+                              value={getProp<number>('backgroundVideoEaseOut').value || 0}
+                              onChange={(_, val) => updateProp('backgroundVideoEaseOut', { enabled: true, value: val as number })}
+                              valueLabelDisplay="auto"
+                              valueLabelFormat={(v) => `${v}s`}
+                              sx={{ width: 120 }}
+                            />
+                          </StylePropRow>
+                        </PropCard>
+                      </CardGrid>
+                    )}
+
+                    {editTab === 1 && (
+                      <CardGrid>
+                        <PropCard>
+                          <StylePropRow
+                            block
+                            label={LL.STYLE.FONT_FAMILY()}
+                            enabled={getProp<string>('fontFamily').enabled || getProp<string[]>('fontFallback').enabled}
+                            onToggle={(e) => {
+                              togglePropEnabled('fontFamily', e);
+                              togglePropEnabled('fontFallback', e);
+                            }}
+                          >
+                            <FontFamilyEditor
+                              primary={getProp<string>('fontFamily').value || 'Arial'}
+                              fallbacks={getProp<string[]>('fontFallback').value || []}
+                              onPrimaryChange={(font) => updateProp('fontFamily', { enabled: true, value: font })}
+                              onFallbacksChange={(list) => updateProp('fontFallback', { enabled: true, value: list })}
+                            />
+                          </StylePropRow>
+                        </PropCard>
+
+                        <PropCard>
+                          <StylePropRow
+                            label={LL.STYLE.ALIGNMENT()}
+                            enabled={getProp<string>('textAlign').enabled || getProp<string>('verticalAlign').enabled}
+                            onToggle={(e) => {
+                              togglePropEnabled('textAlign', e);
+                              togglePropEnabled('verticalAlign', e);
+                            }}
+                          >
+                            <Stack
+                              direction="row"
+                              spacing={1.5}
+                              sx={{
+                                alignItems: 'center',
+                              }}
+                            >
+                              <ToggleButtonGroup
+                                size="small"
+                                exclusive
+                                value={getProp<string>('textAlign').value || 'center'}
+                                onChange={(_, val) => val && updateProp('textAlign', { enabled: true, value: val })}
+                              >
+                                <ToggleButton value="left">
+                                  <AlignLeftIcon />
+                                </ToggleButton>
+                                <ToggleButton value="center">
+                                  <AlignCenterIcon />
+                                </ToggleButton>
+                                <ToggleButton value="right">
+                                  <AlignRightIcon />
+                                </ToggleButton>
+                                <ToggleButton value="justify">
+                                  <AlignJustifyIcon />
+                                </ToggleButton>
+                              </ToggleButtonGroup>
+                              <Box sx={{ width: 1, height: 28, bgcolor: 'divider' }} />
+                              <ToggleButtonGroup
+                                size="small"
+                                exclusive
+                                value={getProp<string>('verticalAlign').value || 'center'}
+                                onChange={(_, val) => val && updateProp('verticalAlign', { enabled: true, value: val })}
+                              >
+                                <Tooltip title={LL.STYLE.VERTICAL_ALIGN() + ': Top'}>
+                                  <ToggleButton value="top">
+                                    <VAlignTopIcon />
+                                  </ToggleButton>
+                                </Tooltip>
+                                <Tooltip title={LL.STYLE.VERTICAL_ALIGN() + ': Center'}>
+                                  <ToggleButton value="center">
+                                    <VAlignMidIcon />
+                                  </ToggleButton>
+                                </Tooltip>
+                                <Tooltip title={LL.STYLE.VERTICAL_ALIGN() + ': Bottom'}>
+                                  <ToggleButton value="bottom">
+                                    <VAlignBotIcon />
+                                  </ToggleButton>
+                                </Tooltip>
+                              </ToggleButtonGroup>
+                            </Stack>
+                          </StylePropRow>
+                          <StylePropRow
+                            label={LL.STYLE.TRANSFORM()}
+                            enabled={getProp<string>('textTransform').enabled}
+                            onToggle={(e) => togglePropEnabled('textTransform', e)}
+                          >
+                            <Select
+                              size="small"
+                              value={getProp<string>('textTransform').value || 'none'}
+                              onChange={(e) => updateProp('textTransform', { enabled: true, value: e.target.value as never })}
+                              sx={{ width: 150 }}
+                            >
+                              <MenuItem value="none">None</MenuItem>
+                              <MenuItem value="uppercase">UPPERCASE</MenuItem>
+                              <MenuItem value="lowercase">lowercase</MenuItem>
+                              <MenuItem value="capitalize">Capitalize</MenuItem>
+                            </Select>
+                          </StylePropRow>
+                          <StylePropRow
+                            label={LL.STYLE.LINE_HEIGHT()}
+                            enabled={getProp<string>('lineHeight').enabled}
+                            onToggle={(e) => togglePropEnabled('lineHeight', e)}
+                          >
+                            <CssUnitInput
+                              value={getProp<string>('lineHeight').value || '1.4'}
+                              onChange={(v) => updateProp('lineHeight', { enabled: true, value: v })}
+                              units={['em', 'px', 'rem', '%']}
+                            />
+                          </StylePropRow>
+                          <StylePropRow
+                            label={LL.STYLE.PADDING()}
+                            enabled={getProp<string>('padding').enabled}
+                            onToggle={(e) => togglePropEnabled('padding', e)}
+                          >
+                            {(() => {
+                              const raw = getProp<string>('padding').value || '5% 10%';
+                              const parts = raw.split(/\s+/);
+                              const pV = parts[0] || '5%';
+                              const pH = parts[1] || parts[0] || '10%';
+                              return (
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  sx={{
+                                    alignItems: 'flex-start',
+                                  }}
+                                >
+                                  <CssUnitInput
+                                    value={pV}
+                                    onChange={(v) => updateProp('padding', { enabled: true, value: `${v} ${pH}` })}
+                                    label="Vertical"
+                                  />
+                                  <CssUnitInput
+                                    value={pH}
+                                    onChange={(v) => updateProp('padding', { enabled: true, value: `${pV} ${v}` })}
+                                    label="Horizontal"
+                                  />
+                                </Stack>
+                              );
+                            })()}
+                          </StylePropRow>
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            sx={{
+                              alignItems: 'center',
+                              py: 0.5,
+                            }}
+                          >
+                            <Switch
+                              size="small"
+                              checked={styleData.hideText || false}
+                              onChange={(e) => {
+                                setStyleData((prev) => ({ ...prev, hideText: e.target.checked }));
+                                setIsDirty(true);
+                              }}
+                            />
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {styleData.hideText ? (
+                                <VisibilityOffIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
+                              ) : (
+                                <VisibilityIcon fontSize="small" sx={{ mr: 0.5, verticalAlign: 'middle' }} />
+                              )}
+                              {LL.STYLE.HIDE_TEXT()}
+                            </Typography>
+                          </Stack>
+                        </PropCard>
+                      </CardGrid>
+                    )}
+
+                    {/* Language/Translation tab — per-language typography */}
+                    {editTab === 2 &&
+                      (() => {
+                        const langStyles: LanguageStyleEntry[] = getProp<LanguageStyleEntry[]>('languageStyles').value || [
+                          { language: '' },
+                        ];
+                        const updateLangEntry = (idx: number, patch: Partial<LanguageStyleEntry>) => {
+                          const updated = [...langStyles];
+                          updated[idx] = { ...updated[idx], ...patch };
+                          updateProp('languageStyles', { enabled: true, value: updated });
+                        };
+                        const addLang = (tag: string) => {
+                          if (langStyles.some((e) => e.language === tag)) return;
+                          updateProp('languageStyles', { enabled: true, value: [...langStyles, { language: tag }] });
+                        };
+                        const removeLang = (idx: number) => {
+                          const updated = langStyles.filter((_, i) => i !== idx);
+                          updateProp('languageStyles', { enabled: true, value: updated.length ? updated : [{ language: '' }] });
+                        };
+                        const moveLang = (idx: number, direction: -1 | 1) => {
+                          // All entries (including default) can be reordered freely
+                          const newIdx = idx + direction;
+                          if (newIdx < 0 || newIdx >= langStyles.length) return;
+                          const reordered = [...langStyles];
+                          [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+                          updateProp('languageStyles', { enabled: true, value: reordered });
+                        };
+                        // Ensure there is always at least a default entry
+                        const entries = langStyles.some((e) => e.language === '') ? langStyles : [{ language: '' }, ...langStyles];
+
+                        return (
+                          <>
+                            {entries.map((entry, idx) => {
+                              const isDefault = entry.language === '';
+                              const canMoveUp = idx > 0;
+                              const canMoveDown = idx < entries.length - 1;
+                              return (
+                                <Accordion
+                                  key={entry.language || 'default'}
+                                  defaultExpanded={idx === 0}
+                                  disableGutters
+                                  elevation={0}
+                                  draggable
+                                  onDragStart={() => {
+                                    langDragIndexRef.current = idx;
+                                  }}
+                                  onDragOver={(e) => {
+                                    e.preventDefault();
+                                    setLangDragOver(idx);
+                                  }}
+                                  onDragLeave={() => setLangDragOver(null)}
+                                  onDrop={(e) => {
+                                    e.preventDefault();
+                                    setLangDragOver(null);
+                                    const from = langDragIndexRef.current;
+                                    if (from === null || from === idx) return;
+                                    const reordered = [...langStyles];
+                                    const [item] = reordered.splice(from, 1);
+                                    reordered.splice(idx, 0, item);
+                                    updateProp('languageStyles', { enabled: true, value: reordered });
+                                    langDragIndexRef.current = null;
+                                  }}
+                                  sx={{
+                                    border: 1,
+                                    borderColor: langDragOver === idx ? 'primary.main' : 'divider',
+                                    borderRadius: 1,
+                                    '&:before': { display: 'none' },
+                                    mb: 0.5,
+                                    opacity: langDragIndexRef.current === idx ? 0.5 : 1,
+                                  }}
+                                >
+                                  <AccordionSummary
+                                    expandIcon={<ExpandMoreIcon />}
+                                    sx={{ bgcolor: isDefault ? 'action.hover' : 'background.paper', borderRadius: 1 }}
+                                  >
+                                    <Stack
+                                      direction="row"
+                                      spacing={0.5}
+                                      sx={{
+                                        alignItems: 'center',
+                                        flex: 1,
+                                        mr: 1,
+                                      }}
+                                    >
+                                      <DragHandleIcon fontSize="small" sx={{ color: 'action.active', cursor: 'grab', mr: 0.5 }} />
+                                      <TranslateIcon fontSize="small" color={isDefault ? 'primary' : 'action'} />
+                                      <Typography
+                                        variant="body2"
+                                        sx={{
+                                          fontWeight: 600,
+                                          flexGrow: 1,
+                                        }}
+                                      >
+                                        {isDefault ? LL.STYLE.LANG_DEFAULT() : entry.language.toUpperCase()}
+                                      </Typography>
+                                      {entry.fontColor && (
+                                        <Box
+                                          sx={{
+                                            width: 14,
+                                            height: 14,
+                                            borderRadius: 0.5,
+                                            bgcolor: entry.fontColor,
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                            flexShrink: 0,
+                                          }}
+                                        />
+                                      )}
+                                    </Stack>
+                                    {!isDefault && (
+                                      <Stack direction="row" spacing={0} onClick={(e) => e.stopPropagation()}>
+                                        <Tooltip title={LL.STYLE.LANG_MOVE_UP()}>
+                                          <span>
+                                            <IconButton
+                                              component="div"
+                                              size="small"
+                                              disabled={!canMoveUp}
+                                              onClick={() => moveLang(idx, -1)}
+                                            >
+                                              <MoveUpIcon fontSize="small" />
+                                            </IconButton>
+                                          </span>
+                                        </Tooltip>
+                                        <Tooltip title={LL.STYLE.LANG_MOVE_DOWN()}>
+                                          <span>
+                                            <IconButton
+                                              component="div"
+                                              size="small"
+                                              disabled={!canMoveDown}
+                                              onClick={() => moveLang(idx, 1)}
+                                            >
+                                              <MoveDownIcon fontSize="small" />
+                                            </IconButton>
+                                          </span>
+                                        </Tooltip>
+                                        <Tooltip title={LL.STYLE.LANG_REMOVE()}>
+                                          <IconButton component="div" size="small" onClick={() => removeLang(idx)} color="error">
+                                            <RemoveIcon fontSize="small" />
+                                          </IconButton>
+                                        </Tooltip>
+                                      </Stack>
+                                    )}
+                                  </AccordionSummary>
+                                  <AccordionDetails>
+                                    <LanguageStyleEditor entry={entry} onChange={(patch) => updateLangEntry(idx, patch)} LL={LL} />
+                                  </AccordionDetails>
+                                </Accordion>
+                              );
+                            })}
+                            {/* Add language row + show other languages */}
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              sx={{
+                                alignItems: 'center',
+                                mt: 1,
+                              }}
+                            >
+                              <Autocomplete
+                                freeSolo
+                                options={knownLanguageTags.filter((t) => !entries.some((e) => e.language === t.toLowerCase()))}
+                                inputValue={addLangInput}
+                                onInputChange={(_, v) => setAddLangInput(v)}
+                                size="small"
+                                sx={{ width: 150 }}
+                                renderInput={(params) => <TextField {...params} label={LL.STYLE.LANG_TAG()} size="small" />}
+                              />
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                startIcon={<AddIcon />}
+                                disabled={!addLangInput.trim()}
+                                onClick={() => {
+                                  addLang(addLangInput.trim().toLowerCase());
+                                  setAddLangInput('');
+                                }}
+                              >
+                                {LL.STYLE.LANG_ADD()}
+                              </Button>
+                              <Box sx={{ flexGrow: 1 }} />
+                              <FormControlLabel
+                                control={
+                                  <Switch
+                                    size="small"
+                                    checked={styleData.showAllLanguages ?? false}
+                                    onChange={(e) => {
+                                      setStyleData((prev) => ({ ...prev, showAllLanguages: e.target.checked }));
+                                      setIsDirty(true);
+                                    }}
+                                  />
+                                }
+                                label={<Typography variant="caption">{LL.STYLE.SHOW_OTHER_LANGUAGES()}</Typography>}
+                                sx={{ ml: 0 }}
+                              />
+                            </Stack>
+                          </>
+                        );
+                      })()}
+
+                    {editTab === 3 && (
+                      <CardGrid>
+                        <PropCard>
+                          {/* 1. Font */}
+                          <StylePropRow
+                            block
+                            label={LL.STYLE.COPYRIGHT_FONT()}
+                            enabled={getProp<string>('copyrightFontFamily').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightFontFamily', e)}
+                          >
+                            <FontFamilyEditor
+                              primary={getProp<string>('copyrightFontFamily').value || 'Arial'}
+                              fallbacks={[]}
+                              onPrimaryChange={(font) => updateProp('copyrightFontFamily', { enabled: true, value: font })}
+                              onFallbacksChange={() => {}}
+                            />
+                          </StylePropRow>
+                          {/* 2. Padding */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_PADDING()}
+                            enabled={getProp<string>('copyrightPadding').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightPadding', e)}
+                          >
+                            {(() => {
+                              const raw = getProp<string>('copyrightPadding').value || '2vh 4vw';
+                              const parts = raw.split(/\s+/);
+                              const pV = parts[0] || '2vh';
+                              const pH = parts[1] || parts[0] || '4vw';
+                              return (
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  sx={{
+                                    alignItems: 'flex-start',
+                                  }}
+                                >
+                                  <CssUnitInput
+                                    value={pV}
+                                    onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${v} ${pH}` })}
+                                    label="Vertical"
+                                  />
+                                  <CssUnitInput
+                                    value={pH}
+                                    onChange={(v) => updateProp('copyrightPadding', { enabled: true, value: `${pV} ${v}` })}
+                                    label="Horizontal"
+                                  />
+                                </Stack>
+                              );
+                            })()}
+                          </StylePropRow>
+                          {/* 3. Alignment */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_ALIGNMENT()}
+                            enabled={getProp<string>('copyrightTextAlign').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightTextAlign', e)}
+                          >
+                            <ToggleButtonGroup
+                              size="small"
+                              exclusive
+                              value={getProp<string>('copyrightTextAlign').value || 'center'}
+                              onChange={(_, val) => val && updateProp('copyrightTextAlign', { enabled: true, value: val })}
+                            >
+                              <ToggleButton value="left">
+                                <AlignLeftIcon />
+                              </ToggleButton>
+                              <ToggleButton value="center">
+                                <AlignCenterIcon />
+                              </ToggleButton>
+                              <ToggleButton value="right">
+                                <AlignRightIcon />
+                              </ToggleButton>
+                            </ToggleButtonGroup>
+                          </StylePropRow>
+                          {/* 4. Opacity */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_OPACITY()}
+                            enabled={getProp<number>('copyrightOpacity').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightOpacity', e)}
+                          >
+                            <Slider
+                              min={0}
+                              max={1}
+                              step={0.05}
+                              value={getProp<number>('copyrightOpacity').value ?? 1}
+                              onChange={(_, v) => updateProp('copyrightOpacity', { enabled: true, value: v as number })}
+                              valueLabelDisplay="auto"
+                              valueLabelFormat={(v) => `${Math.round((v as number) * 100)}%`}
+                              sx={{ width: 200 }}
+                            />
+                          </StylePropRow>
+                        </PropCard>
+
+                        <PropCard>
+                          {/* 5. Title Font Size */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_TITLE_SIZE()}
+                            enabled={getProp<string>('copyrightTitleFontSize').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightTitleFontSize', e)}
+                          >
+                            <CssUnitInput
+                              value={getProp<string>('copyrightTitleFontSize').value || '2.5vh'}
+                              onChange={(v) => updateProp('copyrightTitleFontSize', { enabled: true, value: v })}
+                            />
+                          </StylePropRow>
+                          {/* 6. Title Text Style */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_TITLE_BOLD_ITALIC()}
+                            enabled={
+                              getProp<boolean>('copyrightTitleFontBold').enabled ||
+                              getProp<boolean>('copyrightTitleFontItalic').enabled ||
+                              getProp<boolean>('copyrightTitleFontUnderline').enabled
+                            }
+                            onToggle={(e) => {
+                              togglePropEnabled('copyrightTitleFontBold', e);
+                              togglePropEnabled('copyrightTitleFontItalic', e);
+                              togglePropEnabled('copyrightTitleFontUnderline', e);
+                            }}
+                          >
+                            <ToggleButtonGroup size="small">
+                              <ToggleButton
+                                value="bold"
+                                selected={getProp<boolean>('copyrightTitleFontBold').value || false}
+                                onClick={() =>
+                                  updateProp('copyrightTitleFontBold', {
+                                    enabled: true,
+                                    value: !getProp<boolean>('copyrightTitleFontBold').value,
+                                  })
+                                }
+                              >
+                                <BoldIcon />
+                              </ToggleButton>
+                              <ToggleButton
+                                value="italic"
+                                selected={getProp<boolean>('copyrightTitleFontItalic').value || false}
+                                onClick={() =>
+                                  updateProp('copyrightTitleFontItalic', {
+                                    enabled: true,
+                                    value: !getProp<boolean>('copyrightTitleFontItalic').value,
+                                  })
+                                }
+                              >
+                                <ItalicIcon />
+                              </ToggleButton>
+                              <ToggleButton
+                                value="underline"
+                                selected={getProp<boolean>('copyrightTitleFontUnderline').value || false}
+                                onClick={() =>
+                                  updateProp('copyrightTitleFontUnderline', {
+                                    enabled: true,
+                                    value: !getProp<boolean>('copyrightTitleFontUnderline').value,
+                                  })
+                                }
+                              >
+                                <UnderlineIcon />
+                              </ToggleButton>
+                            </ToggleButtonGroup>
+                          </StylePropRow>
+                          {/* 7. Title Spacing */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_TITLE_SPACING()}
+                            enabled={getProp<string>('copyrightTitleSpacing').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightTitleSpacing', e)}
+                          >
+                            <CssUnitInput
+                              value={getProp<string>('copyrightTitleSpacing').value || '0.5vh'}
+                              onChange={(v) => updateProp('copyrightTitleSpacing', { enabled: true, value: v })}
+                            />
+                          </StylePropRow>
+                          {/* 8. Show Song Number in Title */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_SHOW_SONG_NUMBER()}
+                            enabled={getProp<boolean>('copyrightShowSongNumber').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightShowSongNumber', e)}
+                          >
+                            <Switch
+                              size="small"
+                              checked={getProp<boolean>('copyrightShowSongNumber').value || false}
+                              onChange={(e) => updateProp('copyrightShowSongNumber', { enabled: true, value: e.target.checked })}
+                            />
+                          </StylePropRow>
+                        </PropCard>
+
+                        <PropCard>
+                          {/* 9. Size */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_SIZE()}
+                            enabled={getProp<string>('copyrightFontSize').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightFontSize', e)}
+                          >
+                            <CssUnitInput
+                              value={getProp<string>('copyrightFontSize').value || '2vh'}
+                              onChange={(v) => updateProp('copyrightFontSize', { enabled: true, value: v })}
+                            />
+                          </StylePropRow>
+                          {/* 10. Color */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_COLOR()}
+                            enabled={getProp<string>('copyrightFontColor').enabled}
+                            onToggle={(e) => togglePropEnabled('copyrightFontColor', e)}
+                          >
+                            <ColorSwatchButton
+                              value={getProp<string>('copyrightFontColor').value || '#FFFFFF'}
+                              onChange={(c) => updateProp('copyrightFontColor', { enabled: true, value: c })}
+                            />
+                          </StylePropRow>
+                          {/* 11. Text Style (Bold / Italic / Underline) */}
+                          <StylePropRow
+                            label={LL.STYLE.COPYRIGHT_BOLD_ITALIC()}
+                            enabled={
+                              getProp<boolean>('copyrightFontBold').enabled ||
+                              getProp<boolean>('copyrightFontItalic').enabled ||
+                              getProp<boolean>('copyrightFontUnderline').enabled
+                            }
+                            onToggle={(e) => {
+                              togglePropEnabled('copyrightFontBold', e);
+                              togglePropEnabled('copyrightFontItalic', e);
+                              togglePropEnabled('copyrightFontUnderline', e);
+                            }}
+                          >
+                            <ToggleButtonGroup size="small">
+                              <ToggleButton
+                                value="bold"
+                                selected={getProp<boolean>('copyrightFontBold').value || false}
+                                onClick={() =>
+                                  updateProp('copyrightFontBold', { enabled: true, value: !getProp<boolean>('copyrightFontBold').value })
+                                }
+                              >
+                                <BoldIcon />
+                              </ToggleButton>
+                              <ToggleButton
+                                value="italic"
+                                selected={getProp<boolean>('copyrightFontItalic').value || false}
+                                onClick={() =>
+                                  updateProp('copyrightFontItalic', {
+                                    enabled: true,
+                                    value: !getProp<boolean>('copyrightFontItalic').value,
+                                  })
+                                }
+                              >
+                                <ItalicIcon />
+                              </ToggleButton>
+                              <ToggleButton
+                                value="underline"
+                                selected={getProp<boolean>('copyrightFontUnderline').value || false}
+                                onClick={() =>
+                                  updateProp('copyrightFontUnderline', {
+                                    enabled: true,
+                                    value: !getProp<boolean>('copyrightFontUnderline').value,
+                                  })
+                                }
+                              >
+                                <UnderlineIcon />
+                              </ToggleButton>
+                            </ToggleButtonGroup>
+                          </StylePropRow>
+                        </PropCard>
+                      </CardGrid>
+                    )}
+
+                    {editTab === 4 && (
+                      <>
+                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', flex: 1 }}>
+                            {LL.STYLE.CUSTOM_CSS()}
+                          </Typography>
+                          <Tooltip title="Insert current style settings as CSS">
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<CodeIcon />}
+                              onClick={() => {
+                                const generated = generateCssFromStyleData(styleData);
+                                setStyleData((prev) => ({ ...prev, css: prev.css ? `${prev.css}\n\n${generated}` : generated }));
+                                setIsDirty(true);
+                              }}
+                            >
+                              Insert as CSS
+                            </Button>
+                          </Tooltip>
+                        </Stack>
+                        <TextField
+                          multiline
+                          minRows={12}
+                          fullWidth
+                          value={styleData.css || ''}
+                          onChange={(e) => {
+                            setStyleData((prev) => ({ ...prev, css: e.target.value }));
+                            setIsDirty(true);
+                          }}
+                          placeholder=".presentation-line { /* custom styles */ }"
+                          sx={{ fontFamily: 'monospace', fontSize: '0.85rem', mt: 1 }}
+                        />
+                      </>
+                    )}
+                  </Stack>
+                </Stack>
+
+                {/* ── Live preview — always visible next to the settings ── */}
+                <Stack
+                  spacing={1}
                   sx={{
-                    position: 'relative',
-                    width: '100%',
-                    aspectRatio: '16/9',
-                    borderRadius: 1,
-                    overflow: 'hidden',
-                    border: 1,
+                    width: 'clamp(420px, 42%, 560px)',
+                    flexShrink: 0,
+                    borderLeft: 1,
                     borderColor: 'divider',
-                    ...previewContainerCssNoPadding,
+                    p: 2,
+                    overflow: 'auto',
+                    bgcolor: (t) => t.palette.action.hover,
                   }}
                 >
-                  {/* Image layer with fit / position / zoom / blur */}
-                  {resolvedPreview.backgroundImage &&
-                    !previewImageHidden &&
-                    (() => {
-                      const imgFit = resolvedPreview.backgroundSize === 'contain' ? 'contain' : 'cover';
-                      const imgPos = resolvedPreview.backgroundPosition || 'center';
-                      const imgZoom = resolvedPreview.backgroundZoom ?? 100;
-                      return (
-                        <Box
-                          component="img"
-                          src={resolveMediaUrl(resolvedPreview.backgroundImage)}
-                          alt=""
-                          sx={{
-                            position: 'absolute',
-                            inset: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: imgFit as never,
-                            objectPosition: imgPos,
-                            zIndex: 0,
-                            ...(imgZoom !== 100 ? { transform: `scale(${imgZoom / 100})`, transformOrigin: imgPos } : {}),
-                            ...(resolvedPreview.backgroundBlur ? { filter: `blur(${resolvedPreview.backgroundBlur}px)` } : {}),
-                          }}
-                        />
-                      );
-                    })()}
-                  {/* Video layer with hover controls, fit / position / zoom / blur */}
-                  {resolvedPreview.backgroundVideo &&
-                    !previewVideoHidden &&
-                    (() => {
-                      const videoSizeVal = resolvedPreview.backgroundVideoSize ?? resolvedPreview.backgroundSize;
-                      const videoFit = videoSizeVal === 'contain' ? 'contain' : 'cover';
-                      const videoPos = (resolvedPreview.backgroundVideoPosition ?? resolvedPreview.backgroundPosition) || 'center';
-                      const videoZoom = resolvedPreview.backgroundVideoZoom ?? resolvedPreview.backgroundZoom ?? 100;
-                      const videoBlur = resolvedPreview.backgroundVideoBlur ?? 0;
-                      const videoSrc = resolveMediaUrl(resolvedPreview.backgroundVideo);
-                      return (
-                        <Box
-                          sx={{ position: 'absolute', inset: 0, zIndex: 1 }}
-                          onMouseEnter={() => setPreviewVideoHovered(true)}
-                          onMouseLeave={() => setPreviewVideoHovered(false)}
+                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                    <Typography variant="subtitle2" sx={{ fontWeight: 700, flex: 1 }}>
+                      {LL.STYLE.PREVIEW()}
+                    </Typography>
+                    {resolvedPreview.backgroundImage && (
+                      <Tooltip title={previewImageHidden ? LL.STYLE.PREVIEW_SHOW_IMAGE() : LL.STYLE.PREVIEW_HIDE_IMAGE()}>
+                        <IconButton
+                          size="small"
+                          onClick={() => setPreviewImageHidden((h) => !h)}
+                          color={previewImageHidden ? 'warning' : 'default'}
                         >
-                          <video
-                            key={videoSrc}
-                            ref={previewVideoRef}
-                            src={videoSrc}
-                            autoPlay
-                            loop
-                            muted={previewVideoMuted}
-                            playsInline
-                            style={{
+                          <ImageIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {resolvedPreview.backgroundVideo && (
+                      <Tooltip title={previewVideoHidden ? LL.STYLE.PREVIEW_SHOW_VIDEO() : LL.STYLE.PREVIEW_HIDE_VIDEO()}>
+                        <IconButton
+                          size="small"
+                          onClick={() => setPreviewVideoHidden((h) => !h)}
+                          color={previewVideoHidden ? 'warning' : 'default'}
+                        >
+                          <VideoIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </Stack>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      width: '100%',
+                      aspectRatio: '16/9',
+                      borderRadius: 1,
+                      overflow: 'hidden',
+                      border: 1,
+                      borderColor: 'divider',
+                      ...previewContainerCssNoPadding,
+                    }}
+                  >
+                    {/* Image layer with fit / position / zoom / blur */}
+                    {resolvedPreview.backgroundImage &&
+                      !previewImageHidden &&
+                      (() => {
+                        const imgFit = resolvedPreview.backgroundSize === 'contain' ? 'contain' : 'cover';
+                        const imgPos = resolvedPreview.backgroundPosition || 'center';
+                        const imgZoom = resolvedPreview.backgroundZoom ?? 100;
+                        return (
+                          <Box
+                            component="img"
+                            src={resolveMediaUrl(resolvedPreview.backgroundImage)}
+                            alt=""
+                            sx={{
                               position: 'absolute',
                               inset: 0,
                               width: '100%',
                               height: '100%',
-                              objectFit: videoFit,
-                              objectPosition: videoPos,
-                              ...(videoZoom !== 100 ? { transform: `scale(${videoZoom / 100})`, transformOrigin: videoPos } : {}),
-                              ...(videoBlur ? { filter: `blur(${videoBlur}px)` } : {}),
+                              objectFit: imgFit as never,
+                              objectPosition: imgPos,
+                              zIndex: 0,
+                              ...(imgZoom !== 100 ? { transform: `scale(${imgZoom / 100})`, transformOrigin: imgPos } : {}),
+                              ...(resolvedPreview.backgroundBlur ? { filter: `blur(${resolvedPreview.backgroundBlur}px)` } : {}),
                             }}
                           />
-                          {/* Hover overlay — play/pause, mute, seek, time, volume */}
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            sx={{
-                              alignItems: 'center',
-                              position: 'absolute',
-                              bottom: 4,
-                              left: 4,
-                              right: 4,
-                              opacity: previewVideoHovered ? 1 : 0,
-                              transition: 'opacity 0.2s',
-                              bgcolor: 'rgba(0,0,0,0.6)',
-                              borderRadius: 1,
-                              px: 0.75,
-                              py: 0.4,
-                              pointerEvents: previewVideoHovered ? 'auto' : 'none',
-                            }}
+                        );
+                      })()}
+                    {/* Video layer with hover controls, fit / position / zoom / blur */}
+                    {resolvedPreview.backgroundVideo &&
+                      !previewVideoHidden &&
+                      (() => {
+                        const videoSizeVal = resolvedPreview.backgroundVideoSize ?? resolvedPreview.backgroundSize;
+                        const videoFit = videoSizeVal === 'contain' ? 'contain' : 'cover';
+                        const videoPos = (resolvedPreview.backgroundVideoPosition ?? resolvedPreview.backgroundPosition) || 'center';
+                        const videoZoom = resolvedPreview.backgroundVideoZoom ?? resolvedPreview.backgroundZoom ?? 100;
+                        const videoBlur = resolvedPreview.backgroundVideoBlur ?? 0;
+                        const videoSrc = resolveMediaUrl(resolvedPreview.backgroundVideo);
+                        return (
+                          <Box
+                            sx={{ position: 'absolute', inset: 0, zIndex: 1 }}
+                            onMouseEnter={() => setPreviewVideoHovered(true)}
+                            onMouseLeave={() => setPreviewVideoHovered(false)}
                           >
-                            {/* Play/Pause */}
-                            <IconButton
-                              size="small"
-                              sx={{ color: 'white', p: 0.25, flexShrink: 0 }}
-                              onClick={() => {
-                                const v = previewVideoRef.current;
-                                if (!v) return;
-                                if (v.paused) {
-                                  v.play();
-                                  setPreviewVideoPaused(false);
-                                } else {
-                                  v.pause();
-                                  setPreviewVideoPaused(true);
-                                }
+                            <video
+                              key={videoSrc}
+                              ref={previewVideoRef}
+                              src={videoSrc}
+                              autoPlay
+                              loop
+                              muted={previewVideoMuted}
+                              playsInline
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: videoFit,
+                                objectPosition: videoPos,
+                                ...(videoZoom !== 100 ? { transform: `scale(${videoZoom / 100})`, transformOrigin: videoPos } : {}),
+                                ...(videoBlur ? { filter: `blur(${videoBlur}px)` } : {}),
+                              }}
+                            />
+                            {/* Hover overlay — play/pause, mute, seek, time, volume */}
+                            <Stack
+                              direction="row"
+                              spacing={0.5}
+                              sx={{
+                                alignItems: 'center',
+                                position: 'absolute',
+                                bottom: 4,
+                                left: 4,
+                                right: 4,
+                                opacity: previewVideoHovered ? 1 : 0,
+                                transition: 'opacity 0.2s',
+                                bgcolor: 'rgba(0,0,0,0.6)',
+                                borderRadius: 1,
+                                px: 0.75,
+                                py: 0.4,
+                                pointerEvents: previewVideoHovered ? 'auto' : 'none',
                               }}
                             >
-                              {previewVideoPaused ? <PlayIcon sx={{ fontSize: 16 }} /> : <PauseIcon sx={{ fontSize: 16 }} />}
-                            </IconButton>
-                            {/* Time */}
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.6rem', flexShrink: 0 }}>
-                              {formatTime(previewVideoTime)}
-                            </Typography>
-                            {/* Seek */}
-                            <Slider
-                              size="small"
-                              min={0}
-                              max={previewVideoDuration || 100}
-                              value={previewVideoTime}
-                              onChange={(_, v) => {
-                                const vid = previewVideoRef.current;
-                                if (vid) vid.currentTime = v as number;
-                                setPreviewVideoTime(v as number);
-                              }}
-                              sx={{ flex: 1, color: 'white', '& .MuiSlider-thumb': { width: 10, height: 10 } }}
-                            />
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.6rem', flexShrink: 0 }}>
-                              {formatTime(previewVideoDuration)}
-                            </Typography>
-                            {/* Mute */}
-                            <IconButton
-                              size="small"
-                              sx={{ color: 'white', p: 0.25, flexShrink: 0 }}
-                              onClick={() => {
-                                setPreviewVideoMuted((m) => {
-                                  const next = !m;
-                                  const vid = previewVideoRef.current;
-                                  if (next) {
-                                    // Muting: set volume to 0 so the slider reflects muted state
-                                    setPreviewVideoVolume(0);
-                                    if (vid) {
-                                      vid.volume = 0;
-                                      vid.muted = true;
-                                    }
+                              {/* Play/Pause */}
+                              <IconButton
+                                size="small"
+                                sx={{ color: 'white', p: 0.25, flexShrink: 0 }}
+                                onClick={() => {
+                                  const v = previewVideoRef.current;
+                                  if (!v) return;
+                                  if (v.paused) {
+                                    v.play();
+                                    setPreviewVideoPaused(false);
                                   } else {
-                                    // Unmuting: clear muted flag; do not change volume here
-                                    if (vid) vid.muted = false;
+                                    v.pause();
+                                    setPreviewVideoPaused(true);
                                   }
-                                  return next;
-                                });
-                              }}
-                            >
-                              {previewVideoMuted ? <VolumeOffIcon sx={{ fontSize: 16 }} /> : <VolumeUpIcon sx={{ fontSize: 16 }} />}
-                            </IconButton>
-                            {/* Volume */}
-                            <Slider
-                              size="small"
-                              min={0}
-                              max={1}
-                              step={0.05}
-                              value={previewVideoMuted ? 0 : previewVideoVolume}
-                              onChange={(_, v) => {
-                                const vol = v as number;
-                                setPreviewVideoVolume(vol);
-                                setPreviewVideoMuted(vol === 0);
-                                const vid = previewVideoRef.current;
-                                if (vid) {
-                                  vid.volume = vol;
-                                  vid.muted = vol === 0;
-                                }
-                              }}
-                              sx={{ width: 50, color: 'white', '& .MuiSlider-thumb': { width: 10, height: 10 } }}
-                            />
-                          </Stack>
-                        </Box>
-                      );
-                    })()}
-                  <Stack
-                    sx={{
-                      alignItems: 'center',
+                                }}
+                              >
+                                {previewVideoPaused ? <PlayIcon sx={{ fontSize: 16 }} /> : <PauseIcon sx={{ fontSize: 16 }} />}
+                              </IconButton>
+                              {/* Time */}
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.6rem', flexShrink: 0 }}>
+                                {formatTime(previewVideoTime)}
+                              </Typography>
+                              {/* Seek */}
+                              <Slider
+                                size="small"
+                                min={0}
+                                max={previewVideoDuration || 100}
+                                value={previewVideoTime}
+                                onChange={(_, v) => {
+                                  const vid = previewVideoRef.current;
+                                  if (vid) vid.currentTime = v as number;
+                                  setPreviewVideoTime(v as number);
+                                }}
+                                sx={{ flex: 1, color: 'white', '& .MuiSlider-thumb': { width: 10, height: 10 } }}
+                              />
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.6rem', flexShrink: 0 }}>
+                                {formatTime(previewVideoDuration)}
+                              </Typography>
+                              {/* Mute */}
+                              <IconButton
+                                size="small"
+                                sx={{ color: 'white', p: 0.25, flexShrink: 0 }}
+                                onClick={() => {
+                                  setPreviewVideoMuted((m) => {
+                                    const next = !m;
+                                    const vid = previewVideoRef.current;
+                                    if (next) {
+                                      // Muting: set volume to 0 so the slider reflects muted state
+                                      setPreviewVideoVolume(0);
+                                      if (vid) {
+                                        vid.volume = 0;
+                                        vid.muted = true;
+                                      }
+                                    } else {
+                                      // Unmuting: clear muted flag; do not change volume here
+                                      if (vid) vid.muted = false;
+                                    }
+                                    return next;
+                                  });
+                                }}
+                              >
+                                {previewVideoMuted ? <VolumeOffIcon sx={{ fontSize: 16 }} /> : <VolumeUpIcon sx={{ fontSize: 16 }} />}
+                              </IconButton>
+                              {/* Volume */}
+                              <Slider
+                                size="small"
+                                min={0}
+                                max={1}
+                                step={0.05}
+                                value={previewVideoMuted ? 0 : previewVideoVolume}
+                                onChange={(_, v) => {
+                                  const vol = v as number;
+                                  setPreviewVideoVolume(vol);
+                                  setPreviewVideoMuted(vol === 0);
+                                  const vid = previewVideoRef.current;
+                                  if (vid) {
+                                    vid.volume = vol;
+                                    vid.muted = vol === 0;
+                                  }
+                                }}
+                                sx={{ width: 50, color: 'white', '& .MuiSlider-thumb': { width: 10, height: 10 } }}
+                              />
+                            </Stack>
+                          </Box>
+                        );
+                      })()}
+                    <Stack
+                      sx={{
+                        alignItems: 'center',
 
-                      justifyContent:
-                        resolvedPreview.verticalAlign === 'top'
-                          ? 'flex-start'
-                          : resolvedPreview.verticalAlign === 'bottom'
-                            ? 'flex-end'
-                            : 'center',
+                        justifyContent:
+                          resolvedPreview.verticalAlign === 'top'
+                            ? 'flex-start'
+                            : resolvedPreview.verticalAlign === 'bottom'
+                              ? 'flex-end'
+                              : 'center',
 
-                      width: '100%',
-                      height: '100%',
-                      position: 'relative',
-                      zIndex: 2,
-                      padding: previewPadding || 0,
-                      boxSizing: 'border-box',
-                      pointerEvents: 'none',
-                    }}
-                  >
-                    <Typography sx={{ ...previewTextCss, fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)` }}>
-                      Amazing Grace
-                    </Typography>
-                    <Typography sx={{ ...previewTextCss, fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)`, opacity: 0.7 }}>
-                      How sweet the sound
-                    </Typography>
-                  </Stack>
-                </Box>
-              </Box>
-            )}
-          </Box>
-
-          {/* Footer actions */}
-          <Stack direction="row" spacing={2} sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-            <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave} disabled={!isDirty && selectedStyleId !== 'new'}>
-              {selectedStyleId === 'new' ? LL.STYLE.CREATE() : LL.COMMON.SAVE()}
-            </Button>
-            <Button
-              variant="contained"
-              color="success"
-              startIcon={<ApplyIcon />}
-              onClick={async () => {
-                const id = await handleSave();
-                if (id != null) setStatusMessage(LL.STYLE.APPLIED());
-              }}
-              disabled={!isDirty && selectedStyleId !== 'new'}
-            >
-              {LL.STYLE.SAVE_AND_APPLY()}
-            </Button>
-            <Box
-              sx={{
-                flexGrow: 1,
-              }}
-            />
-            <Button variant="outlined" onClick={onClose}>
-              {LL.COMMON.CANCEL()}
-            </Button>
-          </Stack>
+                        width: '100%',
+                        height: '100%',
+                        position: 'relative',
+                        zIndex: 2,
+                        padding: previewPadding || 0,
+                        boxSizing: 'border-box',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      <Typography sx={{ ...previewTextCss, fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)` }}>
+                        Amazing Grace
+                      </Typography>
+                      <Typography sx={{ ...previewTextCss, fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)`, opacity: 0.7 }}>
+                        How sweet the sound
+                      </Typography>
+                      {/* German sample line — previews per-language typography (Languages tab) */}
+                      <Typography
+                        sx={{
+                          ...previewTextCss,
+                          fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)`,
+                          opacity: 0.85,
+                          ...previewGermanCss,
+                        }}
+                      >
+                        Wie süß der Klang
+                      </Typography>
+                    </Stack>
+                  </Box>
+                </Stack>
+              </Stack>
+            </>
+          )}
         </Stack>
       </Drawer>
     </>

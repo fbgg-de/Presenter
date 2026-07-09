@@ -100,7 +100,7 @@ import { useLazyGetSongQuery, useCreateSongMutation, useUpdateSongMutation } fro
 import { useMetrics } from '@/hooks/useMetrics';
 import { useCcliSongImport } from '@/hooks/useCcliSongImport';
 import { loadShowSongs } from '@/store/songsSlice';
-import { StyleEditor } from '@/components/style/StyleEditor';
+import { StyleEditor, StyleGalleryThumb } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
 import { MUSICAL_KEYS, parseOrderKey } from '@/utils/orderKeyUtils';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
@@ -211,6 +211,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [itemMenuIndex, setItemMenuIndex] = useState<number>(-1);
   const [keySubmenuAnchor, setKeySubmenuAnchor] = useState<null | HTMLElement>(null);
   const [orderSubmenuAnchor, setOrderSubmenuAnchor] = useState<null | HTMLElement>(null);
+  // Direct item style submenu (sets item.styleId — applies to all windows)
+  const [itemStyleAnchor, setItemStyleAnchor] = useState<null | HTMLElement>(null);
   // Item-style nested submenus: window list -> style list (per chosen window)
   const [itemStyleWinAnchor, setItemStyleWinAnchor] = useState<null | HTMLElement>(null);
   const [itemStyleStyleAnchor, setItemStyleStyleAnchor] = useState<null | HTMLElement>(null);
@@ -655,10 +657,21 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     setItemMenuIndex(-1);
     setKeySubmenuAnchor(null);
     setOrderSubmenuAnchor(null);
+    setItemStyleAnchor(null);
     setItemStyleWinAnchor(null);
     setItemStyleStyleAnchor(null);
     setItemStyleWindowName('');
     setGroupSubmenuAnchor(null);
+  };
+
+  /** Assign a style directly to the item (all windows) and persist the show. */
+  const handleItemSetStyle = async (styleId: number | undefined) => {
+    if (itemMenuIndex >= 0) {
+      dispatch(updateShowItem({ index: itemMenuIndex, item: { styleId } }));
+      const nextShowOrder = showItems.map((showItem, idx) => (idx === itemMenuIndex ? { ...showItem, styleId } : showItem));
+      await saveCurrentShow(nextShowOrder);
+    }
+    handleItemMenuClose();
   };
 
   const handleItemSetStyleForWindow = (styleId: number | null) => {
@@ -1077,6 +1090,16 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
+        {/* Direct item style submenu (applies to all windows) */}
+        {availableStyles.length > 0 && (
+          <MenuItem onClick={(e) => setItemStyleAnchor(e.currentTarget)}>
+            <ListItemIcon>
+              <PaletteIcon fontSize="small" sx={{ color: menuItem?.styleId ? 'primary.main' : undefined }} />
+            </ListItemIcon>
+            <ListItemText>{LL.STYLE.STYLE()}</ListItemText>
+            <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
+          </MenuItem>
+        )}
         {/* Item style submenu (window list) */}
         {windowNames.length > 0 && availableStyles.length > 0 && (
           <MenuItem onClick={(e) => setItemStyleWinAnchor(e.currentTarget)}>
@@ -1122,6 +1145,36 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
                 <CircleIcon fontSize="small" sx={{ color: g.color || 'text.disabled' }} />
               </ListItemIcon>
               <ListItemText>{groupDisplayName(g, LL.SHOW_GROUPS.DEFAULT())}</ListItemText>
+            </MenuItem>
+          ))}
+      </Menu>
+      {/* Direct item style submenu — visual previews for one-click assignment */}
+      <Menu
+        anchorEl={itemStyleAnchor}
+        open={Boolean(itemStyleAnchor)}
+        onClose={() => setItemStyleAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+        slotProps={{
+          paper: { sx: { maxHeight: '60vh', overflowY: 'auto' } },
+        }}
+      >
+        <MenuItem onClick={() => void handleItemSetStyle(undefined)} selected={!menuItem?.styleId} sx={{ gap: 1 }}>
+          <Box sx={{ width: 56, flexShrink: 0 }} />
+          <Typography variant="body2">
+            <em>{LL.STYLE.NONE()}</em>
+          </Typography>
+        </MenuItem>
+        {availableStyles
+          .filter((s) => s.enabled)
+          .map((s) => (
+            <MenuItem key={s.id} onClick={() => void handleItemSetStyle(s.id)} selected={s.id === menuItem?.styleId} sx={{ gap: 1 }}>
+              <Box sx={{ width: 56, flexShrink: 0, borderRadius: 0.5, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                <StyleGalleryThumb style={s} />
+              </Box>
+              <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>
+                {s.name}
+              </Typography>
             </MenuItem>
           ))}
       </Menu>
@@ -1216,16 +1269,23 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         >
           <em>{LL.STYLE.NONE()}</em>
         </MenuItem>
-        {availableStyles.map((s) => (
-          <MenuItem
-            key={s.id}
-            onClick={() => handleItemSetStyleForWindow(s.id)}
-            selected={s.id === menuItem?.itemStyleByWindow?.[itemStyleWindowName]}
-            sx={{ fontSize: '0.85rem' }}
-          >
-            {s.name}
-          </MenuItem>
-        ))}
+        {availableStyles
+          .filter((s) => s.enabled)
+          .map((s) => (
+            <MenuItem
+              key={s.id}
+              onClick={() => handleItemSetStyleForWindow(s.id)}
+              selected={s.id === menuItem?.itemStyleByWindow?.[itemStyleWindowName]}
+              sx={{ fontSize: '0.85rem', gap: 1 }}
+            >
+              <Box sx={{ width: 56, flexShrink: 0, borderRadius: 0.5, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
+                <StyleGalleryThumb style={s} />
+              </Box>
+              <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>
+                {s.name}
+              </Typography>
+            </MenuItem>
+          ))}
       </Menu>
       {showItems.length === 0 ? (
         <Box sx={{ overflow: 'auto', flexGrow: 1 }}>

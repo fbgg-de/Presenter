@@ -130,7 +130,12 @@ export const CredentialsSection = () => {
               <Switch
                 size="small"
                 checked={autoLogin}
-                onChange={(e) => updateSetting('autoLogin', e.target.checked)}
+                onChange={(e) => {
+                  updateSetting('autoLogin', e.target.checked);
+                  // Mirror to the main process so the IdP auto-fill script can submit
+                  // even if the setting is toggled without reloading the page.
+                  api?.setAutoLogin?.(e.target.checked);
+                }}
               />
             }
             label={<Typography variant="body2">{LL.AUTH.CREDENTIALS_AUTO_LOGIN()}</Typography>}

@@ -46,6 +46,55 @@ const savePersistedMediaPath = (mediaPath: string) => {
   }
 };
 
+// Sidecar mirror of the renderer's `autoLogin` setting. The credential auto-fill
+// script runs in the *IdP page* context (an external origin), where the presenter's
+// localStorage is not accessible — so the setting must be read in the main process
+// and injected into the script as a literal, just like the username/password.
+const autoLoginFile = join(app.getPath('userData'), 'auto-login.json');
+
+const loadPersistedAutoLogin = (): boolean => {
+  try {
+    if (existsSync(autoLoginFile)) {
+      const raw = JSON.parse(readFileSync(autoLoginFile, 'utf-8')) as { enabled?: boolean };
+      return raw.enabled === true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+};
+
+/** Latest known value of the renderer's `autoLogin` setting (refreshed on each presenter-page load). */
+let autoLoginEnabled = loadPersistedAutoLogin();
+
+const savePersistedAutoLogin = (enabled: boolean) => {
+  autoLoginEnabled = enabled;
+  try {
+    const dir = app.getPath('userData');
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(autoLoginFile, JSON.stringify({ enabled }), 'utf-8');
+  } catch {
+    /* ignore */
+  }
+};
+
+/**
+ * Read the `autoLogin` preference from the presenter renderer's localStorage while a
+ * presenter (file://) page is loaded, and cache/persist it for the auto-fill script.
+ * No-op on external pages (their localStorage doesn't hold presenter settings).
+ */
+const refreshAutoLoginFromRenderer = () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const url = mainWindow.webContents.getURL();
+  if (!url.startsWith('file://')) return;
+  mainWindow.webContents
+    .executeJavaScript(
+      `(() => { try { return JSON.parse(localStorage.getItem('presenter_settings') || '{}').autoLogin === true; } catch { return false; } })()`,
+    )
+    .then((enabled: boolean) => savePersistedAutoLogin(enabled === true))
+    .catch(() => {});
+};
+
 interface WindowBoundsData {
   x?: number;
   y?: number;
@@ -332,6 +381,8 @@ const createWindow = () => {
   // Auto-start media server after renderer finishes loading
   mainWindow.webContents.on('did-finish-load', () => {
     autoStartMediaServer();
+    // Keep the cached autoLogin preference fresh (no-op on external / IdP pages).
+    refreshAutoLoginFromRenderer();
   });
 
   // Auto-fill OIDC provider login form when the window navigates to an external page.
@@ -349,12 +400,10 @@ const createWindow = () => {
       (() => {
         const username = ${JSON.stringify(creds.username)};
         const password = ${JSON.stringify(creds.password)};
-        // Read the autoLogin preference directly from renderer localStorage
-        const autoLogin = (() => {
-          try {
-            return JSON.parse(localStorage.getItem('presenter_settings') || '{}').autoLogin === true;
-          } catch { return false; }
-        })();
+        // autoLogin is read from the presenter renderer in the MAIN process and injected
+        // here as a literal — this script executes in the IdP page context, whose
+        // localStorage does NOT contain presenter settings.
+        const autoLogin = ${JSON.stringify(autoLoginEnabled)};
         const usernameSelectors = [
           'input#username', 'input[name="username"]',
           'input[type="email"]', 'input#email', 'input[name="email"]',
@@ -465,6 +514,12 @@ ipcMain.handle('set-ws-command-handling-enabled', (_event, enabled: boolean) => 
 // Renderer pushes current state after executing a navigation command
 ipcMain.on('ws-broadcast-state', (_event, data: Record<string, unknown>) => {
   wsServer.broadcastStateUpdate(data);
+});
+
+// Renderer pushes the autoLogin preference whenever it changes, so the IdP auto-fill
+// script always has the current value even if the setting is toggled without a reload.
+ipcMain.on('set-auto-login', (_event, enabled: boolean) => {
+  savePersistedAutoLogin(enabled === true);
 });
 
 // Renderer reports the configured backend URL so will-navigate can identify callbacks

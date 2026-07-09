@@ -138,6 +138,9 @@ const api = {
   // ── Backend origin (for OIDC callback detection in main process) ──
   setBackendOrigin: (origin: string) => ipcRenderer.send('set-backend-origin', origin),
 
+  // ── Auto-login preference mirror (so the IdP auto-fill script can submit) ──
+  setAutoLogin: (enabled: boolean) => ipcRenderer.send('set-auto-login', enabled),
+
   // ── Secure credential storage (Electron only) ──
   isEncryptionAvailable: () => electronAPI.ipcRenderer.invoke('is-encryption-available'),
   storeCredentials: (username: string, password: string) => electronAPI.ipcRenderer.invoke('store-credentials', username, password),

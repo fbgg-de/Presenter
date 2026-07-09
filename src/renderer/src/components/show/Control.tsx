@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
-import { Stack, Box, Typography, IconButton, Tooltip } from '@mui/material';
+import { Stack, Typography, IconButton, Tooltip } from '@mui/material';
 import { MusicNote as MusicNoteIcon, Image as ImageIcon, Videocam as VideocamIcon, MenuBook as MenuBookIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import ControlSong from '@/components/show/ControlSong';
@@ -8,7 +8,7 @@ import ControlMedia from '@/components/show/ControlMedia';
 import { useGetSessionQuery } from '@/api/session.api';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { resolveStyleCascade, mergeStyles, DEFAULT_STYLE } from '@/utils/styleUtils';
-import VideoControlBar from '@/components/media/VideoControlBar';
+import VideoControlPanel from '@/components/media/VideoControlPanel';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { getOpenWindows } from '@/utils/presentationBridge';
 import { useGetSettings } from '@/store/settingsSlice';
@@ -172,18 +172,12 @@ const Control = ({
   return (
     <Stack sx={{ flexGrow: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
       {renderControl}
-      {!mediaVideoUrl && <VideoControlBar variant="general" videoSources={videoSources} showIfNoLocalSources={!localHasVideos} />}
-      {perWindowRows.map((w) => (
-        <VideoControlBar
-          key={w.id}
-          variant="window"
-          videoSources={[]}
-          windowName={w.config.name}
-          label={w.config.name}
-          showIfNoLocalSources
-          slim={!!mediaVideoUrl}
-        />
-      ))}
+      <VideoControlPanel
+        videoSources={videoSources}
+        windowNames={perWindowRows.map((w) => w.config.name!).filter(Boolean)}
+        mediaItemMaster={!!mediaVideoUrl}
+        showIfNoLocalSources={!localHasVideos}
+      />
     </Stack>
   );
 };
