@@ -9,6 +9,7 @@ export type ResolvedStyle = {
   backgroundImage?: string;
   backgroundVideo?: string;
   backgroundVideoAutoplay?: boolean;
+  backgroundVideoLoop?: boolean;
   backgroundVideoVolume?: number;
   backgroundVideoSize?: string;
   backgroundVideoPosition?: string;
@@ -32,6 +33,8 @@ export type ResolvedStyle = {
   lineHeight?: string;
   letterSpacing?: string;
   padding?: string;
+  /** CSS padding shorthand around each paragraph (song block) — "top right bottom left" */
+  paragraphPadding?: string;
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   textAlign?: 'left' | 'center' | 'right' | 'justify';
   verticalAlign?: 'top' | 'center' | 'bottom';
@@ -108,6 +111,7 @@ export function resolveStyleData(data: StyleData | undefined): ResolvedStyle {
   set('backgroundImage', extractEnabled(data.backgroundImage));
   set('backgroundVideo', extractEnabled(data.backgroundVideo));
   set('backgroundVideoAutoplay', extractEnabled(data.backgroundVideoAutoplay));
+  set('backgroundVideoLoop', extractEnabled(data.backgroundVideoLoop));
   set('backgroundVideoVolume', extractEnabled(data.backgroundVideoVolume));
   set('backgroundVideoSize', extractEnabled(data.backgroundVideoSize));
   set('backgroundVideoPosition', extractEnabled(data.backgroundVideoPosition));
@@ -131,6 +135,7 @@ export function resolveStyleData(data: StyleData | undefined): ResolvedStyle {
   set('lineHeight', extractEnabled(data.lineHeight));
   set('letterSpacing', extractEnabled(data.letterSpacing));
   set('padding', extractEnabled(data.padding));
+  set('paragraphPadding', extractEnabled(data.paragraphPadding));
   set('textTransform', extractEnabled(data.textTransform));
   set('textAlign', extractEnabled(data.textAlign));
   set('verticalAlign', extractEnabled(data.verticalAlign));

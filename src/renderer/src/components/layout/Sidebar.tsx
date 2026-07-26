@@ -42,6 +42,8 @@ import {
   CreateNewFolder as NewGroupIcon,
   Circle as CircleIcon,
   FileUpload as FileUploadIcon,
+  Sync as SyncIcon,
+  Smartphone as SmartphoneIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -99,6 +101,7 @@ import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
 import { useLazyGetSongQuery, useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useCcliSongImport } from '@/hooks/useCcliSongImport';
+import { useSongUpdatePoller } from '@/hooks/useSongUpdatePoller';
 import { loadShowSongs } from '@/store/songsSlice';
 import { StyleEditor, StyleGalleryThumb } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
@@ -143,6 +146,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [mediaBrowserPickType, setMediaBrowserPickType] = useState<'image' | 'video' | 'any'>('any');
   const [songToEdit, _setSongToEdit] = useState<ISong>();
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
+  /** When set, the StyleEditor opens directly in edit view for this style (direct edit from item menus). */
+  const [styleEditorEditId, setStyleEditorEditId] = useState<number | undefined>(undefined);
   const [windowManagerOpen, setWindowManagerOpen] = useState(false);
   /** Error message shown when a song file import fails. */
   const [importErrorMsg, setImportErrorMsg] = useState<string | null>(null);
@@ -153,6 +158,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const { data: session } = useGetSessionQuery();
   const bibleEnabled = session?.settings?.bibleEnabled ?? false;
   const churchToolsEnabled = session?.settings?.churchToolsEnabled ?? false;
+  // Detect songs that were changed on the server since they were cached locally
+  const { updatedSongNumbers, reloadSong } = useSongUpdatePoller();
   const [logout] = useLogoutMutation();
   const [fetchSong] = useLazyGetSongQuery();
 
@@ -611,6 +618,21 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
                 }}
               />
             )}
+            {/* Server-side song update available */}
+            {isSong && item.songNumber != null && updatedSongNumbers[item.songNumber] && (
+              <Tooltip title={LL.SHOW_ITEMS.SONG_UPDATED()}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void reloadSong(item.songNumber!);
+                  }}
+                  sx={{ p: 0.25 }}
+                >
+                  <SyncIcon fontSize="small" color="warning" />
+                </IconButton>
+              </Tooltip>
+            )}
             {/* Style badge */}
             {item.styleId && (
               <Tooltip title={availableStyles.find((s) => s.id === item.styleId)?.name || LL.STYLE.STYLE()}>
@@ -672,6 +694,13 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       await saveCurrentShow(nextShowOrder);
     }
     handleItemMenuClose();
+  };
+
+  /** Open the StyleEditor directly in edit view for the given style (from item style submenus). */
+  const handleEditStyleDirect = (styleId: number) => {
+    handleItemMenuClose();
+    setStyleEditorEditId(styleId);
+    setStyleEditorOpen(true);
   };
 
   const handleItemSetStyleForWindow = (styleId: number | null) => {
@@ -846,7 +875,14 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         onAdd={handleMediaAdd}
         pickType={mediaBrowserPickType}
       />
-      <StyleEditor open={styleEditorOpen} onClose={() => setStyleEditorOpen(false)} />
+      <StyleEditor
+        open={styleEditorOpen}
+        onClose={() => {
+          setStyleEditorOpen(false);
+          setStyleEditorEditId(undefined);
+        }}
+        editStyleId={styleEditorEditId}
+      />
       <WindowManager open={windowManagerOpen} onClose={() => setWindowManagerOpen(false)} />
       <Stack
         direction="row"
@@ -978,6 +1014,13 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
                 flexGrow: 1,
               }}
             />
+
+            {/* Mobile control page */}
+            <Tooltip title={LL.REMOTE.OPEN_CONTROL()}>
+              <IconButton size="small" onClick={() => window.open('/control', '_blank')}>
+                <SmartphoneIcon />
+              </IconButton>
+            </Tooltip>
 
             {/* Musician View */}
             <Tooltip title={LL.MUSICIAN.OPEN()}>
@@ -1172,9 +1215,20 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
               <Box sx={{ width: 56, flexShrink: 0, borderRadius: 0.5, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                 <StyleGalleryThumb style={s} />
               </Box>
-              <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>
+              <Typography variant="body2" noWrap sx={{ maxWidth: 180, flexGrow: 1 }}>
                 {s.name}
               </Typography>
+              <Tooltip title={LL.STYLE.EDIT_STYLE()}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditStyleDirect(s.id);
+                  }}
+                >
+                  <EditIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
             </MenuItem>
           ))}
       </Menu>
@@ -1281,9 +1335,20 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
               <Box sx={{ width: 56, flexShrink: 0, borderRadius: 0.5, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }}>
                 <StyleGalleryThumb style={s} />
               </Box>
-              <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>
+              <Typography variant="body2" noWrap sx={{ maxWidth: 180, flexGrow: 1 }}>
                 {s.name}
               </Typography>
+              <Tooltip title={LL.STYLE.EDIT_STYLE()}>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditStyleDirect(s.id);
+                  }}
+                >
+                  <EditIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
             </MenuItem>
           ))}
       </Menu>

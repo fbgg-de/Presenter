@@ -4,6 +4,7 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setActiveBlockIndex, setActiveLineIndex, useGetPresentationSettings } from '@/store/presentationSlice';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
+import { useGetShow } from '@/store/showSlice';
 import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
 import { useGetSettings } from '@/store/settingsSlice';
 
@@ -179,8 +180,16 @@ const ControlSong = () => {
   const { verseClick, showLicenseNumber } = useGetSettings();
   const { activeBlockIndex, activeLineIndex, activeItemIndex } = useGetPresentationSettings();
   const { songsOrder, songs } = useGetSongs();
+  const { currentShow } = useGetShow();
 
-  const currentSongNumber = songsOrder[activeItemIndex];
+  // Resolve the current song from the SHOW order (not songsOrder — that array only
+  // contains songs, so its indices diverge from activeItemIndex once non-song items exist).
+  const activeShowItem = currentShow?.order?.[activeItemIndex];
+  const currentSongNumber = activeShowItem
+    ? activeShowItem.type === 'song'
+      ? activeShowItem.songNumber
+      : undefined
+    : songsOrder[activeItemIndex];
   const currentSong = currentSongNumber ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 

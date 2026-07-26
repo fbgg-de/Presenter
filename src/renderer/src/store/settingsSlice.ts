@@ -46,6 +46,8 @@ export interface SettingsState {
   offlineMode: boolean;
   overrideSongImport: boolean;
   reloadSongAfterEdit: boolean;
+  /** Mobile remote (/control): which commands connected devices may trigger. Missing key = allowed. */
+  remoteControlCommands: Record<string, boolean>;
   resetBlackOnSwitch: boolean;
   restoreWindowsOnStart: boolean;
   showDeleteFromDb: boolean;
@@ -105,6 +107,7 @@ const defaultState: SettingsState = {
   offlineMode: false,
   overrideSongImport: false,
   reloadSongAfterEdit: false,
+  remoteControlCommands: {},
   resetBlackOnSwitch: false,
   restoreWindowsOnStart: true,
   showDeleteFromDb: false,

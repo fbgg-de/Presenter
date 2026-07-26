@@ -20,6 +20,8 @@ export interface ISong {
   background?: string;
   css?: string;
   lastUpdate?: number;
+  /** Server-side last-modified timestamp (as returned by the API) — used for change detection */
+  updatedAt?: string | null;
 
   getBlock: (order: string, index: number) => string[];
   getBlocks: (order: string) => { name: string; lines: string[]; copyright: boolean }[];

@@ -5,7 +5,7 @@ import { Document, Page } from 'react-pdf';
 import { PdfAnnotationToolbar } from '@/components/pdf/PdfAnnotationToolbar';
 import { MusicianFooter } from './MusicianFooter';
 import type { PageViewMode } from './usePdfViewer';
-import { getPageState, setPageField } from './usePdfViewer';
+import { getPageState, setPageField, getPdfScrollTarget, pdfSmoothScrollTo } from './usePdfViewer';
 
 interface PdfViewProps {
   pdfUrl: string | null;
@@ -76,9 +76,6 @@ const ZOOM_MAX = 3.0;
 const ZOOM_DEFAULT = 1.0;
 const SCROLL_SAVE_DEBOUNCE_MS = 200;
 
-/** Shared with usePdfViewer — tracks intended smooth-scroll destination per container. */
-const pdfScrollTargets = new WeakMap<HTMLElement, number>();
-
 /**
  * Renders persistent overlay indicators for ALL mapped block areas on a given page.
  * Each overlay is always in the DOM at its fixed region — only opacity/border-color
@@ -134,18 +131,13 @@ const BlockAreaOverlays = ({
         }
         const elOffsetBottom = elOffsetTop + el.offsetHeight;
 
-        const pending = pdfScrollTargets.get(c);
+        const pending = getPdfScrollTarget(c);
         const effectiveTop = pending ?? c.scrollTop;
         const fullyVisible = elOffsetTop >= effectiveTop && elOffsetBottom <= effectiveTop + c.clientHeight;
 
         if (!fullyVisible) {
           const targetScroll = Math.max(0, elOffsetTop - c.clientHeight / 2 + el.offsetHeight / 2);
-          pdfScrollTargets.set(c, targetScroll);
-          c.scrollTo({ top: targetScroll, behavior: 'smooth' });
-          c.addEventListener('scrollend', function onScrollEnd() {
-            c.removeEventListener('scrollend', onScrollEnd);
-            if (pdfScrollTargets.get(c) === targetScroll) pdfScrollTargets.delete(c);
-          });
+          pdfSmoothScrollTo(c, targetScroll);
         }
       });
     });

@@ -13,8 +13,26 @@ const ZOOM_MAX = 3.0;
 const ZOOM_DEFAULT = 1.0;
 
 /** Tracks the intended smooth-scroll destination per container to enable correct
- *  visibility checks while an animation is in progress. */
+ *  visibility checks while an animation is in progress. Shared with PdfView via
+ *  the exported helpers below so both scroll mechanisms agree on pending targets. */
 const pdfScrollTargets = new WeakMap<HTMLElement, number>();
+
+export const getPdfScrollTarget = (container: HTMLElement): number | undefined => pdfScrollTargets.get(container);
+
+/** Smooth-scroll a container and track the destination until the scroll settles.
+ *  The timeout fallback covers browsers without `scrollend`, interrupted animations
+ *  and no-op scrolls (already at target), which never emit a scrollend event. */
+export const pdfSmoothScrollTo = (container: HTMLElement, targetY: number): void => {
+  pdfScrollTargets.set(container, targetY);
+  container.scrollTo({ top: targetY, behavior: 'smooth' });
+  const clear = () => {
+    container.removeEventListener('scrollend', clear);
+    clearTimeout(timer);
+    if (pdfScrollTargets.get(container) === targetY) pdfScrollTargets.delete(container);
+  };
+  const timer = setTimeout(clear, 1500);
+  container.addEventListener('scrollend', clear);
+};
 
 const SONGS_STORAGE_KEY = 'presenter_musician';
 const SONGS_STORAGE_KEY_OLD = 'presenter_musician_songs'; // migration ToDo remove
@@ -207,6 +225,23 @@ export const usePdfViewer = ({
 
   // Guard: skip zoom/scroll save when a restore is in progress (prevents writing stale values during song transitions)
   const skipZoomSaveRef = useRef(false);
+
+  // Set when a synced block advance changes currentPage — consumed by the
+  // page-top scroll effect so it doesn't fight the block-targeted smooth scroll.
+  const blockSyncPageChangeRef = useRef(false);
+
+  // Pending retry timer for the block-sync scroll while the PDF is still rendering
+  const blockScrollRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // True while block sync is responsible for positioning the view — the saved-scroll
+  // restore must not fire then, or it would override the block-targeted scroll.
+  const syncPositionsViewRef = useRef(false);
+  syncPositionsViewRef.current =
+    (syncMode === 'operator' || syncMode === 'midi') &&
+    blockIndicator &&
+    operatorActiveBlockIndex != null &&
+    operatorActiveBlockIndex >= 0 &&
+    !!areaMappings.find((m) => m.blockName === lyricsBlocks[operatorActiveBlockIndex]?.name)?.region;
 
   // Ref that always holds current pageView for use in callbacks without re-creating them
   const pageViewRef = useRef(pageView);
@@ -413,6 +448,10 @@ export const usePdfViewer = ({
         const savedX = ps.scrollX ?? 0;
         if ((savedY > 0 || savedX > 0) && pdfContainerRef.current) {
           setTimeout(() => {
+            // While block sync positions the view, restoring a saved scroll would
+            // fight the block-targeted scroll. Checked at fire time so mappings
+            // that arrive during the delay are taken into account.
+            if (syncPositionsViewRef.current) return;
             if (pdfContainerRef.current) {
               pdfContainerRef.current.scrollTop = savedY;
               pdfContainerRef.current.scrollLeft = savedX;
@@ -454,43 +493,66 @@ export const usePdfViewer = ({
     const mapping = areaMappings.find((m) => m.blockName === activeBlock.name);
     if (!mapping || !mapping.region) return;
 
-    if (mapping.page !== currentPage) setCurrentPage(mapping.page);
-
-    const container = pdfContainerRef.current;
-    if (!container) return;
-
-    const pages = container.querySelectorAll('.react-pdf__Page');
-    const pageIdx = pageView === 'two-page' ? Math.floor((mapping.page - 1) / 2) : mapping.page - 1;
-    const pageEl = pages[pageIdx] as HTMLElement | undefined;
-    if (!pageEl) return;
-
-    // Compute block top/bottom in scroll-space using stable layout values.
-    const regionTopFraction = mapping.region.y / 100;
-    const regionBottomFraction = (mapping.region.y + mapping.region.height) / 100;
-    const blockTop = pageEl.offsetTop + regionTopFraction * pageEl.offsetHeight;
-    const blockBottom = pageEl.offsetTop + regionBottomFraction * pageEl.offsetHeight;
-
-    // Use the pending target if a smooth scroll is in progress, otherwise live scrollTop.
-    const pending = pdfScrollTargets.get(container);
-    const effectiveTop = pending ?? container.scrollTop;
-    const fullyVisible = blockTop >= effectiveTop && blockBottom <= effectiveTop + container.clientHeight;
-
-    if (!fullyVisible) {
-      const targetY = Math.max(0, blockTop - container.clientHeight / 2 + (blockBottom - blockTop) / 2);
-      pdfScrollTargets.set(container, targetY);
-      container.scrollTo({ top: targetY, behavior: 'smooth' });
-      // Clear the pending target once the animation ends, but only if it hasn't
-      // been overwritten by a newer scroll in the meantime.
-      container.addEventListener('scrollend', function onScrollEnd() {
-        container.removeEventListener('scrollend', onScrollEnd);
-        if (pdfScrollTargets.get(container) === targetY) {
-          pdfScrollTargets.delete(container);
-        }
-      });
+    if (mapping.page !== currentPage) {
+      // This effect performs its own targeted smooth scroll below, so the
+      // instant "jump to page top" effect must not fire for this page change.
+      blockSyncPageChangeRef.current = true;
+      setCurrentPage(mapping.page);
     }
+
+    const attempt = (retriesLeft: number) => {
+      const container = pdfContainerRef.current;
+      if (!container) return;
+
+      const pages = container.querySelectorAll('.react-pdf__Page');
+      const pageIdx = pageView === 'two-page' ? Math.floor((mapping.page - 1) / 2) : mapping.page - 1;
+      const pageEl = pages[pageIdx] as HTMLElement | undefined;
+      if (!pageEl || pageEl.offsetHeight === 0) {
+        // PDF document/page not rendered yet (e.g. right after a song switch) —
+        // retry until it is, so the block positioning isn't silently dropped.
+        if (retriesLeft > 0) {
+          blockScrollRetryRef.current = setTimeout(() => attempt(retriesLeft - 1), 150);
+        }
+        return;
+      }
+
+      // Compute block top/bottom in scroll-space. Measured via bounding rects so
+      // positioned wrapper elements between page and container (e.g. the overlay
+      // anchor around each page) don't break the calculation like offsetTop would.
+      const pageTop = pageEl.getBoundingClientRect().top - container.getBoundingClientRect().top + container.scrollTop;
+      const regionTopFraction = mapping.region!.y / 100;
+      const regionBottomFraction = (mapping.region!.y + mapping.region!.height) / 100;
+      const blockTop = pageTop + regionTopFraction * pageEl.offsetHeight;
+      const blockBottom = pageTop + regionBottomFraction * pageEl.offsetHeight;
+
+      // Use the pending target if a smooth scroll is in progress, otherwise live scrollTop.
+      const pending = getPdfScrollTarget(container);
+      const effectiveTop = pending ?? container.scrollTop;
+      const fullyVisible = blockTop >= effectiveTop && blockBottom <= effectiveTop + container.clientHeight;
+
+      if (!fullyVisible) {
+        const targetY = Math.max(0, blockTop - container.clientHeight / 2 + (blockBottom - blockTop) / 2);
+        pdfSmoothScrollTo(container, targetY);
+      }
+    };
+
+    if (blockScrollRetryRef.current) clearTimeout(blockScrollRetryRef.current);
+    attempt(40);
+    return () => {
+      if (blockScrollRetryRef.current) {
+        clearTimeout(blockScrollRetryRef.current);
+        blockScrollRetryRef.current = null;
+      }
+    };
   }, [operatorActiveBlockIndex, syncMode, blockIndicator, areaMappings, lyricsBlocks, currentPage, pageView]);
 
   useEffect(() => {
+    // Skip the instant page-top jump when the page change came from block sync —
+    // the sync effect scrolls precisely to the mapped block (and only if needed).
+    if (blockSyncPageChangeRef.current) {
+      blockSyncPageChangeRef.current = false;
+      return;
+    }
     if (pdfContainerRef.current && numPages > 0) {
       const pages = pdfContainerRef.current.querySelectorAll('.react-pdf__Page');
       const idx = pageView === 'two-page' ? Math.floor((currentPage - 1) / 2) : currentPage - 1;

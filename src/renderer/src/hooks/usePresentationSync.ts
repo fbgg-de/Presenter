@@ -15,10 +15,15 @@ import {
   setActiveItemIndex,
   setActiveBlockIndex,
   setActiveItemAndBlock,
+  setBlack,
+  toggleBlack,
+  toggleTextHidden,
+  toggleVideoVisible,
   setWsConnectedCount,
   setWsMidiSyncAt,
   setWsOperatorConnected,
 } from '@/store/presentationSlice';
+import { isRemoteCommandAllowed, allowedRemoteCommands } from '@/utils/remoteCommands';
 import { useGetShow } from '@/store/showSlice';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSessionQuery } from '@/api/session.api';
@@ -58,6 +63,11 @@ export const usePresentationSync = (): void => {
     offlineMode,
     cachedStyles,
     showLicenseNumber,
+    resetBlackOnSwitch,
+    remoteControlCommands,
+    hideTransitionMode,
+    hideTransitionDuration,
+    videoFadeDuration,
   } = useGetSettings();
   const { midiTrackingMaster } = useGetMusicianSettings();
 
@@ -125,13 +135,122 @@ export const usePresentationSync = (): void => {
     return () => window.removeEventListener('presenter:force-broadcast', handler);
   }, []);
 
+  // ── Remote-control commands (mobile control page, relayed as 'remote_command') ──
+  // Context ref is assigned further below once song/show/order are derived.
+  const remoteCtxRef = useRef<{
+    showItemCount: number;
+    currentSong: { getBlocks: (order: string) => { name: string; copyright: boolean }[] } | undefined;
+    orderName: string;
+    resetBlackOnSwitch: boolean;
+    /** Per-command permission map from settings — missing key = allowed */
+    allowed: Record<string, boolean>;
+    videoVisible: boolean;
+    hideTransitionMode: 'cut' | 'fade';
+    hideTransitionDuration: number;
+    videoFadeDuration: number;
+  }>({
+    showItemCount: 0,
+    currentSong: undefined,
+    orderName: 'Default',
+    resetBlackOnSwitch: false,
+    allowed: {},
+    videoVisible: true,
+    hideTransitionMode: 'cut',
+    hideTransitionDuration: 300,
+    videoFadeDuration: 0,
+  });
+
+  const handleRemoteCommand = useCallback(
+    (data: Record<string, unknown>) => {
+      const command = typeof data.command === 'string' ? data.command : '';
+      const nav = navStateRef.current;
+      const ctx = remoteCtxRef.current;
+      // Permission gate — set_item/set_block (agenda/order jumps) are allowed when
+      // item/block navigation is permitted in either direction.
+      if (command === 'set_item') {
+        if (!isRemoteCommandAllowed(ctx.allowed, 'next_item') && !isRemoteCommandAllowed(ctx.allowed, 'prev_item')) return;
+      } else if (command === 'set_block') {
+        if (!isRemoteCommandAllowed(ctx.allowed, 'next_block') && !isRemoteCommandAllowed(ctx.allowed, 'prev_block')) return;
+      } else if (!isRemoteCommandAllowed(ctx.allowed, command)) {
+        return;
+      }
+      switch (command) {
+        case 'prev_item':
+          if (nav.activeItemIndex > 0) {
+            dispatch(setActiveItemIndex(nav.activeItemIndex - 1));
+            if (ctx.resetBlackOnSwitch) dispatch(setBlack(false));
+          }
+          break;
+        case 'next_item':
+          if (nav.activeItemIndex < ctx.showItemCount - 1) {
+            dispatch(setActiveItemIndex(nav.activeItemIndex + 1));
+            if (ctx.resetBlackOnSwitch) dispatch(setBlack(false));
+          }
+          break;
+        case 'set_item': {
+          const idx = typeof data.index === 'number' ? Math.floor(data.index) : null;
+          if (idx != null) {
+            dispatch(setActiveItemIndex(Math.max(0, Math.min(idx, Math.max(0, ctx.showItemCount - 1)))));
+            if (ctx.resetBlackOnSwitch) dispatch(setBlack(false));
+          }
+          break;
+        }
+        case 'prev_block':
+          if (nav.activeBlockIndex > 0) {
+            dispatch(setActiveBlockIndex(nav.activeBlockIndex - 1));
+          }
+          break;
+        case 'next_block': {
+          if (!ctx.currentSong) break;
+          const allBlocks = ctx.currentSong.getBlocks(ctx.orderName);
+          if (nav.activeBlockIndex < allBlocks.length - 1) {
+            dispatch(setActiveBlockIndex(nav.activeBlockIndex + 1));
+          }
+          break;
+        }
+        case 'set_block': {
+          const idx = typeof data.index === 'number' ? Math.floor(data.index) : null;
+          if (idx != null && ctx.currentSong) {
+            const max = Math.max(0, ctx.currentSong.getBlocks(ctx.orderName).length - 1);
+            dispatch(setActiveBlockIndex(Math.max(0, Math.min(idx, max))));
+          }
+          break;
+        }
+        case 'toggle_black':
+          dispatch(toggleBlack());
+          break;
+        case 'toggle_text':
+          dispatch(toggleTextHidden());
+          break;
+        case 'toggle_video':
+          // Mirrors the keyboard action — Electron only (window.api), like useKeyboardNavigation
+          if (window.api?.setVideoVisible) {
+            const nextVisible = !ctx.videoVisible;
+            dispatch(toggleVideoVisible());
+            window.api.setVideoVisible({
+              value: nextVisible,
+              mode: ctx.hideTransitionMode,
+              durationMs: ctx.hideTransitionDuration,
+            });
+          }
+          break;
+        case 'toggle_video_playback':
+          if (window.api?.videoCommand) {
+            window.api.videoCommand({ action: 'toggle', fadeDuration: ctx.videoFadeDuration });
+          }
+          break;
+      }
+    },
+    [dispatch],
+  );
+
   // Operator WebSocket connection to the relay server
   const {
     broadcast: wsBroadcast,
     connected: wsOperatorConnected,
     connectedCount,
     lastMidiSyncAt,
-  } = useWsOperator(wsUrl, wsAccount, handleMusicianSync, handleGetState);
+  } = useWsOperator(wsUrl, wsAccount, handleMusicianSync, handleGetState, handleRemoteCommand);
 
   // Also listen for direct Electron IPC musician sync (bypasses WS relay, works offline / same machine)
   useEffect(() => {
@@ -162,7 +281,7 @@ export const usePresentationSync = (): void => {
     if (lastMidiSyncAt > 0) dispatch(setWsMidiSyncAt(lastMidiSyncAt));
   }, [lastMidiSyncAt, dispatch]);
 
-  const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden } = useGetPresentationSettings();
+  const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden, videoVisible } = useGetPresentationSettings();
   const updateSetting = useUpdateSetting();
 
   // Fetch all styles for cascade resolution
@@ -195,6 +314,43 @@ export const usePresentationSync = (): void => {
   const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
+  // Agenda for the mobile control page — one entry per show item, labels resolved
+  // the same way the sidebar does. Sent inside musician_sync so the phone can render
+  // an expandable agenda and jump to any item via `set_item`.
+  const agenda = useMemo(
+    () =>
+      (currentShow?.order ?? []).map((item) => ({
+        type: item.type,
+        label:
+          item.type === 'song'
+            ? item.songNumber != null
+              ? (songs[item.songNumber]?.title ?? `#${item.songNumber}`)
+              : 'Song'
+            : item.type === 'bible_verse'
+              ? item.bibleRef || item.label || 'Bible'
+              : item.label || item.mediaSubType || 'Media',
+      })),
+    [currentShow?.order, songs],
+  );
+
+  // Stable signature of the allowed remote-command list — changing a permission in
+  // Settings must immediately rebroadcast the list (otherwise the phone only updates
+  // on the next navigation, which reads as tiles briefly showing then disappearing).
+  const remoteCommandsSig = useMemo(() => allowedRemoteCommands(remoteControlCommands).join(','), [remoteControlCommands]);
+
+  // Keep the remote-command context current (declared above the WS hook, filled here)
+  remoteCtxRef.current = {
+    showItemCount: currentShow?.order?.length ?? 0,
+    currentSong,
+    orderName,
+    resetBlackOnSwitch,
+    allowed: remoteControlCommands,
+    videoVisible,
+    hideTransitionMode,
+    hideTransitionDuration,
+    videoFadeDuration,
+  };
+
   // Use a ref to avoid sending duplicate content — compare key fields only
   const lastKeyRef = useRef('');
   // Throttle/coalesce broadcast scheduling — see broadcast effect below.
@@ -203,8 +359,8 @@ export const usePresentationSync = (): void => {
   // Mirror the navigation indices so the deferred flush always sends the
   // newest values (otherwise a fast-repeating key would re-schedule the
   // timer with a stale closure). Updated synchronously below.
-  const navStateRef = useRef({ activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden });
-  navStateRef.current = { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden };
+  const navStateRef = useRef({ activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden, videoVisible });
+  navStateRef.current = { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden, videoVisible };
 
   // ── Memoize expensive computations ──
   // These only recompute when content changes (song/show/styles), NOT on every index change.
@@ -298,6 +454,7 @@ export const usePresentationSync = (): void => {
     nextLinePreviewColor,
     transitionMode,
     transitionDuration,
+    agenda,
   });
   broadcastRef.current = {
     contentType,
@@ -315,6 +472,7 @@ export const usePresentationSync = (): void => {
     nextLinePreviewColor,
     transitionMode,
     transitionDuration,
+    agenda,
   };
 
   // A cheap content-identity hash (changes only when actual style values change).
@@ -408,11 +566,33 @@ export const usePresentationSync = (): void => {
       // Include the current block's name and text lines so viewer clients
       // (viewer.php) can display the lyrics without an extra API call.
       const activeBlock = cb.blocks[nav.activeBlockIndex];
+
+      // A display title for the ACTIVE item, always a string so the control page's
+      // partial-state merge overwrites a previous song title when a media/bible item
+      // becomes active (songTitle alone is undefined for non-songs and would persist).
+      const itemTitle =
+        cb.contentType === 'song'
+          ? (cb.title ?? '')
+          : cb.contentType === 'bible_verse'
+            ? cb.activeItem?.bibleRef || cb.activeItem?.label || 'Bible'
+            : cb.contentType === 'media'
+              ? cb.activeItem?.label ||
+                (cb.activeItem?.mediaSubType === 'color'
+                  ? 'Color'
+                  : cb.activeItem?.mediaSubType === 'video'
+                    ? 'Video'
+                    : cb.activeItem?.mediaSubType === 'image'
+                      ? 'Image'
+                      : 'Media')
+              : '';
+
       wsBroadcast('musician_sync', {
         activeItemIndex: nav.activeItemIndex,
         activeBlockIndex: nav.activeBlockIndex,
         activeLineIndex: nav.activeLineIndex,
         isBlack: nav.isBlack,
+        isTextHidden: nav.isTextHidden,
+        videoVisible: nav.videoVisible,
         songNumber: cb.currentSongNumber,
         songTitle: cb.title,
         showTitle: cb.currentShow?.title,
@@ -420,13 +600,25 @@ export const usePresentationSync = (): void => {
         contentType: cb.contentType,
         blockName: activeBlock?.name,
         blockLines: activeBlock?.lines,
+        // Extras for the mobile control page (/control):
+        // - itemTitle: display title of the active item (song/media/bible)
+        // - mediaSubType: so the phone can pick an icon for media items
+        // - agenda: all show items (label+type) for the expandable agenda + set_item
+        // - blockNames: current song's block names for the expandable order + set_block
+        itemTitle,
+        mediaSubType: cb.activeItem?.mediaSubType,
+        agenda: cb.agenda,
+        blockNames: cb.blocks.map((bl) => bl.name),
+        // Which commands remote-control clients (/control) may trigger — they
+        // hide/disable tiles for anything not listed here.
+        remoteCommands: allowedRemoteCommands(remoteCtxRef.current.allowed),
       });
     };
 
     // Deduplicate scheduling using a lightweight key (includes styleHash so style
     // edits actually re-broadcast and apply immediately).
     const ai = b.activeItem;
-    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${b.blocks.length}|${b.nextLinePreview}|${b.nextLinePreviewColor}|${ai?.mediaPath}|${ai?.mediaColor}|${ai?.mediaObjectFit}|${ai?.mediaObjectPosition}|${ai?.mediaZoom}|${ai?.mediaBlur}|${ai?.mediaAutoplay}|${ai?.mediaLoop}|${styleHash}|${windowStylesSig}`;
+    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${b.blocks.length}|${b.nextLinePreview}|${b.nextLinePreviewColor}|${ai?.mediaPath}|${ai?.mediaColor}|${ai?.mediaObjectFit}|${ai?.mediaObjectPosition}|${ai?.mediaZoom}|${ai?.mediaBlur}|${ai?.mediaAutoplay}|${ai?.mediaLoop}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${b.agenda.map((a) => a.label).join('~')}`;
     if (contentKey === lastKeyRef.current) return;
     lastKeyRef.current = contentKey;
 
@@ -445,6 +637,7 @@ export const usePresentationSync = (): void => {
     activeLineIndex,
     isBlack,
     isTextHidden,
+    videoVisible,
     styleHash,
     // The following primitives change rarely but should still trigger a re-broadcast:
     contentType,
@@ -463,6 +656,10 @@ export const usePresentationSync = (): void => {
     activeItem?.mediaAutoplay,
     activeItem?.mediaLoop,
     forceBroadcastCount,
+    // Remote-control permission changes must rebroadcast the allowed list immediately.
+    remoteCommandsSig,
+    // Agenda label/order changes (e.g. song titles loading in) rebroadcast the agenda.
+    agenda,
     // Peer requested current state — force a re-broadcast even if nothing changed.
     wsBroadcast,
   ]);

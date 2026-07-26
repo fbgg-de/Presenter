@@ -32,6 +32,8 @@ export type StyleData = {
   backgroundImage?: { enabled: boolean; value: string };
   backgroundVideo?: { enabled: boolean; value: string };
   backgroundVideoAutoplay?: { enabled: boolean; value: boolean };
+  /** Whether the background video loops (default true) */
+  backgroundVideoLoop?: { enabled: boolean; value: boolean };
   backgroundVideoVolume?: { enabled: boolean; value: number };
   backgroundVideoSize?: { enabled: boolean; value: 'cover' | 'contain' | '100% auto' | 'auto 100%' | 'auto' };
   backgroundVideoPosition?: { enabled: boolean; value: string };
@@ -53,6 +55,8 @@ export type StyleData = {
   lineHeight?: { enabled: boolean; value: string };
   letterSpacing?: { enabled: boolean; value: string };
   padding?: { enabled: boolean; value: string };
+  /** CSS padding shorthand around each paragraph (song block) — "top right bottom left" */
+  paragraphPadding?: { enabled: boolean; value: string };
   textTransform?: { enabled: boolean; value: 'none' | 'uppercase' | 'lowercase' | 'capitalize' };
   textAlign?: { enabled: boolean; value: 'left' | 'center' | 'right' | 'justify' };
   verticalAlign?: { enabled: boolean; value: 'top' | 'center' | 'bottom' };

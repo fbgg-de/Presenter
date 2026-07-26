@@ -610,6 +610,16 @@ class AdminMigrations extends RestController
                     }
                 },
             ],
+
+            18 => [
+                'description' => 'Add songs.updated_at column for song change detection',
+                'up' => function (mysqli $db) use ($columnExists) {
+                    if (!$columnExists('songs', 'updated_at')) {
+                        $db->query("ALTER TABLE `songs` ADD COLUMN `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+                        echo "Added column: songs.updated_at\n";
+                    }
+                },
+            ],
         ];
     }
 }

@@ -178,7 +178,12 @@ export const MusicianPage = () => {
         if (typeof state.activeItemIndex === 'number') {
           if (syncMode !== 'midi') {
             // In operator mode: follow the operator's song selection too.
-            handleSelectItemRef.current?.(state.activeItemIndex);
+            // Non-song items (media, bible) are NOT followed — the musician keeps
+            // their current sheet while the operator shows announcement slides etc.
+            const targetItem = showItemsRef.current[state.activeItemIndex];
+            if (!targetItem || targetItem.type === 'song') {
+              handleSelectItemRef.current?.(state.activeItemIndex);
+            }
           }
           // Always keep the Redux operator index in sync so block indicators work.
           dispatch(setPresentationItemIndex(state.activeItemIndex));
@@ -378,7 +383,11 @@ export const MusicianPage = () => {
     const pending = pendingWsStateRef.current;
     if (!pending) return;
     if (typeof pending.activeItemIndex === 'number') {
-      handleSelectItemRef.current?.(pending.activeItemIndex);
+      // Only follow to song items — see the WS onStateUpdate handler.
+      const targetItem = showItemsRef.current[pending.activeItemIndex];
+      if (!targetItem || targetItem.type === 'song') {
+        handleSelectItemRef.current?.(pending.activeItemIndex);
+      }
       dispatch(setPresentationItemIndex(pending.activeItemIndex));
     }
     if (typeof pending.activeBlockIndex === 'number') {
@@ -652,6 +661,10 @@ export const MusicianPage = () => {
   // ── Sync: follow operator item selection ─────────────────────────
   useEffect(() => {
     if (syncMode === 'operator' && operatorItemIndex !== activeItemIndex) {
+      // Non-song items are not followed — the musician keeps their current sheet
+      // while the operator shows announcement slides / media items.
+      const targetItem = showItems[operatorItemIndex];
+      if (targetItem && targetItem.type !== 'song') return;
       handleSelectItem(operatorItemIndex);
     }
   }, [syncMode, operatorItemIndex]); // intentionally exclude handleSelectItem / activeItemIndex to avoid loops

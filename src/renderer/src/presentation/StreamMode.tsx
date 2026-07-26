@@ -16,6 +16,7 @@ export const StreamMode = ({
   languages,
   streamLines = 2,
   langStyles,
+  paragraphPadding,
 }: {
   blocks: PresentationLine[][];
   activeBlockIndex: number;
@@ -24,20 +25,20 @@ export const StreamMode = ({
   languages?: string[];
   streamLines?: number;
   langStyles?: LanguageStyleEntry[];
+  /** CSS padding shorthand around each paragraph (spacing between blocks in the stream) */
+  paragraphPadding?: string;
 }) => {
-  // Build full flat list (filter + reorder per language preference)
-  const allLines: PresentationLine[] = [];
-  blocks.forEach((block) => {
-    allLines.push(...filterLinesByLanguage(block, languages));
-  });
+  // Build per-block filtered lists plus the full flat list (filter + reorder per language preference)
+  const filteredBlocks = blocks.map((block) => filterLinesByLanguage(block, languages));
+  const allLines: PresentationLine[] = filteredBlocks.flat();
 
   // Compute flat index: convert primary-line activeLineIndex to flat position
   let flatIndex = 0;
   for (let b = 0; b < activeBlockIndex && b < blocks.length; b++) {
-    flatIndex += filterLinesByLanguage(blocks[b], languages).length;
+    flatIndex += filteredBlocks[b].length;
   }
   if (activeBlockIndex < blocks.length) {
-    const currentFiltered = filterLinesByLanguage(blocks[activeBlockIndex], languages);
+    const currentFiltered = filteredBlocks[activeBlockIndex];
     // Count primary lines to find flat position of activeLineIndex-th primary
     let primCount = 0;
     for (let i = 0; i < currentFiltered.length; i++) {
@@ -77,27 +78,47 @@ export const StreamMode = ({
     });
   }, [flatIndex, activeBlockIndex]);
 
+  // Render grouped by block so paragraphs can get vertical spacing; line
+  // indexing stays flat (blockStarts[b] + i === absolute index in allLines).
+  const blockStarts: number[] = [];
+  {
+    let acc = 0;
+    for (const fb of filteredBlocks) {
+      blockStarts.push(acc);
+      acc += fb.length;
+    }
+  }
+
   return (
     <div className="presentation-stream" style={{ width: '100%', overflow: 'hidden', position: 'relative' }}>
-      {allLines.map((line, absIdx) => {
-        const isActive = absIdx >= flatIndex && absIdx < flatIndex + effectiveLines;
-        return (
-          <div
-            key={absIdx}
-            ref={isActive && absIdx === flatIndex ? activeLineRef : undefined}
-            className={`presentation-line ${isActive ? 'presentation-line-active' : 'presentation-line-preview'}`}
-            data-lang={line.language || undefined}
-            style={{
-              ...textStyle,
-              ...resolveLineLangCss(line.language, langStyles),
-              ...(!isActive ? { opacity: 0.5 } : {}),
-              ...(line.bold ? { fontWeight: 'bold' } : {}),
-            }}
-          >
-            {line.text}
-          </div>
-        );
-      })}
+      {filteredBlocks.map((blockLines, b) => (
+        <div
+          key={b}
+          className="presentation-stream-block"
+          style={paragraphPadding ? { padding: paragraphPadding, boxSizing: 'border-box' } : undefined}
+        >
+          {blockLines.map((line, i) => {
+            const absIdx = blockStarts[b] + i;
+            const isActive = absIdx >= flatIndex && absIdx < flatIndex + effectiveLines;
+            return (
+              <div
+                key={absIdx}
+                ref={isActive && absIdx === flatIndex ? activeLineRef : undefined}
+                className={`presentation-line ${isActive ? 'presentation-line-active' : 'presentation-line-preview'}`}
+                data-lang={line.language || undefined}
+                style={{
+                  ...textStyle,
+                  ...resolveLineLangCss(line.language, langStyles),
+                  ...(!isActive ? { opacity: 0.5 } : {}),
+                  ...(line.bold ? { fontWeight: 'bold' } : {}),
+                }}
+              >
+                {line.text}
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 };

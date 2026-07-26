@@ -27,7 +27,14 @@ export const useBroadcastCompanionState = () => {
   const { songsOrder, songs } = useGetSongs();
   const { currentShow } = useGetShow();
 
-  const currentSongNumber = songsOrder[activeItemIndex];
+  // Resolve the current song from the SHOW order (not songsOrder — that array only
+  // contains songs, so its indices diverge from activeItemIndex once non-song items exist).
+  const activeShowItem = currentShow?.order?.[activeItemIndex];
+  const currentSongNumber = activeShowItem
+    ? activeShowItem.type === 'song'
+      ? activeShowItem.songNumber
+      : undefined
+    : songsOrder[activeItemIndex];
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
   const showItemCount = currentShow?.order?.length ?? songsOrder.length;
@@ -66,13 +73,15 @@ export const useBroadcastCompanionState = () => {
     if (!window.api?.wsBroadcastState) return;
     const s = ctxRef.current;
 
-    const songNum = s.songsOrder[s.activeItemIndex];
+    const showItem = s.currentShow?.order?.[s.activeItemIndex];
+    // Resolve the song via the show item — songsOrder indices don't line up with
+    // activeItemIndex when the show contains non-song items.
+    const songNum = showItem ? (showItem.type === 'song' ? showItem.songNumber : undefined) : s.songsOrder[s.activeItemIndex];
     const song = songNum != null ? s.songs[songNum] : undefined;
     const blocks = song?.getBlocks(s.orderName) ?? [];
     const nonCopyrightBlocks = blocks.filter((b) => !b.copyright);
     const activeBlock = nonCopyrightBlocks[s.activeBlockIndex];
     const nextBlock = nonCopyrightBlocks[s.activeBlockIndex + 1];
-    const showItem = s.currentShow?.order?.[s.activeItemIndex];
 
     window.api.wsBroadcastState({
       lastTriggeredAction: lastTriggeredActionRef.current,

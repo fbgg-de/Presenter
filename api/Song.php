@@ -31,7 +31,7 @@ class Song extends RestController
     private function fetchSongData(int $account, int $songNumber): ?array
     {
         $stmt = self::prepare('
-				SELECT `title`, `initialOrder`, `order`, `authors`, `copyright`, `background`, `css`, `style_id`, `ccli_number`, `song_key`
+				SELECT `title`, `initialOrder`, `order`, `authors`, `copyright`, `background`, `css`, `style_id`, `ccli_number`, `song_key`, `updated_at`
 				FROM `songs`
 				WHERE `songnumber` = ?
 				AND `account` = ?
@@ -61,7 +61,8 @@ class Song extends RestController
           'css' => $row['css'],
           'styleId' => $row['style_id'] ? (int)$row['style_id'] : null,
           'ccliNumber' => $row['ccli_number'],
-          'key' => $row['song_key']
+          'key' => $row['song_key'],
+          'updatedAt' => $row['updated_at'] ?? null
         ];
     }
 
@@ -199,7 +200,8 @@ class Song extends RestController
 				`initialOrder` = VALUES(`initialOrder`),
 				`order` = VALUES(`order`),
 				`authors` = VALUES(`authors`),
-				`copyright` = VALUES(`copyright`)
+				`copyright` = VALUES(`copyright`),
+				`updated_at` = CURRENT_TIMESTAMP
 		');
 
         $stmt->bind_param(

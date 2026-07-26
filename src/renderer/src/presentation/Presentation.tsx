@@ -94,7 +94,7 @@ const FadeOutLayer = ({
         <video
           src={prevResolved.backgroundVideo}
           autoPlay
-          loop
+          loop={prevResolved.backgroundVideoLoop !== false}
           playsInline
           ref={(el) => rampToVolume(el, prevResolved.backgroundVideoVolume ?? 1, prevResolved.backgroundVideoEaseIn)}
           style={{
@@ -132,7 +132,14 @@ const FadeOutLayer = ({
             (() => {
               const prevBlock = prevContent.blocks[prevContent.activeBlockIndex];
               if (!prevBlock) return null;
-              return <NormalMode block={prevBlock.lines} textStyle={prevTextCss} languages={prevContent.languages} />;
+              return (
+                <NormalMode
+                  block={prevBlock.lines}
+                  textStyle={prevTextCss}
+                  languages={prevContent.languages}
+                  paragraphPadding={prevResolved.paragraphPadding}
+                />
+              );
             })()
           )}
           {/* Include next-block preview in fade-out layer */}
@@ -143,6 +150,7 @@ const FadeOutLayer = ({
               textStyle={prevTextCss}
               languages={prevContent.languages}
               langStyles={prevResolved.languageStyles}
+              paragraphPadding={prevResolved.paragraphPadding}
             />
           )}
         </div>
@@ -328,6 +336,7 @@ export const Presentation = (props: PresentationProps) => {
               languages={content.languages}
               streamLines={content.streamLines}
               langStyles={resolvedStyle.languageStyles}
+              paragraphPadding={resolvedStyle.paragraphPadding}
             />
           );
         }
@@ -342,6 +351,7 @@ export const Presentation = (props: PresentationProps) => {
             textStyle={textCss}
             languages={content.languages}
             langStyles={resolvedStyle.languageStyles}
+            paragraphPadding={resolvedStyle.paragraphPadding}
           />
         );
       }
@@ -391,7 +401,7 @@ export const Presentation = (props: PresentationProps) => {
           key={contentIdentityKey(content)}
           src={resolvedStyle.backgroundVideo}
           autoPlay={resolvedStyle.backgroundVideoAutoplay !== false}
-          loop
+          loop={resolvedStyle.backgroundVideoLoop !== false}
           playsInline
           ref={(el) => rampToVolume(el, resolvedStyle.backgroundVideoVolume ?? 1, resolvedStyle.backgroundVideoEaseIn)}
           style={{
@@ -444,6 +454,7 @@ export const Presentation = (props: PresentationProps) => {
             textStyle={textCss}
             languages={content.languages}
             langStyles={resolvedStyle.languageStyles}
+            paragraphPadding={resolvedStyle.paragraphPadding}
           />
         )}
       </div>

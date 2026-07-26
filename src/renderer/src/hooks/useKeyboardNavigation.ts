@@ -45,7 +45,14 @@ export const useKeyboardNavigation = () => {
   const { songsOrder, songs } = useGetSongs();
   const { currentShow } = useGetShow();
 
-  const currentSongNumber = songsOrder[activeItemIndex];
+  // Resolve the current song from the SHOW order (not songsOrder — that array only
+  // contains songs, so its indices diverge from activeItemIndex once non-song items exist).
+  const activeShowItem = currentShow?.order?.[activeItemIndex];
+  const currentSongNumber = activeShowItem
+    ? activeShowItem.type === 'song'
+      ? activeShowItem.songNumber
+      : undefined
+    : songsOrder[activeItemIndex];
   const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
   const showItemCount = currentShow?.order?.length ?? songsOrder.length;

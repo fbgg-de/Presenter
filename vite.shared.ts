@@ -13,6 +13,7 @@ export const rendererAliases: Record<string, string> = {
 /** Renderer rollup input entries for the full web build (all pages). */
 export const rendererInputs: Record<string, string> = {
   admin: resolve(__dirname, 'src/renderer/admin.html'),
+  control: resolve(__dirname, 'src/renderer/control.html'),
   login: resolve(__dirname, 'src/renderer/login.html'),
   main: resolve(__dirname, 'src/renderer/index.html'),
   musician: resolve(__dirname, 'src/renderer/musician.html'),

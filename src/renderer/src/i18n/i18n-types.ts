@@ -1166,6 +1166,14 @@ type RootTranslation = {
 		 * C​l​i​c​k​ ​o​r​ ​d​r​o​p​ ​.​t​x​t​ ​s​o​n​g​ ​f​i​l​e​s​ ​h​e​r​e
 		 */
 		EMPTY_HINT_DROP: string
+		/**
+		 * T​h​i​s​ ​s​o​n​g​ ​w​a​s​ ​u​p​d​a​t​e​d​ ​o​n​ ​t​h​e​ ​s​e​r​v​e​r​ ​—​ ​c​l​i​c​k​ ​t​o​ ​l​o​a​d​ ​t​h​e​ ​c​h​a​n​g​e​s
+		 */
+		SONG_UPDATED: string
+		/**
+		 * S​o​n​g​ ​u​p​d​a​t​e​d
+		 */
+		SONG_UPDATE_APPLIED: string
 	}
 	BIBLE: {
 		/**
@@ -1404,6 +1412,10 @@ type RootTranslation = {
 		 */
 		ASSIGN: string
 		/**
+		 * E​d​i​t​ ​s​t​y​l​e
+		 */
+		EDIT_STYLE: string
+		/**
 		 * N​o​n​e
 		 */
 		NONE: string
@@ -1435,6 +1447,30 @@ type RootTranslation = {
 		 * C​u​s​t​o​m​ ​C​S​S
 		 */
 		CUSTOM_CSS: string
+		/**
+		 * S​e​t​t​i​n​g​s​ ​a​s​ ​C​S​S
+		 */
+		SHOW_GENERATED_CSS: string
+		/**
+		 * S​h​o​w​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​s​t​y​l​e​ ​s​e​t​t​i​n​g​s​ ​a​s​ ​C​S​S​ ​—​ ​c​o​p​y​ ​i​t​ ​i​n​t​o​ ​o​t​h​e​r​ ​s​t​y​l​e​s​ ​o​r​ ​r​e​f​i​n​e​ ​i​t​ ​b​y​ ​h​a​n​d
+		 */
+		SHOW_GENERATED_CSS_HINT: string
+		/**
+		 * I​n​s​e​r​t​ ​b​e​l​o​w
+		 */
+		INSERT_GENERATED_CSS: string
+		/**
+		 * A​p​p​e​n​d​ ​t​h​e​ ​g​e​n​e​r​a​t​e​d​ ​C​S​S​ ​t​o​ ​t​h​e​ ​C​u​s​t​o​m​ ​C​S​S​ ​f​i​e​l​d
+		 */
+		INSERT_GENERATED_CSS_HINT: string
+		/**
+		 * C​o​p​y​ ​C​S​S
+		 */
+		COPY_CSS: string
+		/**
+		 * C​o​p​i​e​d​!
+		 */
+		CSS_COPIED: string
 		/**
 		 * U​n​s​a​v​e​d
 		 */
@@ -1539,6 +1575,10 @@ type RootTranslation = {
 		 * P​a​d​d​i​n​g
 		 */
 		PADDING: string
+		/**
+		 * P​a​r​a​g​r​a​p​h​ ​P​a​d​d​i​n​g
+		 */
+		PARAGRAPH_PADDING: string
 		/**
 		 * T​e​x​t
 		 */
@@ -2569,6 +2609,10 @@ type RootTranslation = {
 		 * M​u​s​i​c​i​a​n
 		 */
 		GROUP_MUSICIAN: string
+		/**
+		 * R​e​m​o​t​e​ ​C​o​n​t​r​o​l
+		 */
+		GROUP_REMOTE: string
 		/**
 		 * E​l​e​c​t​r​o​n
 		 */
@@ -4737,6 +4781,46 @@ type RootTranslation = {
 		 * M​a​p​ ​a​ ​k​e​y​b​o​a​r​d​ ​k​e​y
 		 */
 		LEARN_KEY: string
+		/**
+		 * C​h​o​o​s​e​ ​w​h​i​c​h​ ​a​c​t​i​o​n​s​ ​c​o​n​n​e​c​t​e​d​ ​r​e​m​o​t​e​-​c​o​n​t​r​o​l​ ​d​e​v​i​c​e​s​ ​(​m​o​b​i​l​e​ ​c​o​n​t​r​o​l​ ​p​a​g​e​)​ ​a​r​e​ ​a​l​l​o​w​e​d​ ​t​o​ ​t​r​i​g​g​e​r​.
+		 */
+		SETTINGS_HINT: string
+		/**
+		 * O​p​e​n​ ​m​o​b​i​l​e​ ​c​o​n​t​r​o​l​ ​p​a​g​e
+		 */
+		OPEN_CONTROL: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​b​l​o​c​k
+		 */
+		CMD_PREV_BLOCK: string
+		/**
+		 * N​e​x​t​ ​b​l​o​c​k
+		 */
+		CMD_NEXT_BLOCK: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​i​t​e​m
+		 */
+		CMD_PREV_ITEM: string
+		/**
+		 * N​e​x​t​ ​i​t​e​m
+		 */
+		CMD_NEXT_ITEM: string
+		/**
+		 * S​h​o​w​/​h​i​d​e​ ​t​e​x​t
+		 */
+		CMD_TOGGLE_TEXT: string
+		/**
+		 * S​h​o​w​/​h​i​d​e​ ​b​a​c​k​g​r​o​u​n​d​ ​v​i​d​e​o
+		 */
+		CMD_TOGGLE_VIDEO: string
+		/**
+		 * P​l​a​y​/​p​a​u​s​e​ ​b​a​c​k​g​r​o​u​n​d​ ​v​i​d​e​o
+		 */
+		CMD_TOGGLE_VIDEO_PLAYBACK: string
+		/**
+		 * B​l​a​c​k​ ​s​c​r​e​e​n
+		 */
+		CMD_TOGGLE_BLACK: string
 	}
 	CONNECTIVITY: {
 		/**
@@ -5959,6 +6043,14 @@ export type TranslationFunctions = {
 		 * Click or drop .txt song files here
 		 */
 		EMPTY_HINT_DROP: () => LocalizedString
+		/**
+		 * This song was updated on the server — click to load the changes
+		 */
+		SONG_UPDATED: () => LocalizedString
+		/**
+		 * Song updated
+		 */
+		SONG_UPDATE_APPLIED: () => LocalizedString
 	}
 	BIBLE: {
 		/**
@@ -6196,6 +6288,10 @@ export type TranslationFunctions = {
 		 */
 		ASSIGN: () => LocalizedString
 		/**
+		 * Edit style
+		 */
+		EDIT_STYLE: () => LocalizedString
+		/**
 		 * None
 		 */
 		NONE: () => LocalizedString
@@ -6227,6 +6323,30 @@ export type TranslationFunctions = {
 		 * Custom CSS
 		 */
 		CUSTOM_CSS: () => LocalizedString
+		/**
+		 * Settings as CSS
+		 */
+		SHOW_GENERATED_CSS: () => LocalizedString
+		/**
+		 * Show the current style settings as CSS — copy it into other styles or refine it by hand
+		 */
+		SHOW_GENERATED_CSS_HINT: () => LocalizedString
+		/**
+		 * Insert below
+		 */
+		INSERT_GENERATED_CSS: () => LocalizedString
+		/**
+		 * Append the generated CSS to the Custom CSS field
+		 */
+		INSERT_GENERATED_CSS_HINT: () => LocalizedString
+		/**
+		 * Copy CSS
+		 */
+		COPY_CSS: () => LocalizedString
+		/**
+		 * Copied!
+		 */
+		CSS_COPIED: () => LocalizedString
 		/**
 		 * Unsaved
 		 */
@@ -6331,6 +6451,10 @@ export type TranslationFunctions = {
 		 * Padding
 		 */
 		PADDING: () => LocalizedString
+		/**
+		 * Paragraph Padding
+		 */
+		PARAGRAPH_PADDING: () => LocalizedString
 		/**
 		 * Text
 		 */
@@ -7357,6 +7481,10 @@ export type TranslationFunctions = {
 		 * Musician
 		 */
 		GROUP_MUSICIAN: () => LocalizedString
+		/**
+		 * Remote Control
+		 */
+		GROUP_REMOTE: () => LocalizedString
 		/**
 		 * Electron
 		 */
@@ -9481,6 +9609,46 @@ export type TranslationFunctions = {
 		 * Map a keyboard key
 		 */
 		LEARN_KEY: () => LocalizedString
+		/**
+		 * Choose which actions connected remote-control devices (mobile control page) are allowed to trigger.
+		 */
+		SETTINGS_HINT: () => LocalizedString
+		/**
+		 * Open mobile control page
+		 */
+		OPEN_CONTROL: () => LocalizedString
+		/**
+		 * Previous block
+		 */
+		CMD_PREV_BLOCK: () => LocalizedString
+		/**
+		 * Next block
+		 */
+		CMD_NEXT_BLOCK: () => LocalizedString
+		/**
+		 * Previous item
+		 */
+		CMD_PREV_ITEM: () => LocalizedString
+		/**
+		 * Next item
+		 */
+		CMD_NEXT_ITEM: () => LocalizedString
+		/**
+		 * Show/hide text
+		 */
+		CMD_TOGGLE_TEXT: () => LocalizedString
+		/**
+		 * Show/hide background video
+		 */
+		CMD_TOGGLE_VIDEO: () => LocalizedString
+		/**
+		 * Play/pause background video
+		 */
+		CMD_TOGGLE_VIDEO_PLAYBACK: () => LocalizedString
+		/**
+		 * Black screen
+		 */
+		CMD_TOGGLE_BLACK: () => LocalizedString
 	}
 	CONNECTIVITY: {
 		/**

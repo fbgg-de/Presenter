@@ -14,6 +14,7 @@ export const NextBlockPreview = ({
   textStyle,
   languages,
   langStyles,
+  paragraphPadding,
 }: {
   lines: PresentationLine[];
   color?: string;
@@ -21,6 +22,8 @@ export const NextBlockPreview = ({
   textStyle: CSSProperties;
   languages?: string[];
   langStyles?: LanguageStyleEntry[];
+  /** CSS padding shorthand around the preview paragraph (spacing towards the active block) */
+  paragraphPadding?: string;
 }) => {
   const filtered = filterLinesByLanguage(lines, languages);
   if (filtered.length === 0) return null;
@@ -30,7 +33,9 @@ export const NextBlockPreview = ({
       className="presentation-next-preview"
       style={{
         width: '100%',
+        boxSizing: 'border-box',
         opacity: opacity ?? 0.6,
+        ...(paragraphPadding ? { padding: paragraphPadding } : {}),
       }}
     >
       {filtered.map((line, i) => (

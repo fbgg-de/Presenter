@@ -22,6 +22,8 @@ export type SongEntity = {
   css?: string;
   styleId?: number;
   languages?: string[];
+  /** Server-side last-modified timestamp (MySQL DATETIME string) */
+  updatedAt?: string | null;
 };
 
 const songsApi = presenterApi.injectEndpoints({
@@ -42,6 +44,10 @@ const songsApi = presenterApi.injectEndpoints({
     getSong: build.query<ApiSuccess<SongEntity>, { songNumber: number }>({
       query: ({ songNumber }) => `rest/Song/${songNumber}`,
       providesTags: (_res, _err, arg) => [{ type: 'Song', id: arg.songNumber }],
+    }),
+    /** Lightweight change-detection feed (songNumber + updated_at only) for background polling. */
+    getSongsRevision: build.query<ApiSuccess<{ songs: { songNumber: number; date?: string | null }[]; count: number }>, void>({
+      query: () => 'rest/SongsRevision',
     }),
     createSong: build.mutation<ApiSuccess<SongEntity>, Partial<SongEntity> & Pick<SongEntity, 'title' | 'initialOrder' | 'blocks'>>({
       query: (body) => ({ url: 'rest/Song', method: 'POST', body }),
@@ -92,6 +98,7 @@ export const {
   useSearchSongsQuery,
   useGetSongQuery,
   useLazyGetSongQuery,
+  useGetSongsRevisionQuery,
   useCreateSongMutation,
   useUpdateSongMutation,
   useDeleteSongMutation,

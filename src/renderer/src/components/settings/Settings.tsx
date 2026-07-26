@@ -45,6 +45,7 @@ import { AutoUpdaterSection } from '@/components/settings/AutoUpdaterSection';
 import { CredentialsSection } from '@/components/settings/CredentialsSection';
 import { ViewerTokenSection } from '@/components/settings/ViewerTokenSection';
 import { isElectronApp } from '@/utils';
+import { REMOTE_COMMAND_IDS, type RemoteCommandId } from '@/utils/remoteCommands';
 
 type SettingConfig = {
   key: keyof SettingsState;
@@ -95,7 +96,7 @@ const SETTINGS_CONFIG: SettingConfig[] = [
   { key: 'metricsEnabled', type: 'boolean', group: 'Privacy', label: 'Send usage metrics' },
 ];
 
-const GROUP_ORDER = ['General', 'Behavior', 'Notifications', 'Presentation', 'Keyboard', 'Electron', 'Privacy'];
+const GROUP_ORDER = ['General', 'Behavior', 'Notifications', 'Presentation', 'Keyboard', 'Remote', 'Electron', 'Privacy'];
 
 export const Settings = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
   const { LL } = useI18nContext();
@@ -152,6 +153,8 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
         return LL.SETTINGS.GROUP_PRESENTATION();
       case 'Musician':
         return LL.SETTINGS.GROUP_MUSICIAN();
+      case 'Remote':
+        return LL.SETTINGS.GROUP_REMOTE();
       case 'Electron':
         return LL.SETTINGS.GROUP_ELECTRON();
       default:
@@ -178,6 +181,11 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
     LL.KEYBOARD.MAPPING().toLowerCase().includes(filterLower) ||
     LL.SETTINGS.GROUP_KEYBOARD().toLowerCase().includes(filterLower);
   if (keyboardVisible && !groups['Keyboard']) groups['Keyboard'] = [];
+
+  // Remote-control group: always present if filter matches (no config entries — custom section)
+  const remoteVisible =
+    !filterLower || LL.REMOTE.TITLE().toLowerCase().includes(filterLower) || LL.SETTINGS.GROUP_REMOTE().toLowerCase().includes(filterLower);
+  if (remoteVisible && !groups['Remote']) groups['Remote'] = [];
 
   return (
     <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right">
@@ -355,6 +363,8 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                   ))}
                   {/* Keyboard mapping — inside Keyboard group */}
                   {groupName === 'Keyboard' && <KeyboardMappingEditor />}
+                  {/* Remote-control command permissions — inside Remote group */}
+                  {groupName === 'Remote' && <RemoteControlSection />}
                   {/* AutoUpdater — inside Electron group */}
                   {groupName === 'Electron' && isElectronApp() && <AutoUpdaterSection />}
                   {/* Saved credentials (OIDC auto-fill) — inside Electron group */}
@@ -400,6 +410,57 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
         </Stack>
       </Stack>
     </Drawer>
+  );
+};
+
+/**
+ * Remote-control permissions — which commands connected mobile control devices
+ * (/control page) are allowed to trigger. Missing key = allowed; `false` = denied.
+ */
+const RemoteControlSection = () => {
+  const { LL } = useI18nContext();
+  const { remoteControlCommands } = useGetSettings();
+  const updateSetting = useUpdateSetting();
+
+  const commandLabel = (id: RemoteCommandId): string => {
+    switch (id) {
+      case 'prev_block':
+        return LL.REMOTE.CMD_PREV_BLOCK();
+      case 'next_block':
+        return LL.REMOTE.CMD_NEXT_BLOCK();
+      case 'prev_item':
+        return LL.REMOTE.CMD_PREV_ITEM();
+      case 'next_item':
+        return LL.REMOTE.CMD_NEXT_ITEM();
+      case 'toggle_text':
+        return LL.REMOTE.CMD_TOGGLE_TEXT();
+      case 'toggle_video':
+        return LL.REMOTE.CMD_TOGGLE_VIDEO();
+      case 'toggle_video_playback':
+        return LL.REMOTE.CMD_TOGGLE_VIDEO_PLAYBACK();
+      case 'toggle_black':
+        return LL.REMOTE.CMD_TOGGLE_BLACK();
+    }
+  };
+
+  return (
+    <Stack spacing={0.5}>
+      <Typography variant="body2" color="text.secondary" sx={{ pb: 0.5 }}>
+        {LL.REMOTE.SETTINGS_HINT()}
+      </Typography>
+      {REMOTE_COMMAND_IDS.map((id) => (
+        <Stack key={id} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
+            {commandLabel(id)}
+          </Typography>
+          <Switch
+            size="small"
+            checked={remoteControlCommands[id] !== false}
+            onChange={(e) => updateSetting('remoteControlCommands', { ...remoteControlCommands, [id]: e.target.checked })}
+          />
+        </Stack>
+      ))}
+    </Stack>
   );
 };
 

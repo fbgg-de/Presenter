@@ -30,6 +30,7 @@ import {
   Save as SaveIcon,
   ViewList as ViewListIcon,
   MultipleStop as MultipleStopIcon,
+  Sync as SyncIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
@@ -60,6 +61,7 @@ import { useUpdateSongMutation } from '@/api/songs.api';
 import { QuickOrderDialog } from '@/components/song/QuickOrderDialog';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useCcliSongImport } from '@/hooks/useCcliSongImport';
+import { useSongUpdatePoller } from '@/hooks/useSongUpdatePoller';
 import { useGetSessionQuery } from '@/api/session.api';
 
 const SIDEBAR_WIDTH = 350;
@@ -102,6 +104,9 @@ export const MusicianSidebar = ({
   }, [showItems]);
 
   const { data: pdfCounts } = useGetPdfCountsQuery({ songNumbers: uniqueSongNumbers }, { skip: uniqueSongNumbers.length === 0 });
+
+  // Detect songs that were changed on the server since they were cached locally
+  const { updatedSongNumbers, reloadSong } = useSongUpdatePoller();
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
@@ -199,6 +204,20 @@ export const MusicianSidebar = ({
           )}
           {musicianBlockIndicator && i === operatorActiveIndex && (
             <Chip label="●" size="small" color="primary" sx={{ height: 16, fontSize: '0.6rem', ml: 0.25 }} />
+          )}
+          {item.type === 'song' && item.songNumber != null && updatedSongNumbers[item.songNumber] && (
+            <Tooltip title={LL.SHOW_ITEMS.SONG_UPDATED()}>
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void reloadSong(item.songNumber!);
+                }}
+                sx={{ p: 0.25 }}
+              >
+                <SyncIcon sx={{ fontSize: '1rem' }} color="warning" />
+              </IconButton>
+            </Tooltip>
           )}
           {item.type === 'song' && item.songNumber != null && pdfCounts && (pdfCounts[String(item.songNumber)] ?? 0) > 0 && (
             <Tooltip title={LL.MUSICIAN.PDF_COUNT({ count: pdfCounts[String(item.songNumber)] })}>

@@ -27,6 +27,7 @@ export const useWsOperator = (
   account: number | null,
   onMusicianSync?: (state: WsOperatorIncomingSync) => void,
   onGetState?: () => void,
+  onRemoteCommand?: (data: Record<string, unknown>) => void,
 ) => {
   const wsRef = useRef<WebSocket | null>(null);
   const authedRef = useRef(false);
@@ -37,6 +38,8 @@ export const useWsOperator = (
   onMusicianSyncRef.current = onMusicianSync;
   const onGetStateRef = useRef(onGetState);
   onGetStateRef.current = onGetState;
+  const onRemoteCommandRef = useRef(onRemoteCommand);
+  onRemoteCommandRef.current = onRemoteCommand;
 
   useEffect(() => {
     if (!url || account == null) {
@@ -94,6 +97,9 @@ export const useWsOperator = (
           } else if (msg.action === 'get_state') {
             // A new musician client is requesting the current state — re-broadcast immediately
             onGetStateRef.current?.();
+          } else if (msg.action === 'remote_command' && msg.data) {
+            // A remote-control client (mobile control page) sent a navigation command
+            onRemoteCommandRef.current?.(msg.data as Record<string, unknown>);
           }
         } catch {
           // ignore

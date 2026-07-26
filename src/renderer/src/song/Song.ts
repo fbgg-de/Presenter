@@ -12,6 +12,7 @@ export class Song implements ISong {
   background?: string;
   css?: string;
   lastUpdate?: number;
+  updatedAt?: string | null;
 
   constructor(
     song?: Pick<
@@ -27,6 +28,7 @@ export class Song implements ISong {
       | 'background'
       | 'css'
       | 'lastUpdate'
+      | 'updatedAt'
     >,
   ) {
     this.title = song?.title ?? '';
@@ -40,6 +42,7 @@ export class Song implements ISong {
     this.background = song?.background ?? '';
     this.css = song?.css ?? '';
     this.lastUpdate = song?.lastUpdate ?? Date.now();
+    this.updatedAt = song?.updatedAt ?? null;
   }
 
   hasBlock(type: string): boolean {

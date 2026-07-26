@@ -95,6 +95,7 @@ CREATE TABLE `songs` (
   `background` varchar(300) DEFAULT NULL,
   `css` mediumtext DEFAULT NULL,
   `style_id` INT DEFAULT NULL,
+  `updated_at` TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`account`,`songnumber`),
   CONSTRAINT `fk_songs_account` FOREIGN KEY (`account`) REFERENCES `account` (`license`) ON DELETE CASCADE,
   CONSTRAINT `fk_songs_style` FOREIGN KEY (`style_id`) REFERENCES `styles` (`id`) ON DELETE SET NULL

@@ -15,6 +15,7 @@ RewriteRule ^login/(.*)$ login.html [L,QSA]
 RewriteRule ^admin$ admin.html [L,QSA]
 RewriteRule ^admin/(.*)$ admin.html [L,QSA]
 RewriteRule ^notes$ musician.html [L,QSA]
+RewriteRule ^control$ control.html [L,QSA]
 
 # Protect data directory from direct access
 RewriteRule ^data/ - [F,L]
@@ -30,6 +31,7 @@ RewriteCond %{REQUEST_URI} !^/oidc
 RewriteCond %{REQUEST_URI} !^/admin\.html
 RewriteCond %{REQUEST_URI} !^/login\.html
 RewriteCond %{REQUEST_URI} !^/musician\.html
+RewriteCond %{REQUEST_URI} !^/control\.html
 RewriteCond %{REQUEST_URI} !^/presentation\.html
 # Rewrite everything else to index.html for React Router
 RewriteRule ^(.*)$ index.html [L]

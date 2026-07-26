@@ -622,14 +622,27 @@ const generateCssFromStyleData = (data: StyleData): string => {
   }
   if (r.padding) containerLines.push(`  padding: ${r.padding};`);
 
+  if (r.opacity !== undefined) containerLines.push(`  opacity: ${r.opacity};`);
+
   if (r.fontFamily || r.fontFallback) textLines.push(`  font-family: ${buildFontFamily(r.fontFamily, r.fontFallback)};`);
+  if (r.fontColor) textLines.push(`  color: ${r.fontColor};`);
+  if (r.fontSize) textLines.push(`  font-size: ${r.fontSize};`);
+  if (r.fontBold) textLines.push(`  font-weight: bold;`);
+  if (r.fontItalic) textLines.push(`  font-style: italic;`);
+  if (r.fontUnderline) textLines.push(`  text-decoration: underline;`);
   if (r.textTransform && r.textTransform !== 'none') textLines.push(`  text-transform: ${r.textTransform};`);
   if (r.textAlign) textLines.push(`  text-align: ${r.textAlign};`);
   if (r.lineHeight) textLines.push(`  line-height: ${r.lineHeight};`);
+  if (r.letterSpacing) textLines.push(`  letter-spacing: ${r.letterSpacing};`);
+  if (r.textShadow) textLines.push(`  text-shadow: ${r.textShadow} ${r.textShadowColor || 'rgba(0,0,0,0.5)'};`);
+  if (r.textStroke) textLines.push(`  -webkit-text-stroke: ${r.textStroke};`);
 
   const parts: string[] = [];
   if (containerLines.length) parts.push(`.presentation {\n${containerLines.join('\n')}\n}`);
   if (textLines.length) parts.push(`.presentation-line {\n${textLines.join('\n')}\n}`);
+  if (r.paragraphPadding) {
+    parts.push(`.presentation-block,\n.presentation-stream-block,\n.presentation-next-preview {\n  padding: ${r.paragraphPadding};\n}`);
+  }
 
   // Per-language overrides
   const langEntries = data.languageStyles?.value || [];
@@ -673,7 +686,8 @@ export const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew
     delete css.padding;
     return css;
   }, [resolved]);
-  const textCss = useMemo(() => styleToTextCss(resolved), [resolved]);
+  // Include default-language entry overrides (text color etc. live there since the Languages tab rework)
+  const textCss = useMemo(() => ({ ...styleToTextCss(resolved), ...languageEntryCss(resolved.languageStyles, '') }), [resolved]);
   const bgImgSrc = resolved.backgroundImage ? resolveMediaUrl(resolved.backgroundImage) : undefined;
   const bgVideoSrc = resolved.backgroundVideo ? resolveMediaUrl(resolved.backgroundVideo) : undefined;
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -826,6 +840,10 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   const [addLangInput, setAddLangInput] = useState('');
   const langDragIndexRef = useRef<number | null>(null);
   const [langDragOver, setLangDragOver] = useState<number | null>(null);
+
+  // Custom-CSS tab: generated-CSS viewer state (top level — never inside render IIFEs)
+  const [showGeneratedCss, setShowGeneratedCss] = useState(false);
+  const [generatedCssCopied, setGeneratedCssCopied] = useState(false);
 
   // Preview layer visibility & video controls
   const [previewImageHidden, setPreviewImageHidden] = useState(false);
@@ -1104,6 +1122,9 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   const previewTextCss = useMemo(() => styleToTextCss(resolvedPreview), [resolvedPreview]);
   // Per-language overrides for the German sample line in the preview (scaled like the base text)
   const previewGermanCss = useMemo(() => languageEntryCss(resolvedPreview.languageStyles, 'de', 0.45), [resolvedPreview]);
+  // Default-entry typography (Languages tab) — the presentation applies it to every primary
+  // line, so the base sample lines must include it too (text color/size/style live there).
+  const previewDefaultLangCss = useMemo(() => languageEntryCss(resolvedPreview.languageStyles, '', 0.45), [resolvedPreview]);
 
   const bgImageVal = getProp<string>('backgroundImage').value || '';
   const bgVideoVal = getProp<string>('backgroundVideo').value || '';
@@ -1684,6 +1705,17 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                                 label={<Typography variant="caption">{LL.VIDEO.AUTOPLAY()}</Typography>}
                                 sx={{ ml: 0 }}
                               />
+                              <FormControlLabel
+                                control={
+                                  <Switch
+                                    size="small"
+                                    checked={getProp<boolean>('backgroundVideoLoop').value !== false}
+                                    onChange={(e) => updateProp('backgroundVideoLoop', { enabled: true, value: e.target.checked })}
+                                  />
+                                }
+                                label={<Typography variant="caption">{LL.VIDEO.LOOP()}</Typography>}
+                                sx={{ ml: 0 }}
+                              />
                             </SubControlsRow>
                           )}
                           <Divider sx={{ my: 1 }} />
@@ -1864,6 +1896,64 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                                     value={pH}
                                     onChange={(v) => updateProp('padding', { enabled: true, value: `${pV} ${v}` })}
                                     label="Horizontal"
+                                  />
+                                </Stack>
+                              );
+                            })()}
+                          </StylePropRow>
+                          <StylePropRow
+                            block
+                            label={LL.STYLE.PARAGRAPH_PADDING()}
+                            enabled={getProp<string>('paragraphPadding').enabled}
+                            onToggle={(e) => togglePropEnabled('paragraphPadding', e)}
+                          >
+                            {(() => {
+                              // Stored as CSS shorthand "top right bottom left"; expand per CSS rules
+                              const raw = (getProp<string>('paragraphPadding').value || '1vh 0px 1vh 0px').trim();
+                              const p = raw.split(/\s+/);
+                              const [pT, pR, pB, pL] =
+                                p.length === 1
+                                  ? [p[0], p[0], p[0], p[0]]
+                                  : p.length === 2
+                                    ? [p[0], p[1], p[0], p[1]]
+                                    : p.length === 3
+                                      ? [p[0], p[1], p[2], p[1]]
+                                      : [p[0], p[1] || '0px', p[2] || '0px', p[3] || '0px'];
+                              const setSide = (t: string, r: string, b: string, l: string) =>
+                                updateProp('paragraphPadding', { enabled: true, value: `${t} ${r} ${b} ${l}` });
+                              return (
+                                <Stack
+                                  direction="row"
+                                  spacing={1}
+                                  useFlexGap
+                                  sx={{
+                                    alignItems: 'flex-start',
+                                    flexWrap: 'wrap',
+                                  }}
+                                >
+                                  <CssUnitInput
+                                    value={pT}
+                                    onChange={(v) => setSide(v, pR, pB, pL)}
+                                    label="Top"
+                                    units={['vh', 'em', 'px', '%']}
+                                  />
+                                  <CssUnitInput
+                                    value={pR}
+                                    onChange={(v) => setSide(pT, v, pB, pL)}
+                                    label="Right"
+                                    units={['vw', 'em', 'px', '%']}
+                                  />
+                                  <CssUnitInput
+                                    value={pB}
+                                    onChange={(v) => setSide(pT, pR, v, pL)}
+                                    label="Bottom"
+                                    units={['vh', 'em', 'px', '%']}
+                                  />
+                                  <CssUnitInput
+                                    value={pL}
+                                    onChange={(v) => setSide(pT, pR, pB, v)}
+                                    label="Left"
+                                    units={['vw', 'em', 'px', '%']}
                                   />
                                 </Stack>
                               );
@@ -2358,25 +2448,63 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
 
                     {editTab === 4 && (
                       <>
-                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                          <Typography variant="body2" sx={{ color: 'text.secondary', flex: 1 }}>
+                        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', flexWrap: 'wrap' }} useFlexGap>
+                          <Typography variant="body2" sx={{ color: 'text.secondary', flex: 1, minWidth: 120 }}>
                             {LL.STYLE.CUSTOM_CSS()}
                           </Typography>
-                          <Tooltip title="Insert current style settings as CSS">
+                          <Tooltip title={LL.STYLE.SHOW_GENERATED_CSS_HINT()}>
+                            <Button
+                              size="small"
+                              variant={showGeneratedCss ? 'contained' : 'outlined'}
+                              startIcon={<CodeIcon />}
+                              onClick={() => setShowGeneratedCss((v) => !v)}
+                            >
+                              {LL.STYLE.SHOW_GENERATED_CSS()}
+                            </Button>
+                          </Tooltip>
+                          <Tooltip title={LL.STYLE.INSERT_GENERATED_CSS_HINT()}>
                             <Button
                               size="small"
                               variant="outlined"
-                              startIcon={<CodeIcon />}
                               onClick={() => {
                                 const generated = generateCssFromStyleData(styleData);
                                 setStyleData((prev) => ({ ...prev, css: prev.css ? `${prev.css}\n\n${generated}` : generated }));
                                 setIsDirty(true);
                               }}
                             >
-                              Insert as CSS
+                              {LL.STYLE.INSERT_GENERATED_CSS()}
                             </Button>
                           </Tooltip>
                         </Stack>
+                        {/* Read-only view of the settings rendered as CSS — copyable to other styles */}
+                        {showGeneratedCss && (
+                          <Box sx={{ position: 'relative', mt: 1 }}>
+                            <TextField
+                              multiline
+                              minRows={6}
+                              maxRows={16}
+                              fullWidth
+                              value={generateCssFromStyleData(styleData) || '/* no enabled settings */'}
+                              slotProps={{ input: { readOnly: true } }}
+                              sx={{ fontFamily: 'monospace', fontSize: '0.85rem', bgcolor: 'action.hover' }}
+                            />
+                            <Tooltip title={generatedCssCopied ? LL.STYLE.CSS_COPIED() : LL.STYLE.COPY_CSS()}>
+                              <IconButton
+                                size="small"
+                                onClick={() => {
+                                  void navigator.clipboard?.writeText(generateCssFromStyleData(styleData)).then(() => {
+                                    setGeneratedCssCopied(true);
+                                    setTimeout(() => setGeneratedCssCopied(false), 2000);
+                                  });
+                                }}
+                                color={generatedCssCopied ? 'success' : 'default'}
+                                sx={{ position: 'absolute', top: 6, right: 6, bgcolor: 'background.paper', boxShadow: 1 }}
+                              >
+                                <DuplicateIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        )}
                         <TextField
                           multiline
                           minRows={12}
@@ -2632,10 +2760,27 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                         pointerEvents: 'none',
                       }}
                     >
-                      <Typography sx={{ ...previewTextCss, fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)` }}>
+                      {/* Full-width lines (like real presentation lines) so textAlign is visible;
+                          default-language entry css applied like the presentation does. */}
+                      <Typography
+                        sx={{
+                          ...previewTextCss,
+                          fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)`,
+                          ...previewDefaultLangCss,
+                          width: '100%',
+                        }}
+                      >
                         Amazing Grace
                       </Typography>
-                      <Typography sx={{ ...previewTextCss, fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)`, opacity: 0.7 }}>
+                      <Typography
+                        sx={{
+                          ...previewTextCss,
+                          fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)`,
+                          ...previewDefaultLangCss,
+                          width: '100%',
+                          opacity: 0.7,
+                        }}
+                      >
                         How sweet the sound
                       </Typography>
                       {/* German sample line — previews per-language typography (Languages tab) */}
@@ -2645,6 +2790,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                           fontSize: `calc(${previewTextCss.fontSize || '4vh'} * 0.45)`,
                           opacity: 0.85,
                           ...previewGermanCss,
+                          width: '100%',
                         }}
                       >
                         Wie süß der Klang
