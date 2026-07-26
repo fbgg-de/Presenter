@@ -90,7 +90,7 @@ export const MusicianSidebar = ({
 
   const { currentShow, isDirty } = useGetShow();
   const { songs } = useGetSongs();
-  const { musicianBlockIndicator } = useGetMusicianSettings();
+  const { musicianBlockIndicator, musicianAutoRefresh } = useGetMusicianSettings();
 
   const showItems = currentShow?.order ?? [];
 
@@ -105,8 +105,9 @@ export const MusicianSidebar = ({
 
   const { data: pdfCounts } = useGetPdfCountsQuery({ songNumbers: uniqueSongNumbers }, { skip: uniqueSongNumbers.length === 0 });
 
-  // Detect songs that were changed on the server since they were cached locally
-  const { updatedSongNumbers, reloadSong } = useSongUpdatePoller();
+  // Detect songs that were changed on the server since they were cached locally.
+  // In auto-refresh mode the poller adopts them straight away instead of flagging them.
+  const { updatedSongNumbers, reloadSong } = useSongUpdatePoller({ autoReload: musicianAutoRefresh });
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);

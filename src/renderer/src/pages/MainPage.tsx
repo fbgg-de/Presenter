@@ -33,6 +33,7 @@ import { formatRelativeTime } from '@/utils/relativeTime';
 import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
 import { useGetAccountSettingsQuery, useGetSessionQuery } from '@/api/session.api';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
+import { useGetMusicianSettings } from '@/store/musicianSlice';
 
 export const MainPage = () => {
   const dispatch = useAppDispatch();
@@ -48,7 +49,16 @@ export const MainPage = () => {
   const sidebarRef = useRef<SidebarHandle>(null);
 
   // ── Show update polling ──────────────────────────────────────────────
-  const { updateAvailable: showUpdateAvailable, updatedAt: showUpdatedAt, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
+  // While following remote commands the operator is driven from the musician pages, so
+  // server-side edits are adopted automatically — nobody is at this screen to confirm them.
+  const { midiTrackingMaster } = useGetMusicianSettings();
+  const followsRemote = midiTrackingMaster === 'midi';
+  const {
+    updateAvailable: showUpdateAvailable,
+    updatedAt: showUpdatedAt,
+    reloadShow,
+    dismiss: dismissShowUpdate,
+  } = useShowUpdatePoller({ autoReload: followsRemote });
 
   // Gate all authenticated queries on confirmed session status.
   // MainPage hooks run immediately on mount — before <RequireAuth> has a chance

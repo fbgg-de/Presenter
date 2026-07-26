@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setCurrentShow, useGetShow } from '@/store/showSlice';
 import { loadShowSongs } from '@/store/songsSlice';
@@ -33,8 +33,12 @@ const normalizeOrderSig = (show: Show | null | undefined): string => {
  * - `updatedAt`        — the server timestamp of the loaded show (for relative display).
  * - `reloadShow()`     — apply the server version and reset the flag.
  * - `dismiss()`        — clear the flag without reloading.
+ *
+ * With `autoReload` enabled a detected foreign update is applied straight away and
+ * `updateAvailable` never goes true — used by the musician auto-refresh mode and by the
+ * operator while it follows remote commands, where a manual confirmation only gets in the way.
  */
-export const useShowUpdatePoller = () => {
+export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boolean } = {}) => {
   const dispatch = useAppDispatch();
   const { currentShow, isShowSelectorOpen } = useGetShow();
   const { serverSnapshot } = useAppSelector((s) => s.show);
@@ -45,6 +49,12 @@ export const useShowUpdatePoller = () => {
   // full show unless it actually changed).
   const lastSeenDateRef = useRef<string | null>(null);
   const currentTitleRef = useRef<string | null>(null);
+  // Read inside the classification callback and by reloadShow so neither has to be
+  // re-created (and the poll effect re-run) when the flag or the show object changes.
+  const autoReloadRef = useRef(autoReload);
+  autoReloadRef.current = autoReload;
+  const currentShowRef = useRef(currentShow);
+  currentShowRef.current = currentShow;
 
   const { offlineMode } = useGetSettings();
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
@@ -85,24 +95,41 @@ export const useShowUpdatePoller = () => {
         if (!polledShow) return;
         const polledSig = normalizeOrderSig(polledShow);
         const snapshotSig = normalizeOrderSig(serverSnapshot ?? currentShow);
-        setUpdateAvailable(polledSig !== snapshotSig);
+        if (polledSig === snapshotSig) return;
+        if (autoReloadRef.current) {
+          // Auto mode — we already hold the server version, so apply it directly
+          // instead of raising the banner and re-fetching on confirmation.
+          dispatch(setCurrentShow(polledShow));
+          void dispatch(loadShowSongs(polledShow));
+        } else {
+          setUpdateAvailable(true);
+        }
       })
       .catch(() => {});
-  }, [revisionData, currentShow, serverSnapshot, fetchShow]);
+  }, [revisionData, currentShow, serverSnapshot, fetchShow, dispatch]);
 
-  const reloadShow = async () => {
-    setUpdateAvailable(false);
-    if (!currentShow) return;
-    const data = await fetchShow({ title: currentShow.title }).unwrap();
-    const polled: Show | undefined = data.shows?.[0];
-    if (polled) {
-      lastSeenDateRef.current = polled.date ?? lastSeenDateRef.current;
-      dispatch(setCurrentShow(polled));
-      await dispatch(loadShowSongs(polled));
-    }
-  };
+  /**
+   * Apply the server version of the current show.
+   * `forceSongs` bypasses the song cache — used by the explicit "update everything"
+   * action, where song/order edits must be picked up even if the show order is unchanged.
+   */
+  const reloadShow = useCallback(
+    async ({ forceSongs = false }: { forceSongs?: boolean } = {}) => {
+      setUpdateAvailable(false);
+      const show = currentShowRef.current;
+      if (!show) return;
+      const data = await fetchShow({ title: show.title }).unwrap();
+      const polled: Show | undefined = data.shows?.[0];
+      if (polled) {
+        lastSeenDateRef.current = polled.date ?? lastSeenDateRef.current;
+        dispatch(setCurrentShow(polled));
+        await dispatch(loadShowSongs({ show: polled, forceRefetch: forceSongs }));
+      }
+    },
+    [dispatch, fetchShow],
+  );
 
-  const dismiss = () => setUpdateAvailable(false);
+  const dismiss = useCallback(() => setUpdateAvailable(false), []);
 
   return { updateAvailable, updatedAt, reloadShow, dismiss };
 };

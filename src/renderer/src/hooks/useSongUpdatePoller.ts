@@ -34,8 +34,12 @@ const songContentSig = (
  *
  * - `updatedSongNumbers` — songs with newer, materially different server versions.
  * - `reloadSong(n)`      — fetch the server version into the cache and clear the flag.
+ *
+ * With `autoReload` enabled a foreign edit is adopted into the cache immediately and never
+ * flagged — used by the musician auto-refresh mode and by the operator while it follows
+ * remote commands.
  */
-export const useSongUpdatePoller = () => {
+export const useSongUpdatePoller = ({ autoReload = false }: { autoReload?: boolean } = {}) => {
   const dispatch = useAppDispatch();
   const { currentShow, isShowSelectorOpen } = useGetShow();
   const { songs } = useGetSongs();
@@ -48,6 +52,9 @@ export const useSongUpdatePoller = () => {
   const [updatedSongs, setUpdatedSongs] = useState<Record<number, string>>({});
   /** songNumber → last server date we classified (avoids re-fetch loops) */
   const classifiedRef = useRef<Record<number, string>>({});
+  // Read inside the classification callback so toggling the mode doesn't re-run the effect.
+  const autoReloadRef = useRef(autoReload);
+  autoReloadRef.current = autoReload;
 
   const { data: revisionData } = useGetSongsRevisionQuery(undefined, {
     pollingInterval: POLL_INTERVAL_MS,
@@ -96,6 +103,9 @@ export const useSongUpdatePoller = () => {
           if (songContentSig(data as unknown as ISong) === songContentSig(current)) {
             // Same content — just record the server timestamp in the cache.
             dispatch(updateSongInStore(new Song({ ...current, updatedAt: data.updatedAt ?? serverDate })));
+          } else if (autoReloadRef.current) {
+            // Auto mode — the freshly fetched version is already here, adopt it silently.
+            dispatch(updateSongInStore(new Song(data as unknown as ISong)));
           } else {
             setUpdatedSongs((prev) => ({ ...prev, [num]: serverDate }));
           }

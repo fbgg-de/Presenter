@@ -4146,6 +4146,14 @@ type RootTranslation = {
 		 */
 		TOOLBAR_TOGGLE: string
 		/**
+		 * U​p​d​a​t​e​ ​s​h​o​w​,​ ​s​o​n​g​s​,​ ​o​r​d​e​r​s​,​ ​P​D​F​s
+		 */
+		REFRESH_CONTENT: string
+		/**
+		 * A​u​t​o​ ​l​o​a​d​ ​/​ ​a​u​t​o​ ​r​e​f​r​e​s​h
+		 */
+		AUTO_REFRESH: string
+		/**
 		 * Z​o​o​m​ ​I​n
 		 */
 		ZOOM_IN: string
@@ -4781,6 +4789,23 @@ type RootTranslation = {
 		 * M​a​p​ ​a​ ​k​e​y​b​o​a​r​d​ ​k​e​y
 		 */
 		LEARN_KEY: string
+		/**
+		 * I​g​n​o​r​e​ ​d​o​u​b​l​e​ ​c​o​m​m​a​n​d​s
+		 */
+		DEBOUNCE_TITLE: string
+		/**
+		 * I​g​n​o​r​e​s​ ​t​h​e​ ​s​a​m​e​ ​c​o​m​m​a​n​d​ ​w​h​e​n​ ​i​t​ ​i​s​ ​r​e​p​e​a​t​e​d​ ​w​i​t​h​i​n​ ​t​h​i​s​ ​t​i​m​e​ ​—​ ​u​s​e​f​u​l​ ​f​o​r​ ​f​o​o​t​s​w​i​t​c​h​e​s​ ​t​h​a​t​ ​t​r​i​g​g​e​r​ ​t​w​i​c​e​ ​o​n​ ​o​n​e​ ​t​a​p​.​ ​D​i​f​f​e​r​e​n​t​ ​c​o​m​m​a​n​d​s​ ​a​r​e​ ​n​e​v​e​r​ ​b​l​o​c​k​e​d​.
+		 */
+		DEBOUNCE_HINT: string
+		/**
+		 * O​f​f
+		 */
+		DEBOUNCE_OFF: string
+		/**
+		 * {​m​s​}​ ​m​s
+		 * @param {unknown} ms
+		 */
+		DEBOUNCE_VALUE: RequiredParams<'ms'>
 		/**
 		 * C​h​o​o​s​e​ ​w​h​i​c​h​ ​a​c​t​i​o​n​s​ ​c​o​n​n​e​c​t​e​d​ ​r​e​m​o​t​e​-​c​o​n​t​r​o​l​ ​d​e​v​i​c​e​s​ ​(​m​o​b​i​l​e​ ​c​o​n​t​r​o​l​ ​p​a​g​e​)​ ​a​r​e​ ​a​l​l​o​w​e​d​ ​t​o​ ​t​r​i​g​g​e​r​.
 		 */
@@ -8996,6 +9021,14 @@ export type TranslationFunctions = {
 		 */
 		TOOLBAR_TOGGLE: () => LocalizedString
 		/**
+		 * Update show, songs, orders, PDFs
+		 */
+		REFRESH_CONTENT: () => LocalizedString
+		/**
+		 * Auto load / auto refresh
+		 */
+		AUTO_REFRESH: () => LocalizedString
+		/**
 		 * Zoom In
 		 */
 		ZOOM_IN: () => LocalizedString
@@ -9609,6 +9642,22 @@ export type TranslationFunctions = {
 		 * Map a keyboard key
 		 */
 		LEARN_KEY: () => LocalizedString
+		/**
+		 * Ignore double commands
+		 */
+		DEBOUNCE_TITLE: () => LocalizedString
+		/**
+		 * Ignores the same command when it is repeated within this time — useful for footswitches that trigger twice on one tap. Different commands are never blocked.
+		 */
+		DEBOUNCE_HINT: () => LocalizedString
+		/**
+		 * Off
+		 */
+		DEBOUNCE_OFF: () => LocalizedString
+		/**
+		 * {ms} ms
+		 */
+		DEBOUNCE_VALUE: (arg: { ms: unknown }) => LocalizedString
 		/**
 		 * Choose which actions connected remote-control devices (mobile control page) are allowed to trigger.
 		 */

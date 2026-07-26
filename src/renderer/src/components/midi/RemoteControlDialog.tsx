@@ -17,6 +17,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  Slider,
   Stack,
   Tooltip,
   Typography,
@@ -33,6 +34,8 @@ import {
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useMidi, type MidiAction, type MidiStatus } from '@/hooks/useMidi';
 import type { KeyboardRemote } from '@/hooks/useKeyboardRemote';
+import { REMOTE_DEBOUNCE_MAX_MS } from '@/hooks/useRemoteActionFilter';
+import { useGetMusicianSettings, useUpdateMusicianSetting } from '@/store/musicianSlice';
 
 const ACTION_KEYS: MidiAction[] = ['next_page', 'prev_page', 'next_song', 'prev_song', 'next_block', 'prev_block', 'toggle_tracking'];
 
@@ -62,6 +65,8 @@ interface RemoteControlDialogProps {
 export const RemoteControlDialog = ({ open, onClose, onAction, keyboard, enabled = true }: RemoteControlDialogProps) => {
   const { LL } = useI18nContext();
   const midi = useMidi({ onAction, enabled: enabled && open });
+  const { musicianRemoteDebounceMs: debounceMs } = useGetMusicianSettings();
+  const updateMusicianSetting = useUpdateMusicianSetting();
 
   const actionLabel = (key: MidiAction) => {
     switch (key) {
@@ -350,6 +355,42 @@ export const RemoteControlDialog = ({ open, onClose, onAction, keyboard, enabled
               {LL.MIDI.NOT_SUPPORTED()}
             </Typography>
           )}
+
+          {/* Bounce filter — footswitches often emit a press twice in quick succession */}
+          <Divider sx={{ mx: 1.5, pt: 1 }} />
+          <Stack sx={{ px: 1.5, pt: 1.5 }}>
+            <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, flexGrow: 1 }}>
+                {LL.REMOTE.DEBOUNCE_TITLE()}
+              </Typography>
+              <Chip
+                size="small"
+                variant="outlined"
+                color={debounceMs > 0 ? 'primary' : 'default'}
+                label={debounceMs > 0 ? LL.REMOTE.DEBOUNCE_VALUE({ ms: debounceMs }) : LL.REMOTE.DEBOUNCE_OFF()}
+                sx={{ fontFamily: 'monospace', fontSize: '0.7rem', minWidth: 64 }}
+              />
+            </Stack>
+            <Slider
+              value={debounceMs}
+              onChange={(_e, value) => updateMusicianSetting('musicianRemoteDebounceMs', value as number)}
+              min={0}
+              max={REMOTE_DEBOUNCE_MAX_MS}
+              step={50}
+              marks={[
+                { value: 0, label: LL.REMOTE.DEBOUNCE_OFF() },
+                { value: 500, label: '500' },
+                { value: REMOTE_DEBOUNCE_MAX_MS, label: '1000' },
+              ]}
+              valueLabelDisplay="auto"
+              valueLabelFormat={(v) => `${v} ms`}
+              aria-label={LL.REMOTE.DEBOUNCE_TITLE()}
+              sx={{ mt: 0.5 }}
+            />
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {LL.REMOTE.DEBOUNCE_HINT()}
+            </Typography>
+          </Stack>
         </Stack>
       </DialogContent>
       <DialogActions>

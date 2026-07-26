@@ -22,6 +22,8 @@ import {
   LockOpen as LockOpenIcon,
   RotateLeft as RefetchAnnotationsIcon,
   MultipleStop as OrderIcon,
+  CloudSync as RefreshContentIcon,
+  Autorenew as AutoRefreshIcon,
 } from '@mui/icons-material';
 import { alpha, type Palette } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -138,6 +140,11 @@ interface MusicianToolbarProps {
   hasPdfs: boolean;
   /** Triggers an immediate annotation reload from the server. Only available when a PDF is shown. */
   onRefetchAnnotations?: () => void;
+  /** Reloads show, songs, orders and PDFs from the server. */
+  onRefreshContent?: () => void;
+  /** When true, server updates are applied automatically instead of being offered. */
+  autoRefresh?: boolean;
+  onToggleAutoRefresh?: () => void;
   orderEditorOpen?: boolean;
   onToggleOrderEditor?: () => void;
 }
@@ -163,6 +170,9 @@ export const MusicianToolbar = ({
   onToggleAnnotate,
   hasPdfs,
   onRefetchAnnotations,
+  onRefreshContent,
+  autoRefresh,
+  onToggleAutoRefresh,
   orderEditorOpen,
   onToggleOrderEditor,
 }: MusicianToolbarProps) => {
@@ -179,6 +189,7 @@ export const MusicianToolbar = ({
   const [pageCountOpen, setPageCountOpen] = useState(false);
   const [syncDialOpen, setSyncDialOpen] = useState(false);
   const [zoomDialOpen, setZoomDialOpen] = useState(false);
+  const [refreshDialOpen, setRefreshDialOpen] = useState(false);
 
   // Safari-compatible fullscreen helpers
   const getFullscreenElement = (): Element | null => document.fullscreenElement ?? (document as any).webkitFullscreenElement ?? null;
@@ -274,7 +285,9 @@ export const MusicianToolbar = ({
         position: 'absolute',
         top: 10,
         right: NAV_MARGIN,
-        zIndex: 10,
+        // Above the quick order editor (zIndex 12) — a tall wrapped order used to grow
+        // into the toolbar and swallow its clicks.
+        zIndex: 20,
         pointerEvents: 'none',
       }}
     >
@@ -445,16 +458,58 @@ export const MusicianToolbar = ({
             />
           )}
 
-          {/* 5b. Refetch annotations — only when PDF is shown */}
-          {showPdfTools && onRefetchAnnotations && (
-            <FloatingButton
-              icon={<RefetchAnnotationsIcon fontSize="small" />}
-              tooltip={LL.ANNOTATION.REFETCH()}
-              onClick={() => {
-                trackEvent('musician_button_clicked', undefined, undefined, { button: 'refetch_annotations' });
-                onRefetchAnnotations();
-              }}
-            />
+          {/* 5b. Reload from server — annotations / full content / auto mode */}
+          {(onRefreshContent || onToggleAutoRefresh || (showPdfTools && onRefetchAnnotations)) && (
+            <SpeedDial
+              ariaLabel="Reload from server"
+              sx={speedDialCompactSx}
+              open={refreshDialOpen}
+              onOpen={() => setRefreshDialOpen(true)}
+              onClose={() => setRefreshDialOpen(false)}
+              direction="left"
+              icon={autoRefresh ? <AutoRefreshIcon fontSize="small" /> : <RefetchAnnotationsIcon fontSize="small" />}
+              FabProps={{ size: 'small', sx: makeSpeedDialFabSx(palette, !!autoRefresh) }}
+            >
+              {showPdfTools && onRefetchAnnotations && (
+                <SpeedDialAction
+                  icon={<RefetchAnnotationsIcon fontSize="small" />}
+                  slotProps={{ tooltip: { title: LL.ANNOTATION.REFETCH(), placement: 'bottom' } }}
+                  onClick={() => {
+                    onRefetchAnnotations();
+                    setRefreshDialOpen(false);
+                    trackEvent('musician_button_clicked', undefined, undefined, { button: 'refetch_annotations' });
+                  }}
+                />
+              )}
+              {onRefreshContent && (
+                <SpeedDialAction
+                  icon={<RefreshContentIcon fontSize="small" />}
+                  slotProps={{ tooltip: { title: LL.MUSICIAN.REFRESH_CONTENT(), placement: 'bottom' } }}
+                  onClick={() => {
+                    onRefreshContent();
+                    setRefreshDialOpen(false);
+                    trackEvent('musician_button_clicked', undefined, undefined, { button: 'refresh_content' });
+                  }}
+                />
+              )}
+              {onToggleAutoRefresh && (
+                <SpeedDialAction
+                  icon={<AutoRefreshIcon fontSize="small" />}
+                  slotProps={{
+                    tooltip: { title: LL.MUSICIAN.AUTO_REFRESH(), placement: 'bottom' },
+                    fab: { sx: activeActionFabSx(!!autoRefresh) },
+                  }}
+                  onClick={() => {
+                    onToggleAutoRefresh();
+                    setRefreshDialOpen(false);
+                    trackEvent('musician_button_clicked', undefined, undefined, {
+                      button: 'auto_refresh',
+                      value: autoRefresh ? 'off' : 'on',
+                    });
+                  }}
+                />
+              )}
+            </SpeedDial>
           )}
 
           {/* 6. Zoom — only when PDF is shown */}

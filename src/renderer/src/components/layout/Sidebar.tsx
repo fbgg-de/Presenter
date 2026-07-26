@@ -102,6 +102,7 @@ import { useLazyGetSongQuery, useCreateSongMutation, useUpdateSongMutation } fro
 import { useMetrics } from '@/hooks/useMetrics';
 import { useCcliSongImport } from '@/hooks/useCcliSongImport';
 import { useSongUpdatePoller } from '@/hooks/useSongUpdatePoller';
+import { useGetMusicianSettings } from '@/store/musicianSlice';
 import { loadShowSongs } from '@/store/songsSlice';
 import { StyleEditor, StyleGalleryThumb } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
@@ -158,8 +159,10 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const { data: session } = useGetSessionQuery();
   const bibleEnabled = session?.settings?.bibleEnabled ?? false;
   const churchToolsEnabled = session?.settings?.churchToolsEnabled ?? false;
-  // Detect songs that were changed on the server since they were cached locally
-  const { updatedSongNumbers, reloadSong } = useSongUpdatePoller();
+  // Detect songs that were changed on the server since they were cached locally.
+  // While following remote commands nobody is at this screen to confirm, so adopt them directly.
+  const { midiTrackingMaster } = useGetMusicianSettings();
+  const { updatedSongNumbers, reloadSong } = useSongUpdatePoller({ autoReload: midiTrackingMaster === 'midi' });
   const [logout] = useLogoutMutation();
   const [fetchSong] = useLazyGetSongQuery();
 

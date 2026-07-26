@@ -1,18 +1,6 @@
 import { useState } from 'react';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import {
-  Box,
-  Button,
-  Chip,
-  Fab,
-  FormControl,
-  IconButton,
-  MenuItem,
-  Popover,
-  Select,
-  Stack,
-  Typography,
-} from '@mui/material';
+import { Box, Button, Chip, Fab, FormControl, IconButton, MenuItem, Popover, Select, Stack, Typography } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
 import AddOrderDialog from './AddOrderDialog';
@@ -180,7 +168,10 @@ export const SongOrderEditor = ({
       <Stack
         direction="row"
         sx={{
-          gap: 1,
+          columnGap: 1,
+          // Narrow screens wrap the order into (nearly) one chip per row — the default
+          // gap then stacks up into a very tall block, so tighten the vertical rhythm.
+          rowGap: { xs: 0.25, sm: 1 },
           flexWrap: 'wrap',
           justifyContent: centerChips ? 'center' : 'flex-start',
         }}

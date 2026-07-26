@@ -28,6 +28,7 @@ import { PdfAreaMappingEditor } from '@/components/pdf/PdfAreaMappingEditor';
 import { RemoteControlDialog } from '@/components/midi/RemoteControlDialog';
 import { useMidi, type MidiAction } from '@/hooks/useMidi';
 import { useKeyboardRemote } from '@/hooks/useKeyboardRemote';
+import { useRemoteActionFilter } from '@/hooks/useRemoteActionFilter';
 import { loadShowSongs } from '@/store/songsSlice';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import { Song } from '@/song';
@@ -47,6 +48,7 @@ import { useUpdateSongMutation } from '@/api/songs.api';
 import { useSaveShowMutation, useGetShowQuery } from '@/api/shows.api';
 import { SongOrderEditor } from '@/components/song/SongOrderEditor';
 import { useLazySearchChurchToolsSongsQuery } from '@/api/churchtools.api';
+import { presenterApi } from '@/api/base.api';
 
 /**
  * Top-level page component for the Musician View.
@@ -55,6 +57,9 @@ import { useLazySearchChurchToolsSongsQuery } from '@/api/churchtools.api';
  * and the show selector dialog. Rendered as the sole child of the musician
  * entry-point (musician.tsx).
  */
+/** How often auto-refresh re-validates PDFs and annotations (they have no revision feed). */
+const AUTO_REFRESH_INTERVAL_MS = 60_000;
+
 export const MusicianPage = () => {
   const NAV_MARGIN = 36;
 
@@ -71,6 +76,8 @@ export const MusicianPage = () => {
     musicianSyncMode: syncModeSetting,
     musicianSidebarOpen: persistedSidebarOpen,
     musicianLastItemIndex: persistedLastItemIndex,
+    musicianAutoRefresh: autoRefresh,
+    musicianRemoteDebounceMs: remoteDebounceMs,
   } = useGetMusicianSettings();
   const { currentShow, isShowSelectorOpen } = useGetShow();
   const { songs } = useGetSongs();
@@ -136,7 +143,13 @@ export const MusicianPage = () => {
   const annotationRefetchRef = useRef<(() => void) | null>(null);
 
   // ── Show update polling ──────────────────────────────────────────────
-  const { updateAvailable: showUpdateAvailable2, updatedAt: showUpdatedAt, reloadShow, dismiss: dismissShowUpdate } = useShowUpdatePoller();
+  // In auto-refresh mode the poller applies foreign changes itself and never raises the banner.
+  const {
+    updateAvailable: showUpdateAvailable2,
+    updatedAt: showUpdatedAt,
+    reloadShow,
+    dismiss: dismissShowUpdate,
+  } = useShowUpdatePoller({ autoReload: autoRefresh });
   // Only fetch the operator's show (by title) when following it — not the whole show library.
   const { data: operatorShowData } = useGetShowQuery({ title: operatorWsShowTitle ?? '' }, { skip: !operatorWsShowTitle });
   // Keep the snackbar driven by the hook
@@ -210,6 +223,34 @@ export const MusicianPage = () => {
   const handleRegisterRefetch = useCallback((fn: () => void) => {
     annotationRefetchRef.current = fn;
   }, []);
+
+  // ── Manual + automatic refresh of server-side content ────────────────
+  /** Reload the PDF list/resolution and the annotations of the visible sheet. */
+  const refreshPdfsAndAnnotations = useCallback(() => {
+    dispatch(presenterApi.util.invalidateTags(['Pdfs', 'PdfAnnotations']));
+    annotationRefetchRef.current?.();
+  }, [dispatch]);
+
+  /** "Update show, songs, orders, PDFs" — re-reads everything from the server. */
+  const handleRefreshContent = useCallback(async () => {
+    refreshPdfsAndAnnotations();
+    await reloadShow({ forceSongs: true });
+  }, [refreshPdfsAndAnnotations, reloadShow]);
+
+  // Auto mode: show/song changes are adopted by the pollers, but PDFs and annotations
+  // have no revision feed — so re-validate them on a timer while auto-refresh is on.
+  useEffect(() => {
+    if (!autoRefresh) return;
+    const t = setInterval(refreshPdfsAndAnnotations, AUTO_REFRESH_INTERVAL_MS);
+    return () => clearInterval(t);
+  }, [autoRefresh, refreshPdfsAndAnnotations]);
+
+  const handleToggleAutoRefresh = useCallback(() => {
+    const next = !autoRefresh;
+    updateMusicianSetting('musicianAutoRefresh', next);
+    // Turning it on should feel immediate rather than waiting for the first poll.
+    if (next) void handleRefreshContent();
+  }, [autoRefresh, updateMusicianSetting, handleRefreshContent]);
 
   // Persist sync mode changes
   const handleSetSyncMode = useCallback((mode: SyncMode) => {
@@ -633,13 +674,28 @@ export const MusicianPage = () => {
     saveShowMutation,
   ]);
 
+  /**
+   * Hardware-remote entry point (MIDI + keyboard/footswitch). Same actions as the
+   * on-screen buttons, but filtered so a bouncing footswitch can't double-trigger.
+   * The on-screen buttons keep calling handleMidiAction directly — a deliberate
+   * double tap there should not be swallowed.
+   */
+  const acceptRemoteAction = useRemoteActionFilter(remoteDebounceMs);
+  const handleRemoteAction = useCallback(
+    (action: MidiAction) => {
+      if (!acceptRemoteAction(action)) return;
+      handleMidiAction(action);
+    },
+    [acceptRemoteAction, handleMidiAction],
+  );
+
   // Always-on MIDI — MIDI is a local hardware input and should work regardless of
   // the network sync mode. The RemoteControlDialog has its own separate useMidi instance.
-  useMidi({ onAction: handleMidiAction, enabled: true });
+  useMidi({ onAction: handleRemoteAction, enabled: true });
 
   // Always-on keyboard remote — window-level listener, so the page owns the SINGLE
   // instance and shares it with the RemoteControlDialog (a second one would double-fire).
-  const keyboardRemote = useKeyboardRemote({ onAction: handleMidiAction, enabled: true });
+  const keyboardRemote = useKeyboardRemote({ onAction: handleRemoteAction, enabled: true });
 
   const handleToggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => {
@@ -785,7 +841,7 @@ export const MusicianPage = () => {
         />
       )}
       {/* Remote control (MIDI + keyboard) mapping dialog */}
-      <RemoteControlDialog open={midiOpen} onClose={() => setMidiOpen(false)} onAction={handleMidiAction} keyboard={keyboardRemote} />
+      <RemoteControlDialog open={midiOpen} onClose={() => setMidiOpen(false)} onAction={handleRemoteAction} keyboard={keyboardRemote} />
       {/* Settings drawer */}
       <MusicianSettings
         open={settingsOpen}
@@ -884,6 +940,9 @@ export const MusicianPage = () => {
             onToggleAnnotate={() => setAnnotateMode((a) => !a)}
             hasPdfs={hasPdfs}
             onRefetchAnnotations={() => annotationRefetchRef.current?.()}
+            onRefreshContent={() => void handleRefreshContent()}
+            autoRefresh={autoRefresh}
+            onToggleAutoRefresh={handleToggleAutoRefresh}
             orderEditorOpen={orderEditorOpen}
             onToggleOrderEditor={() => setOrderEditorOpen((prev) => !prev)}
           />
@@ -1002,12 +1061,17 @@ export const MusicianPage = () => {
                 right: 0,
                 bottom: `calc(${showFooter ? 64 : 16}px + env(safe-area-inset-bottom, 0px))`,
                 zIndex: 12,
-                px: NAV_MARGIN,
+                // Narrow screens wrap the order into a single column, which makes this
+                // overlay tall — keep it clear of the side margins and the nav buttons.
+                px: { xs: 1, sm: `${NAV_MARGIN}px` },
                 display: 'flex',
                 justifyContent: 'center',
+                // The wrapper spans the full width; only the editor itself may take clicks,
+                // so the empty areas beside it never block the floating toolbar/nav buttons.
+                pointerEvents: 'none',
               }}
             >
-              <Stack sx={{ width: 'min(1100px, 100%)' }}>
+              <Stack sx={{ width: 'min(1100px, 100%)', pointerEvents: 'auto' }}>
                 <SongOrderEditor
                   orders={orderEditorOrders}
                   currentOrder={orderEditorName}
@@ -1032,7 +1096,7 @@ export const MusicianPage = () => {
                     setOrderEditorDirty(true);
                   }}
                 />
-                <Stack direction="row" sx={{ justifyContent: 'center', gap: 1, mt: 1 }}>
+                <Stack direction="row" sx={{ justifyContent: 'center', gap: 1, mt: { xs: 0.5, sm: 1 } }}>
                   <Button
                     size="small"
                     variant="outlined"

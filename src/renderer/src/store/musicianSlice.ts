@@ -19,12 +19,19 @@ export interface MusicianState {
   musicianSyncMode: 'off' | 'operator' | 'midi';
   musicianSidebarOpen: boolean;
   musicianLastItemIndex: number;
+  /** Auto-apply server updates (show, songs, orders, PDFs, annotations) without asking. */
+  musicianAutoRefresh: boolean;
   /** Remote control: MIDI message key (e.g. "cc_64") → action. */
   midiMappings: Record<string, MidiAction>;
   /** Who drives block tracking on the operator side: the operator or the MIDI musician. */
   midiTrackingMaster: TrackingMaster;
   /** Remote control: keyboard combo (e.g. "Ctrl+ArrowRight") → action. */
   musicianKeyboardMappings: Record<string, MidiAction>;
+  /**
+   * Remote control: ignore a repeat of the SAME action within this many milliseconds.
+   * Guards against bouncing footswitches double-triggering a jump. 0 disables the filter.
+   */
+  musicianRemoteDebounceMs: number;
 }
 
 const defaultMusicianSettings: MusicianState = {
@@ -39,9 +46,11 @@ const defaultMusicianSettings: MusicianState = {
   musicianSyncMode: 'operator',
   musicianSidebarOpen: true,
   musicianLastItemIndex: 0,
+  musicianAutoRefresh: false,
   midiMappings: {},
   midiTrackingMaster: 'operator',
   musicianKeyboardMappings: {},
+  musicianRemoteDebounceMs: 0,
 };
 
 let initialState: MusicianState = { ...defaultMusicianSettings };
