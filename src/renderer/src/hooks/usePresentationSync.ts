@@ -250,7 +250,24 @@ export const usePresentationSync = (): void => {
     connected: wsOperatorConnected,
     connectedCount,
     lastMidiSyncAt,
+    lastPeersDisconnected,
   } = useWsOperator(wsUrl, wsAccount, handleMusicianSync, handleGetState, handleRemoteCommand);
+
+  // Relay confirmed a disconnect-peers request — hand the count back to the Footer, which
+  // is waiting on it to tell "cleared N clients" from "the relay never answered".
+  useEffect(() => {
+    if (!lastPeersDisconnected) return;
+    window.dispatchEvent(new CustomEvent('presenter:ws-peers-disconnected', { detail: lastPeersDisconnected }));
+  }, [lastPeersDisconnected]);
+
+  // Footer asks the relay to drop every other client of this account (stale tablets,
+  // reloaded pages, phones that went to sleep). Routed through a DOM event — the same
+  // indirection `presenter:force-broadcast` uses — so the Footer doesn't own the socket.
+  useEffect(() => {
+    const handler = () => wsBroadcast('disconnect_peers');
+    window.addEventListener('presenter:disconnect-ws-peers', handler);
+    return () => window.removeEventListener('presenter:disconnect-ws-peers', handler);
+  }, [wsBroadcast]);
 
   // Also listen for direct Electron IPC musician sync (bypasses WS relay, works offline / same machine)
   useEffect(() => {

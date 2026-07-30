@@ -80,6 +80,23 @@ export const redirectToLogin = (next?: string) => {
   }
 };
 
+/**
+ * Full sign-out: ends the OIDC provider's session as well as ours.
+ *
+ * `DELETE /rest/Session` alone only drops the local PHP session — the identity provider
+ * still holds an SSO session, so the very next login is silently re-authenticated as the
+ * same user and the account can never be switched. The backend `oidc?logout=1` handler
+ * destroys the local session AND redirects to the provider's end-session endpoint.
+ *
+ * `logged_out=1` marks the return trip so the Electron main process can pull the window
+ * back to the local login page instead of leaving it on the website.
+ */
+export const oidcLogoutUrl = (): string => {
+  const origin = isElectronApp() ? getBackendOrigin() : window.location.origin;
+  const back = `${origin}/login?logged_out=1&switch=1`;
+  return `${origin}/oidc?logout=1&redirect=${encodeURIComponent(back)}`;
+};
+
 export type DetectedOs = 'windows' | 'macos' | 'linux' | 'unknown';
 
 /** Detect the user's OS to offer the right installer. */

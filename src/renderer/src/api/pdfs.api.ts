@@ -138,24 +138,25 @@ const pdfsApi = presenterApi.injectEndpoints({
     }),
 
     // ──────── PDF Area Mappings ────────
-    getPdfAreaMappings: build.query<ApiSuccess<PdfAreaMapping[]>, { songNumber: number; filename: string; musician: string }>({
-      query: ({ songNumber, filename, musician }) => ({
+    // Keyed by the PDF file alone: the regions describe the sheet, so they are shared by
+    // everyone who opens it. Only annotations are per musician (see pdfAnnotations.api).
+    getPdfAreaMappings: build.query<ApiSuccess<PdfAreaMapping[]>, { songNumber: number; filename: string }>({
+      query: ({ songNumber, filename }) => ({
         url: `rest/Pdfs/${songNumber}/mappings`,
-        params: { filename, musician },
+        params: { filename },
       }),
-      providesTags: (_res, _err, arg) => [{ type: 'Pdfs', id: `mappings-${arg.songNumber}-${arg.filename}-${arg.musician}` }],
+      providesTags: (_res, _err, arg) => [{ type: 'Pdfs', id: `mappings-${arg.songNumber}-${arg.filename}` }],
     }),
-    savePdfAreaMappings: build.mutation<
-      ApiSuccess<{ message: string }>,
-      { songNumber: number; filename: string; musician: string; mappings: PdfAreaMapping[] }
-    >({
-      query: ({ songNumber, filename, musician, mappings }) => ({
-        url: `rest/Pdfs/${songNumber}/mappings`,
-        method: 'PUT',
-        body: { filename, musician, mappings },
-      }),
-      invalidatesTags: (_res, _err, arg) => [{ type: 'Pdfs', id: `mappings-${arg.songNumber}-${arg.filename}-${arg.musician}` }],
-    }),
+    savePdfAreaMappings: build.mutation<ApiSuccess<{ message: string }>, { songNumber: number; filename: string; mappings: PdfAreaMapping[] }>(
+      {
+        query: ({ songNumber, filename, mappings }) => ({
+          url: `rest/Pdfs/${songNumber}/mappings`,
+          method: 'PUT',
+          body: { filename, mappings },
+        }),
+        invalidatesTags: (_res, _err, arg) => [{ type: 'Pdfs', id: `mappings-${arg.songNumber}-${arg.filename}` }],
+      },
+    ),
   }),
   overrideExisting: false,
 });

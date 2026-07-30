@@ -106,10 +106,12 @@ class Pdfs extends RestController
 
         $songPath = $basePath . '/' . $songNumber;
 
-        // GET /rest/Pdfs/{songNumber}/mappings?filename=X&musician=Y
+        // GET /rest/Pdfs/{songNumber}/mappings?filename=X
+        // Mappings belong to the PDF file, not to a musician — the regions to map are the
+        // same for everyone looking at that sheet. (Per-musician content lives in
+        // pdf_annotations.layer instead.)
         if ($req->path->get(1, '', false) === 'mappings') {
             $filename = $req->query->get('filename', '', false);
-            $musician = $req->query->get('musician', '_', false);
             if (!$filename) {
                 $res->error(400, 'filename query parameter is required');
             }
@@ -117,8 +119,8 @@ class Pdfs extends RestController
             $account = intval($_SESSION['account']);
             $sn = intval($songNumber);
 
-            $stmt = self::prepare('SELECT mappings FROM pdf_area_mappings WHERE account = ? AND songnumber = ? AND filename = ? AND musician_name = ?');
-            $stmt->bind_param('iiss', $account, $sn, $filename, $musician)->execute()->fetchOne($row)->close();
+            $stmt = self::prepare('SELECT mappings FROM pdf_area_mappings WHERE account = ? AND songnumber = ? AND filename = ?');
+            $stmt->bind_param('iis', $account, $sn, $filename)->execute()->fetchOne($row)->close();
 
             if ($row && isset($row['mappings'])) {
                 $mappings = json_decode($row['mappings'], true);
@@ -238,7 +240,6 @@ class Pdfs extends RestController
         // PUT /rest/Pdfs/{songNumber}/mappings — save area mappings
         if ($req->path->get(1, '', false) === 'mappings') {
             $filename = $req->params->get('filename', '', false);
-            $musician = $req->params->get('musician', '_', false);
             $mappings = $req->params->getAsArray('mappings', []);
 
             if (!$filename) {
@@ -250,11 +251,11 @@ class Pdfs extends RestController
             $mappingsJson = json_encode($mappings);
 
             $stmt = self::prepare(
-                'INSERT INTO pdf_area_mappings (account, songnumber, filename, musician_name, mappings)
-					 VALUES (?, ?, ?, ?, ?)
+                'INSERT INTO pdf_area_mappings (account, songnumber, filename, mappings)
+					 VALUES (?, ?, ?, ?)
 					 ON DUPLICATE KEY UPDATE mappings = VALUES(mappings), updated_at = CURRENT_TIMESTAMP'
             );
-            $stmt->bind_param('iisss', $account, $sn, $filename, $musician, $mappingsJson)->execute()->close();
+            $stmt->bind_param('iiss', $account, $sn, $filename, $mappingsJson)->execute()->close();
 
             $res->success(['message' => 'Mappings saved']);
         }

@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import { useUpdateMusicianSetting } from '@/store/musicianSlice';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { DEFAULT_LAYER } from '@/components/pdf/PdfAnnotationToolbar';
 
 type SettingRowProps = {
   icon: any;
@@ -64,6 +65,8 @@ interface MusicianSettingsProps {
   onClose: () => void;
   musicianName: string;
   musicianBand: string;
+  /** Raw setting — empty means "my own layer". */
+  annotationLayer: string;
   musicianTheme: 'light' | 'dark';
   defaultPageView: 'one-page' | 'two-page';
   blockIndicator: boolean;
@@ -81,6 +84,7 @@ export const MusicianSettings = ({
   onClose,
   musicianName,
   musicianBand,
+  annotationLayer,
   musicianTheme,
   defaultPageView,
   blockIndicator,
@@ -96,6 +100,19 @@ export const MusicianSettings = ({
   const autocompleteFilter = useMemo(() => createFilterOptions<string>(), []);
 
   const updateMusicianSetting = useUpdateMusicianSetting();
+
+  // Annotation layers are named per PDF, so there is no global list to offer. These are
+  // the names that actually occur in practice — the shared `default` layer plus every
+  // known musician name — and freeSolo still allows any other layer to be typed in.
+  const layerOptions = useMemo(() => {
+    const names = new Set<string>([DEFAULT_LAYER]);
+    if (musicianName) names.add(musicianName);
+    for (const name of musicianNames) names.add(name);
+    return Array.from(names);
+  }, [musicianName, musicianNames]);
+
+  /** What the dropdown shows: the explicit choice, or the layer we would fall back to. */
+  const effectiveLayer = annotationLayer || musicianName || DEFAULT_LAYER;
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -195,6 +212,35 @@ export const MusicianSettings = ({
             ))}
           </Select>
         </FormControl>
+
+        {/* Default annotation layer — which layer the PDF annotation tools write to */}
+        <Autocomplete
+          freeSolo
+          size="small"
+          value={effectiveLayer}
+          options={layerOptions}
+          onChange={(_e, newValue) => updateMusicianSetting('musicianAnnotationLayer', (newValue ?? '').trim())}
+          filterOptions={(options, params) => {
+            const filtered = autocompleteFilter(options, params);
+            const { inputValue } = params;
+            const isExisting = options.some((option) => inputValue === option);
+            if (inputValue !== '' && !isExisting) {
+              filtered.push(inputValue);
+            }
+            return filtered;
+          }}
+          renderOption={(props, option) => {
+            const isNew = !layerOptions.includes(option);
+            return (
+              <li {...props} key={option}>
+                {isNew ? `Add "${option}"` : option}
+              </li>
+            );
+          }}
+          renderInput={(params) => (
+            <TextField {...params} label={LL.MUSICIAN.LAYER_SELECT()} helperText={LL.MUSICIAN.LAYER_SELECT_HINT()} />
+          )}
+        />
         <Divider />
 
         {/* Text size */}

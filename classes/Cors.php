@@ -14,6 +14,9 @@
  */
 class Cors
 {
+    /** Session lifetime in seconds — users stay logged in for 30 days. */
+    private const SESSION_LIFETIME = 30 * 24 * 60 * 60;
+
     public static function handle(): void
     {
         if (!defined('CORS_ALLOWED_ORIGINS')) {
@@ -61,42 +64,66 @@ class Cors
             return;
         }
 
-        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-        $isCrossOrigin = self::isAllowedOrigin($origin);
+        // Keep the session alive for 30 days so users stay logged in across restarts.
+        // Session ini settings can only be changed while no session is active, which is
+        // why this lives here and not in sessionCookieParams() (also called afterwards).
+        ini_set('session.gc_maxlifetime', (string)self::SESSION_LIFETIME);
+        session_set_cookie_params(self::sessionCookieParams());
+    }
 
-        // Always set Secure=true when the connection arrives over HTTPS.
-        // Detect HTTPS directly and also honour common reverse-proxy headers.
+    /**
+     * The session cookie parameters for this deployment.
+     *
+     * SameSite is deliberately NOT derived from the current request's Origin header.
+     * A cookie is identified by (name, domain, path) only — SameSite is not part of its
+     * identity — and PHP emits Set-Cookie just once, when it creates the session. So the
+     * single request that happened to create the session used to fix SameSite for the
+     * whole 30-day lifetime: a session born on a plain navigation got `Lax`, and `Lax`
+     * cookies are not sent on the cross-site POST that SimpleSAMLphp uses to return from
+     * the IdP. The callback then landed in a brand-new session with no `oidc_state`,
+     * failed the state check and bounced back to the login page — for as long as that
+     * cookie survived. A private window worked because it started the flow from scratch.
+     *
+     * Over HTTPS the app always needs the cookie to survive a cross-site return (OIDC /
+     * SAML) and cross-origin XHR from the desktop app, so `None; Secure` is the only
+     * correct setting. Plain HTTP (local dev) cannot use `None` — browsers reject a
+     * non-Secure `SameSite=None` cookie — so it falls back to `Lax`.
+     */
+    private static function sessionCookieParams(): array
+    {
         $isHttps = self::isHttps();
 
-        // Keep the session alive for 30 days so users stay logged in across restarts.
-        $lifetime = 30 * 24 * 60 * 60; // 30 days in seconds
-        ini_set('session.gc_maxlifetime', (string)$lifetime);
+        return [
+            'lifetime' => self::SESSION_LIFETIME,
+            'path'     => '/',
+            'domain'   => '',
+            'secure'   => $isHttps,
+            'httponly' => true,
+            'samesite' => $isHttps ? 'None' : 'Lax',
+        ];
+    }
 
-        if ($isCrossOrigin) {
-            // SameSite=None; Secure is required for cross-origin fetch requests
-            // (credentials: 'include') to send the session cookie.
-            // Without this the default SameSite=Lax blocks the cookie on XHR.
-            session_set_cookie_params([
-                'lifetime' => $lifetime,
-                'path'     => '/',
-                'domain'   => '',
-                'secure'   => true,  // SameSite=None mandates Secure=true
-                'httponly' => true,
-                'samesite' => 'None',
-            ]);
-        } else {
-            // Same-origin — Lax is the safe default; still persist 30 days.
-            // Set Secure=true on HTTPS so iOS Safari (ITP) reliably stores and
-            // sends the cookie after the OIDC redirect chain.
-            session_set_cookie_params([
-                'lifetime' => $lifetime,
-                'path'     => '/',
-                'domain'   => '',
-                'secure'   => $isHttps,
-                'httponly' => true,
-                'samesite' => 'Lax',
-            ]);
+    /**
+     * Re-send the session cookie with the current parameters. Call right AFTER
+     * session_start().
+     *
+     * PHP only emits Set-Cookie when it creates a new session, so a client that already
+     * holds a cookie written under the old (Origin-dependent) rules would keep it — and
+     * stay broken — for the full 30 days. Rewriting it on every request repairs those
+     * clients on their next page load instead of requiring them to clear site data.
+     */
+    public static function refreshSessionCookie(): void
+    {
+        if (!defined('CORS_ALLOWED_ORIGINS')) {
+            return;
         }
+        if (session_status() !== PHP_SESSION_ACTIVE || headers_sent()) {
+            return;
+        }
+        $params = self::sessionCookieParams();
+        $params['expires'] = time() + $params['lifetime'];
+        unset($params['lifetime']);
+        setcookie(session_name(), session_id(), $params);
     }
 
     /**

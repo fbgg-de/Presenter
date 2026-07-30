@@ -14,6 +14,14 @@ class SongsSearch extends RestController
 
         $mode = strtolower($req->path->get(0, 'title'));
 
+        // Callers that render a denser list (e.g. the set list "Add" view) can ask for more
+        // rows than the deployment-wide default. Clamped so a client cannot request the table.
+        $limit = SEARCH_RESULT_LIMIT;
+        $limitRaw = $req->query->get('limit', null, false);
+        if ($limitRaw !== null && is_numeric($limitRaw)) {
+            $limit = max(1, min(50, (int)$limitRaw));
+        }
+
         switch ($mode) {
             case 'text':
                 $search = self::prepareSearchParameter($query);
@@ -22,6 +30,7 @@ class SongsSearch extends RestController
             SELECT
               `songs`.`songnumber` AS `songNumber`,
               `songs`.`title`,
+              `songs`.`authors`,
               MAX(MATCH(`blocks`.`text`) AGAINST (? IN BOOLEAN MODE)) AS `score`
             FROM `songs`
             INNER JOIN `blocks`
@@ -30,18 +39,18 @@ class SongsSearch extends RestController
             WHERE
               `songs`.`account` = ?
               AND MATCH(`blocks`.`text`) AGAINST (? IN BOOLEAN MODE)
-            GROUP BY `songs`.`songnumber`, `songs`.`title`
+            GROUP BY `songs`.`songnumber`, `songs`.`title`, `songs`.`authors`
             ORDER BY `score` DESC, `songs`.`title`
             LIMIT ?
           ');
 
-                $stmt->bind_param('sisi', $search, $account, $search, SEARCH_RESULT_LIMIT)->execute()->fetchAll($result)->close();
+                $stmt->bind_param('sisi', $search, $account, $search, $limit)->execute()->fetchAll($result)->close();
                 break;
             case 'number':
                 $req->query->checkNumeric('q');
 
                 $stmt = self::prepare('
-            SELECT `songnumber` AS `songNumber`, `title`
+            SELECT `songnumber` AS `songNumber`, `title`, `authors`
             FROM `songs`
             WHERE
               CAST(`songnumber` AS CHAR) LIKE ?
@@ -50,7 +59,7 @@ class SongsSearch extends RestController
             LIMIT ?
           ');
 
-                $stmt->bind_param('sii', $query . '%', $account, SEARCH_RESULT_LIMIT)->execute()->fetchAll($result)->close();
+                $stmt->bind_param('sii', $query . '%', $account, $limit)->execute()->fetchAll($result)->close();
                 break;
             default: // title — search title, authors, and songNumber
                 // If query is purely numeric, also match by song number
@@ -60,7 +69,7 @@ class SongsSearch extends RestController
                 if ($isNumeric) {
                     // Search by song number prefix
                     $stmt = self::prepare('
-              SELECT `songnumber` AS `songNumber`, `title`
+              SELECT `songnumber` AS `songNumber`, `title`, `authors`
               FROM `songs`
               WHERE
                 CAST(`songnumber` AS CHAR) LIKE ?
@@ -68,12 +77,13 @@ class SongsSearch extends RestController
               ORDER BY `songnumber`
               LIMIT ?
             ');
-                    $stmt->bind_param('sii', $query . '%', $account, SEARCH_RESULT_LIMIT)->execute()->fetchAll($result)->close();
+                    $stmt->bind_param('sii', $query . '%', $account, $limit)->execute()->fetchAll($result)->close();
                 } else {
                     $stmt = self::prepare('
               SELECT
                 `songnumber` AS `songNumber`,
                 `title`,
+                `authors`,
                 MATCH(`title`) AGAINST (? IN BOOLEAN MODE) AS `relevance`,
                 CASE WHEN `title` LIKE ? THEN 10 ELSE 0 END AS `prefix_boost`
               FROM `songs`
@@ -93,7 +103,7 @@ class SongsSearch extends RestController
 
                     $likeQuery = "%{$query}%";
                     $prefixLike = "{$query}%";
-                    $stmt->bind_param('ssisssi', $search, $prefixLike, $account, $likeQuery, $search, $likeQuery, SEARCH_RESULT_LIMIT)->execute()->fetchAll($result)->close();
+                    $stmt->bind_param('ssisssi', $search, $prefixLike, $account, $likeQuery, $search, $likeQuery, $limit)->execute()->fetchAll($result)->close();
                 }
         }
 

@@ -179,10 +179,11 @@ CREATE TABLE `pdf_area_mappings` (
   `account` INT NOT NULL,
   `songnumber` INT NOT NULL,
   `filename` VARCHAR(300) NOT NULL,
-  `musician_name` VARCHAR(200) NOT NULL DEFAULT '_',
   `mappings` JSON NOT NULL,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY `uk_pam` (`account`, `songnumber`, `filename`, `musician_name`),
+  -- Regions describe the PDF itself, so they are shared by everyone who opens that file.
+  -- (Annotation layers are the per-musician part — see pdf_annotations.layer.)
+  UNIQUE KEY `uk_pam` (`account`, `songnumber`, `filename`),
   CONSTRAINT `fk_pam_account` FOREIGN KEY (`account`)
     REFERENCES `account` (`license`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -218,6 +219,53 @@ CREATE TABLE `pdf_annotations` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
+-- Set Lists (reusable planning layer on top of the song library)
+-- --------------------------------------------------------
+CREATE TABLE `set_lists` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `account` INT NOT NULL,
+  `name` VARCHAR(200) NOT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_set_lists_account_name` (`account`, `name`),
+  CONSTRAINT `fk_set_lists_account` FOREIGN KEY (`account`)
+    REFERENCES `account` (`license`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- One Set List Entry per (set list, song). `account` is carried so the row can point at
+-- the composite songs(account, songnumber) key.
+CREATE TABLE `set_list_entries` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `set_list_id` INT NOT NULL,
+  `account` INT NOT NULL,
+  `songnumber` INT NOT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_sle_list_song` (`set_list_id`, `songnumber`),
+  KEY `idx_sle_song` (`account`, `songnumber`),
+  CONSTRAINT `fk_sle_set_list` FOREIGN KEY (`set_list_id`)
+    REFERENCES `set_lists` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_sle_song` FOREIGN KEY (`account`, `songnumber`)
+    REFERENCES `songs` (`account`, `songnumber`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- One row per Tag Assignment; playback metadata hangs off the assignment, not the entry.
+CREATE TABLE `set_list_entry_tags` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `set_list_entry_id` INT NOT NULL,
+  `tag_name` VARCHAR(100) NOT NULL,
+  `custom_key` VARCHAR(20) DEFAULT NULL,
+  `block_order_name` VARCHAR(200) DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_slet_entry_tag` (`set_list_entry_id`, `tag_name`),
+  CONSTRAINT `fk_slet_entry` FOREIGN KEY (`set_list_entry_id`)
+    REFERENCES `set_list_entries` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
 -- Schema Version Tracking (for migrations)
 -- --------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `schema_version` (
@@ -227,7 +275,7 @@ CREATE TABLE IF NOT EXISTS `schema_version` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO `schema_version` (`version`, `description`) VALUES (15, 'Fresh install — all migrations included');
+INSERT INTO `schema_version` (`version`, `description`) VALUES (19, 'Fresh install — all migrations included');
 
 COMMIT;
 

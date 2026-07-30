@@ -32,6 +32,12 @@ interface AuthedClient {
 const clients = new Set<AuthedClient>();
 
 /**
+ * Close code sent to peers the operator kicked. In the application range (4000-4999) so
+ * clients can tell it apart from a network drop: this one must NOT auto-reconnect.
+ */
+const WS_CLOSE_OPERATOR_DISCONNECT = 4010;
+
+/**
  * Resolve a viewer token to an account number by calling the PHP backend.
  * Returns the account number on success, or null if the token is invalid.
  */
@@ -180,6 +186,26 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       }
 
       finishAuth(msg.account as number);
+      return;
+    }
+
+    // ── Operator: drop every other client of this account ────────────────────
+    // Stale sockets accumulate (sleeping tablets, reloaded pages, dropped mobiles) and
+    // there is no way to tell them apart from the server side. This lets the operator
+    // clear the slate; peers see close code 4010, stop auto-reconnecting and offer a
+    // manual reconnect instead, so nobody is silently cut off or instantly back.
+    if (msg.action === 'disconnect_peers') {
+      let closed = 0;
+      for (const peer of [...clients]) {
+        if (peer === client) continue;
+        if (peer.account !== client.account) continue;
+        peer.ws.close(WS_CLOSE_OPERATOR_DISCONNECT, 'Disconnected by operator');
+        closed++;
+      }
+      console.log(`[WS Relay] account=${client.account} disconnected ${closed} peer(s) on operator request`);
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'peers_disconnected', count: closed }));
+      }
       return;
     }
 

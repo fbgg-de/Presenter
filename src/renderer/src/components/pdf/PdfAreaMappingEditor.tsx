@@ -11,6 +11,7 @@
  */
 import { useState, useRef, useCallback, useEffect, useMemo, type MouseEvent, type TouchEvent } from 'react';
 import {
+  Alert,
   Box,
   Button,
   Dialog,
@@ -52,8 +53,12 @@ interface PdfAreaMappingEditorProps {
   onClose: () => void;
   pdfUrl: string;
   blockNames: string[];
+  /** Block name → its lyric lines, shown as a hover preview so the right block can be
+   *  picked without opening the song elsewhere to check what "Verse 2" actually is. */
+  blockLines?: Record<string, string[]>;
   initialMappings?: PdfAreaMapping[];
-  onSave: (mappings: PdfAreaMapping[]) => void;
+  /** Rejecting keeps the dialog open with the user's work intact. */
+  onSave: (mappings: PdfAreaMapping[]) => void | Promise<void>;
 }
 
 // ── Resize handle types ──────────────────────────────────────────────────────
@@ -150,7 +155,18 @@ const applyResize = (start: Region, handle: HandleType, dx: number, dy: number):
 const SNAP_THRESHOLD = 2;
 
 // ── Component ────────────────────────────────────────────────────────────────
-export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initialMappings = [], onSave }: PdfAreaMappingEditorProps) => {
+/** How many lines of a block the hover preview shows before truncating. */
+const PREVIEW_MAX_LINES = 14;
+
+export const PdfAreaMappingEditor = ({
+  open,
+  onClose,
+  pdfUrl,
+  blockNames,
+  blockLines,
+  initialMappings = [],
+  onSave,
+}: PdfAreaMappingEditorProps) => {
   const { LL } = useI18nContext();
 
   const [mappings, setMappings] = useState<PdfAreaMapping[]>(initialMappings);
@@ -158,6 +174,11 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedBlock, setSelectedBlock] = useState<string>(blockNames[0] || '');
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // Hover/open state of the block select, used to gate its lyrics preview tooltip.
+  const [blockSelectHovered, setBlockSelectHovered] = useState(false);
+  const [blockSelectOpen, setBlockSelectOpen] = useState(false);
 
   // Drawing state
   const [isDrawing, setIsDrawing] = useState(false);
@@ -169,11 +190,50 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
 
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Seed the working copy from the server state when the dialog OPENS, and never again
+  // while it is open. `initialMappings` gets a fresh array identity on every background
+  // refetch of the mapping query (the auto-refresh timer and the "refresh content" button
+  // both invalidate the `Pdfs` tag), and re-seeding on that silently threw away every
+  // rectangle drawn since the dialog was opened.
+  const initialMappingsRef = useRef(initialMappings);
+  initialMappingsRef.current = initialMappings;
   useEffect(() => {
-    setMappings(initialMappings);
-  }, [initialMappings]);
+    if (open) setMappings(initialMappingsRef.current);
+  }, [open]);
+
+  // The dialog stays mounted between songs, so page and selection would otherwise
+  // carry over: opening a one-page PDF after paging through a two-page one left the
+  // view on page 2 (blank), and the block select kept a name the new song has not got.
   useEffect(() => {
-    if (blockNames.length > 0 && !selectedBlock) setSelectedBlock(blockNames[0]);
+    if (!open) return;
+    setCurrentPage(1);
+    setSaveError(null);
+    setIsDrawing(false);
+    setDrawStart(null);
+    setPointerCurrent(null);
+    setResizeState(null);
+  }, [open]);
+
+  // A different document means a different page count — drop the old one so the page
+  // navigation can't reference pages the new PDF does not have.
+  useEffect(() => {
+    setNumPages(0);
+    setCurrentPage(1);
+  }, [pdfUrl]);
+
+  // Safety net for a shrinking document (e.g. the mapping list jumps to a stored page).
+  useEffect(() => {
+    if (numPages > 0 && currentPage > numPages) setCurrentPage(numPages);
+  }, [numPages, currentPage]);
+
+  // Keep the selection on a block the current song actually has — an unknown value
+  // renders as a blank, unselectable entry in the Select.
+  useEffect(() => {
+    if (blockNames.length === 0) {
+      setSelectedBlock('');
+      return;
+    }
+    if (!blockNames.includes(selectedBlock)) setSelectedBlock(blockNames[0]);
   }, [blockNames, selectedBlock]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -342,9 +402,19 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
     setCurrentPage(m.page);
   }, []);
 
-  const handleSave = useCallback(() => {
-    onSave(mappings);
-    onClose();
+  const handleSave = useCallback(async () => {
+    setSaveError(null);
+    setSaving(true);
+    try {
+      await onSave(mappings);
+      onClose();
+    } catch (err) {
+      // Keep the dialog open — closing here would discard work that never reached the server.
+      console.error('[PdfAreaMapping] Failed to save mappings:', err);
+      setSaveError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setSaving(false);
+    }
   }, [mappings, onSave, onClose]);
 
   // ── Derived display data ──────────────────────────────────────────────────
@@ -371,6 +441,27 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
 
   // ── Container cursor ──────────────────────────────────────────────────────
   const containerCursor = resizeState ? HANDLE_CURSORS[resizeState.handle] : 'crosshair';
+
+  // Lyrics of the currently selected block, rendered as the Select's hover preview.
+  const selectedBlockPreview = useMemo(() => {
+    const lines = (blockLines?.[selectedBlock] ?? []).filter((line) => line.trim().length > 0);
+    if (lines.length === 0) return null;
+    const shown = lines.slice(0, PREVIEW_MAX_LINES);
+    return (
+      <Box sx={{ maxWidth: 320 }}>
+        {shown.map((line, i) => (
+          <Typography key={i} variant="caption" sx={{ display: 'block', lineHeight: 1.4 }}>
+            {line}
+          </Typography>
+        ))}
+        {lines.length > shown.length && (
+          <Typography variant="caption" sx={{ display: 'block', opacity: 0.7 }}>
+            …
+          </Typography>
+        )}
+      </Box>
+    );
+  }, [blockLines, selectedBlock]);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -533,16 +624,34 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
               {LL.PDF.SELECT_BLOCK_TO_MAP()}
             </Typography>
 
-            <Select value={selectedBlock} onChange={(e) => setSelectedBlock(e.target.value)} size="small" fullWidth>
-              {blockNames.map((name) => (
-                <MenuItem key={name} value={name}>
-                  <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: blockColors[name] }} />
-                    <span>{name}</span>
-                  </Stack>
-                </MenuItem>
-              ))}
-            </Select>
+            {/* Hovering the select previews the selected block's text — `open` is controlled
+                so the preview never hangs over the opened dropdown list. */}
+            <Tooltip
+              title={selectedBlockPreview ?? ''}
+              placement="left"
+              open={blockSelectHovered && !blockSelectOpen && !!selectedBlockPreview}
+              disableInteractive
+            >
+              <Box onMouseEnter={() => setBlockSelectHovered(true)} onMouseLeave={() => setBlockSelectHovered(false)}>
+                <Select
+                  value={selectedBlock}
+                  onChange={(e) => setSelectedBlock(e.target.value)}
+                  onOpen={() => setBlockSelectOpen(true)}
+                  onClose={() => setBlockSelectOpen(false)}
+                  size="small"
+                  fullWidth
+                >
+                  {blockNames.map((name) => (
+                    <MenuItem key={name} value={name}>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                        <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: blockColors[name] }} />
+                        <span>{name}</span>
+                      </Stack>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </Box>
+            </Tooltip>
 
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {LL.PDF.DRAW_RECTANGLE_HELP()}
@@ -612,8 +721,15 @@ export const PdfAreaMappingEditor = ({ open, onClose, pdfUrl, blockNames, initia
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
-        <Button variant="contained" startIcon={<SaveIcon />} onClick={handleSave}>
+        {saveError && (
+          <Alert severity="error" sx={{ flex: 1, py: 0, mr: 1 }}>
+            {saveError}
+          </Alert>
+        )}
+        <Button onClick={onClose} disabled={saving}>
+          {LL.COMMON.CANCEL()}
+        </Button>
+        <Button variant="contained" startIcon={<SaveIcon />} onClick={() => void handleSave()} disabled={saving}>
           {LL.PDF.SAVE_MAPPINGS()}
         </Button>
       </DialogActions>

@@ -440,6 +440,14 @@ $debugMode  = isset($_GET['debug']);
               e.code === 4003 || e.code === 4002 ? 'error' : 'warn');
           if (permanentStop) return;
           if (stopped) return;
+          // 4010 = the operator cleared the connected clients. Reconnecting on a timer
+          // would put us straight back, so wait for the viewer to ask for it.
+          if (e.code === 4010) {
+            dbg('Disconnected by operator — not reconnecting automatically', 'warn');
+            permanentStop = true;
+            setStatus('error', 'Disconnected by the presenter. Reload this page to reconnect.');
+            return;
+          }
           setStatus('connecting', 'Reconnecting… (#' + reconnectCount + ')');
           setTimeout(connect, RECONNECT);
         };

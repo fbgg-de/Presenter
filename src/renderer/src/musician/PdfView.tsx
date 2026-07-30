@@ -19,6 +19,8 @@ interface PdfViewProps {
   onDocumentLoadSuccess: (data: { numPages: number }) => void;
   onDocumentLoadError: (error: Error) => void;
   musicianName: string;
+  /** Annotation layer preselected for editing (musician setting); empty = own layer. */
+  annotationLayer?: string;
   activeSongNumber?: number;
   /** Optional display name of the active song — included in the exported PDF filename. */
   activeSongName?: string;
@@ -188,13 +190,13 @@ const BlockAreaOverlays = ({
                   position: 'absolute',
                   right: 0,
                   top: 0,
-                  minWidth: 24,
-                  height: 20,
-                  px: 0.75,
+                  minWidth: 34,
+                  height: 30,
+                  px: 1,
                   borderRadius: 0,
-                  bgcolor: 'rgba(0,0,0,0.72)',
+                  bgcolor: 'rgba(0,0,0,0.7)',
                   color: '#fff',
-                  fontSize: '0.72rem',
+                  fontSize: '1.5rem',
                   fontWeight: 700,
                   display: 'flex',
                   alignItems: 'center',
@@ -246,6 +248,7 @@ export const PdfView = ({
   onDocumentLoadSuccess,
   onDocumentLoadError,
   musicianName,
+  annotationLayer,
   activeSongNumber,
   activeSongName,
   showFooter,
@@ -708,6 +711,7 @@ export const PdfView = ({
               pageHeight={pageBaseWidth * zoomLevel * 1.414}
               pdfUrl={pdfUrl}
               musicianName={musicianName}
+              defaultLayer={annotationLayer}
               songNumber={activeSongNumber}
               songName={activeSongName}
               filename={resolvedFilename}

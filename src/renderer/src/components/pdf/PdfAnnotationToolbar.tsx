@@ -81,6 +81,9 @@ import { ANNOTATION_COLORS } from '@/theme';
 
 export type AnnotationTool = 'draw' | 'text' | 'highlight' | 'icon' | 'eraser' | 'none';
 
+/** Layer used when no musician name is set — the shared layer everyone writes to. */
+export const DEFAULT_LAYER = 'default';
+
 interface Point {
   x: number;
   y: number;
@@ -182,6 +185,11 @@ interface PdfAnnotationToolbarProps {
   hiddenLayers: Set<string>;
   onToggleLayerVisibility: (layer: string) => void;
   /**
+   * Layer preselected for editing (musician setting). Empty falls back to the musician's
+   * own layer. The user can still switch layers in the layer popover for the session.
+   */
+  defaultLayer?: string;
+  /**
    * Called once on mount (and whenever the song/filename changes) with the
    * `refetch` function so that parent components (e.g. MusicianToolbar) can
    * trigger an immediate annotation reload without owning the query themselves.
@@ -205,6 +213,7 @@ export const PdfAnnotationToolbar = ({
   onShowAnnotationsChange,
   hiddenLayers,
   onToggleLayerVisibility,
+  defaultLayer,
   onRegisterRefetch,
 }: PdfAnnotationToolbarProps) => {
   const { LL } = useI18nContext();
@@ -226,11 +235,12 @@ export const PdfAnnotationToolbar = ({
   const [textPosition, setTextPosition] = useState<Point | null>(null);
   const [highlightStart, setHighlightStart] = useState<Point | null>(null);
   const [highlightCurrent, setHighlightCurrent] = useState<Point | null>(null);
-  const [draggingTextId, setDraggingTextId] = useState<string | null>(null);
-  /** Offset between the mouse and the text annotation's position when drag started */
+  /** The annotation currently being relocated (text, icon or highlight), if any. */
+  const [dragging, setDragging] = useState<{ id: string; tool: AnnotationTool } | null>(null);
+  /** Offset between the pointer and the dragged annotation's anchor when the drag started */
   const dragOffsetRef = useRef<Point | null>(null);
-  /** Live position of the text being dragged (percentage coords) */
-  const [dragTextPos, setDragTextPos] = useState<Point | null>(null);
+  /** Live anchor position of the annotation being dragged (percentage coords) */
+  const [dragPos, setDragPos] = useState<Point | null>(null);
   /** ID of the text annotation currently being edited via double-click */
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
@@ -257,12 +267,14 @@ export const PdfAnnotationToolbar = ({
   const lastIconPlacedRef = useRef(0);
 
   // -- Layer management --
-  const musicianKey = musicianName || 'default';
-  const [activeLayerKey, setActiveLayerKey] = useState(musicianKey);
+  const musicianKey = musicianName || DEFAULT_LAYER;
+  // The configured layer wins; without one we keep writing to the musician's own layer.
+  const preferredLayerKey = defaultLayer?.trim() || musicianKey;
+  const [activeLayerKey, setActiveLayerKey] = useState(preferredLayerKey);
 
   useEffect(() => {
-    setActiveLayerKey(musicianKey);
-  }, [musicianKey]);
+    setActiveLayerKey(preferredLayerKey);
+  }, [preferredLayerKey]);
 
   // Reset to draw tool when entering edit mode; deactivate when leaving
   useEffect(() => {
@@ -450,6 +462,63 @@ export const PdfAnnotationToolbar = ({
     [activeLayerAnnotations],
   );
 
+  /**
+   * Find a relocatable annotation under the pointer for the active tool.
+   *
+   * Only text, icons and highlights can be moved — a freehand stroke has no single anchor.
+   * Restricting the search to the active tool keeps the interaction predictable: the highlight
+   * tool grabs highlights, the icon tool grabs icons, and neither steals the other's press.
+   * The bounds are a touch more generous than the eraser's so grabbing does not require
+   * pixel accuracy on a touch screen.
+   */
+  const hitTestForMove = useCallback(
+    (coords: Point, pageNum: number, activeTool: AnnotationTool): AnnotationEntry | null => {
+      if (activeTool !== 'text' && activeTool !== 'icon' && activeTool !== 'highlight') return null;
+      const candidates = activeLayerAnnotations.filter((a) => a.tool === activeTool && a.page === pageNum && a.position);
+      // Reverse order: the most recently drawn annotation sits on top.
+      for (let i = candidates.length - 1; i >= 0; i--) {
+        const ann = candidates[i];
+        const pos = ann.position!;
+        if (ann.tool === 'text' && ann.text) {
+          const fs = ann.fontSize ?? 14;
+          const approxWidth = ann.text.length * fs * 0.06;
+          const approxHeight = fs * 0.12;
+          if (coords.x >= pos.x - 1 && coords.x <= pos.x + approxWidth + 1 && coords.y >= pos.y - approxHeight && coords.y <= pos.y + 1) {
+            return ann;
+          }
+        } else if (ann.tool === 'icon') {
+          const iconPct = ((ann.iconSize ?? ICON_BASE_SIZE) / 2) * 0.08;
+          if (Math.abs(coords.x - pos.x) < iconPct && Math.abs(coords.y - pos.y) < iconPct) return ann;
+        } else if (ann.tool === 'highlight' && ann.rect) {
+          const r = ann.rect;
+          if (coords.x >= r.x && coords.x <= r.x + r.width && coords.y >= r.y && coords.y <= r.y + r.height) return ann;
+        }
+      }
+      return null;
+    },
+    [activeLayerAnnotations],
+  );
+
+  /** Begin relocating `ann`; returns false when it has no anchor to drag by. */
+  const beginMove = useCallback((ann: AnnotationEntry, coords: Point): boolean => {
+    if (!ann.position) return false;
+    setDragging({ id: ann.id, tool: ann.tool });
+    dragOffsetRef.current = { x: coords.x - ann.position.x, y: coords.y - ann.position.y };
+    setDragPos({ ...ann.position });
+    return true;
+  }, []);
+
+  /** Persist the dragged annotation's new anchor. Only x/y are sent, so the tool's own
+   *  payload (icon file + size, highlight width/height, text + font) is left untouched. */
+  const commitMove = useCallback(() => {
+    if (dragging && dragPos && songNumber && filename) {
+      updateAnnotation({ songNumber, filename, annotationId: Number(dragging.id), x: dragPos.x, y: dragPos.y });
+    }
+    setDragging(null);
+    dragOffsetRef.current = null;
+    setDragPos(null);
+  }, [dragging, dragPos, songNumber, filename, updateAnnotation]);
+
   /** Erase annotation at coords if one is hit and not already erased this drag */
   const eraseAtCoords = useCallback(
     (coords: Point, pageNum: number) => {
@@ -475,6 +544,11 @@ export const PdfAnnotationToolbar = ({
 
       const activeTool = penEraserActiveRef.current ? 'eraser' : tool;
 
+      // Pressing on an existing text / icon / highlight picks it up instead of creating a
+      // new one, so all three relocate the same way.
+      const grabbed = hitTestForMove(coords, pageNum, activeTool);
+      if (grabbed && beginMove(grabbed, coords)) return;
+
       if (activeTool === 'eraser') {
         setIsErasing(true);
         erasedIdsRef.current = new Set();
@@ -483,36 +557,12 @@ export const PdfAnnotationToolbar = ({
         setIsDrawing(true);
         setCurrentPoints([coords]);
       } else if (activeTool === 'text') {
-        // Check if clicking on an existing text annotation to relocate it
-        const hitText = activeLayerAnnotations
-          .filter((a) => a.tool === 'text' && a.page === pageNum && a.position && a.text)
-          .reverse()
-          .find((ann) => {
-            const fs = ann.fontSize ?? 14;
-            const approxWidth = ann.text!.length * fs * 0.06;
-            const approxHeight = fs * 0.12;
-            return (
-              coords.x >= ann.position!.x - 1 &&
-              coords.x <= ann.position!.x + approxWidth + 1 &&
-              coords.y >= ann.position!.y - approxHeight &&
-              coords.y <= ann.position!.y + 1
-            );
-          });
-        if (hitText && hitText.position) {
-          setDraggingTextId(hitText.id);
-          dragOffsetRef.current = {
-            x: coords.x - hitText.position.x,
-            y: coords.y - hitText.position.y,
-          };
-          setDragTextPos({ ...hitText.position });
-        } else {
-          // Clicking on empty space: cancel any active editing and create a new anchor
-          setEditingTextId(null);
-          setTextPosition(coords);
-          setActiveDrawPage(pageNum);
-          // Auto-focus the text input after a short delay so it renders first
-          setTimeout(() => textInputRef.current?.focus(), 50);
-        }
+        // Empty space: cancel any active editing and create a new anchor
+        setEditingTextId(null);
+        setTextPosition(coords);
+        setActiveDrawPage(pageNum);
+        // Auto-focus the text input after a short delay so it renders first
+        setTimeout(() => textInputRef.current?.focus(), 50);
       } else if (activeTool === 'highlight') {
         setHighlightStart(coords);
         setHighlightCurrent(coords);
@@ -540,8 +590,9 @@ export const PdfAnnotationToolbar = ({
       saveAnnotation,
       eraseAtCoords,
       toolOpacity,
-      activeLayerAnnotations,
       iconSize,
+      hitTestForMove,
+      beginMove,
     ],
   );
 
@@ -560,8 +611,8 @@ export const PdfAnnotationToolbar = ({
         setEraserPos(null);
       }
 
-      if (draggingTextId && dragOffsetRef.current) {
-        setDragTextPos({
+      if (dragging && dragOffsetRef.current) {
+        setDragPos({
           x: coords.x - dragOffsetRef.current.x,
           y: coords.y - dragOffsetRef.current.y,
         });
@@ -573,7 +624,7 @@ export const PdfAnnotationToolbar = ({
         setHighlightCurrent(coords);
       }
     },
-    [isDrawing, isErasing, draggingTextId, tool, getCoordsFromClient, getPageFromCanvas, highlightStart, eraseAtCoords, eraserPos],
+    [isDrawing, isErasing, dragging, tool, getCoordsFromClient, getPageFromCanvas, highlightStart, eraseAtCoords, eraserPos],
   );
 
   /** Clear eraser cursor indicator when the pointer leaves a canvas */
@@ -585,18 +636,9 @@ export const PdfAnnotationToolbar = ({
     (e: MouseEvent<HTMLCanvasElement>) => {
       const pageNum = getPageFromCanvas(e.currentTarget);
 
-      // -- Text drag release: persist new position --
-      if (draggingTextId && dragTextPos && songNumber && filename) {
-        updateAnnotation({
-          songNumber,
-          filename,
-          annotationId: Number(draggingTextId),
-          x: dragTextPos.x,
-          y: dragTextPos.y,
-        });
-        setDraggingTextId(null);
-        dragOffsetRef.current = null;
-        setDragTextPos(null);
+      // -- Drag release (text / icon / highlight): persist the new position --
+      if (dragging) {
+        commitMove();
         return;
       }
 
@@ -640,14 +682,13 @@ export const PdfAnnotationToolbar = ({
       setCurrentPoints([]);
       setHighlightStart(null);
       setHighlightCurrent(null);
-      setDraggingTextId(null);
     },
     [
       tool,
       isDrawing,
       isErasing,
-      draggingTextId,
-      dragTextPos,
+      dragging,
+      commitMove,
       currentPoints,
       highlightStart,
       color,
@@ -657,9 +698,6 @@ export const PdfAnnotationToolbar = ({
       getCoordsFromClient,
       getPageFromCanvas,
       saveAnnotation,
-      updateAnnotation,
-      songNumber,
-      filename,
     ],
   );
 
@@ -703,6 +741,10 @@ export const PdfAnnotationToolbar = ({
 
       const activeTool = penEraserActiveRef.current ? 'eraser' : tool;
 
+      // Touching an existing text / icon / highlight picks it up — same as the mouse path.
+      const grabbed = hitTestForMove(coords, pageNum, activeTool);
+      if (grabbed && beginMove(grabbed, coords)) return;
+
       if (activeTool === 'eraser') {
         setIsErasing(true);
         erasedIdsRef.current = new Set();
@@ -711,34 +753,10 @@ export const PdfAnnotationToolbar = ({
         setIsDrawing(true);
         setCurrentPoints([coords]);
       } else if (activeTool === 'text') {
-        // Check if touching an existing text annotation to relocate it
-        const hitText = activeLayerAnnotations
-          .filter((a) => a.tool === 'text' && a.page === pageNum && a.position && a.text)
-          .reverse()
-          .find((ann) => {
-            const fs = ann.fontSize ?? 14;
-            const approxWidth = ann.text!.length * fs * 0.06;
-            const approxHeight = fs * 0.12;
-            return (
-              coords.x >= ann.position!.x - 1 &&
-              coords.x <= ann.position!.x + approxWidth + 1 &&
-              coords.y >= ann.position!.y - approxHeight &&
-              coords.y <= ann.position!.y + 1
-            );
-          });
-        if (hitText && hitText.position) {
-          setDraggingTextId(hitText.id);
-          dragOffsetRef.current = {
-            x: coords.x - hitText.position.x,
-            y: coords.y - hitText.position.y,
-          };
-          setDragTextPos({ ...hitText.position });
-        } else {
-          setEditingTextId(null);
-          setTextPosition(coords);
-          setActiveDrawPage(pageNum);
-          setTimeout(() => textInputRef.current?.focus(), 50);
-        }
+        setEditingTextId(null);
+        setTextPosition(coords);
+        setActiveDrawPage(pageNum);
+        setTimeout(() => textInputRef.current?.focus(), 50);
       } else if (activeTool === 'highlight') {
         setHighlightStart(coords);
         setHighlightCurrent(coords);
@@ -766,8 +784,9 @@ export const PdfAnnotationToolbar = ({
       saveAnnotation,
       eraseAtCoords,
       toolOpacity,
-      activeLayerAnnotations,
       iconSize,
+      hitTestForMove,
+      beginMove,
     ],
   );
 
@@ -787,8 +806,8 @@ export const PdfAnnotationToolbar = ({
         setEraserPos({ pageNum, x: coords.x, y: coords.y });
       }
 
-      if (draggingTextId && dragOffsetRef.current) {
-        setDragTextPos({
+      if (dragging && dragOffsetRef.current) {
+        setDragPos({
           x: coords.x - dragOffsetRef.current.x,
           y: coords.y - dragOffsetRef.current.y,
         });
@@ -800,22 +819,13 @@ export const PdfAnnotationToolbar = ({
         setHighlightCurrent(coords);
       }
     },
-    [isDrawing, isErasing, draggingTextId, tool, getCoordsFromClient, getPageFromCanvas, highlightStart, eraseAtCoords],
+    [isDrawing, isErasing, dragging, tool, getCoordsFromClient, getPageFromCanvas, highlightStart, eraseAtCoords],
   );
 
   const handleCanvasTouchEnd = useCallback(() => {
-    // -- Text drag release: persist new position --
-    if (draggingTextId && dragTextPos && songNumber && filename) {
-      updateAnnotation({
-        songNumber,
-        filename,
-        annotationId: Number(draggingTextId),
-        x: dragTextPos.x,
-        y: dragTextPos.y,
-      });
-      setDraggingTextId(null);
-      dragOffsetRef.current = null;
-      setDragTextPos(null);
+    // -- Drag release (text / icon / highlight): persist the new position --
+    if (dragging) {
+      commitMove();
       return;
     }
 
@@ -857,13 +867,12 @@ export const PdfAnnotationToolbar = ({
     setCurrentPoints([]);
     setHighlightStart(null);
     setHighlightCurrent(null);
-    setDraggingTextId(null);
   }, [
     tool,
     isDrawing,
     isErasing,
-    draggingTextId,
-    dragTextPos,
+    dragging,
+    commitMove,
     currentPoints,
     highlightStart,
     highlightCurrent,
@@ -873,9 +882,6 @@ export const PdfAnnotationToolbar = ({
     highlightOpacity,
     toolOpacity,
     saveAnnotation,
-    updateAnnotation,
-    songNumber,
-    filename,
   ]);
 
   // -- Text annotation confirmation --
@@ -986,10 +992,10 @@ export const PdfAnnotationToolbar = ({
     (deletedKey: string) => {
       if (deletedKey === activeLayerKey) {
         const remaining = layerNames.filter((l) => l !== deletedKey);
-        setActiveLayerKey(remaining.length > 0 ? remaining[0] : musicianKey);
+        setActiveLayerKey(remaining.length > 0 ? remaining[0] : preferredLayerKey);
       }
     },
-    [activeLayerKey, musicianKey, layerNames],
+    [activeLayerKey, preferredLayerKey, layerNames],
   );
 
   const handleLayerCreated = useCallback((newKey: string) => {
@@ -1153,6 +1159,10 @@ export const PdfAnnotationToolbar = ({
       const pageAnns = activeLayerAnnotations.filter((a) => a.page === pageNum);
       for (const ann of pageAnns) {
         const annOpacity = ann.opacity ?? 1;
+        // While an annotation is being relocated it follows the pointer and renders semi
+        // transparent, so the drop position is obvious before releasing.
+        const isBeingDragged = dragging?.id === ann.id && dragPos !== null;
+        const livePos = isBeingDragged ? dragPos! : ann.position;
         if (ann.tool === 'draw' && ann.points && ann.points.length > 1) {
           ctx.globalAlpha = annOpacity;
           ctx.strokeStyle = ann.color;
@@ -1165,14 +1175,14 @@ export const PdfAnnotationToolbar = ({
           ctx.stroke();
           ctx.globalAlpha = 1.0;
         } else if (ann.tool === 'highlight' && ann.rect) {
-          ctx.globalAlpha = ann.opacity ?? 0.25;
+          // The rect keeps its size while dragging — only the top-left anchor moves.
+          const rectPos = livePos ?? ann.rect;
+          ctx.globalAlpha = isBeingDragged ? 0.6 : (ann.opacity ?? 0.25);
           ctx.fillStyle = ann.color;
-          ctx.fillRect((ann.rect.x / 100) * cw, (ann.rect.y / 100) * ch, (ann.rect.width / 100) * cw, (ann.rect.height / 100) * ch);
+          ctx.fillRect((rectPos.x / 100) * cw, (rectPos.y / 100) * ch, (ann.rect.width / 100) * cw, (ann.rect.height / 100) * ch);
           ctx.globalAlpha = 1.0;
         } else if (ann.tool === 'text' && ann.position && ann.text) {
-          // Use live drag position if this text is being relocated
-          const isBeingDragged = draggingTextId === ann.id && dragTextPos;
-          const textPos = isBeingDragged ? dragTextPos : ann.position;
+          const textPos = livePos ?? ann.position;
           ctx.globalAlpha = isBeingDragged ? 0.6 : annOpacity;
           const b = ann.fontBold ? 'bold ' : '';
           const it = ann.fontItalic ? 'italic ' : '';
@@ -1192,11 +1202,12 @@ export const PdfAnnotationToolbar = ({
           }
           ctx.globalAlpha = 1.0;
         } else if (ann.tool === 'icon' && ann.position && ann.iconUrl) {
-          ctx.globalAlpha = annOpacity;
+          const iconPos = livePos ?? ann.position;
+          ctx.globalAlpha = isBeingDragged ? 0.6 : annOpacity;
           const img = iconImageCache.current.get(ann.iconUrl);
           if (img) {
             const sz = (ann.iconSize ?? ICON_BASE_SIZE) * scaleFactor;
-            drawSvgIconOnCanvas(ctx, img, (ann.position.x / 100) * cw, (ann.position.y / 100) * ch, sz, ann.color);
+            drawSvgIconOnCanvas(ctx, img, (iconPos.x / 100) * cw, (iconPos.y / 100) * ch, sz, ann.color);
           }
           ctx.globalAlpha = 1.0;
         }
@@ -1337,8 +1348,8 @@ export const PdfAnnotationToolbar = ({
     cursorVisible,
     toolOpacity,
     activeLayerKey,
-    draggingTextId,
-    dragTextPos,
+    dragging,
+    dragPos,
     iconLoadVersion,
     eraserPos,
   ]);
@@ -1379,13 +1390,13 @@ export const PdfAnnotationToolbar = ({
     };
   }, [containerRef, numPages, pageWidth, pdfUrl]);
 
-  const cursorStyle =
-    effectiveTool === 'draw'
+  const cursorStyle = dragging
+    ? // Any annotation being relocated shows the move cursor, whichever tool grabbed it.
+      'move'
+    : effectiveTool === 'draw'
       ? 'crosshair'
       : effectiveTool === 'text'
-        ? draggingTextId
-          ? 'move'
-          : 'text'
+        ? 'text'
         : effectiveTool === 'highlight'
           ? 'crosshair'
           : effectiveTool === 'icon'

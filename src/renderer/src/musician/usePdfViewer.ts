@@ -190,9 +190,23 @@ export const usePdfViewer = ({
 
   const [saveMappingsMutation] = useSavePdfAreaMappingsMutation();
 
+  /**
+   * Filename the area mappings are keyed by, for BOTH reading and writing.
+   *
+   * Deliberately built from `currentData` rather than `data`: RTK Query keeps the last
+   * successful `data` while a new query is in flight, so right after a song switch
+   * `resolvedFilename` still holds the PREVIOUS song's file. Keying off that wrote the
+   * mappings to `(new songNumber, old filename)` — a row nothing ever reads back, which
+   * is why mappings could look saved and then be gone. `currentData` is null during the
+   * transition, so we simply have no key until the correct one is known.
+   */
+  const mappingFilename = pdfOverrideFilename ?? currentResolveResult?.filename ?? null;
+  const mappingFilenameRef = useRef<string | null>(null);
+  mappingFilenameRef.current = mappingFilename;
+
   const { data: serverMappings } = useGetPdfAreaMappingsQuery(
-    { songNumber: activeSongNumber!, filename: resolvedFilename!, musician: musicianName || '_' },
-    { skip: activeSongNumber == null || !resolvedFilename },
+    { songNumber: activeSongNumber!, filename: mappingFilename! },
+    { skip: activeSongNumber == null || !mappingFilename },
   );
 
   useEffect(() => {
@@ -463,20 +477,26 @@ export const usePdfViewer = ({
     [activeSongNumber, currentPage, pageView],
   );
 
+  /**
+   * Persist area mappings. Rejects when the save did not reach the server so the editor
+   * can stay open with the user's work — the previous version passed `.catch()` to a
+   * promise RTK Query never rejects, so failures were swallowed and the dialog closed as
+   * if everything had been stored.
+   */
   const handleSaveAreaMappings = useCallback(
-    (mappings: PdfAreaMapping[]) => {
-      setAreaMappings(mappings);
-      const fname = resolvedFilenameRef.current;
-      if (activeSongNumber != null && fname) {
-        saveMappingsMutation({
-          songNumber: activeSongNumber,
-          filename: fname,
-          musician: musicianName || '_',
-          mappings,
-        }).catch((err) => console.error('[MusicianPDF] Failed to save area mappings:', err));
+    async (mappings: PdfAreaMapping[]) => {
+      const fname = mappingFilenameRef.current;
+      if (activeSongNumber == null || !fname) {
+        throw new Error('No PDF resolved yet — mappings would be stored under an unknown file.');
       }
+      await saveMappingsMutation({
+        songNumber: activeSongNumber,
+        filename: fname,
+        mappings,
+      }).unwrap();
+      setAreaMappings(mappings);
     },
-    [musicianName, activeSongNumber, saveMappingsMutation],
+    [activeSongNumber, saveMappingsMutation],
   );
 
   // Sync scroll to mapped block — only when the block region is not already visible.

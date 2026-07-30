@@ -60,7 +60,7 @@ class SongRenumber extends RestController
             )->bind_param('isii', $new, $newStr, $account, $old)->execute()->close();
 
             // 2. Move all child references to the new number.
-            foreach (['blocks', 'pdf_area_mappings', 'pdf_annotations'] as $table) {
+            foreach (['blocks', 'pdf_area_mappings', 'pdf_annotations', 'set_list_entries'] as $table) {
                 self::prepare("UPDATE `{$table}` SET `songnumber` = ? WHERE `account` = ? AND `songnumber` = ?")
                     ->bind_param('iii', $new, $account, $old)->execute()->close();
             }

@@ -44,6 +44,7 @@ import {
   FileUpload as FileUploadIcon,
   Sync as SyncIcon,
   Smartphone as SmartphoneIcon,
+  QueueMusic as SetListIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -97,7 +98,7 @@ import type { Show, ShowItem, MediaSubType } from '@/api/shows.api';
 import type { SongListItem } from '@/api/songs.api';
 import { useSaveShowMutation } from '@/api/shows.api';
 import { useGetStylesQuery } from '@/api/styles.api';
-import { useGetSessionQuery, useLogoutMutation } from '@/api/session.api';
+import { useGetSessionQuery } from '@/api/session.api';
 import { useLazyGetSongQuery, useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useCcliSongImport } from '@/hooks/useCcliSongImport';
@@ -106,10 +107,11 @@ import { useGetMusicianSettings } from '@/store/musicianSlice';
 import { loadShowSongs } from '@/store/songsSlice';
 import { StyleEditor, StyleGalleryThumb } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
+import { SetListManager } from '@/components/setlist/SetListManager';
 import { MUSICAL_KEYS, parseOrderKey } from '@/utils/orderKeyUtils';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useGetWindows } from '@/store/windowSlice';
-import { redirectToLogin } from '@/utils';
+import { oidcLogoutUrl } from '@/utils';
 import { DEFAULT_SONG_ITEM_COLOR, DEFAULT_MEDIA_ITEM_COLOR, DEFAULT_BIBLE_ITEM_COLOR } from '@/theme';
 
 export interface SidebarHandle {
@@ -150,6 +152,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   /** When set, the StyleEditor opens directly in edit view for this style (direct edit from item menus). */
   const [styleEditorEditId, setStyleEditorEditId] = useState<number | undefined>(undefined);
   const [windowManagerOpen, setWindowManagerOpen] = useState(false);
+  const [setListsOpen, setSetListsOpen] = useState(false);
   /** Error message shown when a song file import fails. */
   const [importErrorMsg, setImportErrorMsg] = useState<string | null>(null);
   /** Result notification for the ChurchTools event-agenda sync on save. */
@@ -163,7 +166,6 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   // While following remote commands nobody is at this screen to confirm, so adopt them directly.
   const { midiTrackingMaster } = useGetMusicianSettings();
   const { updatedSongNumbers, reloadSong } = useSongUpdatePoller({ autoReload: midiTrackingMaster === 'midi' });
-  const [logout] = useLogoutMutation();
   const [fetchSong] = useLazyGetSongQuery();
 
   // Add menu
@@ -237,17 +239,15 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
 
   const windowNames = (savedWindowConfigs || []).map((c) => (c?.name || '').trim()).filter((n) => n.length > 0);
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     setAccountMenuAnchor(null);
-    try {
-      await logout().unwrap();
-      // Clear last-selected account so the login page does not default back
-      // to the same account (especially important when logging out of admin).
-      updateSetting('lastSelectedAccount', '');
-      redirectToLogin();
-    } catch (error) {
-      console.error('Failed to logout:', error);
-    }
+    // Clear last-selected account so the login page does not default back
+    // to the same account (especially important when logging out of admin).
+    updateSetting('lastSelectedAccount', '');
+    // Hand off to the backend's OIDC logout, which destroys the PHP session AND ends the
+    // provider session before returning to the login page. Calling DELETE /rest/Session
+    // first would destroy the session that still holds the id_token needed for that.
+    window.location.assign(oidcLogoutUrl());
   };
 
   const handleSaveShow = async () => {
@@ -887,6 +887,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         editStyleId={styleEditorEditId}
       />
       <WindowManager open={windowManagerOpen} onClose={() => setWindowManagerOpen(false)} />
+      <SetListManager open={setListsOpen} onClose={() => setSetListsOpen(false)} />
       <Stack
         direction="row"
         sx={{
@@ -1022,6 +1023,13 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
             <Tooltip title={LL.REMOTE.OPEN_CONTROL()}>
               <IconButton size="small" onClick={() => window.open('/control', '_blank')}>
                 <SmartphoneIcon />
+              </IconButton>
+            </Tooltip>
+
+            {/* Set Lists */}
+            <Tooltip title={LL.SET_LISTS.TITLE()}>
+              <IconButton size="small" onClick={() => setSetListsOpen(true)}>
+                <SetListIcon />
               </IconButton>
             </Tooltip>
 

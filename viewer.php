@@ -348,8 +348,15 @@ $wsUrlJson = json_encode($wsUrl);
           if (!stopped) setStatus('error', 'Connection error.');
         };
 
-        ws.onclose = function () {
+        ws.onclose = function (e) {
           if (stopped) return;
+          // 4010 = the operator cleared the connected clients. Reconnecting on a timer
+          // would put us straight back, so wait for the viewer to ask for it.
+          if (e && e.code === 4010) {
+            stopped = true;
+            setStatus('error', 'Disconnected by the presenter. Reload this page to reconnect.');
+            return;
+          }
           setStatus('connecting', 'Reconnecting…');
           setTimeout(connect, RECONNECT);
         };

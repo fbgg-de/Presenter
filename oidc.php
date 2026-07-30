@@ -15,17 +15,56 @@ Cors::handle();
 Cors::configureSession();
 
 session_start();
+// Repairs cookies issued under the older Origin-dependent SameSite rules, which could not
+// survive the cross-site return from the IdP. Must run after session_start().
+Cors::refreshSessionCookie();
 
 if (isset($_GET['logout'])) {
     $idToken = $_SESSION['oidc_tokens']['id_token'] ?? null;
-    unset($_SESSION['account']);
-    unset($_SESSION['authType']);
-    unset($_SESSION['mail']);
-    unset($_SESSION['admin_sub']);
-    unset($_SESSION['admin_name']);
-    unset($_SESSION['oidc_tokens']);
-    $oidc = OidcClient::fromGlobalConfig();
-    $logoutUrl = $oidc->getLogoutUrl($idToken, BASE_URL);
+    $providerId = $_SESSION['oidc_provider_id'] ?? null;
+
+    // Where to land after the provider has ended its session. Kept inside our own site.
+    $postLogout = $_GET['redirect'] ?? (BASE_URL . 'login');
+    $postLogout = filter_var($postLogout, FILTER_SANITIZE_URL);
+    if (str_starts_with($postLogout, '/')) {
+        $postLogout = BASE_URL . ltrim($postLogout, '/');
+    }
+    if (!str_starts_with($postLogout, BASE_URL)) {
+        $postLogout = BASE_URL . 'login';
+    }
+
+    // A tenant session was established through that account's own provider, so its
+    // end_session_endpoint is the one that has to be called — the global config only
+    // applies to admin logins. Using the global client here left the tenant's provider
+    // session alive, and the next login was silently re-authenticated with no prompt,
+    // making it impossible to switch accounts.
+    $oidc = null;
+    if ($providerId) {
+        $providerRow = lookupProviderById((int)$providerId);
+        if ($providerRow) {
+            $oidc = OidcClient::fromProvider($providerRow);
+        }
+    }
+    if ($oidc === null) {
+        $oidc = OidcClient::fromGlobalConfig();
+    }
+
+    try {
+        $logoutUrl = $oidc->getLogoutUrl($idToken, $postLogout);
+    } catch (Throwable $e) {
+        // Discovery unreachable — still drop the local session and go back to the login page.
+        Logging::warning('OIDC logout URL lookup failed: ' . $e->getMessage());
+        $logoutUrl = $postLogout;
+    }
+
+    // Drop the local session completely (not just the OIDC keys), so a failed or
+    // cancelled provider logout can never leave a half-authenticated session behind.
+    $_SESSION = [];
+    if (ini_get('session.use_cookies')) {
+        $p = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+    }
+    session_destroy();
 
     header('Location: ' . $logoutUrl);
     exit;
@@ -48,11 +87,16 @@ if (!isset($_GET['code']) || !isset($_GET['state'])) {
     // Determine which OIDC provider to use
     $license = isset($_GET['license']) ? intval($_GET['license']) : null;
 
-    if (!empty($_SESSION['oidc_admin']) || $license === null) {
+    if (!empty($_SESSION['oidc_admin'])) {
         // Admin login — use global config
         unset($_SESSION['oidc_license']);
         unset($_SESSION['oidc_provider_id']);
         $oidc = OidcClient::fromGlobalConfig();
+    } elseif ($license === null) {
+        // Neither an admin login nor a license: the callback would run the tenant branch
+        // with a null license and fatal on Auth::checkById(int). Refuse up front instead.
+        header('Location: /unauthorized?error=oidc.no_account_selected');
+        exit;
     } else {
         // Tenant login — look up the default provider for this license
         $provider = lookupDefaultProvider($license);
@@ -91,9 +135,16 @@ try {
     unset($_SESSION['oidc_license']); // only needed during the redirect round-trip
     // Keep oidc_provider_id in session so the token refresh can reconstruct the correct OidcClient
 
-    if ($isAdminLogin || $license === null) {
+    if ($isAdminLogin) {
         $oidc = OidcClient::fromGlobalConfig();
         $providerRow = null;
+    } elseif ($license === null) {
+        // Should be unreachable (the authorize step refuses this), but the tenant branch
+        // below would call Auth::checkById(null) and fatal on the int type — TypeError is
+        // an Error, not an Exception, so the catch below would not contain it either.
+        MetricsHelper::record('login_failed', null, ['method' => 'oidc', 'reason' => 'no_account_selected']);
+        header('Location: /unauthorized?error=oidc.no_account_selected');
+        exit;
     } else {
         // Re-fetch provider from DB using the stored provider_id
         $providerRow = lookupProviderById($providerId);

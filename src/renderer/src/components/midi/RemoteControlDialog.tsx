@@ -37,7 +37,16 @@ import type { KeyboardRemote } from '@/hooks/useKeyboardRemote';
 import { REMOTE_DEBOUNCE_MAX_MS } from '@/hooks/useRemoteActionFilter';
 import { useGetMusicianSettings, useUpdateMusicianSetting } from '@/store/musicianSlice';
 
-const ACTION_KEYS: MidiAction[] = ['next_page', 'prev_page', 'next_song', 'prev_song', 'next_block', 'prev_block', 'toggle_tracking'];
+const ACTION_KEYS: MidiAction[] = [
+  'next_page',
+  'prev_page',
+  'next_song',
+  'prev_song',
+  'next_block',
+  'prev_block',
+  'toggle_black',
+  'toggle_tracking',
+];
 
 const StatusChip = ({ status }: { status: MidiStatus }) => {
   const { LL } = useI18nContext();
@@ -82,6 +91,8 @@ export const RemoteControlDialog = ({ open, onClose, onAction, keyboard, enabled
         return LL.MIDI.NEXT_BLOCK();
       case 'prev_block':
         return LL.MIDI.PREV_BLOCK();
+      case 'toggle_black':
+        return LL.MIDI.TOGGLE_BLACK();
       case 'toggle_tracking':
         return LL.MIDI.TOGGLE_TRACKING();
       default:

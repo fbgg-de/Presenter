@@ -40,11 +40,15 @@ export const getBackendBaseUrl = (): string => {
  * In offline mode all backend requests are skipped and return empty data.
  */
 const dynamicBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryError> = async (args, api, extraOptions) => {
-  // Offline mode: skip all backend API calls silently
+  // Offline mode: skip all backend API calls silently.
   try {
     if (getSetting('offlineMode')) {
-      // Return empty success so RTK Query caches empty data instead of showing errors
-      return { data: null };
+      // Resolve as success-with-no-data rather than an error, so offline never paints
+      // error states. `undefined` (not null) is deliberate: consumers overwhelmingly read
+      // the result via a destructuring default — `const { data: styles = [] } = ...` — and
+      // those only fire for undefined. Returning null left them holding null and crashed
+      // on the first `.length`.
+      return { data: undefined };
     }
   } catch {}
 
@@ -91,6 +95,7 @@ export const presenterApi = createApi({
     'PdfIcons',
     'Pdfs',
     'Session',
+    'SetLists',
     'ShowItemTypes',
     'Shows',
     'Song',

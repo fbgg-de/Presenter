@@ -620,6 +620,119 @@ class AdminMigrations extends RestController
                     }
                 },
             ],
+
+            19 => [
+                'description' => 'Add set_lists, set_list_entries and set_list_entry_tags tables',
+                'up' => function (mysqli $db) use ($tableExists) {
+                    if (!$tableExists('set_lists')) {
+                        $db->query("
+                            CREATE TABLE `set_lists` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `account` INT NOT NULL,
+                                `name` VARCHAR(200) NOT NULL,
+                                `sort_order` INT NOT NULL DEFAULT 0,
+                                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                UNIQUE KEY `uk_set_lists_account_name` (`account`, `name`),
+                                CONSTRAINT `fk_set_lists_account` FOREIGN KEY (`account`)
+                                    REFERENCES `account` (`license`) ON DELETE CASCADE
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+                        ");
+                        echo "Created table: set_lists\n";
+                    }
+                    if (!$tableExists('set_list_entries')) {
+                        // `account` is carried here so the row can point at the composite
+                        // songs(account, songnumber) key — a deleted song takes its set list
+                        // entries with it. Renumbering moves these rows (see SongRenumber).
+                        $db->query("
+                            CREATE TABLE `set_list_entries` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `set_list_id` INT NOT NULL,
+                                `account` INT NOT NULL,
+                                `songnumber` INT NOT NULL,
+                                `sort_order` INT NOT NULL DEFAULT 0,
+                                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                UNIQUE KEY `uk_sle_list_song` (`set_list_id`, `songnumber`),
+                                KEY `idx_sle_song` (`account`, `songnumber`),
+                                CONSTRAINT `fk_sle_set_list` FOREIGN KEY (`set_list_id`)
+                                    REFERENCES `set_lists` (`id`) ON DELETE CASCADE,
+                                CONSTRAINT `fk_sle_song` FOREIGN KEY (`account`, `songnumber`)
+                                    REFERENCES `songs` (`account`, `songnumber`) ON DELETE CASCADE
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+                        ");
+                        echo "Created table: set_list_entries\n";
+                    }
+                    if (!$tableExists('set_list_entry_tags')) {
+                        // One row per Tag Assignment: (entry, tag) is unique, and the playback
+                        // metadata (key / block order name) hangs off the assignment, not the entry.
+                        $db->query("
+                            CREATE TABLE `set_list_entry_tags` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `set_list_entry_id` INT NOT NULL,
+                                `tag_name` VARCHAR(100) NOT NULL,
+                                `custom_key` VARCHAR(20) DEFAULT NULL,
+                                `block_order_name` VARCHAR(200) DEFAULT NULL,
+                                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                                UNIQUE KEY `uk_slet_entry_tag` (`set_list_entry_id`, `tag_name`),
+                                CONSTRAINT `fk_slet_entry` FOREIGN KEY (`set_list_entry_id`)
+                                    REFERENCES `set_list_entries` (`id`) ON DELETE CASCADE
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+                        ");
+                        echo "Created table: set_list_entry_tags\n";
+                    }
+                },
+            ],
+
+            20 => [
+                'description' => 'Make pdf_area_mappings per PDF file instead of per musician',
+                'up' => function (mysqli $db) use ($tableExists, $columnExists) {
+                    if (!$tableExists('pdf_area_mappings') || !$columnExists('pdf_area_mappings', 'musician_name')) {
+                        return;
+                    }
+                    // The mapped regions describe the PDF itself, so every musician looking at
+                    // the same file needs the same ones. Collapse the per-musician rows, keeping
+                    // the most recently updated one for each (account, songnumber, filename).
+                    $db->query('
+                        DELETE pam FROM `pdf_area_mappings` pam
+                        JOIN `pdf_area_mappings` keep
+                          ON  keep.`account`    = pam.`account`
+                          AND keep.`songnumber` = pam.`songnumber`
+                          AND keep.`filename`   = pam.`filename`
+                          AND (keep.`updated_at` > pam.`updated_at`
+                               OR (keep.`updated_at` = pam.`updated_at` AND keep.`id` > pam.`id`))
+                    ');
+                    echo 'Collapsed duplicate area mappings: ' . $db->affected_rows . " row(s) removed\n";
+
+                    $indexExists = function (string $index) use ($db): bool {
+                        $r = $db->query("SHOW INDEX FROM `pdf_area_mappings` WHERE Key_name = '{$index}'");
+                        return $r->num_rows > 0;
+                    };
+
+                    // DDL implicitly commits, so each step is guarded: a re-run after a
+                    // partial failure picks up where it stopped instead of erroring out.
+                    // `uk_pam` is the leftmost index on `account`, so it is what satisfies
+                    // fk_pam_account — without a stand-in, dropping it fails with errno 1553.
+                    if (!$indexExists('idx_pam_account')) {
+                        $db->query('ALTER TABLE `pdf_area_mappings` ADD INDEX `idx_pam_account` (`account`)');
+                    }
+                    if ($indexExists('uk_pam')) {
+                        $db->query('ALTER TABLE `pdf_area_mappings` DROP INDEX `uk_pam`');
+                    }
+                    $db->query('ALTER TABLE `pdf_area_mappings` DROP COLUMN `musician_name`');
+                    if (!$indexExists('uk_pam')) {
+                        $db->query('ALTER TABLE `pdf_area_mappings` ADD UNIQUE KEY `uk_pam` (`account`, `songnumber`, `filename`)');
+                    }
+                    // The new uk_pam is leftmost on `account` and takes the FK over again.
+                    try {
+                        $db->query('ALTER TABLE `pdf_area_mappings` DROP INDEX `idx_pam_account`');
+                    } catch (\Throwable $e) {
+                        echo "Kept helper index idx_pam_account: " . $e->getMessage() . "\n";
+                    }
+                    echo "pdf_area_mappings is now keyed by (account, songnumber, filename)\n";
+                },
+            ],
         ];
     }
 }

@@ -29,6 +29,9 @@ $restFile = API . $restClass . '.php';
 
 Cors::configureSession();
 session_start();
+// Repairs cookies issued under the older Origin-dependent SameSite rules, which could not
+// survive the cross-site return from the IdP. Must run after session_start().
+Cors::refreshSessionCookie();
 
 // Silently refresh the OIDC access token when it is near expiry (within 5 minutes).
 // This keeps the server-side session alive without requiring the user to log in again.

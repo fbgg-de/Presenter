@@ -35,8 +35,8 @@ import { Song } from '@/song';
 import type { Show, ShowItem } from '@/api/shows.api';
 import {
   useGetPresentationSettings,
-  setActiveItemIndex as setPresentationItemIndex,
   setActiveBlockIndex as setPresentationBlockIndex,
+  setActiveItemAndBlock as setPresentationItemAndBlock,
 } from '@/store/presentationSlice';
 import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
 import { formatRelativeTime } from '@/utils/relativeTime';
@@ -60,6 +60,16 @@ import { presenterApi } from '@/api/base.api';
 /** How often auto-refresh re-validates PDFs and annotations (they have no revision feed). */
 const AUTO_REFRESH_INTERVAL_MS = 60_000;
 
+/**
+ * Identity of this page's outgoing sync broadcasts.
+ *
+ * In MIDI mode the page holds TWO relay sockets — `useWsSync` to receive and
+ * `useWsOperator` to send. The relay only skips the socket a message came from, so
+ * everything we broadcast comes straight back to our own receive socket. Tagging the
+ * payload lets us drop that echo instead of feeding it back into navigation.
+ */
+const WS_CLIENT_ID = `musician-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+
 export const MusicianPage = () => {
   const NAV_MARGIN = 36;
 
@@ -68,6 +78,7 @@ export const MusicianPage = () => {
   const {
     musicianName,
     musicianBand,
+    musicianAnnotationLayer: annotationLayer,
     musicianTheme,
     musicianPageView: defaultPageView,
     musicianBlockIndicator: blockIndicator,
@@ -136,6 +147,8 @@ export const MusicianPage = () => {
     return typeof acc === 'number' ? acc : null;
   }, [sessionData?.account]);
   const [showUpdateAvailable, setShowUpdateAvailable] = useState(false);
+  /** Shown when a remote command (e.g. toggle black) could not be relayed to the operator. */
+  const [remoteCommandFailed, setRemoteCommandFailed] = useState(false);
   const [operatorWsShowTitle, setOperatorWsShowTitle] = useState<string | undefined>(undefined);
   const [dismissedMismatchShowTitle, setDismissedMismatchShowTitle] = useState<string | null>(null);
   const initialLoadDone = useRef(false);
@@ -168,14 +181,22 @@ export const MusicianPage = () => {
   // Ref to current musician's active item for use inside WS callback (avoids stale closure).
   const activeItemIndexRef = useRef(persistedLastItemIndex);
   const showItemsRef = useRef<ShowItem[]>([]);
+  // Mirror of the operator position in Redux, so the WS callback can compare against the
+  // current value and skip dispatching when nothing actually changed.
+  const operatorItemIndexRef = useRef(0);
+  const operatorBlockIndexRef = useRef(0);
 
   const wsEnabled = (syncMode === 'operator' || syncMode === 'midi') && !!wsUrl && wsAccount !== null;
-  const { status: wsStatus } = useWsSync({
+  const { status: wsStatus, broadcast: wsSend, reconnect: wsReconnect } = useWsSync({
     url: wsUrl,
     account: wsAccount,
     enabled: wsEnabled,
     onStateUpdate: useCallback(
       (state) => {
+        // Our own broadcast, bounced back by the relay — applying it would re-enter the
+        // navigation path for a position we just set ourselves.
+        if (state.clientId && state.clientId === WS_CLIENT_ID) return;
+
         // Always persist the latest state so we can re-apply after songs load.
         pendingWsStateRef.current = {
           activeItemIndex: typeof state.activeItemIndex === 'number' ? state.activeItemIndex : undefined,
@@ -188,27 +209,38 @@ export const MusicianPage = () => {
         if (typeof state.showTitle === 'string') {
           setOperatorWsShowTitle(state.showTitle);
         }
-        if (typeof state.activeItemIndex === 'number') {
-          if (syncMode !== 'midi') {
-            // In operator mode: follow the operator's song selection too.
-            // Non-song items (media, bible) are NOT followed — the musician keeps
-            // their current sheet while the operator shows announcement slides etc.
-            const targetItem = showItemsRef.current[state.activeItemIndex];
-            if (!targetItem || targetItem.type === 'song') {
-              handleSelectItemRef.current?.(state.activeItemIndex);
-            }
+        // The item we will be showing once this update settles — `handleSelectItem` only
+        // takes effect on the next render, so the song check below must not read the
+        // item we are leaving.
+        let shownItemIndex = activeItemIndexRef.current;
+        if (typeof state.activeItemIndex === 'number' && syncMode !== 'midi') {
+          // In operator mode: follow the operator's song selection too.
+          // Non-song items (media, bible) are NOT followed — the musician keeps
+          // their current sheet while the operator shows announcement slides etc.
+          // An index this show doesn't have is ignored rather than selected: it means
+          // the operator is running a different show, and selecting it blanks the view.
+          const targetItem = showItemsRef.current[state.activeItemIndex];
+          if (targetItem && targetItem.type === 'song') {
+            handleSelectItemRef.current?.(state.activeItemIndex);
+            shownItemIndex = state.activeItemIndex;
           }
-          // Always keep the Redux operator index in sync so block indicators work.
-          dispatch(setPresentationItemIndex(state.activeItemIndex));
         }
-        if (typeof state.activeBlockIndex === 'number') {
-          // Only update block index when the operator is on the same song — prevents
-          // highlighting bleeding from a different song the operator is viewing.
-          const currentItem = showItemsRef.current[activeItemIndexRef.current] as (ShowItem & { songNumber?: number }) | undefined;
-          const matchesSong = typeof state.songNumber !== 'number' || state.songNumber === currentItem?.songNumber;
-          if (matchesSong) {
-            dispatch(setPresentationBlockIndex(state.activeBlockIndex));
-          }
+
+        // The operator's block index only means anything while they are on the same song
+        // as us. Anything else — a media/bible item (no songNumber), or a different song
+        // because show or order are out of sync — must leave our indicator alone.
+        const shownItem = showItemsRef.current[shownItemIndex] as (ShowItem & { songNumber?: number }) | undefined;
+        const matchesSong = typeof state.songNumber === 'number' && shownItem?.type === 'song' && state.songNumber === shownItem.songNumber;
+
+        // Item and block are applied in ONE dispatch: setActiveItemIndex resets the block
+        // index to 0, so dispatching them separately made every operator broadcast wipe our
+        // block position whenever the song didn't match — the next "next block" then
+        // restarted at 1 and re-broadcast it, ping-ponging the two sides.
+        const nextItemIndex = typeof state.activeItemIndex === 'number' ? state.activeItemIndex : operatorItemIndexRef.current;
+        const nextBlockIndex =
+          matchesSong && typeof state.activeBlockIndex === 'number' ? state.activeBlockIndex : operatorBlockIndexRef.current;
+        if (nextItemIndex !== operatorItemIndexRef.current || nextBlockIndex !== operatorBlockIndexRef.current) {
+          dispatch(setPresentationItemAndBlock({ itemIndex: nextItemIndex, blockIndex: nextBlockIndex }));
         }
       },
       // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -219,7 +251,11 @@ export const MusicianPage = () => {
   // Musician-side WS operator for broadcasting MIDI actions in midi mode.
   // Only enabled when syncMode === 'midi' and WS is configured.
   const midiWsBroadcastEnabled = syncMode === 'midi' && !!wsUrl && wsAccount !== null;
-  const { broadcast: midiWsBroadcast } = useWsOperator(midiWsBroadcastEnabled ? wsUrl : '', midiWsBroadcastEnabled ? wsAccount : null);
+  const {
+    broadcast: midiWsBroadcast,
+    droppedByOperator: midiWsDropped,
+    reconnect: midiWsReconnect,
+  } = useWsOperator(midiWsBroadcastEnabled ? wsUrl : '', midiWsBroadcastEnabled ? wsAccount : null);
   const handleRegisterRefetch = useCallback((fn: () => void) => {
     annotationRefetchRef.current = fn;
   }, []);
@@ -263,6 +299,8 @@ export const MusicianPage = () => {
   // Keep refs in sync for use inside WS callbacks (avoid stale closures)
   activeItemIndexRef.current = activeItemIndex;
   showItemsRef.current = showItems;
+  operatorItemIndexRef.current = operatorItemIndex;
+  operatorBlockIndexRef.current = operatorActiveBlockIndex;
 
   // Clamp persisted item index to valid range when show items load
   useEffect(() => {
@@ -364,6 +402,19 @@ export const MusicianPage = () => {
     return result;
   }, [lyricsBlocks, activeSong]);
 
+  // Lyrics per block name, so the area mapping editor can preview a block's text on hover
+  // instead of the user having to look the song up elsewhere to tell verses apart.
+  const activeSongBlockLines = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const block of lyricsBlocks) {
+      if (!map[block.name]) map[block.name] = block.lines ?? [];
+    }
+    for (const [name, lines] of Object.entries(activeSong?.blocks ?? {})) {
+      if (!map[name]) map[name] = lines;
+    }
+    return map;
+  }, [lyricsBlocks, activeSong]);
+
   // ── PDF viewer hook ──────────────────────────────────────────────
   const pdfViewer = usePdfViewer({
     activeItem,
@@ -426,14 +477,17 @@ export const MusicianPage = () => {
     if (typeof pending.activeItemIndex === 'number') {
       // Only follow to song items — see the WS onStateUpdate handler.
       const targetItem = showItemsRef.current[pending.activeItemIndex];
-      if (!targetItem || targetItem.type === 'song') {
+      if (targetItem && targetItem.type === 'song') {
         handleSelectItemRef.current?.(pending.activeItemIndex);
       }
-      dispatch(setPresentationItemIndex(pending.activeItemIndex));
     }
-    if (typeof pending.activeBlockIndex === 'number') {
-      dispatch(setPresentationBlockIndex(pending.activeBlockIndex));
-    }
+    // One dispatch — setActiveItemIndex would zero the block index we are restoring.
+    dispatch(
+      setPresentationItemAndBlock({
+        itemIndex: pending.activeItemIndex ?? operatorItemIndexRef.current,
+        blockIndex: pending.activeBlockIndex ?? operatorBlockIndexRef.current,
+      }),
+    );
   }, [songCount, dispatch]);
 
   const handleShowSelected = useCallback(
@@ -469,6 +523,8 @@ export const MusicianPage = () => {
   // Refs updated each render so callbacks always see the latest values without re-registering
   const midiWsBroadcastRef = useRef(midiWsBroadcast);
   midiWsBroadcastRef.current = midiWsBroadcast;
+  const wsSendRef = useRef(wsSend);
+  wsSendRef.current = wsSend;
   const lyricsBlocksRef = useRef(lyricsBlocks);
   lyricsBlocksRef.current = lyricsBlocks;
   const activeSongNumberRef = useRef(activeSongNumber);
@@ -476,9 +532,11 @@ export const MusicianPage = () => {
 
   /** Broadcast musician sync via both WS relay (for browser peers) and IPC (for Electron operator window). */
   const broadcastMidiSync = useCallback((data: Record<string, unknown>) => {
-    midiWsBroadcastRef.current('musician_sync', data);
+    // clientId lets our own receive socket recognise and drop the relay's echo.
+    const tagged = { ...data, clientId: WS_CLIENT_ID };
+    midiWsBroadcastRef.current('musician_sync', tagged);
     // Also send directly to operator via Electron IPC when running in the desktop app
-    window.api?.musicianSyncToOperator?.({ action: 'musician_sync', data });
+    window.api?.musicianSyncToOperator?.({ action: 'musician_sync', data: tagged });
   }, []);
 
   /** User-initiated navigation (sidebar click, prev/next buttons) — disables sync first unless in midi mode */
@@ -486,7 +544,8 @@ export const MusicianPage = () => {
     (index: number) => {
       if (syncMode === 'midi') {
         handleSelectItem(index);
-        dispatch(setPresentationItemIndex(index));
+        // Selecting an item always restarts at its first block.
+        dispatch(setPresentationItemAndBlock({ itemIndex: index, blockIndex: 0 }));
         const newItem = showItemsRef.current[index] as (ShowItem & { songNumber?: number }) | undefined;
         broadcastMidiSync({
           activeItemIndex: index,
@@ -510,7 +569,8 @@ export const MusicianPage = () => {
     (index: number) => {
       if (syncMode === 'midi') {
         handleSelectItem(index);
-        dispatch(setPresentationItemIndex(index));
+        // Selecting an item always restarts at its first block.
+        dispatch(setPresentationItemAndBlock({ itemIndex: index, blockIndex: 0 }));
         const newItem = showItemsRef.current[index] as (ShowItem & { songNumber?: number }) | undefined;
         broadcastMidiSync({
           activeItemIndex: index,
@@ -543,39 +603,55 @@ export const MusicianPage = () => {
           if (idx > 0) handleManualNav(idx - 1);
           break;
         }
-        case 'next_block':
-          if (syncMode === 'midi') {
-            const next = operatorActiveBlockIndex + 1;
-            if (next < lyricsBlocksRef.current.length) {
-              dispatch(setPresentationBlockIndex(next));
-              broadcastMidiSync({
-                activeItemIndex: activeItemIndexRef.current,
-                activeBlockIndex: next,
-                activeLineIndex: 0,
-                songNumber: activeSongNumberRef.current,
-              });
-            }
-          }
+        // Both block actions clamp the CURRENT index into our own order before stepping.
+        // The Redux value can come from the operator, whose order may be shorter or longer
+        // than ours; stepping from an out-of-range value would jump or run past the end.
+        case 'next_block': {
+          if (syncMode !== 'midi') break;
+          const blockCount = lyricsBlocksRef.current.length;
+          if (blockCount === 0) break;
+          const next = Math.min(Math.max(operatorActiveBlockIndex, -1), blockCount - 1) + 1;
+          if (next >= blockCount || next === operatorActiveBlockIndex) break;
+          dispatch(setPresentationBlockIndex(next));
+          broadcastMidiSync({
+            activeItemIndex: activeItemIndexRef.current,
+            activeBlockIndex: next,
+            activeLineIndex: 0,
+            songNumber: activeSongNumberRef.current,
+          });
           break;
-        case 'prev_block':
-          if (syncMode === 'midi') {
-            const prev = operatorActiveBlockIndex - 1;
-            if (prev >= 0) {
-              dispatch(setPresentationBlockIndex(prev));
-              broadcastMidiSync({
-                activeItemIndex: activeItemIndexRef.current,
-                activeBlockIndex: prev,
-                activeLineIndex: 0,
-                songNumber: activeSongNumberRef.current,
-              });
-            }
-          }
+        }
+        case 'prev_block': {
+          if (syncMode !== 'midi') break;
+          const blockCount = lyricsBlocksRef.current.length;
+          if (blockCount === 0) break;
+          const prev = Math.min(operatorActiveBlockIndex, blockCount) - 1;
+          if (prev < 0 || prev === operatorActiveBlockIndex) break;
+          dispatch(setPresentationBlockIndex(prev));
+          broadcastMidiSync({
+            activeItemIndex: activeItemIndexRef.current,
+            activeBlockIndex: prev,
+            activeLineIndex: 0,
+            songNumber: activeSongNumberRef.current,
+          });
           break;
+        }
         case 'next_page':
           if (pdfViewer.currentPage < pdfViewer.numPages) pdfViewer.setCurrentPage(pdfViewer.currentPage + 1);
           break;
         case 'prev_page':
           if (pdfViewer.currentPage > 1) pdfViewer.setCurrentPage(pdfViewer.currentPage - 1);
+          break;
+        // Black is an output state the musician view has no copy of, so it is relayed to
+        // the operator as the same `remote_command` the mobile control page sends — the
+        // operator's per-command permissions therefore apply to it too. Sent over the sync
+        // socket we already hold, so it works in Operator sync as well as MIDI sync.
+        case 'toggle_black':
+          // The musician view shows no black state, so a silently dropped press would be
+          // invisible — warn only when it could not be delivered.
+          if (!wsSendRef.current('remote_command', { command: 'toggle_black' })) {
+            setRemoteCommandFailed(true);
+          }
           break;
       }
     },
@@ -718,24 +794,35 @@ export const MusicianPage = () => {
   useEffect(() => {
     if (syncMode === 'operator' && operatorItemIndex !== activeItemIndex) {
       // Non-song items are not followed — the musician keeps their current sheet
-      // while the operator shows announcement slides / media items.
+      // while the operator shows announcement slides / media items. An index this show
+      // doesn't have is ignored too: it means the operator is on a different show, and
+      // selecting it would leave the view on a non-existent item until a reload.
       const targetItem = showItems[operatorItemIndex];
-      if (targetItem && targetItem.type !== 'song') return;
+      if (!targetItem || targetItem.type !== 'song') return;
       handleSelectItem(operatorItemIndex);
     }
   }, [syncMode, operatorItemIndex]); // intentionally exclude handleSelectItem / activeItemIndex to avoid loops
 
   // isSynced: block indicators visible only when sync is on, blockIndicator is enabled,
-  // and the operator is on the same song as the musician.
+  // and the block position we are showing actually belongs to the song on screen.
   const operatorSongMatchesMusician = useMemo(() => {
     if (syncMode === 'midi') {
-      // Electron shared Redux: compare item indices — both musician and operator index same show
-      return operatorItemIndex === activeItemIndex;
+      // In MIDI mode the musician drives navigation, so the block index in Redux IS their
+      // own position for the item they are on — there is no operator to match against.
+      // (Item switches reset it to 0 in the same dispatch, and the WS handler only adopts
+      // a foreign block index when the song matches, so it can't belong to another song.)
+      //
+      // This used to compare operatorItemIndex with activeItemIndex. Those are only kept
+      // in step by navigating or by an incoming WS message: after a reload the musician's
+      // item is restored from localStorage while the Redux presentation index starts at 0,
+      // so on any item but the first the indicators stayed hidden until the user toggled
+      // to Operator sync (whose follow effect aligns the two) and back.
+      return true;
     }
     // WS modes: compare song numbers received via WS
     if (operatorWsSongNumber == null) return true; // no info yet, assume match
     return operatorWsSongNumber === activeSongNumber;
-  }, [syncMode, operatorItemIndex, activeItemIndex, operatorWsSongNumber, activeSongNumber]);
+  }, [syncMode, operatorWsSongNumber, activeSongNumber]);
 
   const isSynced = (syncMode === 'operator' || syncMode === 'midi') && blockIndicator && operatorSongMatchesMusician;
 
@@ -812,6 +899,42 @@ export const MusicianPage = () => {
           {LL.MUSICIAN.SHOW_MISMATCH_WARNING({ operatorShow: operatorWsShowTitle ?? '', currentShow: currentShow?.title ?? '' })}
         </Alert>
       </Snackbar>
+      {/* Operator cleared the connected clients — we deliberately do not auto-reconnect,
+          so the musician decides when to come back. */}
+      <Snackbar
+        open={wsStatus === 'dropped_by_operator' || midiWsDropped}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          severity="info"
+          action={
+            <Button
+              color="inherit"
+              size="small"
+              onClick={() => {
+                // In MIDI mode this page holds two sockets and both were dropped —
+                // reconnect them together, or broadcasting would stay dead.
+                wsReconnect();
+                midiWsReconnect();
+              }}
+            >
+              {LL.CONNECTIVITY.RECONNECT()}
+            </Button>
+          }
+        >
+          {LL.CONNECTIVITY.DROPPED_BY_OPERATOR()}
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={remoteCommandFailed}
+        autoHideDuration={4000}
+        onClose={() => setRemoteCommandFailed(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert severity="warning" onClose={() => setRemoteCommandFailed(false)}>
+          {LL.REMOTE.COMMAND_NOT_SENT()}
+        </Alert>
+      </Snackbar>
       {/* PDF Upload dialog — always available for song items */}
       {activeSongNumber != null && (
         <PdfUploadModal
@@ -836,6 +959,7 @@ export const MusicianPage = () => {
           onClose={() => setAreaMappingOpen(false)}
           pdfUrl={pdfViewer.pdfUrl}
           blockNames={activeSongBlocks}
+          blockLines={activeSongBlockLines}
           initialMappings={pdfViewer.areaMappings}
           onSave={pdfViewer.handleSaveAreaMappings}
         />
@@ -848,6 +972,7 @@ export const MusicianPage = () => {
         onClose={() => setSettingsOpen(false)}
         musicianName={musicianName}
         musicianBand={musicianBand}
+        annotationLayer={annotationLayer}
         musicianTheme={musicianTheme}
         defaultPageView={defaultPageView}
         blockIndicator={blockIndicator}
@@ -888,6 +1013,12 @@ export const MusicianPage = () => {
             setPdfUploadOpen(true);
           }}
           onClose={handleToggleSidebar}
+          onActiveIndexChange={(index) => {
+            // Passive follow after a group/drag reorder — the same item just sits elsewhere
+            // in the order now, so don't touch sync mode the way a user selection would.
+            setActiveItemIndex(index);
+            updateMusicianSetting('musicianLastItemIndex', index);
+          }}
         />
 
         {/* Content area */}
@@ -995,6 +1126,7 @@ export const MusicianPage = () => {
               onDocumentLoadSuccess={pdfViewer.onDocumentLoadSuccess}
               onDocumentLoadError={() => pdfViewer.setPdfLoadError(true)}
               musicianName={musicianName}
+              annotationLayer={annotationLayer}
               activeSongNumber={activeSongNumber}
               activeSongName={activeSong?.title}
               showFooter={showFooter}

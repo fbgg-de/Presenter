@@ -2325,6 +2325,24 @@ type RootTranslation = {
 		 * W​e​b​S​o​c​k​e​t​ ​r​e​l​a​y​ ​n​o​t​ ​c​o​n​n​e​c​t​e​d
 		 */
 		WS_NOT_CONNECTED: string
+		/**
+		 * D​i​s​c​o​n​n​e​c​t​ ​a​l​l​ ​c​l​i​e​n​t​s
+		 */
+		WS_DISCONNECT_ALL: string
+		/**
+		 * D​i​s​c​o​n​n​e​c​t​e​d​ ​{​c​o​u​n​t​}​ ​c​l​i​e​n​t​{​{​s​}​}​.
+		 * @param {number} count
+		 */
+		WS_DISCONNECT_DONE: RequiredParams<'count'>
+		/**
+		 * T​h​e​ ​r​e​l​a​y​ ​d​i​d​ ​n​o​t​ ​a​n​s​w​e​r​.​ ​I​t​ ​i​s​ ​p​r​o​b​a​b​l​y​ ​r​u​n​n​i​n​g​ ​a​ ​b​u​i​l​d​ ​f​r​o​m​ ​b​e​f​o​r​e​ ​t​h​i​s​ ​f​e​a​t​u​r​e​ ​—​ ​r​e​d​e​p​l​o​y​ ​t​h​e​ ​W​e​b​S​o​c​k​e​t​ ​r​e​l​a​y​.
+		 */
+		WS_DISCONNECT_NO_REPLY: string
+		/**
+		 * D​i​s​c​o​n​n​e​c​t​ ​{​c​o​u​n​t​}​ ​c​o​n​n​e​c​t​e​d​ ​c​l​i​e​n​t​{​{​s​}​}​?​ ​T​h​e​y​ ​a​r​e​ ​n​o​t​i​f​i​e​d​ ​a​n​d​ ​c​a​n​ ​r​e​c​o​n​n​e​c​t​ ​t​h​e​m​s​e​l​v​e​s​ ​—​ ​n​o​t​h​i​n​g​ ​r​e​c​o​n​n​e​c​t​s​ ​a​u​t​o​m​a​t​i​c​a​l​l​y​.
+		 * @param {number} count
+		 */
+		WS_DISCONNECT_ALL_CONFIRM: RequiredParams<'count'>
 	}
 	UNIFIED_SEARCH: {
 		/**
@@ -4005,6 +4023,14 @@ type RootTranslation = {
 		 */
 		BAND_PLACEHOLDER: string
 		/**
+		 * S​e​l​e​c​t​e​d​ ​L​a​y​e​r
+		 */
+		LAYER_SELECT: string
+		/**
+		 * A​n​n​o​t​a​t​i​o​n​ ​l​a​y​e​r​ ​u​s​e​d​ ​f​o​r​ ​e​d​i​t​i​n​g​ ​b​y​ ​d​e​f​a​u​l​t
+		 */
+		LAYER_SELECT_HINT: string
+		/**
 		 * M​u​s​i​c​i​a​n​ ​N​a​m​e
 		 */
 		NAME_SELECT: string
@@ -4759,6 +4785,10 @@ type RootTranslation = {
 		 */
 		PREV_BLOCK: string
 		/**
+		 * T​o​g​g​l​e​ ​B​l​a​c​k​ ​S​c​r​e​e​n
+		 */
+		TOGGLE_BLACK: string
+		/**
 		 * T​o​g​g​l​e​ ​T​r​a​c​k​i​n​g​ ​M​a​s​t​e​r
 		 */
 		TOGGLE_TRACKING: string
@@ -4770,6 +4800,193 @@ type RootTranslation = {
 		 * F​o​l​l​o​w​i​n​g​ ​M​I​D​I​ ​m​u​s​i​c​i​a​n​ ​—​ ​c​l​i​c​k​ ​t​o​ ​s​t​o​p
 		 */
 		FOLLOW_MIDI_ACTIVE: string
+	}
+	SET_LISTS: {
+		/**
+		 * S​e​t​ ​L​i​s​t​s
+		 */
+		TITLE: string
+		/**
+		 * N​e​w​ ​s​e​t​ ​l​i​s​t
+		 */
+		CREATE: string
+		/**
+		 * R​e​n​a​m​e​ ​s​e​t​ ​l​i​s​t
+		 */
+		RENAME: string
+		/**
+		 * M​o​v​e​ ​s​e​t​ ​l​i​s​t​ ​l​e​f​t
+		 */
+		MOVE_LEFT: string
+		/**
+		 * M​o​v​e​ ​s​e​t​ ​l​i​s​t​ ​r​i​g​h​t
+		 */
+		MOVE_RIGHT: string
+		/**
+		 * C​o​p​y​ ​s​e​t​ ​l​i​s​t​ ​t​o​ ​c​l​i​p​b​o​a​r​d
+		 */
+		COPY: string
+		/**
+		 * C​o​p​i​e​d​ ​t​o​ ​c​l​i​p​b​o​a​r​d
+		 */
+		COPIED: string
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​c​o​p​y​ ​t​o​ ​t​h​e​ ​c​l​i​p​b​o​a​r​d​.
+		 */
+		COPY_FAILED: string
+		/**
+		 * D​e​l​e​t​e​ ​s​e​t​ ​l​i​s​t
+		 */
+		DELETE: string
+		/**
+		 * D​e​l​e​t​e​ ​t​h​e​ ​s​e​t​ ​l​i​s​t​ ​"​{​n​a​m​e​}​"​?​ ​T​h​e​ ​s​o​n​g​s​ ​t​h​e​m​s​e​l​v​e​s​ ​s​t​a​y​ ​i​n​ ​y​o​u​r​ ​l​i​b​r​a​r​y​.
+		 * @param {unknown} name
+		 */
+		DELETE_CONFIRM: RequiredParams<'name'>
+		/**
+		 * S​e​a​r​c​h​ ​m​o​d​e
+		 */
+		SEARCH_MODE: string
+		/**
+		 * F​i​l​t​e​r
+		 */
+		MODE_FILTER: string
+		/**
+		 * A​d​d
+		 */
+		MODE_IMPORT: string
+		/**
+		 * F​i​l​t​e​r​ ​s​o​n​g​s​ ​i​n​ ​t​h​i​s​ ​s​e​t​ ​l​i​s​t
+		 */
+		FILTER_PLACEHOLDER: string
+		/**
+		 * S​e​a​r​c​h​ ​s​o​n​g​ ​l​i​b​r​a​r​y​ ​t​o​ ​a​d​d​ ​s​o​n​g​s
+		 */
+		IMPORT_PLACEHOLDER: string
+		/**
+		 * T​y​p​e​ ​a​t​ ​l​e​a​s​t​ ​2​ ​c​h​a​r​a​c​t​e​r​s​ ​t​o​ ​s​e​a​r​c​h​ ​t​h​e​ ​s​o​n​g​ ​l​i​b​r​a​r​y​.
+		 */
+		IMPORT_HINT: string
+		/**
+		 * F​r​o​m​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​a​g​e​n​d​a
+		 */
+		FROM_AGENDA: string
+		/**
+		 * S​o​n​g​ ​l​i​b​r​a​r​y
+		 */
+		LIBRARY_RESULTS: string
+		/**
+		 * E​v​e​r​y​ ​s​o​n​g​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​a​g​e​n​d​a​ ​i​s​ ​a​l​r​e​a​d​y​ ​i​n​ ​t​h​i​s​ ​s​e​t​ ​l​i​s​t​.
+		 */
+		FROM_AGENDA_EMPTY: string
+		/**
+		 * U​n​t​a​g​g​e​d
+		 */
+		UNTAGGED: string
+		/**
+		 * A​l​r​e​a​d​y​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​a​g​e​n​d​a
+		 */
+		IN_AGENDA: string
+		/**
+		 * A​d​d​ ​t​o​ ​a​g​e​n​d​a
+		 */
+		ADD_TO_AGENDA: string
+		/**
+		 * A​d​d​ ​t​o​ ​s​e​t​ ​l​i​s​t
+		 */
+		ADD_TO_LIST: string
+		/**
+		 * A​l​r​e​a​d​y​ ​i​n​ ​t​h​i​s​ ​s​e​t​ ​l​i​s​t
+		 */
+		ALREADY_IN_LIST: string
+		/**
+		 * E​d​i​t​ ​t​a​g​s
+		 */
+		EDIT_TAGS: string
+		/**
+		 * R​e​m​o​v​e
+		 */
+		REMOVE: string
+		/**
+		 * T​h​i​s​ ​s​o​n​g​ ​i​s​ ​a​s​s​i​g​n​e​d​ ​t​o​ ​s​e​v​e​r​a​l​ ​t​a​g​s​.​ ​R​e​m​o​v​e​ ​o​n​l​y​ ​t​h​e​ ​"​{​t​a​g​}​"​ ​a​s​s​i​g​n​m​e​n​t​,​ ​o​r​ ​t​h​e​ ​s​o​n​g​ ​f​r​o​m​ ​t​h​e​ ​w​h​o​l​e​ ​s​e​t​ ​l​i​s​t​?
+		 * @param {unknown} tag
+		 */
+		REMOVE_MULTI_HINT: RequiredParams<'tag'>
+		/**
+		 * R​e​m​o​v​e​ ​t​h​i​s​ ​s​o​n​g​ ​f​r​o​m​ ​t​h​e​ ​s​e​t​ ​l​i​s​t​?
+		 */
+		REMOVE_SINGLE_HINT: string
+		/**
+		 * R​e​m​o​v​e​ ​t​a​g​ ​"​{​t​a​g​}​"​ ​o​n​l​y
+		 * @param {unknown} tag
+		 */
+		REMOVE_TAG_ONLY: RequiredParams<'tag'>
+		/**
+		 * R​e​m​o​v​e​ ​s​o​n​g​ ​e​n​t​i​r​e​l​y
+		 */
+		REMOVE_SONG_ENTIRELY: string
+		/**
+		 * N​o​ ​s​e​t​ ​l​i​s​t​s​ ​y​e​t​.​ ​C​r​e​a​t​e​ ​o​n​e​ ​t​o​ ​s​t​a​r​t​ ​c​o​l​l​e​c​t​i​n​g​ ​s​o​n​g​s​ ​f​o​r​ ​a​ ​b​a​n​d​,​ ​s​e​a​s​o​n​ ​o​r​ ​e​v​e​n​t​ ​t​y​p​e​.
+		 */
+		EMPTY_NO_LISTS: string
+		/**
+		 * T​h​i​s​ ​s​e​t​ ​l​i​s​t​ ​i​s​ ​e​m​p​t​y​.​ ​S​w​i​t​c​h​ ​t​o​ ​I​m​p​o​r​t​ ​m​o​d​e​ ​t​o​ ​a​d​d​ ​s​o​n​g​s​ ​f​r​o​m​ ​y​o​u​r​ ​l​i​b​r​a​r​y​.
+		 */
+		EMPTY_SET_LIST: string
+		/**
+		 * N​o​ ​s​o​n​g​s​ ​i​n​ ​t​h​i​s​ ​s​e​t​ ​l​i​s​t​ ​m​a​t​c​h​ ​"​{​q​u​e​r​y​}​"​.
+		 * @param {unknown} query
+		 */
+		EMPTY_FILTER: RequiredParams<'query'>
+		/**
+		 * N​o​ ​s​o​n​g​s​ ​i​n​ ​t​h​e​ ​l​i​b​r​a​r​y​ ​m​a​t​c​h​ ​"​{​q​u​e​r​y​}​"​.
+		 * @param {unknown} query
+		 */
+		EMPTY_IMPORT: RequiredParams<'query'>
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​l​o​a​d​ ​s​e​t​ ​l​i​s​t​s​.
+		 */
+		ERROR_LOAD: string
+		/**
+		 * T​h​e​ ​a​c​t​i​o​n​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​c​o​m​p​l​e​t​e​d​.
+		 */
+		ERROR_GENERIC: string
+		/**
+		 * T​a​g​ ​a​s​s​i​g​n​m​e​n​t​s
+		 */
+		TAGS_TITLE: string
+		/**
+		 * N​o​ ​t​a​g​s​ ​y​e​t​.​ ​W​i​t​h​o​u​t​ ​a​ ​t​a​g​ ​t​h​i​s​ ​s​o​n​g​ ​a​p​p​e​a​r​s​ ​u​n​d​e​r​ ​"​U​n​t​a​g​g​e​d​"​.
+		 */
+		TAGS_EMPTY: string
+		/**
+		 * T​a​g
+		 */
+		TAG_NAME: string
+		/**
+		 * K​e​y
+		 */
+		TAG_KEY: string
+		/**
+		 * B​l​o​c​k​ ​o​r​d​e​r
+		 */
+		TAG_ORDER: string
+		/**
+		 * A​d​d​ ​t​a​g
+		 */
+		TAG_ADD: string
+		/**
+		 * R​e​m​o​v​e​ ​t​a​g
+		 */
+		TAG_REMOVE: string
+		/**
+		 * E​a​c​h​ ​t​a​g​ ​c​a​n​ ​o​n​l​y​ ​b​e​ ​a​s​s​i​g​n​e​d​ ​o​n​c​e​ ​p​e​r​ ​s​o​n​g​.
+		 */
+		TAG_DUPLICATE: string
+		/**
+		 * T​h​i​s​ ​s​o​n​g​ ​h​a​s​ ​n​o​ ​n​a​m​e​d​ ​b​l​o​c​k​ ​o​r​d​e​r​s​.
+		 */
+		NO_ORDERS: string
 	}
 	REMOTE: {
 		/**
@@ -4806,6 +5023,10 @@ type RootTranslation = {
 		 * @param {unknown} ms
 		 */
 		DEBOUNCE_VALUE: RequiredParams<'ms'>
+		/**
+		 * N​o​t​ ​s​e​n​t​ ​—​ ​n​o​ ​c​o​n​n​e​c​t​i​o​n​ ​t​o​ ​t​h​e​ ​p​r​e​s​e​n​t​e​r​.​ ​T​u​r​n​ ​o​n​ ​O​p​e​r​a​t​o​r​ ​o​r​ ​M​I​D​I​ ​s​y​n​c​.
+		 */
+		COMMAND_NOT_SENT: string
 		/**
 		 * C​h​o​o​s​e​ ​w​h​i​c​h​ ​a​c​t​i​o​n​s​ ​c​o​n​n​e​c​t​e​d​ ​r​e​m​o​t​e​-​c​o​n​t​r​o​l​ ​d​e​v​i​c​e​s​ ​(​m​o​b​i​l​e​ ​c​o​n​t​r​o​l​ ​p​a​g​e​)​ ​a​r​e​ ​a​l​l​o​w​e​d​ ​t​o​ ​t​r​i​g​g​e​r​.
 		 */
@@ -4880,6 +5101,14 @@ type RootTranslation = {
 		 * D​i​s​m​i​s​s
 		 */
 		SNACK_DISMISS: string
+		/**
+		 * T​h​e​ ​p​r​e​s​e​n​t​e​r​ ​d​i​s​c​o​n​n​e​c​t​e​d​ ​t​h​i​s​ ​c​l​i​e​n​t​.
+		 */
+		DROPPED_BY_OPERATOR: string
+		/**
+		 * R​e​c​o​n​n​e​c​t
+		 */
+		RECONNECT: string
 	}
 	UPDATER: {
 		/**
@@ -7222,6 +7451,22 @@ export type TranslationFunctions = {
 		 * WebSocket relay not connected
 		 */
 		WS_NOT_CONNECTED: () => LocalizedString
+		/**
+		 * Disconnect all clients
+		 */
+		WS_DISCONNECT_ALL: () => LocalizedString
+		/**
+		 * Disconnected {count} client{{s}}.
+		 */
+		WS_DISCONNECT_DONE: (arg: { count: number }) => LocalizedString
+		/**
+		 * The relay did not answer. It is probably running a build from before this feature — redeploy the WebSocket relay.
+		 */
+		WS_DISCONNECT_NO_REPLY: () => LocalizedString
+		/**
+		 * Disconnect {count} connected client{{s}}? They are notified and can reconnect themselves — nothing reconnects automatically.
+		 */
+		WS_DISCONNECT_ALL_CONFIRM: (arg: { count: number }) => LocalizedString
 	}
 	UNIFIED_SEARCH: {
 		/**
@@ -8885,6 +9130,14 @@ export type TranslationFunctions = {
 		 */
 		BAND_PLACEHOLDER: () => LocalizedString
 		/**
+		 * Selected Layer
+		 */
+		LAYER_SELECT: () => LocalizedString
+		/**
+		 * Annotation layer used for editing by default
+		 */
+		LAYER_SELECT_HINT: () => LocalizedString
+		/**
 		 * Musician Name
 		 */
 		NAME_SELECT: () => LocalizedString
@@ -9613,6 +9866,10 @@ export type TranslationFunctions = {
 		 */
 		PREV_BLOCK: () => LocalizedString
 		/**
+		 * Toggle Black Screen
+		 */
+		TOGGLE_BLACK: () => LocalizedString
+		/**
 		 * Toggle Tracking Master
 		 */
 		TOGGLE_TRACKING: () => LocalizedString
@@ -9624,6 +9881,188 @@ export type TranslationFunctions = {
 		 * Following MIDI musician — click to stop
 		 */
 		FOLLOW_MIDI_ACTIVE: () => LocalizedString
+	}
+	SET_LISTS: {
+		/**
+		 * Set Lists
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * New set list
+		 */
+		CREATE: () => LocalizedString
+		/**
+		 * Rename set list
+		 */
+		RENAME: () => LocalizedString
+		/**
+		 * Move set list left
+		 */
+		MOVE_LEFT: () => LocalizedString
+		/**
+		 * Move set list right
+		 */
+		MOVE_RIGHT: () => LocalizedString
+		/**
+		 * Copy set list to clipboard
+		 */
+		COPY: () => LocalizedString
+		/**
+		 * Copied to clipboard
+		 */
+		COPIED: () => LocalizedString
+		/**
+		 * Could not copy to the clipboard.
+		 */
+		COPY_FAILED: () => LocalizedString
+		/**
+		 * Delete set list
+		 */
+		DELETE: () => LocalizedString
+		/**
+		 * Delete the set list "{name}"? The songs themselves stay in your library.
+		 */
+		DELETE_CONFIRM: (arg: { name: unknown }) => LocalizedString
+		/**
+		 * Search mode
+		 */
+		SEARCH_MODE: () => LocalizedString
+		/**
+		 * Filter
+		 */
+		MODE_FILTER: () => LocalizedString
+		/**
+		 * Add
+		 */
+		MODE_IMPORT: () => LocalizedString
+		/**
+		 * Filter songs in this set list
+		 */
+		FILTER_PLACEHOLDER: () => LocalizedString
+		/**
+		 * Search song library to add songs
+		 */
+		IMPORT_PLACEHOLDER: () => LocalizedString
+		/**
+		 * Type at least 2 characters to search the song library.
+		 */
+		IMPORT_HINT: () => LocalizedString
+		/**
+		 * From the current agenda
+		 */
+		FROM_AGENDA: () => LocalizedString
+		/**
+		 * Song library
+		 */
+		LIBRARY_RESULTS: () => LocalizedString
+		/**
+		 * Every song in the current agenda is already in this set list.
+		 */
+		FROM_AGENDA_EMPTY: () => LocalizedString
+		/**
+		 * Untagged
+		 */
+		UNTAGGED: () => LocalizedString
+		/**
+		 * Already in the current agenda
+		 */
+		IN_AGENDA: () => LocalizedString
+		/**
+		 * Add to agenda
+		 */
+		ADD_TO_AGENDA: () => LocalizedString
+		/**
+		 * Add to set list
+		 */
+		ADD_TO_LIST: () => LocalizedString
+		/**
+		 * Already in this set list
+		 */
+		ALREADY_IN_LIST: () => LocalizedString
+		/**
+		 * Edit tags
+		 */
+		EDIT_TAGS: () => LocalizedString
+		/**
+		 * Remove
+		 */
+		REMOVE: () => LocalizedString
+		/**
+		 * This song is assigned to several tags. Remove only the "{tag}" assignment, or the song from the whole set list?
+		 */
+		REMOVE_MULTI_HINT: (arg: { tag: unknown }) => LocalizedString
+		/**
+		 * Remove this song from the set list?
+		 */
+		REMOVE_SINGLE_HINT: () => LocalizedString
+		/**
+		 * Remove tag "{tag}" only
+		 */
+		REMOVE_TAG_ONLY: (arg: { tag: unknown }) => LocalizedString
+		/**
+		 * Remove song entirely
+		 */
+		REMOVE_SONG_ENTIRELY: () => LocalizedString
+		/**
+		 * No set lists yet. Create one to start collecting songs for a band, season or event type.
+		 */
+		EMPTY_NO_LISTS: () => LocalizedString
+		/**
+		 * This set list is empty. Switch to Import mode to add songs from your library.
+		 */
+		EMPTY_SET_LIST: () => LocalizedString
+		/**
+		 * No songs in this set list match "{query}".
+		 */
+		EMPTY_FILTER: (arg: { query: unknown }) => LocalizedString
+		/**
+		 * No songs in the library match "{query}".
+		 */
+		EMPTY_IMPORT: (arg: { query: unknown }) => LocalizedString
+		/**
+		 * Could not load set lists.
+		 */
+		ERROR_LOAD: () => LocalizedString
+		/**
+		 * The action could not be completed.
+		 */
+		ERROR_GENERIC: () => LocalizedString
+		/**
+		 * Tag assignments
+		 */
+		TAGS_TITLE: () => LocalizedString
+		/**
+		 * No tags yet. Without a tag this song appears under "Untagged".
+		 */
+		TAGS_EMPTY: () => LocalizedString
+		/**
+		 * Tag
+		 */
+		TAG_NAME: () => LocalizedString
+		/**
+		 * Key
+		 */
+		TAG_KEY: () => LocalizedString
+		/**
+		 * Block order
+		 */
+		TAG_ORDER: () => LocalizedString
+		/**
+		 * Add tag
+		 */
+		TAG_ADD: () => LocalizedString
+		/**
+		 * Remove tag
+		 */
+		TAG_REMOVE: () => LocalizedString
+		/**
+		 * Each tag can only be assigned once per song.
+		 */
+		TAG_DUPLICATE: () => LocalizedString
+		/**
+		 * This song has no named block orders.
+		 */
+		NO_ORDERS: () => LocalizedString
 	}
 	REMOTE: {
 		/**
@@ -9658,6 +10097,10 @@ export type TranslationFunctions = {
 		 * {ms} ms
 		 */
 		DEBOUNCE_VALUE: (arg: { ms: unknown }) => LocalizedString
+		/**
+		 * Not sent — no connection to the presenter. Turn on Operator or MIDI sync.
+		 */
+		COMMAND_NOT_SENT: () => LocalizedString
 		/**
 		 * Choose which actions connected remote-control devices (mobile control page) are allowed to trigger.
 		 */
@@ -9732,6 +10175,14 @@ export type TranslationFunctions = {
 		 * Dismiss
 		 */
 		SNACK_DISMISS: () => LocalizedString
+		/**
+		 * The presenter disconnected this client.
+		 */
+		DROPPED_BY_OPERATOR: () => LocalizedString
+		/**
+		 * Reconnect
+		 */
+		RECONNECT: () => LocalizedString
 	}
 	UPDATER: {
 		/**

@@ -1,5 +1,6 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState, MouseEvent, DragEvent, ReactNode } from 'react';
 import {
+  Alert,
   AppBar,
   Box,
   Chip,
@@ -13,6 +14,7 @@ import {
   ListItemIcon,
   ListItemText,
   Divider,
+  Snackbar,
   Stack,
   TextField,
   Toolbar,
@@ -73,11 +75,14 @@ const ConnectedWebsocketClients = ({
   connected,
   connectedLabel,
   disconnectedLabel,
+  onDisconnectAll,
 }: {
   wsClientCount: number;
   connected: boolean;
   connectedLabel: string;
   disconnectedLabel: string;
+  /** Provided when there is something to clear — makes the chip clickable. */
+  onDisconnectAll?: () => void;
 }) => (
   <Tooltip title={connected ? connectedLabel : disconnectedLabel}>
     <Chip
@@ -86,7 +91,8 @@ const ConnectedWebsocketClients = ({
       size="small"
       color={connected && wsClientCount > 0 ? 'primary' : 'default'}
       variant="outlined"
-      sx={{ alignSelf: 'center', fontSize: '0.7rem', cursor: 'default', opacity: connected ? 1 : 0.5 }}
+      onClick={onDisconnectAll}
+      sx={{ alignSelf: 'center', fontSize: '0.7rem', cursor: onDisconnectAll ? 'pointer' : 'default', opacity: connected ? 1 : 0.5 }}
     />
   </Tooltip>
 );
@@ -127,6 +133,41 @@ const Footer = () => {
   const { midiTrackingMaster } = useGetMusicianSettings();
   const updateWindowSetting = useUpdateWindows();
   const updateMusicianSetting = useUpdateMusicianSetting();
+
+  // Clearing the connected clients is disruptive (every tablet/phone has to reconnect),
+  // so it is confirmed rather than fired straight off the chip.
+  const [disconnectConfirmOpen, setDisconnectConfirmOpen] = useState(false);
+  const [disconnectResult, setDisconnectResult] = useState<{ severity: 'success' | 'warning'; text: string } | null>(null);
+  const disconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // The relay answers a disconnect request with the number of peers it closed. No answer
+  // within a few seconds means the request was not understood — in practice a relay still
+  // running a build from before this feature, which silently relays it as a normal message.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      if (disconnectTimeoutRef.current) {
+        clearTimeout(disconnectTimeoutRef.current);
+        disconnectTimeoutRef.current = null;
+      }
+      const count = (e as CustomEvent<{ count: number }>).detail?.count ?? 0;
+      setDisconnectResult({ severity: 'success', text: LL.FOOTER.WS_DISCONNECT_DONE({ count }) });
+    };
+    window.addEventListener('presenter:ws-peers-disconnected', handler);
+    return () => window.removeEventListener('presenter:ws-peers-disconnected', handler);
+  }, [LL]);
+
+  useEffect(() => () => clearTimeout(disconnectTimeoutRef.current ?? undefined), []);
+
+  const handleDisconnectAllClients = () => {
+    setDisconnectConfirmOpen(false);
+    setDisconnectResult(null);
+    window.dispatchEvent(new Event('presenter:disconnect-ws-peers'));
+    if (disconnectTimeoutRef.current) clearTimeout(disconnectTimeoutRef.current);
+    disconnectTimeoutRef.current = setTimeout(() => {
+      disconnectTimeoutRef.current = null;
+      setDisconnectResult({ severity: 'warning', text: LL.FOOTER.WS_DISCONNECT_NO_REPLY() });
+    }, 4000);
+  };
 
   const MIDI_ACTIVE_TTL_MS = 10_000;
   const [midiSyncActive, setMidiSyncActive] = useState(false);
@@ -630,6 +671,29 @@ const Footer = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      {/* Disconnect all WebSocket clients */}
+      <Dialog open={disconnectConfirmOpen} onClose={() => setDisconnectConfirmOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{LL.FOOTER.WS_DISCONNECT_ALL()}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">{LL.FOOTER.WS_DISCONNECT_ALL_CONFIRM({ count: wsClientCount })}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDisconnectConfirmOpen(false)}>{LL.COMMON.CANCEL()}</Button>
+          <Button variant="contained" color="warning" onClick={handleDisconnectAllClients}>
+            {LL.FOOTER.WS_DISCONNECT_ALL()}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        open={!!disconnectResult}
+        autoHideDuration={disconnectResult?.severity === 'warning' ? 10000 : 4000}
+        onClose={() => setDisconnectResult(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={disconnectResult?.severity ?? 'success'} onClose={() => setDisconnectResult(null)}>
+          {disconnectResult?.text ?? ''}
+        </Alert>
+      </Snackbar>
       <AppBar
         position="static"
         color="default"
@@ -970,6 +1034,7 @@ const Footer = () => {
                     wsClientCount={wsClientCount}
                     connectedLabel={LL.FOOTER.WS_CLIENTS({ count: wsClientCount })}
                     disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
+                    onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
                   />
                   <Tooltip title={midiTrackingMaster === 'midi' ? LL.MIDI.FOLLOW_MIDI_ACTIVE() : LL.MIDI.SYNC_ACTIVE()}>
                     <Chip
@@ -1045,6 +1110,7 @@ const Footer = () => {
                   wsClientCount={wsClientCount}
                   connectedLabel={LL.FOOTER.WS_CLIENTS({ count: wsClientCount })}
                   disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
+                  onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
                 />
                 <Tooltip title={midiTrackingMaster === 'midi' ? LL.MIDI.FOLLOW_MIDI_ACTIVE() : LL.MIDI.SYNC_ACTIVE()}>
                   <Chip

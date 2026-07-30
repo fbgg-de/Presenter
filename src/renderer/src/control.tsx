@@ -61,6 +61,9 @@ interface SessionResponse {
 
 const RECONNECT_DELAY_MS = 4000;
 
+/** Relay close code meaning "the operator cleared the connected clients" — do not retry. */
+const WS_CLOSE_OPERATOR_DISCONNECT = 4010;
+
 // ── Minimal bilingual labels (page is decoupled from the app i18n bundles) ────
 const de = typeof navigator !== 'undefined' && (navigator.language || '').toLowerCase().startsWith('de');
 const T = {
@@ -69,6 +72,10 @@ const T = {
   noWsHost: de ? 'Kein WebSocket-Server für dieses Konto konfiguriert.' : 'No WebSocket host configured for this account.',
   serverUnreachable: de ? 'Server nicht erreichbar.' : 'Could not reach the server.',
   retry: de ? 'Erneut versuchen' : 'Retry',
+  droppedByOperator: de
+    ? 'Die Verbindung wurde vom Presenter getrennt. Du kannst dich jederzeit wieder verbinden.'
+    : 'The presenter disconnected this client. You can reconnect whenever you like.',
+  reconnect: de ? 'Wieder verbinden' : 'Reconnect',
   prevBlock: de ? 'Block zurück' : 'Prev block',
   nextBlock: de ? 'Block vor' : 'Next block',
   prevItem: de ? 'Song zurück' : 'Prev song',
@@ -372,6 +379,10 @@ const ControlApp = () => {
   const remoteCommandsRef = useRef<string[] | undefined>(undefined);
   remoteCommandsRef.current = sync.remoteCommands;
 
+  /** Set when the operator cleared the clients: we stay down until the user taps Reconnect. */
+  const [droppedByOperator, setDroppedByOperator] = useState(false);
+  const reconnectRef = useRef<(() => void) | null>(null);
+
   const wsRef = useRef<WebSocket | null>(null);
   const stoppedRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -417,10 +428,16 @@ const ControlApp = () => {
         }
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (stoppedRef.current) return;
         setConnected(false);
         wsRef.current = null;
+        // Deliberately cleared by the operator — retrying on a timer would put us straight
+        // back and make the operator's button pointless. Wait for the user instead.
+        if (event.code === WS_CLOSE_OPERATOR_DISCONNECT) {
+          setDroppedByOperator(true);
+          return;
+        }
         reconnectTimer = setTimeout(() => connect(url, account), RECONNECT_DELAY_MS);
       };
     };
@@ -442,6 +459,10 @@ const ControlApp = () => {
         const path = h.path && h.path !== '/' ? h.path : '';
         const url = `${h.wss ? 'wss' : 'ws'}://${h.host}:${h.port}${path}`;
         setPhase('ready');
+        reconnectRef.current = () => {
+          setDroppedByOperator(false);
+          connect(url, account);
+        };
         connect(url, account);
       })
       .catch(() => {
@@ -783,14 +804,20 @@ const ControlApp = () => {
             textAlign: 'center',
           }}
         >
-          {phase !== 'error' && <div className="ctl-spinner" />}
+          {phase !== 'error' && !droppedByOperator && <div className="ctl-spinner" />}
           <div style={{ fontSize: 17, fontWeight: 600, color: C.text }}>
-            {phase === 'error' ? errorMsg : phase === 'loading' ? T.connecting : T.reconnecting}
+            {droppedByOperator
+              ? T.droppedByOperator
+              : phase === 'error'
+                ? errorMsg
+                : phase === 'loading'
+                  ? T.connecting
+                  : T.reconnecting}
           </div>
-          {phase === 'error' && (
+          {(phase === 'error' || droppedByOperator) && (
             <button
               type="button"
-              onClick={() => window.location.reload()}
+              onClick={() => (droppedByOperator && reconnectRef.current ? reconnectRef.current() : window.location.reload())}
               style={{
                 border: `1px solid ${C.accent}`,
                 borderRadius: 12,
@@ -803,7 +830,7 @@ const ControlApp = () => {
                 WebkitTapHighlightColor: 'transparent',
               }}
             >
-              {T.retry}
+              {droppedByOperator ? T.reconnect : T.retry}
             </button>
           )}
         </div>

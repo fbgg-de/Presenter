@@ -9,6 +9,7 @@
  * client with the same account number.
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
+import { WS_CLOSE_OPERATOR_DISCONNECT } from './useWsSync';
 
 const RECONNECT_DELAY_MS = 5000;
 
@@ -32,6 +33,15 @@ export const useWsOperator = (
   const wsRef = useRef<WebSocket | null>(null);
   const authedRef = useRef(false);
   const [connected, setConnected] = useState(false);
+  /** True after the operator cleared the connected clients — no auto-retry until asked. */
+  const [droppedByOperator, setDroppedByOperator] = useState(false);
+  const [reconnectNonce, setReconnectNonce] = useState(0);
+  /**
+   * Relay's answer to a `disconnect_peers` request: how many peers it closed, and when.
+   * Its absence is meaningful too — a relay that predates the feature never answers, so
+   * the caller can tell "nothing to disconnect" from "the relay didn't understand me".
+   */
+  const [lastPeersDisconnected, setLastPeersDisconnected] = useState<{ count: number; at: number } | null>(null);
   const [connectedCount, setConnectedCount] = useState(0);
   const [lastMidiSyncAt, setLastMidiSyncAt] = useState<number>(0);
   const onMusicianSyncRef = useRef(onMusicianSync);
@@ -97,6 +107,8 @@ export const useWsOperator = (
           } else if (msg.action === 'get_state') {
             // A new musician client is requesting the current state — re-broadcast immediately
             onGetStateRef.current?.();
+          } else if (msg.type === 'peers_disconnected') {
+            setLastPeersDisconnected({ count: typeof msg.count === 'number' ? msg.count : 0, at: Date.now() });
           } else if (msg.action === 'remote_command' && msg.data) {
             // A remote-control client (mobile control page) sent a navigation command
             onRemoteCommandRef.current?.(msg.data as Record<string, unknown>);
@@ -110,13 +122,19 @@ export const useWsOperator = (
         // reconnect is handled by onclose
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         if (stopped) return;
         authedRef.current = false;
         setConnected(false);
         setConnectedCount(0);
         setLastMidiSyncAt(0);
         wsRef.current = null;
+        // Cleared by the operator — retrying immediately would defeat the purpose.
+        if (event.code === WS_CLOSE_OPERATOR_DISCONNECT) {
+          stopped = true;
+          setDroppedByOperator(true);
+          return;
+        }
         reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
       };
     };
@@ -136,7 +154,7 @@ export const useWsOperator = (
         wsRef.current = null;
       }
     };
-  }, [url, account]);
+  }, [url, account, reconnectNonce]);
 
   const broadcast = useCallback((action: string, data?: Record<string, unknown>) => {
     const ws = wsRef.current;
@@ -144,5 +162,11 @@ export const useWsOperator = (
     ws.send(JSON.stringify({ type: 'broadcast', action, data }));
   }, []);
 
-  return { connected, connectedCount, lastMidiSyncAt, broadcast };
+  /** Re-open after the operator dropped us — the one close that does not retry on its own. */
+  const reconnect = useCallback(() => {
+    setDroppedByOperator(false);
+    setReconnectNonce((n) => n + 1);
+  }, []);
+
+  return { connected, connectedCount, lastMidiSyncAt, broadcast, droppedByOperator, reconnect, lastPeersDisconnected };
 };

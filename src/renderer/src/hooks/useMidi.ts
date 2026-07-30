@@ -11,7 +11,16 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAppDispatch } from '@/store';
 import { useUpdateMusicianSetting, useGetMusicianSettings } from '@/store/musicianSlice';
 
-export type MidiAction = 'next_page' | 'prev_page' | 'next_song' | 'prev_song' | 'next_block' | 'prev_block' | 'toggle_tracking';
+export type MidiAction =
+  | 'next_page'
+  | 'prev_page'
+  | 'next_song'
+  | 'prev_song'
+  | 'next_block'
+  | 'prev_block'
+  | 'toggle_tracking'
+  /** Blanks the presentation output. Acts on the operator, relayed as a `remote_command`. */
+  | 'toggle_black';
 
 export type MidiStatus = 'disconnected' | 'connected' | 'scanning' | 'unsupported';
 

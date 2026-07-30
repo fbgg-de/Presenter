@@ -38,8 +38,9 @@ const songsApi = presenterApi.injectEndpoints({
           ? [...result.map((s) => ({ type: 'Song' as const, id: s.songNumber })), { type: 'Songs' as const, id: 'LIST' }]
           : [{ type: 'Songs' as const, id: 'LIST' }],
     }),
-    searchSongs: build.query<ApiSuccess<SongListItem[]>, { q: string; mode?: 'title' | 'number' | 'text' }>({
-      query: ({ q, mode = 'title' }) => ({ url: `rest/SongsSearch/${mode}`, params: { q } }),
+    /** `limit` overrides the deployment-wide SEARCH_RESULT_LIMIT; the server clamps it to 50. */
+    searchSongs: build.query<ApiSuccess<SongListItem[]>, { q: string; mode?: 'title' | 'number' | 'text'; limit?: number }>({
+      query: ({ q, mode = 'title', limit }) => ({ url: `rest/SongsSearch/${mode}`, params: limit ? { q, limit } : { q } }),
     }),
     getSong: build.query<ApiSuccess<SongEntity>, { songNumber: number }>({
       query: ({ songNumber }) => `rest/Song/${songNumber}`,

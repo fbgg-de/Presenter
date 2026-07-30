@@ -11,6 +11,17 @@ type ClickBehaviour = 'click' | 'double-click';
 type Transition = 'cut' | 'fade';
 type Order = 'lexicographic' | 'numeric';
 
+/**
+ * Set List view state. Lives inside the settings object (rather than its own localStorage key)
+ * so it rides the existing settings export/import, which copies every `presenter_*` key.
+ */
+export interface SetListsSettings {
+  /** Restored on open; ignored when the list no longer exists. */
+  lastOpenedSetListId: number | null;
+  /** setListId → tagName → expanded. Scoped per set list, stale tag names are ignored. */
+  accordionStateBySetListId: Record<string, Record<string, boolean>>;
+}
+
 export interface SettingsState {
   autoCheckUpdates: boolean;
   autoLogin: boolean;
@@ -50,6 +61,8 @@ export interface SettingsState {
   remoteControlCommands: Record<string, boolean>;
   resetBlackOnSwitch: boolean;
   restoreWindowsOnStart: boolean;
+  /** Set List manager view state (last opened list + per-list accordion expansion). */
+  setLists: SetListsSettings;
   showDeleteFromDb: boolean;
   showLicenseNumber: boolean;
   showLimit: number;
@@ -110,6 +123,7 @@ const defaultState: SettingsState = {
   remoteControlCommands: {},
   resetBlackOnSwitch: false,
   restoreWindowsOnStart: true,
+  setLists: { lastOpenedSetListId: null, accordionStateBySetListId: {} },
   showDeleteFromDb: false,
   showLicenseNumber: true,
   showLimit: 10,
@@ -142,6 +156,15 @@ try {
       }
     }
     initialState = { ...defaultState, ...parsed };
+    // The spread above is shallow, so a settings file written before this key existed (or a
+    // partial one) would leave `setLists` half-formed. Rebuild it from the defaults.
+    initialState.setLists = {
+      ...defaultState.setLists,
+      ...(typeof parsed.setLists === 'object' && parsed.setLists !== null ? parsed.setLists : {}),
+    };
+    if (typeof initialState.setLists.accordionStateBySetListId !== 'object' || initialState.setLists.accordionStateBySetListId === null) {
+      initialState.setLists.accordionStateBySetListId = {};
+    }
   }
 } catch {
   console.log('Failed to load settings from localStorage, using defaults');

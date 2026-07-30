@@ -31,6 +31,8 @@ import {
   ViewList as ViewListIcon,
   MultipleStop as MultipleStopIcon,
   Sync as SyncIcon,
+  QueueMusic as SetListIcon,
+  CreateNewFolder as NewGroupIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
@@ -38,13 +40,22 @@ import {
   removeShowItem,
   updateShowItem,
   setDirty,
-  reorderShowItems,
+  setOrderAndGroups,
   setShowGroups,
   setShowSelectorOpen,
   useGetShow,
 } from '@/store/showSlice';
-import { ShowGroupList } from '@/components/show/ShowGroupList';
-import { toggleGroupCollapsed } from '@/utils/showGroups';
+import { ShowGroupList, GroupNameDialog } from '@/components/show/ShowGroupList';
+import {
+  genGroupId,
+  addGroup as addGroupUtil,
+  updateGroup,
+  toggleGroupCollapsed,
+  reorderGroups as reorderGroupsUtil,
+  deleteGroup as deleteGroupUtil,
+  moveItemFlat,
+} from '@/utils/showGroups';
+import { SetListManager } from '@/components/setlist/SetListManager';
 import { addSongToStore, addToSongsOrder, useGetSongs } from '@/store/songsSlice';
 import { updateSongInStore } from '@/store/songsSlice';
 import { parseOrderKey, MUSICAL_KEYS } from '@/utils/orderKeyUtils';
@@ -74,6 +85,12 @@ interface MusicianSidebarProps {
   onSelectItem: (index: number) => void;
   onOpenPdfModal: () => void;
   onClose?: () => void;
+  /**
+   * The active item moved to a new position in the flat order (group edit / drag), so the
+   * musician keeps viewing the same item. Unlike onSelectItem this is a passive follow —
+   * it must not disable sync mode.
+   */
+  onActiveIndexChange?: (index: number) => void;
 }
 
 export const MusicianSidebar = ({
@@ -83,6 +100,7 @@ export const MusicianSidebar = ({
   onSelectItem,
   onOpenPdfModal,
   onClose,
+  onActiveIndexChange,
 }: MusicianSidebarProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
@@ -111,6 +129,8 @@ export const MusicianSidebar = ({
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false);
+  const [setListsOpen, setSetListsOpen] = useState(false);
+  const [addGroupDialogOpen, setAddGroupDialogOpen] = useState(false);
 
   // Context menu state
   const [itemMenuAnchor, setItemMenuAnchor] = useState<null | HTMLElement>(null);
@@ -142,11 +162,40 @@ export const MusicianSidebar = ({
     [songs],
   );
 
-  // ── Item groups (read-only here; the operator manages them) ──
+  // ── Item groups ──
+  // Same management as the operator sidebar. Each mutation that can shift the flat order
+  // reports the item's new position back so the musician keeps looking at the same sheet
+  // (the operator equivalent dispatches setActiveItemIndex, which would move the *operator*).
   const groups = currentShow?.groups ?? [];
-  // Non-editable mode only allows same-group moves, so the group tag never changes here.
-  const handleMoveItem = (from: number, to: number) => dispatch(reorderShowItems({ source: from, destination: to }));
+
+  const handleMoveItem = (from: number, to: number, targetGroupId: string) => {
+    const res = moveItemFlat(showItems, from, to, targetGroupId, activeItemIndex);
+    if (res) {
+      dispatch(setOrderAndGroups({ order: res.order, groups }));
+      onActiveIndexChange?.(res.activeIndex);
+    }
+  };
+
+  const handleReorderGroup = (sourceId: string, targetId: string) => {
+    const res = reorderGroupsUtil(showItems, groups, sourceId, targetId, activeItemIndex);
+    if (res) {
+      dispatch(setOrderAndGroups({ order: res.order, groups: res.groups }));
+      onActiveIndexChange?.(res.activeIndex);
+    }
+  };
+
+  const handleDeleteGroup = (id: string) => {
+    const res = deleteGroupUtil(showItems, groups, id, activeItemIndex);
+    if (res) {
+      dispatch(setOrderAndGroups({ order: res.order, groups: res.groups }));
+      onActiveIndexChange?.(res.activeIndex);
+    }
+  };
+
   const handleToggleGroupCollapse = (id: string) => dispatch(setShowGroups(toggleGroupCollapsed(groups, id)));
+  const handleAddGroup = (name: string) => dispatch(setShowGroups(addGroupUtil(groups, { id: genGroupId(), name, collapsed: false })));
+  const handleRenameGroup = (id: string, name: string) => dispatch(setShowGroups(updateGroup(groups, id, { name })));
+  const handleRecolorGroup = (id: string, color: string | undefined) => dispatch(setShowGroups(updateGroup(groups, id, { color })));
 
   const renderItemRow = (item: ShowItem, i: number) => {
     const itemParsed = parseOrderKey(item.order);
@@ -571,6 +620,18 @@ export const MusicianSidebar = ({
                       <ViewListIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title={LL.SET_LISTS.TITLE()}>
+                    <IconButton size="small" onClick={() => setSetListsOpen(true)}>
+                      <SetListIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={LL.SHOW_GROUPS.ADD()}>
+                    <span>
+                      <IconButton size="small" disabled={!currentShow} onClick={() => setAddGroupDialogOpen(true)}>
+                        <NewGroupIcon />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
                   {isDirty && (
                     <Tooltip title={LL.SHOWS.SAVE()}>
                       <IconButton size="small" onClick={handleSaveShow} color="warning">
@@ -611,6 +672,12 @@ export const MusicianSidebar = ({
               renderItem={renderItemRow}
               onMoveItem={handleMoveItem}
               onToggleCollapse={handleToggleGroupCollapse}
+              editable
+              onRenameGroup={handleRenameGroup}
+              onRecolorGroup={handleRecolorGroup}
+              onReorderGroup={handleReorderGroup}
+              onDeleteGroup={handleDeleteGroup}
+              onAddGroup={handleAddGroup}
               footer={
                 isImportingCcli ? (
                   <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 2, py: 1 }}>
@@ -623,6 +690,13 @@ export const MusicianSidebar = ({
           </Stack>
         </Drawer>
       </ClickAwayListener>
+      <SetListManager open={setListsOpen} onClose={() => setSetListsOpen(false)} />
+      <GroupNameDialog
+        open={addGroupDialogOpen}
+        title={LL.SHOW_GROUPS.ADD()}
+        onClose={() => setAddGroupDialogOpen(false)}
+        onSubmit={handleAddGroup}
+      />
     </>
   );
 };

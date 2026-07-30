@@ -46,6 +46,13 @@ export const LoginPage = () => {
   }, [offlineMode, next]);
 
   const licenseParam = useQueryParam('license');
+  /**
+   * Set by the logout round-trip. The user came here to pick a DIFFERENT account, so both
+   * restoring the previous one and the Electron auto-proceed below must stay out of the
+   * way — otherwise the page bounces straight back to the provider and the account select
+   * can never be reached.
+   */
+  const switchAccount = useQueryParam('switch') === '1';
 
   // License selection - load from localStorage on mount
   const { data: accounts, isLoading: accountsLoading, error: accountsError } = useGetAccountsQuery();
@@ -77,7 +84,7 @@ export const LoginPage = () => {
     }
 
     try {
-      if (!lastSelectedAccount) {
+      if (switchAccount || !lastSelectedAccount) {
         return;
       }
       if (lastSelectedAccount === 'admin') {
@@ -134,7 +141,7 @@ export const LoginPage = () => {
   // Once the OIDC URL is ready and the account was restored from saved settings,
   // automatically redirect without requiring the user to click the Login button.
   useEffect(() => {
-    if (!isElectronApp() || !autoRestoredRef.current) return;
+    if (!isElectronApp() || switchAccount || !autoRestoredRef.current) return;
     if (isAdminSelected && !adminOidcLoading && adminOidcUrlData?.url) {
       autoRestoredRef.current = false;
       openUrl(adminOidcUrlData.url);
@@ -199,15 +206,17 @@ export const LoginPage = () => {
                   disabled={accountsLoading}
                   onChange={(e) => {
                     const v = e.target.value;
-                    if (v === 'admin' || v === '') {
-                      onSelectLicense(v);
-                    } else {
-                      onSelectLicense(Number(v));
-                    }
+                    // '' is the placeholder row, not an account — never commit it.
+                    if (v === '') return;
+                    onSelectLicense(v === 'admin' ? v : Number(v));
                   }}
                   helperText={LL.AUTH.SELECT_HELP()}
                 >
-                  <MenuItem value="">{LL.AUTH.SELECT_PROMPT()}</MenuItem>
+                  {/* Placeholder only — selecting it would store an empty account and leave
+                      the page in a state with no account and no way to start a login. */}
+                  <MenuItem value="" disabled>
+                    {LL.AUTH.SELECT_PROMPT()}
+                  </MenuItem>
                   <MenuItem value="admin">{LL.AUTH.ADMIN_LABEL()}</MenuItem>
                   {(accounts ?? []).map((a) => (
                     <MenuItem key={a.license} value={a.license}>

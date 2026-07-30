@@ -305,6 +305,21 @@ const createWindow = () => {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
+    // A new-window request raised while we are ON a web origin is part of that site's own
+    // flow — typically the identity provider (SimpleSAMLphp form posts, MFA steps). Handing
+    // those to the system browser moves the flow into a different cookie jar, so the IdP's
+    // session cookie is missing when it comes back and it reports its state as lost. Keep
+    // same-origin continuations inside this window; genuinely external links still leave.
+    try {
+      const target = new URL(details.url);
+      const current = new URL(mainWindow!.webContents.getURL());
+      if (current.protocol.startsWith('http') && target.origin === current.origin) {
+        mainWindow!.loadURL(details.url);
+        return { action: 'deny' };
+      }
+    } catch {
+      /* unparseable URL — fall through to opening externally */
+    }
     shell.openExternal(details.url);
     return { action: 'deny' };
   });
@@ -331,6 +346,15 @@ const createWindow = () => {
     const backendHost = backendOrigin ? new URL(backendOrigin).host : null;
     const isCallbackFromBackend = backendHost && parsed.host === backendHost;
     const hasCode = parsed.searchParams.has('code');
+
+    // End of the OIDC logout round-trip. The provider redirects to the backend's login
+    // page, which in the desktop app must become the LOCAL login.html — otherwise the
+    // window would be left sitting on the website instead of back in the app.
+    if (isCallbackFromBackend && parsed.searchParams.get('logged_out') === '1') {
+      event.preventDefault();
+      mainWindow!.loadFile(HTML_PATHS['/login'], { query: { switch: '1' } });
+      return;
+    }
 
     if (isCallbackFromBackend && hasCode) {
       // Block the navigation — perform the code exchange in a hidden window
