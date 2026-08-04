@@ -20,6 +20,12 @@ export interface WsSyncState {
    * relay only excludes the *sending* socket, not the other socket of the same page.
    */
   clientId?: string;
+  /**
+   * True when this state is the relay's CACHE of the last broadcast, sent once on auth —
+   * not a peer actively talking. Useful as a starting position (operator sync mode), but
+   * it must never drive navigation of a client that is itself the navigation master.
+   */
+  replay?: boolean;
   activeItemIndex: number;
   activeBlockIndex: number;
   activeLineIndex: number;
@@ -105,7 +111,9 @@ export const useWsSync = ({ url, account, enabled, onStateUpdate }: UseWsSyncOpt
             return;
           }
           if (msg.action === 'musician_sync' && onStateUpdateRef.current) {
-            onStateUpdateRef.current(msg.data as WsSyncState);
+            // The relay marks its cached-state replay on the envelope, not the payload —
+            // surface it to the handler so a navigation master can ignore stale caches.
+            onStateUpdateRef.current({ ...(msg.data as WsSyncState), replay: !!msg.replay });
           }
         } catch {
           // ignore malformed messages

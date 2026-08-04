@@ -565,8 +565,18 @@ export const MusicianSidebar = ({
         />
       )}
       <ClickAwayListener
-        onClickAway={() => {
-          if (open) onClose?.();
+        onClickAway={(event) => {
+          if (!open) return;
+          // MUI renders menus, submenus and dialogs in a portal at the end of <body>, so
+          // interacting with them registers as a click OUTSIDE the drawer and used to close
+          // the sidebar underneath — e.g. picking "Remove" from an item's menu. Anything
+          // inside a portalled popup belongs to the sidebar's own UI, so it must not close it.
+          const target = event.target as HTMLElement | null;
+          if (target?.closest?.('.MuiPopover-root, .MuiModal-root, .MuiTooltip-popper')) return;
+          // The popup may also have unmounted on the very click that dismissed it, leaving
+          // nothing to match against — so ignore click-away while one is still registered.
+          if (itemMenuAnchor || keySubmenuAnchor || orderSubmenuAnchor || quickOrderDialogOpen) return;
+          onClose?.();
         }}
         mouseEvent="onMouseDown"
       >

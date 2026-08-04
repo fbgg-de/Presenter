@@ -77,9 +77,23 @@ async function resolveToken(token: string): Promise<number | null> {
 
 /**
  * Last known musician_sync state per account.
- * Replayed to new clients on auth so they immediately see current operator position.
+ *
+ * Replayed to new clients on auth so they immediately see the current position. The replay
+ * is tagged `replay: true` because it is a CACHE, not a live broadcast: an operator that
+ * reconnects would otherwise treat its own stale cached state as a musician telling it
+ * where to go, and jump. Only clients that are meant to adopt a starting position act on it.
  */
 const lastSyncPerAccount = new Map<number, string>();
+
+/** Re-serialize a cached sync payload with the replay marker. Returns null if unusable. */
+function taggedReplay(cached: string): string | null {
+  try {
+    const parsed = JSON.parse(cached) as Record<string, unknown>;
+    return JSON.stringify({ ...parsed, replay: true });
+  } catch {
+    return null;
+  }
+}
 
 /** Send the current peer count for an account to all its authenticated clients. */
 function broadcastPeerCount(account: number) {
@@ -161,7 +175,10 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 
         const cached = lastSyncPerAccount.get(client.account);
         if (cached) {
-          try { ws.send(cached); } catch { /* ignore */ }
+          const replay = taggedReplay(cached);
+          if (replay) {
+            try { ws.send(replay); } catch { /* ignore */ }
+          }
         }
       };
 

@@ -41,7 +41,6 @@ import {
 import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
 import { formatRelativeTime } from '@/utils/relativeTime';
 import { useWsSync } from '@/hooks/useWsSync';
-import { useWsOperator } from '@/hooks/useWsOperator';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useGetSessionQuery } from '@/api/session.api';
 import { useUpdateSongMutation } from '@/api/songs.api';
@@ -63,10 +62,10 @@ const AUTO_REFRESH_INTERVAL_MS = 60_000;
 /**
  * Identity of this page's outgoing sync broadcasts.
  *
- * In MIDI mode the page holds TWO relay sockets — `useWsSync` to receive and
- * `useWsOperator` to send. The relay only skips the socket a message came from, so
- * everything we broadcast comes straight back to our own receive socket. Tagging the
- * payload lets us drop that echo instead of feeding it back into navigation.
+ * The page sends and receives on ONE socket, and the relay never echoes a message back to
+ * its sender, so this is a safety net rather than the main defence: it keeps a stray echo
+ * (a second socket, a replayed cached state) from re-entering navigation as if it were the
+ * operator talking.
  */
 const WS_CLIENT_ID = `musician-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
@@ -197,6 +196,13 @@ export const MusicianPage = () => {
         // navigation path for a position we just set ourselves.
         if (state.clientId && state.clientId === WS_CLIENT_ID) return;
 
+        // The relay's cached-state replay (sent on every (re)connect). In MIDI mode WE are
+        // the navigation master — adopting a stale cache (often the operator's last
+        // broadcast, e.g. re-sent because black was toggled) would poison the pending
+        // state and later snap this page (and with it the operator) back to an old item.
+        // In operator mode it is the intended starting position, so it passes through.
+        if (state.replay && syncMode === 'midi') return;
+
         // Always persist the latest state so we can re-apply after songs load.
         pendingWsStateRef.current = {
           activeItemIndex: typeof state.activeItemIndex === 'number' ? state.activeItemIndex : undefined,
@@ -248,14 +254,6 @@ export const MusicianPage = () => {
     ),
   });
 
-  // Musician-side WS operator for broadcasting MIDI actions in midi mode.
-  // Only enabled when syncMode === 'midi' and WS is configured.
-  const midiWsBroadcastEnabled = syncMode === 'midi' && !!wsUrl && wsAccount !== null;
-  const {
-    broadcast: midiWsBroadcast,
-    droppedByOperator: midiWsDropped,
-    reconnect: midiWsReconnect,
-  } = useWsOperator(midiWsBroadcastEnabled ? wsUrl : '', midiWsBroadcastEnabled ? wsAccount : null);
   const handleRegisterRefetch = useCallback((fn: () => void) => {
     annotationRefetchRef.current = fn;
   }, []);
@@ -299,6 +297,8 @@ export const MusicianPage = () => {
   // Keep refs in sync for use inside WS callbacks (avoid stale closures)
   activeItemIndexRef.current = activeItemIndex;
   showItemsRef.current = showItems;
+  const syncModeRef = useRef(syncMode);
+  syncModeRef.current = syncMode;
   operatorItemIndexRef.current = operatorItemIndex;
   operatorBlockIndexRef.current = operatorActiveBlockIndex;
 
@@ -474,7 +474,11 @@ export const MusicianPage = () => {
     songsLoadedRef.current = true;
     const pending = pendingWsStateRef.current;
     if (!pending) return;
-    if (typeof pending.activeItemIndex === 'number') {
+    // Local navigation only follows the pending state in operator mode. In MIDI mode this
+    // page is the navigation master: the pending state is whatever peer spoke last (e.g.
+    // the operator re-broadcasting because black was toggled), and adopting it here made
+    // the next MIDI next/prev song step from that stale item instead of the current one.
+    if (typeof pending.activeItemIndex === 'number' && syncModeRef.current !== 'midi') {
       // Only follow to song items — see the WS onStateUpdate handler.
       const targetItem = showItemsRef.current[pending.activeItemIndex];
       if (targetItem && targetItem.type === 'song') {
@@ -521,8 +525,6 @@ export const MusicianPage = () => {
   handleSelectItemRef.current = handleSelectItem;
 
   // Refs updated each render so callbacks always see the latest values without re-registering
-  const midiWsBroadcastRef = useRef(midiWsBroadcast);
-  midiWsBroadcastRef.current = midiWsBroadcast;
   const wsSendRef = useRef(wsSend);
   wsSendRef.current = wsSend;
   const lyricsBlocksRef = useRef(lyricsBlocks);
@@ -534,7 +536,7 @@ export const MusicianPage = () => {
   const broadcastMidiSync = useCallback((data: Record<string, unknown>) => {
     // clientId lets our own receive socket recognise and drop the relay's echo.
     const tagged = { ...data, clientId: WS_CLIENT_ID };
-    midiWsBroadcastRef.current('musician_sync', tagged);
+    wsSendRef.current('musician_sync', tagged);
     // Also send directly to operator via Electron IPC when running in the desktop app
     window.api?.musicianSyncToOperator?.({ action: 'musician_sync', data: tagged });
   }, []);
@@ -901,23 +903,11 @@ export const MusicianPage = () => {
       </Snackbar>
       {/* Operator cleared the connected clients — we deliberately do not auto-reconnect,
           so the musician decides when to come back. */}
-      <Snackbar
-        open={wsStatus === 'dropped_by_operator' || midiWsDropped}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
+      <Snackbar open={wsStatus === 'dropped_by_operator'} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert
           severity="info"
           action={
-            <Button
-              color="inherit"
-              size="small"
-              onClick={() => {
-                // In MIDI mode this page holds two sockets and both were dropped —
-                // reconnect them together, or broadcasting would stay dead.
-                wsReconnect();
-                midiWsReconnect();
-              }}
-            >
+            <Button color="inherit" size="small" onClick={wsReconnect}>
               {LL.CONNECTIVITY.RECONNECT()}
             </Button>
           }

@@ -101,6 +101,11 @@ export const useWsOperator = (
               setConnectedCount(Math.max(0, msg.count - 1));
             }
           } else if (msg.action === 'musician_sync' && msg.data) {
+            // `replay` marks the relay's cached last state, sent to every client on auth.
+            // It is not a musician telling us anything — following it would snap the
+            // operator to a stale position every time this socket reconnects (and sockets
+            // churn exactly when other devices are connecting).
+            if (msg.replay) return;
             // A musician is broadcasting their current position — record the timestamp
             setLastMidiSyncAt(Date.now());
             onMusicianSyncRef.current?.(msg.data as WsOperatorIncomingSync);

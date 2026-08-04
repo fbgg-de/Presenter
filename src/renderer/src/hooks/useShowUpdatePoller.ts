@@ -8,6 +8,8 @@ import { useGetSettings } from '@/store/settingsSlice';
 import type { Show } from '@/api/shows.api';
 
 const POLL_INTERVAL_MS = 30_000;
+/** Delay before re-attempting a failed classification fetch (shorter than the poll). */
+const RETRY_DELAY_MS = 10_000;
 
 const normalizeOrderSig = (show: Show | null | undefined): string => {
   const normalized = (show?.order ?? []).map((item) => {
@@ -37,6 +39,10 @@ const normalizeOrderSig = (show: Show | null | undefined): string => {
  * With `autoReload` enabled a detected foreign update is applied straight away and
  * `updateAvailable` never goes true — used by the musician auto-refresh mode and by the
  * operator while it follows remote commands, where a manual confirmation only gets in the way.
+ *
+ * - `reloadFailed` — a change WAS detected but fetching it keeps failing; the change is
+ *   retried automatically, and this flag lets the UI say so instead of silently drifting
+ *   out of sync (indices sent by remote pages then point into a stale order).
  */
 export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boolean } = {}) => {
   const dispatch = useAppDispatch();
@@ -44,6 +50,12 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
   const { serverSnapshot } = useAppSelector((s) => s.show);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [reloadFailed, setReloadFailed] = useState(false);
+  /** Bumped after a failed classification fetch to re-run the effect (the revision data
+   *  itself is referentially stable between polls, so it cannot re-trigger the retry). */
+  const [retryTick, setRetryTick] = useState(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const failureCountRef = useRef(0);
 
   // The server timestamp last observed for the current show (avoids re-fetching the
   // full show unless it actually changed).
@@ -71,10 +83,20 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
     if (currentShow?.title !== currentTitleRef.current) {
       currentTitleRef.current = currentShow?.title ?? null;
       lastSeenDateRef.current = null;
+      failureCountRef.current = 0;
       setUpdateAvailable(false);
       setUpdatedAt(null);
+      setReloadFailed(false);
     }
   }, [currentShow?.title]);
+
+  // Clear a pending retry on unmount.
+  useEffect(
+    () => () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!currentShow || !revisionData) return;
@@ -85,12 +107,17 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
 
     // Server timestamp unchanged since we last looked → nothing to do (cheap path).
     if (rev.date === lastSeenDateRef.current) return;
-    lastSeenDateRef.current = rev.date ?? null;
 
     // Timestamp changed — fetch just this show and classify our own save vs a foreign edit.
+    // The revision is only marked as seen once that fetch SUCCEEDS: stamping it up front
+    // meant one transient failure (sleep/wake, network blip) silently swallowed the change
+    // forever — no reload, no banner — until the next foreign save bumped the timestamp.
     fetchShow({ title: currentShow.title })
       .unwrap()
       .then((data) => {
+        lastSeenDateRef.current = rev.date ?? null;
+        failureCountRef.current = 0;
+        setReloadFailed(false);
         const polledShow = data.shows?.[0];
         if (!polledShow) return;
         const polledSig = normalizeOrderSig(polledShow);
@@ -105,8 +132,16 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
           setUpdateAvailable(true);
         }
       })
-      .catch(() => {});
-  }, [revisionData, currentShow, serverSnapshot, fetchShow, dispatch]);
+      .catch(() => {
+        // Leave lastSeenDateRef unstamped so the change stays pending, and retry sooner
+        // than the next poll. One failed attempt is routine (wake from sleep); from the
+        // second on, tell the UI the show is known-stale.
+        failureCountRef.current += 1;
+        if (failureCountRef.current >= 2) setReloadFailed(true);
+        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = setTimeout(() => setRetryTick((t) => t + 1), RETRY_DELAY_MS);
+      });
+  }, [revisionData, retryTick, currentShow, serverSnapshot, fetchShow, dispatch]);
 
   /**
    * Apply the server version of the current show.
@@ -122,6 +157,8 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
       const polled: Show | undefined = data.shows?.[0];
       if (polled) {
         lastSeenDateRef.current = polled.date ?? lastSeenDateRef.current;
+        failureCountRef.current = 0;
+        setReloadFailed(false);
         dispatch(setCurrentShow(polled));
         await dispatch(loadShowSongs({ show: polled, forceRefetch: forceSongs }));
       }
@@ -131,5 +168,5 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
 
   const dismiss = useCallback(() => setUpdateAvailable(false), []);
 
-  return { updateAvailable, updatedAt, reloadShow, dismiss };
+  return { updateAvailable, updatedAt, reloadShow, dismiss, reloadFailed };
 };

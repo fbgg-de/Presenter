@@ -39,7 +39,7 @@ class OidcClient
             OIDC['discovery_url'],
             OIDC['client_id'],
             OIDC['client_secret'],
-            implode(' ', OIDC['scopes']),
+            self::normalizeScopes(implode(' ', OIDC['scopes'])),
             OIDC['redirect_uri'],
         );
     }
@@ -53,9 +53,24 @@ class OidcClient
             $provider['discovery_url'],
             $provider['client_id'],
             $provider['client_secret'],
-            $provider['scopes'] ?? 'openid email profile',
+            self::normalizeScopes($provider['scopes'] ?? 'openid email profile'),
             OIDC['redirect_uri'],
         );
+    }
+
+    /**
+     * Guarantee `openid` is requested. Without it the provider runs a plain OAuth2 flow and
+     * returns no id_token — which then makes RP-initiated logout impossible, because
+     * providers require `id_token_hint` to honour `post_logout_redirect_uri`. Per-account
+     * provider rows carry a free-text scope list, so this is easy to get wrong in the DB.
+     */
+    private static function normalizeScopes(string $scopes): string
+    {
+        $list = preg_split('/\s+/', trim($scopes), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        if (!in_array('openid', $list, true)) {
+            array_unshift($list, 'openid');
+        }
+        return implode(' ', $list);
     }
 
     /**
@@ -323,7 +338,18 @@ class OidcClient
     }
 
     /**
-     * Get logout URL
+     * Build the RP-initiated logout URL.
+     *
+     * `post_logout_redirect_uri` is only ever sent TOGETHER with `id_token_hint`. The two
+     * are independent in the spec but most providers — SimpleSAMLphp's OIDC module among
+     * them — reject the redirect without the hint:
+     *
+     *   "id_token_hint is mandatory when post_logout_redirect_uri is included."
+     *
+     * The hint can legitimately be missing (a session established before id_tokens were
+     * stored, a provider that returns none, or a refresh that dropped it), so rather than
+     * producing a request the provider refuses, we drop the redirect and let the provider
+     * show its own signed-out page. The local session is destroyed either way.
      */
     public function getLogoutUrl(?string $idToken = null, ?string $redirectUrl = null): string
     {
@@ -335,18 +361,16 @@ class OidcClient
             return $redirectUrl ?? BASE_URL;
         }
 
-        $params = [];
-
-        if ($idToken) {
-            $params['id_token_hint'] = $idToken;
+        if (!$idToken) {
+            require_once(__DIR__ . '/Logging.php');
+            Logging::warning('OIDC logout without id_token_hint — omitting post_logout_redirect_uri; '
+                . 'the provider will show its own signed-out page instead of returning to the app.');
+            return $endSessionEndpoint;
         }
 
+        $params = ['id_token_hint' => $idToken];
         if ($redirectUrl) {
             $params['post_logout_redirect_uri'] = $redirectUrl;
-        }
-
-        if (empty($params)) {
-            return $endSessionEndpoint;
         }
 
         return $endSessionEndpoint . '?' . http_build_query($params);

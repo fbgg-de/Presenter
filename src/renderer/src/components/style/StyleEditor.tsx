@@ -246,6 +246,17 @@ const LanguageStyleEditor = ({
   const sw = strokeMatch ? strokeMatch[1] : '1px';
   const sc = strokeMatch ? strokeMatch[2] : 'black';
 
+  /**
+   * Write a value AND switch its property on.
+   *
+   * The main style rows already do this (`updateProp(key, { enabled: true, value })`), but
+   * the language rows only wrote the value — so picking a colour or size here changed
+   * nothing on screen, because `langEntryToCss` skips any property whose `*Enabled` flag
+   * is not set. The row's toggle still turns it back off.
+   */
+  const setEnabled = (patch: Partial<LanguageStyleEntry>, enableKey: keyof LanguageStyleEntry) =>
+    onChange({ ...patch, [enableKey]: true });
+
   return (
     <Stack spacing={1}>
       <StylePropRow
@@ -253,14 +264,14 @@ const LanguageStyleEditor = ({
         enabled={entry.fontColorEnabled ?? false}
         onToggle={(e) => onChange({ fontColorEnabled: e })}
       >
-        <ColorSwatchButton value={entry.fontColor || '#FFFFFF'} onChange={(c) => onChange({ fontColor: c })} />
+        <ColorSwatchButton value={entry.fontColor || '#FFFFFF'} onChange={(c) => setEnabled({ fontColor: c }, 'fontColorEnabled')} />
       </StylePropRow>
       <StylePropRow
         label={LL.STYLE.FONT_SIZE()}
         enabled={entry.fontSizeEnabled ?? false}
         onToggle={(e) => onChange({ fontSizeEnabled: e })}
       >
-        <CssUnitInput value={entry.fontSize || '4vh'} onChange={(v) => onChange({ fontSize: v })} />
+        <CssUnitInput value={entry.fontSize || '4vh'} onChange={(v) => setEnabled({ fontSize: v }, 'fontSizeEnabled')} />
       </StylePropRow>
       <StylePropRow
         label={LL.STYLE.FONT_BOLD_ITALIC()}
@@ -268,16 +279,16 @@ const LanguageStyleEditor = ({
         onToggle={(e) => onChange({ fontStyleEnabled: e })}
       >
         <ToggleButtonGroup size="small">
-          <ToggleButton value="bold" selected={entry.fontBold || false} onClick={() => onChange({ fontBold: !entry.fontBold })}>
+          <ToggleButton value="bold" selected={entry.fontBold || false} onClick={() => setEnabled({ fontBold: !entry.fontBold }, 'fontStyleEnabled')}>
             <BoldIcon />
           </ToggleButton>
-          <ToggleButton value="italic" selected={entry.fontItalic || false} onClick={() => onChange({ fontItalic: !entry.fontItalic })}>
+          <ToggleButton value="italic" selected={entry.fontItalic || false} onClick={() => setEnabled({ fontItalic: !entry.fontItalic }, 'fontStyleEnabled')}>
             <ItalicIcon />
           </ToggleButton>
           <ToggleButton
             value="underline"
             selected={entry.fontUnderline || false}
-            onClick={() => onChange({ fontUnderline: !entry.fontUnderline })}
+            onClick={() => setEnabled({ fontUnderline: !entry.fontUnderline }, 'fontStyleEnabled')}
           >
             <UnderlineIcon />
           </ToggleButton>
@@ -288,7 +299,7 @@ const LanguageStyleEditor = ({
         enabled={entry.letterSpacingEnabled ?? false}
         onToggle={(e) => onChange({ letterSpacingEnabled: e })}
       >
-        <CssUnitInput value={entry.letterSpacing || '0px'} onChange={(v) => onChange({ letterSpacing: v })} />
+        <CssUnitInput value={entry.letterSpacing || '0px'} onChange={(v) => setEnabled({ letterSpacing: v }, 'letterSpacingEnabled')} />
       </StylePropRow>
       <StylePropRow
         block
@@ -303,9 +314,9 @@ const LanguageStyleEditor = ({
             alignItems: 'flex-start',
           }}
         >
-          <CssUnitInput value={sx} onChange={(v) => onChange({ textShadow: `${v} ${sy} ${sb}` })} label={LL.STYLE.SHADOW_X()} />
-          <CssUnitInput value={sy} onChange={(v) => onChange({ textShadow: `${sx} ${v} ${sb}` })} label={LL.STYLE.SHADOW_Y()} />
-          <CssUnitInput value={sb} onChange={(v) => onChange({ textShadow: `${sx} ${sy} ${v}` })} label={LL.STYLE.SHADOW_BLUR()} />
+          <CssUnitInput value={sx} onChange={(v) => setEnabled({ textShadow: `${v} ${sy} ${sb}` }, 'textShadowEnabled')} label={LL.STYLE.SHADOW_X()} />
+          <CssUnitInput value={sy} onChange={(v) => setEnabled({ textShadow: `${sx} ${v} ${sb}` }, 'textShadowEnabled')} label={LL.STYLE.SHADOW_Y()} />
+          <CssUnitInput value={sb} onChange={(v) => setEnabled({ textShadow: `${sx} ${sy} ${v}` }, 'textShadowEnabled')} label={LL.STYLE.SHADOW_BLUR()} />
           <Stack
             sx={{
               alignItems: 'center',
@@ -320,7 +331,7 @@ const LanguageStyleEditor = ({
             >
               {LL.STYLE.SHADOW_COLOR()}
             </Typography>
-            <ColorSwatchButton value={entry.textShadowColor || '#000000'} onChange={(c) => onChange({ textShadowColor: c })} />
+            <ColorSwatchButton value={entry.textShadowColor || '#000000'} onChange={(c) => setEnabled({ textShadowColor: c }, 'textShadowEnabled')} />
           </Stack>
         </Stack>
       </StylePropRow>
@@ -337,7 +348,7 @@ const LanguageStyleEditor = ({
             alignItems: 'flex-start',
           }}
         >
-          <CssUnitInput value={sw} onChange={(v) => onChange({ textStroke: `${v} ${sc}` })} label={LL.STYLE.STROKE_WIDTH()} />
+          <CssUnitInput value={sw} onChange={(v) => setEnabled({ textStroke: `${v} ${sc}` }, 'textStrokeEnabled')} label={LL.STYLE.STROKE_WIDTH()} />
           <Stack
             sx={{
               alignItems: 'center',
@@ -352,7 +363,7 @@ const LanguageStyleEditor = ({
             >
               {LL.STYLE.STROKE_COLOR()}
             </Typography>
-            <ColorSwatchButton value={sc} onChange={(c) => onChange({ textStroke: `${sw} ${c}` })} />
+            <ColorSwatchButton value={sc} onChange={(c) => setEnabled({ textStroke: `${sw} ${c}` }, 'textStrokeEnabled')} />
           </Stack>
         </Stack>
       </StylePropRow>
@@ -362,7 +373,7 @@ const LanguageStyleEditor = ({
           max={1}
           step={0.05}
           value={entry.opacity ?? 1}
-          onChange={(_, v) => onChange({ opacity: v as number })}
+          onChange={(_, v) => setEnabled({ opacity: v as number }, 'opacityEnabled')}
           valueLabelDisplay="auto"
           sx={{ width: 200 }}
         />
@@ -383,9 +394,9 @@ const LanguageStyleEditor = ({
           <Switch
             size="small"
             checked={entry.nextLinePreview || false}
-            onChange={(e2) => onChange({ nextLinePreview: e2.target.checked })}
+            onChange={(e2) => setEnabled({ nextLinePreview: e2.target.checked }, 'nextLinePreviewEnabled')}
           />
-          <ColorSwatchButton value={entry.nextLinePreviewColor || '#AAAAAA'} onChange={(c) => onChange({ nextLinePreviewColor: c })} />
+          <ColorSwatchButton value={entry.nextLinePreviewColor || '#AAAAAA'} onChange={(c) => setEnabled({ nextLinePreviewColor: c }, 'nextLinePreviewEnabled')} />
           <Stack
             spacing={0}
             sx={{
@@ -405,7 +416,7 @@ const LanguageStyleEditor = ({
               max={1}
               step={0.05}
               value={entry.nextLinePreviewOpacity ?? 0.6}
-              onChange={(_, v) => onChange({ nextLinePreviewOpacity: v as number })}
+              onChange={(_, v) => setEnabled({ nextLinePreviewOpacity: v as number }, 'nextLinePreviewEnabled')}
               valueLabelDisplay="auto"
               valueLabelFormat={(v) => `${Math.round((v as number) * 100)}%`}
               sx={{ width: 80 }}

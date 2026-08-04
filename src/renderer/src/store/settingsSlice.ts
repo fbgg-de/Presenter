@@ -20,6 +20,8 @@ export interface SetListsSettings {
   lastOpenedSetListId: number | null;
   /** setListId → tagName → expanded. Scoped per set list, stale tag names are ignored. */
   accordionStateBySetListId: Record<string, Record<string, boolean>>;
+  /** How many of the most recently saved shows feed the per-song usage counts (1–20). */
+  usageShowCount: number;
 }
 
 export interface SettingsState {
@@ -123,7 +125,7 @@ const defaultState: SettingsState = {
   remoteControlCommands: {},
   resetBlackOnSwitch: false,
   restoreWindowsOnStart: true,
-  setLists: { lastOpenedSetListId: null, accordionStateBySetListId: {} },
+  setLists: { lastOpenedSetListId: null, accordionStateBySetListId: {}, usageShowCount: 8 },
   showDeleteFromDb: false,
   showLicenseNumber: true,
   showLimit: 10,

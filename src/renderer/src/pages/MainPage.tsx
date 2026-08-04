@@ -58,6 +58,7 @@ export const MainPage = () => {
     updatedAt: showUpdatedAt,
     reloadShow,
     dismiss: dismissShowUpdate,
+    reloadFailed: showReloadFailed,
   } = useShowUpdatePoller({ autoReload: followsRemote });
 
   // Gate all authenticated queries on confirmed session status.
@@ -152,6 +153,21 @@ export const MainPage = () => {
         >
           {LL.SHOWS.UPDATE_AVAILABLE()}
           {showUpdatedAt ? ` · ${LL.SHOWS.UPDATE_AVAILABLE_AT({ time: formatRelativeTime(showUpdatedAt, locale) })}` : ''}
+        </Alert>
+      </Snackbar>
+      {/* A change was detected but could not be loaded (auto reload keeps retrying).
+          Without this the operator drifts silently: remote pages keep sending indices
+          that point into an order this app no longer has. */}
+      <Snackbar open={showReloadFailed} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+        <Alert
+          severity="warning"
+          action={
+            <Button color="inherit" size="small" onClick={() => reloadShow()}>
+              {LL.SHOWS.UPDATE_AVAILABLE_ACTION()}
+            </Button>
+          }
+        >
+          {LL.SHOWS.UPDATE_FETCH_FAILED()}
         </Alert>
       </Snackbar>
       {!isShowSelectorOpen && (

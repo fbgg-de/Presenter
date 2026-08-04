@@ -1039,6 +1039,10 @@ type RootTranslation = {
 		 */
 		UPDATE_AVAILABLE_ACTION: string
 		/**
+		 * S​h​o​w​ ​c​h​a​n​g​e​d​ ​o​n​ ​t​h​e​ ​s​e​r​v​e​r​,​ ​b​u​t​ ​l​o​a​d​i​n​g​ ​t​h​e​ ​c​h​a​n​g​e​ ​f​a​i​l​e​d​ ​—​ ​r​e​t​r​y​i​n​g​ ​a​u​t​o​m​a​t​i​c​a​l​l​y
+		 */
+		UPDATE_FETCH_FAILED: string
+		/**
 		 * C​C​L​I​ ​r​e​p​o​r​t
 		 */
 		CCLI_REPORT: string
@@ -4892,6 +4896,21 @@ type RootTranslation = {
 		 */
 		ADD_TO_AGENDA: string
 		/**
+		 * U​s​a​g​e​ ​i​n​ ​t​h​e​ ​l​a​s​t​ ​{​c​o​u​n​t​}​ ​s​h​o​w​s
+		 * @param {unknown} count
+		 */
+		USAGE_SLIDER: RequiredParams<'count'>
+		/**
+		 * P​l​a​y​e​d​ ​i​n​ ​{​c​o​u​n​t​}​ ​o​f​ ​t​h​e​ ​l​a​s​t​ ​{​t​o​t​a​l​}​ ​s​h​o​w​s
+		 * @param {unknown} count
+		 * @param {unknown} total
+		 */
+		USAGE_TOOLTIP: RequiredParams<'count' | 'total'>
+		/**
+		 * U​n​d​o​ ​—​ ​r​e​m​o​v​e​ ​t​h​e​ ​l​a​s​t​ ​a​d​d​e​d​ ​s​o​n​g​ ​f​r​o​m​ ​t​h​e​ ​a​g​e​n​d​a
+		 */
+		UNDO_LAST_ADD: string
+		/**
 		 * A​d​d​ ​t​o​ ​s​e​t​ ​l​i​s​t
 		 */
 		ADD_TO_LIST: string
@@ -6169,6 +6188,10 @@ export type TranslationFunctions = {
 		 * Reload
 		 */
 		UPDATE_AVAILABLE_ACTION: () => LocalizedString
+		/**
+		 * Show changed on the server, but loading the change failed — retrying automatically
+		 */
+		UPDATE_FETCH_FAILED: () => LocalizedString
 		/**
 		 * CCLI report
 		 */
@@ -9971,6 +9994,18 @@ export type TranslationFunctions = {
 		 * Add to agenda
 		 */
 		ADD_TO_AGENDA: () => LocalizedString
+		/**
+		 * Usage in the last {count} shows
+		 */
+		USAGE_SLIDER: (arg: { count: unknown }) => LocalizedString
+		/**
+		 * Played in {count} of the last {total} shows
+		 */
+		USAGE_TOOLTIP: (arg: { count: unknown, total: unknown }) => LocalizedString
+		/**
+		 * Undo — remove the last added song from the agenda
+		 */
+		UNDO_LAST_ADD: () => LocalizedString
 		/**
 		 * Add to set list
 		 */

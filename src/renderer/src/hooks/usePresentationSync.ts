@@ -104,10 +104,14 @@ export const usePresentationSync = (): void => {
       if (midiTrackingMasterRef.current !== 'midi') return;
       const hasItem = typeof state.activeItemIndex === 'number';
       const hasBlock = typeof state.activeBlockIndex === 'number';
+      // Clamp against OUR order — the musician's show may be longer when this app missed a
+      // reload; an out-of-range index would land the presentation on nothing at all.
+      // (Block indices are intentionally not clamped: >= blocks.length means "copyright".)
+      const clampItem = (idx: number) => Math.max(0, Math.min(idx, Math.max(0, remoteCtxRef.current.showItemCount - 1)));
       if (hasItem && hasBlock) {
-        dispatch(setActiveItemAndBlock({ itemIndex: state.activeItemIndex!, blockIndex: state.activeBlockIndex! }));
+        dispatch(setActiveItemAndBlock({ itemIndex: clampItem(state.activeItemIndex!), blockIndex: state.activeBlockIndex! }));
       } else if (hasItem) {
-        dispatch(setActiveItemIndex(state.activeItemIndex!));
+        dispatch(setActiveItemIndex(clampItem(state.activeItemIndex!)));
       } else if (hasBlock) {
         dispatch(setActiveBlockIndex(state.activeBlockIndex!));
       }

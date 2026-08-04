@@ -30,6 +30,7 @@ import {
   ListItem,
   ListItemButton,
   Popover,
+  Slider,
   Stack,
   Tab,
   Tabs,
@@ -47,7 +48,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   FilterAlt as FilterIcon,
   LibraryAdd as ImportIcon,
-  PlaylistAdd as AddToAgendaIcon,
+  History as UsageIcon,
   QueueMusic as SetListIcon,
   Search as SearchIcon,
   ContentCopy as CopyIcon,
@@ -55,10 +56,12 @@ import {
   ChevronLeft as MoveLeftIcon,
   ChevronRight as MoveRightIcon,
   LocalOffer as TagIcon,
+  Undo as UndoIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
-import { addShowItem, useGetShow } from '@/store/showSlice';
+import { addShowItem, removeShowItem, useGetShow } from '@/store/showSlice';
+import { useGetShowsQuery } from '@/api/shows.api';
 import { addSongToStore, addToSongsOrder, useGetSongs } from '@/store/songsSlice';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useSearchSongsQuery, useLazyGetSongQuery, type SongListItem } from '@/api/songs.api';
@@ -85,6 +88,12 @@ const UNTAGGED = '__untagged__';
 
 /** Library results are one line each here, so more of them fit than the server default. */
 const ADD_MODE_RESULT_LIMIT = 15;
+
+/**
+ * Upper bound of the usage slider. The full window is fetched once and sliced client-side,
+ * so dragging the slider never refetches.
+ */
+const MAX_USAGE_SHOWS = 20;
 
 /**
  * The shared one-line song label used by both the set list rows and the Add results.
@@ -160,8 +169,36 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   /** Transient tick on the copy button so the user gets feedback without a snackbar. */
   const [copied, setCopied] = useState(false);
+  /** Anchor of the usage-window popover (the history icon next to the search field). */
+  const [usageAnchor, setUsageAnchor] = useState<HTMLElement | null>(null);
+  /**
+   * Payload of the most recent add-to-agenda click, kept so a mis-click can be undone.
+   * Only the latest addition is undoable; cleared once undone or when the dialog closes.
+   */
+  const [lastAdded, setLastAdded] = useState<{ songNumber: number; order: string; key?: string } | null>(null);
 
   const lists: SetList[] = useMemo(() => setLists ?? [], [setLists]);
+
+  // ── Song usage across recent shows ────────────────────────────────────────
+  // The slider narrows a client-side window over the shows the backend already returns
+  // newest-save-first (`date` is bumped to CURRENT_TIMESTAMP on every save).
+  const [usageShowCount, setUsageShowCount] = useState(setListSettings.usageShowCount ?? 8);
+  const { data: recentShowsData } = useGetShowsQuery({ limit: MAX_USAGE_SHOWS, page: 0 }, { skip: !open });
+
+  const recentShows = useMemo(() => (recentShowsData?.shows ?? []).slice(0, usageShowCount), [recentShowsData, usageShowCount]);
+
+  /** songNumber → number of recent shows it appears in (a show counts once, however often the song repeats in it). */
+  const usageCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const show of recentShows) {
+      const numbers = new Set<number>();
+      for (const item of show.order) {
+        if (item.type === 'song' && item.songNumber != null) numbers.add(item.songNumber);
+      }
+      for (const n of numbers) counts.set(n, (counts.get(n) ?? 0) + 1);
+    }
+    return counts;
+  }, [recentShows]);
 
   // Restore the persisted selection; fall back to the first list when it is gone (or never set).
   useEffect(() => {
@@ -169,6 +206,11 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
     const stillExists = activeId != null && lists.some((l) => l.id === activeId);
     if (!stillExists) setActiveId(lists[0].id);
   }, [open, lists, activeId]);
+
+  // An undo target from a previous opening of the dialog would be confusing — drop it.
+  useEffect(() => {
+    if (!open) setLastAdded(null);
+  }, [open]);
 
   // Persist the selection so the manager reopens where the user left off.
   useEffect(() => {
@@ -382,16 +424,37 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
           dispatch(addToSongsOrder(full.songNumber));
         }
       }
-      dispatch(
-        addShowItem({
-          type: 'song',
-          songNumber: entry.songNumber,
-          order: assignment?.blockOrderName || 'Default',
-          ...(assignment?.customKey ? { key: assignment.customKey } : {}),
-        }),
-      );
+      const payload = {
+        songNumber: entry.songNumber,
+        order: assignment?.blockOrderName || 'Default',
+        ...(assignment?.customKey ? { key: assignment.customKey } : {}),
+      };
+      dispatch(addShowItem({ type: 'song', ...payload }));
+      setLastAdded(payload);
       trackEvent('set_list_added_to_agenda', 'song', String(entry.songNumber), { tag: assignment?.tagName ?? '' });
     });
+  };
+
+  /**
+   * Undo the most recent add-to-agenda click. The item was appended, but the user may have
+   * touched the agenda since — so scan from the end for the matching payload instead of
+   * blindly popping the last item, and do nothing when it is already gone.
+   */
+  const handleUndoLastAdd = () => {
+    if (!lastAdded || !currentShow) return;
+    for (let i = currentShow.order.length - 1; i >= 0; i--) {
+      const item = currentShow.order[i];
+      if (
+        item.type === 'song' &&
+        item.songNumber === lastAdded.songNumber &&
+        (item.order ?? 'Default') === lastAdded.order &&
+        (item.key ?? undefined) === lastAdded.key
+      ) {
+        dispatch(removeShowItem(i));
+        break;
+      }
+    }
+    setLastAdded(null);
   };
 
   const handleRemove = (scope: 'tag' | 'song') => {
@@ -510,6 +573,7 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
   const renderRow = (occurrence: TaggedOccurrence, sectionName: string) => {
     const { entry, assignment } = occurrence;
     const inAgenda = songNumbersInShow.has(entry.songNumber);
+    const usage = usageCounts.get(entry.songNumber) ?? 0;
     return (
       <ListItem
         key={`${entry.id}-${assignment?.id ?? 'none'}`}
@@ -530,12 +594,10 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
         })}
         secondaryAction={
           <Stack direction="row" spacing={0.5}>
-            <Tooltip title={LL.SET_LISTS.ADD_TO_AGENDA()}>
-              <span>
-                <IconButton size="small" disabled={!currentShow} onClick={() => handleAddToAgenda(occurrence)}>
-                  <AddToAgendaIcon fontSize="small" />
-                </IconButton>
-              </span>
+            <Tooltip title={LL.SET_LISTS.EDIT_TAGS()}>
+              <IconButton size="small" onClick={() => setTagEditorEntry(entry)}>
+                <TagIcon fontSize="small" />
+              </IconButton>
             </Tooltip>
             <Tooltip title={LL.SET_LISTS.REMOVE()}>
               <IconButton
@@ -555,9 +617,15 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
         }
       >
         {/* An empty title renders no tooltip, so this doubles as the explanation of the tint
-            for planned entries without needing a separate indicator icon. */}
-        <Tooltip title={inAgenda ? LL.SET_LISTS.IN_AGENDA() : ''}>
-          <ListItemButton dense onClick={() => setTagEditorEntry(entry)} sx={{ borderRadius: 1, minWidth: 0 }}>
+            for planned entries without needing a separate indicator icon. Clicking the row adds
+            the occurrence to the agenda (tags are edited via the tag button instead). */}
+        <Tooltip title={inAgenda ? LL.SET_LISTS.IN_AGENDA() : currentShow ? LL.SET_LISTS.ADD_TO_AGENDA() : ''}>
+          <ListItemButton
+            dense
+            disabled={!currentShow}
+            onClick={() => handleAddToAgenda(occurrence)}
+            sx={{ borderRadius: 1, minWidth: 0 }}
+          >
             {/* One line, two zones: a text zone that absorbs all the shrinking, and a chip zone
                 that holds its size. Keeping the chips out of the text zone means a very long
                 title can never push the key / order out of view. */}
@@ -573,6 +641,16 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
                   )}
                 </Stack>
               )}
+              {/* How often the song appeared in the recent-shows window. Dimmed at zero so
+                  unplayed songs stand out by their absence of emphasis, not by a missing chip. */}
+              <Tooltip title={LL.SET_LISTS.USAGE_TOOLTIP({ count: usage, total: recentShows.length })}>
+                <Chip
+                  label={`${usage}×`}
+                  size="small"
+                  variant="outlined"
+                  sx={{ height: 18, flexShrink: 0, color: usage === 0 ? 'text.disabled' : 'text.secondary' }}
+                />
+              </Tooltip>
             </Stack>
           </ListItemButton>
         </Tooltip>
@@ -707,6 +785,18 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
                 },
               }}
             />
+            <Tooltip title={LL.SET_LISTS.USAGE_SLIDER({ count: usageShowCount })}>
+              <IconButton size="small" onClick={(e) => setUsageAnchor(e.currentTarget)}>
+                <UsageIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title={LL.SET_LISTS.UNDO_LAST_ADD()}>
+              <span>
+                <IconButton size="small" disabled={!lastAdded || !currentShow} onClick={handleUndoLastAdd}>
+                  <UndoIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
           </Stack>
 
           <Divider />
@@ -850,6 +940,33 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
               {LL.COMMON.CANCEL()}
             </Button>
           </Stack>
+        </Stack>
+      </Popover>
+
+      {/* Usage window — how many of the most recently saved shows feed the per-song counts.
+          Dragging only re-slices the already-fetched window; the setting persists on release. */}
+      <Popover
+        open={!!usageAnchor}
+        anchorEl={usageAnchor}
+        onClose={() => setUsageAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Stack spacing={0.5} sx={{ px: 2.5, pt: 1.5, pb: 3, width: 300, overflow: 'hidden' }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {LL.SET_LISTS.USAGE_SLIDER({ count: usageShowCount })}
+          </Typography>
+          <Slider
+            size="small"
+            min={1}
+            max={MAX_USAGE_SHOWS}
+            value={usageShowCount}
+            onChange={(_e, value) => setUsageShowCount(value as number)}
+            onChangeCommitted={(_e, value) => updateSetting('setLists', { ...setListSettings, usageShowCount: value as number })}
+            valueLabelDisplay="auto"
+            marks={[{ value: 1, label: '1' }, { value: 8, label: '8' }, { value: MAX_USAGE_SHOWS, label: String(MAX_USAGE_SHOWS) }]}
+            aria-label={LL.SET_LISTS.USAGE_SLIDER({ count: usageShowCount })}
+          />
         </Stack>
       </Popover>
 
