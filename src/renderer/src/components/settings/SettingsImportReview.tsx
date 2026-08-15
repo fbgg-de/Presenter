@@ -31,9 +31,9 @@ interface SettingsImportReviewProps {
 }
 
 export const SettingsImportReview = ({ open, diff, onConfirm, onCancel }: SettingsImportReviewProps) => {
-  if (!diff) return null;
-
+  // The hook must run before any early return — bailing out first breaks hook order.
   const { LL } = useI18nContext();
+  if (!diff) return null;
 
   const addedCount = Object.keys(diff.added).length;
   const changedCount = Object.keys(diff.changed).length;

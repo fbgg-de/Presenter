@@ -88,6 +88,7 @@ export const presenterApi = createApi({
     'AdminConfig',
     'AdminMigrations',
     'AdminProviders',
+    'AdminSongs',
     'ChurchToolsSongs',
     'Logs',
     'Metrics',

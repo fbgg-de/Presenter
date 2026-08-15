@@ -81,6 +81,9 @@ import {
 } from '@/api/setLists.api';
 import { Song } from '@/song';
 import { useMetrics } from '@/hooks/useMetrics';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { RowActionMenu } from '@/components/common/RowActionMenu';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { SetListTagEditor } from './SetListTagEditor';
 
 /** Section key for entries that have no Tag Assignments at all. */
@@ -96,22 +99,51 @@ const ADD_MODE_RESULT_LIMIT = 15;
 const MAX_USAGE_SHOWS = 20;
 
 /**
- * The shared one-line song label used by both the set list rows and the Add results.
+ * The shared song label used by both the set list rows and the Add results.
  *
  * The title never yields space — `flexShrink: 0` squeezes the authors to nothing first, and the
  * `maxWidth` only bites when the title alone is wider than the row, where it ellipsizes rather
  * than hard-clipping. Callers put anything that must survive (chips, buttons) outside this box.
+ *
+ * `stacked` (phones) drops the authors onto a second line instead: a narrow row shrinks them to
+ * nothing anyway, so they may as well be readable.
  */
-const SongLine = ({ title, songNumber, authors }: { title: string; songNumber: number; authors?: string }) => (
-  <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, flex: '1 1 auto', overflow: 'hidden' }}>
-    <Typography variant="body2" noWrap sx={{ fontWeight: 500, flexShrink: 0, minWidth: 0, maxWidth: '100%' }}>
-      {title}
-    </Typography>
-    <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
-      #{songNumber}
-    </Typography>
+const SongLine = ({
+  title,
+  songNumber,
+  authors,
+  stacked = false,
+}: {
+  title: string;
+  songNumber: number;
+  authors?: string;
+  stacked?: boolean;
+}) => (
+  <Stack
+    direction={stacked ? 'column' : 'row'}
+    spacing={stacked ? 0 : 0.75}
+    sx={{
+      alignItems: stacked ? 'flex-start' : 'center',
+      minWidth: 0,
+      flex: '1 1 auto',
+      overflow: 'hidden',
+      width: stacked ? '100%' : undefined,
+    }}
+  >
+    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%', flexShrink: stacked ? 1 : 0 }}>
+      <Typography variant="body2" noWrap sx={{ fontWeight: 500, minWidth: 0 }}>
+        {title}
+      </Typography>
+      <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
+        #{songNumber}
+      </Typography>
+    </Stack>
     {authors && (
-      <Typography variant="caption" noWrap sx={{ color: 'text.secondary', flex: '1 1 auto', minWidth: 0 }}>
+      <Typography
+        variant="caption"
+        noWrap
+        sx={{ color: 'text.secondary', flex: stacked ? '0 0 auto' : '1 1 auto', minWidth: 0, maxWidth: '100%' }}
+      >
         {authors}
       </Typography>
     )}
@@ -141,6 +173,7 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const { trackEvent } = useMetrics();
+  const isMobile = useIsMobile();
 
   const { currentShow } = useGetShow();
   const { songs } = useGetSongs();
@@ -384,8 +417,8 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
         }
       >
         <ListItemButton dense disabled={already} onClick={() => handleAddSongToSetList(song)} sx={{ borderRadius: 1, minWidth: 0 }}>
-          {/* Same one-line label as the set list rows so both halves of the dialog match. */}
-          <SongLine title={song.title} songNumber={song.songNumber} authors={song.authors} />
+          {/* Same label as the set list rows so both halves of the dialog match. */}
+          <SongLine title={song.title} songNumber={song.songNumber} authors={song.authors} stacked={isMobile} />
         </ListItemButton>
       </ListItem>
     );
@@ -506,28 +539,13 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
     const text = buildSetListText();
     if (!text) return;
     void (async () => {
-      try {
-        // navigator.clipboard needs a secure context; plain-HTTP LAN deployments fall back
-        // to the legacy execCommand path rather than silently doing nothing.
-        if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(text);
-        } else {
-          const area = document.createElement('textarea');
-          area.value = text;
-          area.style.position = 'fixed';
-          area.style.opacity = '0';
-          document.body.appendChild(area);
-          area.select();
-          const ok = document.execCommand('copy');
-          document.body.removeChild(area);
-          if (!ok) throw new Error('execCommand copy failed');
-        }
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-        trackEvent('set_list_copied', undefined, String(activeList?.id ?? ''));
-      } catch {
+      if (!(await copyTextToClipboard(text))) {
         setErrorMsg(LL.SET_LISTS.COPY_FAILED());
+        return;
       }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      trackEvent('set_list_copied', undefined, String(activeList?.id ?? ''));
     })();
   };
 
@@ -574,6 +592,15 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
     const { entry, assignment } = occurrence;
     const inAgenda = songNumbersInShow.has(entry.songNumber);
     const usage = usageCounts.get(entry.songNumber) ?? 0;
+    const rowTagName = sectionName === UNTAGGED ? null : sectionName;
+
+    // Same two chips either way; only their sequence differs by breakpoint (see below).
+    // The order name is capped so a long one ellipsizes inside its chip instead of
+    // crowding the title out of the row.
+    const orderChip = assignment?.blockOrderName ? (
+      <Chip label={assignment.blockOrderName} size="small" variant="outlined" sx={{ height: 18, maxWidth: { xs: 110, sm: 130 } }} />
+    ) : null;
+    const keyChip = assignment?.customKey ? <Chip label={assignment.customKey} size="small" color="primary" sx={{ height: 18 }} /> : null;
     return (
       <ListItem
         key={`${entry.id}-${assignment?.id ?? 'none'}`}
@@ -586,71 +613,97 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
           bgcolor: inAgenda ? alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.18 : 0.12) : 'transparent',
           border: '1px solid',
           borderColor: inAgenda ? alpha(theme.palette.success.main, 0.5) : 'transparent',
-          // Clear the two absolutely-positioned action buttons: they occupy 81px from the row's
-          // right edge (2 × 30px + 4px gap + MUI's 16px secondaryAction inset). ListItem itself
-          // sets 48px on the child button through this very selector, which outranks an `sx` on
-          // the button — so the override has to live here to win the cascade.
-          '& > .MuiListItemButton-root': { pr: '92px' },
+          // Clear the absolutely-positioned actions: 92px for the desktop pair (2 × 30px + 4px
+          // gap + MUI's 16px secondaryAction inset), 48px for the single overflow button on mobile.
+          // ListItem itself sets 48px on the child button through this very selector, which
+          // outranks an `sx` on the button — so the override has to live here to win the cascade.
+          '& > .MuiListItemButton-root': { pr: { xs: '48px', sm: '92px' } },
         })}
         secondaryAction={
-          <Stack direction="row" spacing={0.5}>
-            <Tooltip title={LL.SET_LISTS.EDIT_TAGS()}>
-              <IconButton size="small" onClick={() => setTagEditorEntry(entry)}>
-                <TagIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={LL.SET_LISTS.REMOVE()}>
-              <IconButton
-                size="small"
-                onClick={(e) =>
-                  setRemoveCtx({
-                    anchor: e.currentTarget,
-                    entry,
-                    tagName: sectionName === UNTAGGED ? null : sectionName,
-                  })
-                }
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          </Stack>
+          isMobile ? (
+            <RowActionMenu
+              edge={false}
+              actions={[
+                {
+                  key: 'tags',
+                  label: LL.SET_LISTS.EDIT_TAGS(),
+                  icon: <TagIcon fontSize="small" />,
+                  onClick: () => setTagEditorEntry(entry),
+                },
+                {
+                  key: 'remove',
+                  label: LL.SET_LISTS.REMOVE(),
+                  icon: <DeleteIcon fontSize="small" />,
+                  // The remove popover needs an anchor that outlives the menu — the overflow button.
+                  onClick: (anchor) => setRemoveCtx({ anchor, entry, tagName: rowTagName }),
+                  destructive: true,
+                },
+              ]}
+            />
+          ) : (
+            <Stack direction="row" spacing={0.5}>
+              <Tooltip title={LL.SET_LISTS.EDIT_TAGS()}>
+                <IconButton size="small" onClick={() => setTagEditorEntry(entry)}>
+                  <TagIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={LL.SET_LISTS.REMOVE()}>
+                <IconButton size="small" onClick={(e) => setRemoveCtx({ anchor: e.currentTarget, entry, tagName: rowTagName })}>
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          )
         }
       >
         {/* An empty title renders no tooltip, so this doubles as the explanation of the tint
             for planned entries without needing a separate indicator icon. Clicking the row adds
             the occurrence to the agenda (tags are edited via the tag button instead). */}
         <Tooltip title={inAgenda ? LL.SET_LISTS.IN_AGENDA() : currentShow ? LL.SET_LISTS.ADD_TO_AGENDA() : ''}>
-          <ListItemButton
-            dense
-            disabled={!currentShow}
-            onClick={() => handleAddToAgenda(occurrence)}
-            sx={{ borderRadius: 1, minWidth: 0 }}
-          >
+          <ListItemButton dense disabled={!currentShow} onClick={() => handleAddToAgenda(occurrence)} sx={{ borderRadius: 1, minWidth: 0 }}>
             {/* One line, two zones: a text zone that absorbs all the shrinking, and a chip zone
                 that holds its size. Keeping the chips out of the text zone means a very long
-                title can never push the key / order out of view. */}
-            <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', minWidth: 0, flex: 1, overflow: 'hidden' }}>
-              <SongLine title={entryTitle(entry)} songNumber={entry.songNumber} authors={entryAuthors(entry)} />
-              {(assignment?.customKey || assignment?.blockOrderName) && (
-                <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0 }}>
-                  {assignment?.customKey && <Chip label={assignment.customKey} size="small" color="primary" sx={{ height: 18 }} />}
-                  {/* Capped so a long order name ellipsizes inside its chip instead of crowding
-                      the title out of the row. */}
-                  {assignment?.blockOrderName && (
-                    <Chip label={assignment.blockOrderName} size="small" variant="outlined" sx={{ height: 18, maxWidth: 130 }} />
-                  )}
-                </Stack>
-              )}
-              {/* How often the song appeared in the recent-shows window. Dimmed at zero so
-                  unplayed songs stand out by their absence of emphasis, not by a missing chip. */}
-              <Tooltip title={LL.SET_LISTS.USAGE_TOOLTIP({ count: usage, total: recentShows.length })}>
-                <Chip
-                  label={`${usage}×`}
-                  size="small"
-                  variant="outlined"
-                  sx={{ height: 18, flexShrink: 0, color: usage === 0 ? 'text.disabled' : 'text.secondary' }}
-                />
-              </Tooltip>
+                title can never push the key / order out of view. A phone has no width for both
+                zones side by side, so there the chips move under the title. */}
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={{ xs: 0.25, sm: 0.75 }}
+              sx={{
+                alignItems: { xs: 'flex-start', sm: 'center' },
+                minWidth: 0,
+                flex: 1,
+                width: '100%',
+                overflow: 'hidden',
+              }}
+            >
+              <SongLine title={entryTitle(entry)} songNumber={entry.songNumber} authors={entryAuthors(entry)} stacked={isMobile} />
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0, maxWidth: '100%' }}>
+                {/* Desktop leads with the order: the wide outlined chip anchors the group and the
+                    short filled key reads as its qualifier. Mobile leads with the key instead —
+                    the chips sit on their own line under the title there, where the short chip
+                    first keeps the left edge tidy and the truncated order name trails it. */}
+                {isMobile ? (
+                  <>
+                    {keyChip}
+                    {orderChip}
+                  </>
+                ) : (
+                  <>
+                    {orderChip}
+                    {keyChip}
+                  </>
+                )}
+                {/* How often the song appeared in the recent-shows window. Dimmed at zero so
+                    unplayed songs stand out by their absence of emphasis, not by a missing chip. */}
+                <Tooltip title={LL.SET_LISTS.USAGE_TOOLTIP({ count: usage, total: recentShows.length })}>
+                  <Chip
+                    label={`${usage}×`}
+                    size="small"
+                    variant="outlined"
+                    sx={{ height: 18, flexShrink: 0, color: usage === 0 ? 'text.disabled' : 'text.secondary' }}
+                  />
+                </Tooltip>
+              </Stack>
             </Stack>
           </ListItemButton>
         </Tooltip>
@@ -660,18 +713,29 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth slotProps={{ paper: { sx: { height: 'min(90vh, 820px)' } } }}>
-        <DialogTitle sx={{ pb: 1 }}>
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        // Everything here is dense (tabs, per-row actions, chips) — on a phone it needs the
+        // whole screen to be operable at all.
+        fullScreen={isMobile}
+        slotProps={{ paper: { sx: { height: { xs: '100%', sm: 'min(90vh, 820px)' } } } }}
+      >
+        <DialogTitle sx={{ pb: 1, px: { xs: 2, sm: 3 } }}>
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
             <SetListIcon color="primary" />
-            <Typography variant="h6" sx={{ fontWeight: 700, flexGrow: 1 }}>
+            <Typography variant="h6" noWrap sx={{ fontWeight: 700, flexGrow: 1, minWidth: 0 }}>
               {LL.SET_LISTS.TITLE()}
             </Typography>
           </Stack>
         </DialogTitle>
 
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'hidden' }}>
-          {/* Set list selector — scrolls horizontally rather than wrapping */}
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'hidden', px: { xs: 2, sm: 3 } }}>
+          {/* Set list selector — scrolls horizontally rather than wrapping. The six list actions
+              sit beside it as icons on desktop; on a phone they collapse into one overflow menu so the
+              tab strip keeps the width. */}
           <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
             <Tabs
               value={activeId ?? false}
@@ -679,60 +743,115 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
               variant="scrollable"
               scrollButtons
               allowScrollButtonsMobile
-              sx={{ flexGrow: 1, minHeight: 44, '& .MuiTab-root': { minHeight: 44, textTransform: 'none' } }}
+              sx={{ flexGrow: 1, minWidth: 0, minHeight: 44, '& .MuiTab-root': { minHeight: 44, textTransform: 'none' } }}
             >
               {lists.map((list) => (
                 <Tab key={list.id} value={list.id} label={list.name} />
               ))}
             </Tabs>
-            <Tooltip title={LL.SET_LISTS.CREATE()}>
-              <IconButton size="small" onClick={() => setNameDialog({ mode: 'create', value: '' })}>
-                <AddIcon />
-              </IconButton>
-            </Tooltip>
-            {activeList && (
-              <>
-                <Tooltip title={LL.SET_LISTS.MOVE_LEFT()}>
-                  <span>
-                    <IconButton size="small" disabled={activeIndex <= 0} onClick={() => handleMoveSetList(-1)}>
-                      <MoveLeftIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title={LL.SET_LISTS.MOVE_RIGHT()}>
-                  <span>
-                    <IconButton
-                      size="small"
-                      disabled={activeIndex < 0 || activeIndex >= lists.length - 1}
-                      onClick={() => handleMoveSetList(1)}
-                    >
-                      <MoveRightIcon fontSize="small" />
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title={LL.SET_LISTS.RENAME()}>
-                  <IconButton size="small" onClick={() => setNameDialog({ mode: 'rename', value: activeList.name })}>
-                    <EditIcon fontSize="small" />
+            {isMobile ? (
+              <RowActionMenu
+                edge={false}
+                actions={[
+                  {
+                    key: 'create',
+                    label: LL.SET_LISTS.CREATE(),
+                    icon: <AddIcon fontSize="small" />,
+                    onClick: () => setNameDialog({ mode: 'create', value: '' }),
+                  },
+                  {
+                    key: 'rename',
+                    label: LL.SET_LISTS.RENAME(),
+                    icon: <EditIcon fontSize="small" />,
+                    onClick: () => activeList && setNameDialog({ mode: 'rename', value: activeList.name }),
+                    hidden: !activeList,
+                  },
+                  {
+                    key: 'copy',
+                    label: copied ? LL.SET_LISTS.COPIED() : LL.SET_LISTS.COPY(),
+                    icon: copied ? <CopiedIcon fontSize="small" /> : <CopyIcon fontSize="small" />,
+                    onClick: handleCopyToClipboard,
+                    disabled: !activeList || activeList.entries.length === 0,
+                    hidden: !activeList,
+                  },
+                  {
+                    key: 'move-left',
+                    label: LL.SET_LISTS.MOVE_LEFT(),
+                    icon: <MoveLeftIcon fontSize="small" />,
+                    onClick: () => handleMoveSetList(-1),
+                    disabled: activeIndex <= 0,
+                    hidden: !activeList,
+                  },
+                  {
+                    key: 'move-right',
+                    label: LL.SET_LISTS.MOVE_RIGHT(),
+                    icon: <MoveRightIcon fontSize="small" />,
+                    onClick: () => handleMoveSetList(1),
+                    disabled: activeIndex < 0 || activeIndex >= lists.length - 1,
+                    hidden: !activeList,
+                  },
+                  {
+                    key: 'delete',
+                    label: LL.SET_LISTS.DELETE(),
+                    icon: <DeleteIcon fontSize="small" />,
+                    onClick: () => setDeleteListConfirm(true),
+                    destructive: true,
+                    hidden: !activeList,
+                  },
+                ]}
+              />
+            ) : (
+              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                <Tooltip title={LL.SET_LISTS.CREATE()}>
+                  <IconButton size="small" onClick={() => setNameDialog({ mode: 'create', value: '' })}>
+                    <AddIcon />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title={copied ? LL.SET_LISTS.COPIED() : LL.SET_LISTS.COPY()}>
-                  <span>
-                    <IconButton
-                      size="small"
-                      color={copied ? 'success' : 'default'}
-                      disabled={activeList.entries.length === 0}
-                      onClick={handleCopyToClipboard}
-                    >
-                      {copied ? <CopiedIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
-                    </IconButton>
-                  </span>
-                </Tooltip>
-                <Tooltip title={LL.SET_LISTS.DELETE()}>
-                  <IconButton size="small" color="error" onClick={() => setDeleteListConfirm(true)}>
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </>
+                {activeList && (
+                  <>
+                    <Tooltip title={LL.SET_LISTS.MOVE_LEFT()}>
+                      <span>
+                        <IconButton size="small" disabled={activeIndex <= 0} onClick={() => handleMoveSetList(-1)}>
+                          <MoveLeftIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={LL.SET_LISTS.MOVE_RIGHT()}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          disabled={activeIndex < 0 || activeIndex >= lists.length - 1}
+                          onClick={() => handleMoveSetList(1)}
+                        >
+                          <MoveRightIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={LL.SET_LISTS.RENAME()}>
+                      <IconButton size="small" onClick={() => setNameDialog({ mode: 'rename', value: activeList.name })}>
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title={copied ? LL.SET_LISTS.COPIED() : LL.SET_LISTS.COPY()}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          color={copied ? 'success' : 'default'}
+                          disabled={activeList.entries.length === 0}
+                          onClick={handleCopyToClipboard}
+                        >
+                          {copied ? <CopiedIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={LL.SET_LISTS.DELETE()}>
+                      <IconButton size="small" color="error" onClick={() => setDeleteListConfirm(true)}>
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                )}
+              </Stack>
             )}
           </Stack>
 
@@ -762,12 +881,16 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
                 </Tooltip>
               </ToggleButton>
             </ToggleButtonGroup>
-            <Chip
-              size="small"
-              color={mode === 'import' ? 'secondary' : 'default'}
-              variant={mode === 'import' ? 'filled' : 'outlined'}
-              label={mode === 'filter' ? LL.SET_LISTS.MODE_FILTER() : LL.SET_LISTS.MODE_IMPORT()}
-            />
+            {/* The toggle above already shows the mode; on a phone this label is width the
+                search field needs more. */}
+            {!isMobile && (
+              <Chip
+                size="small"
+                color={mode === 'import' ? 'secondary' : 'default'}
+                variant={mode === 'import' ? 'filled' : 'outlined'}
+                label={mode === 'filter' ? LL.SET_LISTS.MODE_FILTER() : LL.SET_LISTS.MODE_IMPORT()}
+              />
+            )}
             <TextField
               fullWidth
               size="small"
@@ -952,7 +1075,7 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
-        <Stack spacing={0.5} sx={{ px: 2.5, pt: 1.5, pb: 3, width: 300, overflow: 'hidden' }}>
+        <Stack spacing={0.5} sx={{ px: 2.5, pt: 1.5, pb: 3, width: { xs: 240, sm: 300 }, maxWidth: '90vw', overflow: 'hidden' }}>
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             {LL.SET_LISTS.USAGE_SLIDER({ count: usageShowCount })}
           </Typography>
@@ -964,7 +1087,11 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
             onChange={(_e, value) => setUsageShowCount(value as number)}
             onChangeCommitted={(_e, value) => updateSetting('setLists', { ...setListSettings, usageShowCount: value as number })}
             valueLabelDisplay="auto"
-            marks={[{ value: 1, label: '1' }, { value: 8, label: '8' }, { value: MAX_USAGE_SHOWS, label: String(MAX_USAGE_SHOWS) }]}
+            marks={[
+              { value: 1, label: '1' },
+              { value: 8, label: '8' },
+              { value: MAX_USAGE_SHOWS, label: String(MAX_USAGE_SHOWS) },
+            ]}
             aria-label={LL.SET_LISTS.USAGE_SLIDER({ count: usageShowCount })}
           />
         </Stack>

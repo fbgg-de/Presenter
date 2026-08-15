@@ -147,6 +147,66 @@ export type AdminConfigData = {
   } | null;
 };
 
+/** One row of an account's song library, as seen by the admin panel. */
+export type AdminSong = {
+  songNumber: number;
+  title: string;
+  authors: string;
+  copyright: string;
+  ccliNumber: string | null;
+  key: string | null;
+  updatedAt: string | null;
+  /** Number of named block orders. */
+  orderCount: number;
+  blockCount: number;
+  /** Number of PDFs with stored area mappings. */
+  pdfCount: number;
+  annotationCount: number;
+  /** Titles of the shows referencing this song. */
+  shows: string[];
+  /** Names of the set lists referencing this song. */
+  setLists: string[];
+};
+
+/** Songs that look like duplicates of each other (shared CCLI number or normalized title). */
+export type AdminSongDuplicateGroup = {
+  id: number;
+  reasons: Array<'ccli' | 'title'>;
+  songNumbers: number[];
+};
+
+export type AdminSongLibrary = {
+  license: number;
+  songs: AdminSong[];
+  groups: AdminSongDuplicateGroup[];
+};
+
+export type MergeSongsRequest = {
+  license: number;
+  /** The song that gets replaced and deleted. */
+  sourceNumber: number;
+  /** The song that survives and inherits every reference. */
+  targetNumber: number;
+  /** Run the merge in a rolled-back transaction to preview its effect. */
+  dryRun?: boolean;
+};
+
+export type MergeSongsResult = {
+  message: string;
+  dryRun: boolean;
+  license: number;
+  sourceNumber: number;
+  targetNumber: number;
+  sourceTitle: string;
+  targetTitle: string;
+  /** Set lists whose entry was repointed, and those where the source entry was dropped as a duplicate. */
+  setLists: { repointed: string[]; dropped: string[] };
+  shows: { repointed: string[]; dropped: string[] };
+  /** References to a named order the target song does not have; those were cleared. */
+  clearedOrderNames: number;
+  deleted: { blocks: number; pdfMappings: number; pdfAnnotations: number; pdfFiles: number };
+};
+
 const adminApi = presenterApi.injectEndpoints({
   endpoints: (build) => ({
     // ──────── Admin: Accounts ────────
@@ -209,6 +269,17 @@ const adminApi = presenterApi.injectEndpoints({
       invalidatesTags: ['AdminMigrations'],
     }),
 
+    // ──────── Admin: Songs ────────
+    getAdminSongs: build.query<ApiSuccess<AdminSongLibrary>, { license: number }>({
+      query: ({ license }) => `rest/AdminSongs/${license}`,
+      providesTags: (_res, _err, arg) => [{ type: 'AdminSongs', id: arg.license }],
+    }),
+    mergeAdminSongs: build.mutation<ApiSuccess<MergeSongsResult>, MergeSongsRequest>({
+      query: (body) => ({ url: 'rest/AdminSongs', method: 'POST', body }),
+      // A dry run changes nothing — invalidating would refetch the library on every preview.
+      invalidatesTags: (_res, _err, arg) => (arg.dryRun ? [] : [{ type: 'AdminSongs', id: arg.license }]),
+    }),
+
     // ──────── Admin: Config ────────
     getAdminConfig: build.query<ApiSuccess<AdminConfigData>, void>({
       query: () => 'rest/AdminConfig',
@@ -229,6 +300,8 @@ export const {
   useDeleteAdminProviderMutation,
   useAssignProviderToAccountMutation,
   useUnassignProviderFromAccountMutation,
+  useGetAdminSongsQuery,
+  useMergeAdminSongsMutation,
   useGetAdminMigrationsQuery,
   useRunAdminMigrationsMutation,
   useGetAdminConfigQuery,

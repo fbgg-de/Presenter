@@ -489,6 +489,11 @@ if (window.presentationApi) {
       }
     }
   });
+
+  // Listeners are attached — anything main sent before this point never arrived.
+  // This tells main to replay the last content, closing the startup race where a
+  // restored window otherwise stayed black until the operator navigated.
+  window.presentationApi.signalReady?.();
 }
 
 // Initial render (blank)

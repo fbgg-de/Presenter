@@ -379,7 +379,7 @@ const DisplayOptions = ({ item, patch }: DisplayOptionsProps) => {
             }}
             sx={{ flex: 1, minWidth: 60 }}
           />
-          <Tooltip title="Reset to 100%">
+          <Tooltip title={LL.CONTROL.RESET_ZOOM()}>
             <IconButton
               size="small"
               onClick={() => {

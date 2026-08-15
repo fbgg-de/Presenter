@@ -207,26 +207,29 @@ const MediaPropRow = ({
   onChange: (v: string) => void;
   onBrowse: () => void;
   thumbType: 'image' | 'video';
-}) => (
-  <StylePropRow label={label} enabled={enabled} onToggle={onToggle} block>
-    <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-      {value && <MediaThumb url={value} type={thumbType} />}
-      <TextField
-        size="small"
-        fullWidth
-        placeholder="https:// or relative path"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        sx={{ flex: 1 }}
-      />
-      <Tooltip title="Browse…">
-        <IconButton onClick={onBrowse} size="small">
-          <FolderOpenIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-    </Stack>
-  </StylePropRow>
-);
+}) => {
+  const { LL } = useI18nContext();
+  return (
+    <StylePropRow label={label} enabled={enabled} onToggle={onToggle} block>
+      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+        {value && <MediaThumb url={value} type={thumbType} />}
+        <TextField
+          size="small"
+          fullWidth
+          placeholder={LL.STYLE.MEDIA_PATH_PLACEHOLDER()}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          sx={{ flex: 1 }}
+        />
+        <Tooltip title={LL.STYLE.BROWSE()}>
+          <IconButton onClick={onBrowse} size="small">
+            <FolderOpenIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+    </StylePropRow>
+  );
+};
 
 /** Per-language typography settings editor with per-property enable toggles. */
 const LanguageStyleEditor = ({
@@ -432,6 +435,7 @@ const LanguageStyleEditor = ({
  *  states so the user knows whether the file is loading, missing, or whether
  *  the local media server itself isn't running. */
 const MediaThumb = ({ url, type }: { url: string; type: 'image' | 'video' }) => {
+  const { LL } = useI18nContext();
   const resolved = resolveMediaUrl(url);
   const [status, setStatus] = useState<MediaProbeStatus | 'loading'>('loading');
   const triedRef = useRef(false);
@@ -488,7 +492,7 @@ const MediaThumb = ({ url, type }: { url: string; type: 'image' | 'video' }) => 
   }
   if (status === 'not_found') {
     return (
-      <Tooltip title="File not found in media folder">
+      <Tooltip title={LL.STYLE.MEDIA_NOT_FOUND()}>
         <Box sx={boxSx}>
           <BrokenImageIcon sx={{ fontSize: 16 }} />
         </Box>
@@ -497,7 +501,7 @@ const MediaThumb = ({ url, type }: { url: string; type: 'image' | 'video' }) => 
   }
   if (status === 'server_down') {
     return (
-      <Tooltip title="Media server not running">
+      <Tooltip title={LL.STYLE.MEDIA_SERVER_DOWN()}>
         <Box sx={boxSx}>
           <CloudOffIcon sx={{ fontSize: 16, color: 'warning.main' }} />
         </Box>
@@ -532,6 +536,7 @@ const FontFamilyEditor = ({
   onPrimaryChange: (v: string) => void;
   onFallbacksChange: (v: string[]) => void;
 }) => {
+  const { LL } = useI18nContext();
   const [newFont, setNewFont] = useState('');
   const fonts = useMemo(() => [...new Set(WEB_SAFE_FONTS)].sort((a, b) => a.localeCompare(b)), []);
   const handleAdd = () => {
@@ -573,7 +578,7 @@ const FontFamilyEditor = ({
           freeSolo
           size="small"
           sx={{ flex: 1 }}
-          renderInput={(params) => <TextField {...params} placeholder="Add fallback font…" size="small" />}
+          renderInput={(params) => <TextField {...params} placeholder={LL.STYLE.ADD_FALLBACK_FONT()} size="small" />}
         />
         <IconButton size="small" onClick={handleAdd} disabled={!newFont.trim()} color="primary">
           <AddIcon fontSize="small" />

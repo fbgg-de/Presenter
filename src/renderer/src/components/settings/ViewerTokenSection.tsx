@@ -30,6 +30,8 @@ import {
 import { useGetSessionQuery } from '@/api/session.api';
 import { getBackendBaseUrl } from '@/api/base.api';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useI18nContext } from '@/i18n/i18n-react';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 /** Build the viewer URL from the backend base URL and a token */
 function buildViewerUrl(token: string): string {
@@ -39,6 +41,7 @@ function buildViewerUrl(token: string): string {
 }
 
 export const ViewerTokenSection = () => {
+  const { LL } = useI18nContext();
   const { offlineMode } = useGetSettings();
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
   const isAuthenticated = !offlineMode && session?.isAuthenticated === true;
@@ -55,32 +58,35 @@ export const ViewerTokenSection = () => {
     token: null,
   });
   const [copied, setCopied] = useState(false);
+  /** Set when the clipboard was unavailable — the user must select the text manually. */
+  const [copyFailed, setCopyFailed] = useState(false);
+  const [revokeConfirm, setRevokeConfirm] = useState(false);
 
   const handleGenerate = async () => {
     try {
       const result = await generateToken().unwrap();
       setNewTokenDialog({ open: true, token: result.token });
       setCopied(false);
+      setCopyFailed(false);
     } catch {
       // ignore — RTK Query shows the error via status
     }
   };
 
   const handleRevoke = async () => {
-    if (!window.confirm('Revoke the viewer token? Any active viewer pages will lose access immediately.')) return;
+    setRevokeConfirm(false);
     await revokeToken();
   };
 
-  const handleCopyToken = (token: string) => {
-    navigator.clipboard.writeText(token).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleCopyUrl = (token: string) => {
-    navigator.clipboard.writeText(buildViewerUrl(token)).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  /** Copy and report the ACTUAL result — a plain-HTTP deployment has no clipboard API. */
+  const handleCopy = async (text: string) => {
+    const ok = await copyTextToClipboard(text);
+    setCopied(ok);
+    setCopyFailed(!ok);
+    setTimeout(() => {
+      setCopied(false);
+      setCopyFailed(false);
+    }, 2000);
   };
 
   if (!isAuthenticated) return null;
@@ -96,24 +102,29 @@ export const ViewerTokenSection = () => {
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <ViewerIcon fontSize="small" />
-          Viewer Token Generated
+          {LL.VIEWER_TOKEN.GENERATED_TITLE()}
         </DialogTitle>
         <DialogContent>
           <Alert severity="warning" sx={{ mb: 2 }}>
-            Copy this token now — it will <strong>not</strong> be shown again.
+            {LL.VIEWER_TOKEN.GENERATED_WARNING()}
           </Alert>
+          {copyFailed && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              {LL.VIEWER_TOKEN.COPY_FAILED()}
+            </Alert>
+          )}
           {newTokenDialog.token && (
             <Stack spacing={2}>
               <TextField
-                label="Token"
+                label={LL.VIEWER_TOKEN.TOKEN()}
                 value={newTokenDialog.token}
                 slotProps={{
                   input: {
                     readOnly: true,
                     endAdornment: (
                       <InputAdornment position="end">
-                        <Tooltip title={copied ? 'Copied!' : 'Copy token'}>
-                          <IconButton size="small" onClick={() => handleCopyToken(newTokenDialog.token!)}>
+                        <Tooltip title={copied ? LL.VIEWER_TOKEN.COPIED() : LL.VIEWER_TOKEN.COPY_TOKEN()}>
+                          <IconButton size="small" onClick={() => handleCopy(newTokenDialog.token!)}>
                             <CopyIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -126,7 +137,7 @@ export const ViewerTokenSection = () => {
                 sx={{ fontFamily: 'monospace' }}
               />
               <TextField
-                label="Viewer URL"
+                label={LL.VIEWER_TOKEN.VIEWER_URL()}
                 value={buildViewerUrl(newTokenDialog.token)}
                 slotProps={{
                   input: {
@@ -134,12 +145,12 @@ export const ViewerTokenSection = () => {
                     endAdornment: (
                       <InputAdornment position="end">
                         <Stack direction="row">
-                          <Tooltip title={copied ? 'Copied!' : 'Copy URL'}>
-                            <IconButton size="small" onClick={() => handleCopyUrl(newTokenDialog.token!)}>
+                          <Tooltip title={copied ? LL.VIEWER_TOKEN.COPIED() : LL.VIEWER_TOKEN.COPY_URL()}>
+                            <IconButton size="small" onClick={() => handleCopy(buildViewerUrl(newTokenDialog.token!))}>
                               <CopyIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Open viewer page">
+                          <Tooltip title={LL.VIEWER_TOKEN.OPEN_VIEWER()}>
                             <IconButton
                               size="small"
                               onClick={() => window.open(buildViewerUrl(newTokenDialog.token!), '_blank')}
@@ -159,7 +170,22 @@ export const ViewerTokenSection = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setNewTokenDialog({ open: false, token: null })}>Done</Button>
+          <Button onClick={() => setNewTokenDialog({ open: false, token: null })}>{LL.COMMON.DONE()}</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Revoking cuts off every viewer page instantly, so it gets a real confirmation
+          dialog rather than the browser's native confirm() the rest of the app never uses. */}
+      <Dialog open={revokeConfirm} onClose={() => setRevokeConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>{LL.VIEWER_TOKEN.REVOKE()}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">{LL.VIEWER_TOKEN.REVOKE_CONFIRM()}</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRevokeConfirm(false)}>{LL.COMMON.CANCEL()}</Button>
+          <Button variant="contained" color="error" onClick={handleRevoke}>
+            {LL.VIEWER_TOKEN.REVOKE()}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -168,7 +194,7 @@ export const ViewerTokenSection = () => {
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <ViewerIcon fontSize="small" sx={{ color: 'text.secondary' }} />
           <Typography variant="body2" sx={{ flex: 1 }}>
-            Viewer token
+            {LL.VIEWER_TOKEN.TITLE()}
           </Typography>
           {isLoading ? (
             <CircularProgress size={16} />
@@ -178,15 +204,13 @@ export const ViewerTokenSection = () => {
             </Typography>
           ) : (
             <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-              Not set
+              {LL.VIEWER_TOKEN.NOT_SET()}
             </Typography>
           )}
         </Stack>
 
         <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-          Generate a token to enable the standalone&nbsp;
-          <code>viewer.php</code> page. The page can be deployed on any subdomain
-          and displays the live block text without requiring a login.
+          {LL.VIEWER_TOKEN.DESCRIPTION()}
         </Typography>
 
         <Stack direction="row" spacing={1} sx={{ flexWrap: 'wrap' }}>
@@ -197,22 +221,22 @@ export const ViewerTokenSection = () => {
             onClick={handleGenerate}
             disabled={isGenerating || isRevoking}
           >
-            {tokenInfo?.hasToken ? 'Regenerate' : 'Generate'}
+            {tokenInfo?.hasToken ? LL.VIEWER_TOKEN.REGENERATE() : LL.VIEWER_TOKEN.GENERATE()}
           </Button>
 
           {tokenInfo?.hasToken && (
             <Box>
-              <Tooltip title="Revoke token — viewer access will stop immediately">
+              <Tooltip title={LL.VIEWER_TOKEN.REVOKE_HINT()}>
                 <span>
                   <Button
                     size="small"
                     variant="outlined"
                     color="error"
                     startIcon={isRevoking ? <CircularProgress size={14} /> : <DeleteIcon fontSize="small" />}
-                    onClick={handleRevoke}
+                    onClick={() => setRevokeConfirm(true)}
                     disabled={isGenerating || isRevoking}
                   >
-                    Revoke
+                    {LL.VIEWER_TOKEN.REVOKE()}
                   </Button>
                 </span>
               </Tooltip>

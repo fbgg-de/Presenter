@@ -24,6 +24,14 @@ const presentationApi = {
   },
 
   /**
+   * Tell the main process this window's React app is mounted and listening.
+   * Content sent before this point was lost — main replays the last payload on it.
+   */
+  signalReady: () => {
+    ipcRenderer.send('presentation-ready');
+  },
+
+  /**
    * Remove all listeners (for cleanup).
    */
   removeAllListeners: () => {

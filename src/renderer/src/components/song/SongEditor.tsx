@@ -36,6 +36,7 @@ import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { addSongToStore, updateSongInStore } from '@/store/songsSlice';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useMetrics } from '@/hooks/useMetrics';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 type Block = { name: string; lines: string[] };
 
@@ -83,6 +84,7 @@ export const SongEditor = (props: {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const { defaultNewVerseName } = useGetSettings();
+  const isMobile = useIsMobile();
 
   const [createSongMutation] = useCreateSongMutation();
   const [updateSongMutation] = useUpdateSongMutation();
@@ -228,17 +230,32 @@ export const SongEditor = (props: {
     }
   };
 
+  /** Leave without saving. The draft is rebuilt from the song, so reopening starts clean. */
+  const closeAndReset = () => {
+    setOpen(false);
+    init();
+  };
+
   if (!song) {
     return null;
   }
 
   return (
-    <Drawer open={open} anchor="right">
+    // Without an onClose the backdrop is inert — on a phone that leaves the ✕ as the only exit.
+    <Drawer open={open} anchor="right" onClose={closeAndReset} slotProps={{ paper: { sx: { maxWidth: '100vw' } } }}>
       <Stack
         sx={{
           gap: 2,
-          width: 'calc(100vw - 400px)',
-          padding: '20px 25px',
+          // A phone has no room to spare beside the drawer; wider screens keep the app visible
+          // behind it. Below `md` the subtraction would go negative, which is what made the
+          // editor unusable on mobile.
+          width: { xs: '100vw', md: 'calc(100vw - 400px)' },
+          maxWidth: '100vw',
+          // The drawer is a fixed-height viewport: the content has to scroll inside it, or the
+          // order editor and the save buttons sit below the fold with no way to reach them.
+          height: '100%',
+          overflowY: 'auto',
+          padding: { xs: '12px 12px 16px', sm: '20px 25px' },
         }}
       >
         <Stack
@@ -247,19 +264,16 @@ export const SongEditor = (props: {
             alignItems: 'center',
           }}
         >
-          <Typography variant="h4">{LL.SONG_EDITOR.TITLE()}</Typography>
+          <Typography variant={isMobile ? 'h6' : 'h4'} noWrap>
+            {LL.SONG_EDITOR.TITLE()}
+          </Typography>
           {isDirty && <Chip label="Unsaved" size="small" color="warning" sx={{ ml: 2 }} />}
           <Box
             sx={{
               flexGrow: 1,
             }}
           />
-          <IconButton
-            onClick={() => {
-              setOpen(false);
-              init();
-            }}
-          >
+          <IconButton onClick={closeAndReset}>
             <CloseIcon />
           </IconButton>
         </Stack>
@@ -267,7 +281,7 @@ export const SongEditor = (props: {
         <Stack
           sx={{
             gap: 1,
-            padding: '10px 15px',
+            padding: { xs: '8px', sm: '10px 15px' },
             bgcolor: 'background.paper',
           }}
         >
@@ -312,16 +326,18 @@ export const SongEditor = (props: {
               />
             </Stack>
           ) : tab <= blocks.length ? (
+            // The block tools sit beside the lyrics on desktop; on a phone that column would eat
+            // a third of the width, so they move underneath as a toolbar row instead.
             <Stack
-              direction="row"
+              direction={{ xs: 'column', sm: 'row' }}
               sx={{
-                gap: 2,
+                gap: { xs: 1, sm: 2 },
               }}
             >
               <TextField
                 multiline
-                rows={10}
-                sx={{ flexGrow: 1 }}
+                rows={isMobile ? 8 : 10}
+                sx={{ flexGrow: 1, minWidth: 0 }}
                 inputRef={inputRef}
                 value={block}
                 onChange={({ target }) => setBlock(target.value)}
@@ -336,8 +352,10 @@ export const SongEditor = (props: {
                 }}
               />
               <Stack
+                direction={{ xs: 'row', sm: 'column' }}
                 sx={{
                   gap: 1,
+                  alignItems: 'center',
                 }}
               >
                 <IconButton
@@ -432,7 +450,7 @@ export const SongEditor = (props: {
         <Stack
           sx={{
             gap: 1,
-            padding: '10px 15px',
+            padding: { xs: '8px', sm: '10px 15px' },
             bgcolor: 'background.paper',
           }}
         >
@@ -461,6 +479,7 @@ export const SongEditor = (props: {
           direction="row"
           sx={{
             gap: 2,
+            flexWrap: 'wrap',
           }}
         >
           <Badge variant="dot" color="warning" invisible={!isDirty}>
@@ -468,14 +487,7 @@ export const SongEditor = (props: {
               {LL.COMMON.APPLY()}
             </Button>
           </Badge>
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={() => {
-              setOpen(false);
-              init();
-            }}
-          >
+          <Button variant="outlined" color="error" onClick={closeAndReset}>
             {LL.COMMON.CANCEL()}
           </Button>
         </Stack>

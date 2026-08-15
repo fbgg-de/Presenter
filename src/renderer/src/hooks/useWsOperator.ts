@@ -9,9 +9,35 @@
  * client with the same account number.
  */
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { WS_CLOSE_OPERATOR_DISCONNECT } from './useWsSync';
+import { WS_CLOSE_OPERATOR_DISCONNECT, type WsClientInfo } from './useWsSync';
 
 const RECONNECT_DELAY_MS = 5000;
+
+/**
+ * What the relay reports about the OTHER clients of this account. Clients from before
+ * the descriptor handshake (or a relay that predates it) arrive as role 'unknown' —
+ * the count is still right, only the breakdown is missing.
+ */
+export interface WsPeerInfo {
+  role: 'operator' | 'musician' | 'remote' | 'viewer' | 'unknown';
+  mode?: string;
+  name?: string;
+}
+
+/** Keep only the shape we understand; a relay may send anything. */
+const parsePeers = (raw: unknown): WsPeerInfo[] | null => {
+  if (!Array.isArray(raw)) return null;
+  return raw.map((entry) => {
+    const obj = (entry ?? {}) as Record<string, unknown>;
+    const role = obj.role;
+    return {
+      role:
+        role === 'operator' || role === 'musician' || role === 'remote' || role === 'viewer' ? role : ('unknown' as const),
+      mode: typeof obj.mode === 'string' ? obj.mode : undefined,
+      name: typeof obj.name === 'string' ? obj.name : undefined,
+    };
+  });
+};
 
 export interface WsOperatorIncomingSync {
   activeItemIndex?: number;
@@ -43,6 +69,11 @@ export const useWsOperator = (
    */
   const [lastPeersDisconnected, setLastPeersDisconnected] = useState<{ count: number; at: number } | null>(null);
   const [connectedCount, setConnectedCount] = useState(0);
+  /**
+   * Breakdown of the connected peers. Empty while nothing is connected; the count and the
+   * breakdown come from the same relay message, so they can never disagree.
+   */
+  const [peers, setPeers] = useState<WsPeerInfo[]>([]);
   const [lastMidiSyncAt, setLastMidiSyncAt] = useState<number>(0);
   const onMusicianSyncRef = useRef(onMusicianSync);
   onMusicianSyncRef.current = onMusicianSync;
@@ -55,6 +86,7 @@ export const useWsOperator = (
     if (!url || account == null) {
       setConnected(false);
       setConnectedCount(0);
+      setPeers([]);
       return;
     }
 
@@ -79,27 +111,29 @@ export const useWsOperator = (
           ws.close();
           return;
         }
-        ws.send(JSON.stringify({ action: 'auth', account }));
+        const client: WsClientInfo = { role: 'operator' };
+        ws.send(JSON.stringify({ action: 'auth', account, client }));
       };
 
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data as string) as Record<string, unknown>;
-          if (msg.type === 'auth_ok') {
-            authedRef.current = true;
-            setConnected(true);
-            if (typeof msg.others === 'number') {
-              setConnectedCount(msg.others);
-            } else if (typeof msg.count === 'number') {
-              setConnectedCount(Math.max(0, msg.count - 1));
+          if (msg.type === 'auth_ok' || msg.type === 'peer_count') {
+            if (msg.type === 'auth_ok') {
+              authedRef.current = true;
+              setConnected(true);
             }
-          } else if (msg.type === 'peer_count') {
             if (typeof msg.others === 'number') {
               setConnectedCount(msg.others);
             } else if (typeof msg.count === 'number') {
               // Backward compatibility: older relays send count including this client.
               setConnectedCount(Math.max(0, msg.count - 1));
             }
+            // A relay that predates the breakdown sends no `peers` at all — leave the last
+            // known list alone rather than replacing it with an empty one, so the tooltip
+            // falls back to "kind unknown" instead of claiming there is nobody.
+            const parsed = parsePeers(msg.peers);
+            if (parsed) setPeers(parsed);
           } else if (msg.action === 'musician_sync' && msg.data) {
             // `replay` marks the relay's cached last state, sent to every client on auth.
             // It is not a musician telling us anything — following it would snap the
@@ -132,6 +166,7 @@ export const useWsOperator = (
         authedRef.current = false;
         setConnected(false);
         setConnectedCount(0);
+        setPeers([]);
         setLastMidiSyncAt(0);
         wsRef.current = null;
         // Cleared by the operator — retrying immediately would defeat the purpose.
@@ -152,6 +187,7 @@ export const useWsOperator = (
       authedRef.current = false;
       setConnected(false);
       setConnectedCount(0);
+      setPeers([]);
       setLastMidiSyncAt(0);
       if (wsRef.current) {
         wsRef.current.onclose = null;
@@ -173,5 +209,5 @@ export const useWsOperator = (
     setReconnectNonce((n) => n + 1);
   }, []);
 
-  return { connected, connectedCount, lastMidiSyncAt, broadcast, droppedByOperator, reconnect, lastPeersDisconnected };
+  return { connected, connectedCount, peers, lastMidiSyncAt, broadcast, droppedByOperator, reconnect, lastPeersDisconnected };
 };

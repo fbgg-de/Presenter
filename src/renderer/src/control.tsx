@@ -61,6 +61,11 @@ interface SessionResponse {
 
 const RECONNECT_DELAY_MS = 4000;
 
+/** How long a sent command waits for the operator's broadcast before the spinner gives up. */
+const COMMAND_ACK_TIMEOUT_MS = 2500;
+/** How long the acknowledgement ring stays on a control after the broadcast came back. */
+const COMMAND_CONFIRM_MS = 700;
+
 /** Relay close code meaning "the operator cleared the connected clients" — do not retry. */
 const WS_CLOSE_OPERATOR_DISCONNECT = 4010;
 
@@ -91,18 +96,27 @@ const T = {
 };
 
 // ── Colors ────────────────────────────────────────────────────────────────────
+// Mirrors the operator app's DARK theme (src/renderer/src/theme.ts) so the phone reads as
+// the same product. The values are inlined on purpose: this page pulls in neither MUI nor
+// the theme module. Keep them in sync by hand if the theme's palette changes.
 const C = {
-  bg: '#101418',
-  panel: '#1a2027',
-  border: '#2c3640',
-  text: '#e8edf2',
-  dim: '#8a97a5',
-  accent: '#4da3ff',
-  accentBg: '#16263a',
-  warn: '#ffb84d',
-  warnBg: '#3a2d14',
-  ok: '#4dd07a',
-  danger: '#ff5252',
+  bg: '#0F1214', // palette.background.default
+  panel: '#161616', // palette.background.paper
+  border: 'rgba(255,255,255,0.12)', // MUI dark divider
+  text: '#FFFFFF', // palette.text.primary
+  dim: 'rgba(255,255,255,0.7)', // MUI dark text.secondary
+  // Primary red marks the current position — the active agenda item and the active block,
+  // like the operator sidebar's selected row. On the tiles it is NOT a resting state: it
+  // flashes only to acknowledge that a command reached the operator (see Tile below).
+  accent: '#CF7079', // palette.primary.light — accent text/borders, legible on dark
+  accentSolid: '#C44D58', // palette.primary.main — filled surfaces (white text on top)
+  accentBg: 'rgba(196,77,88,0.16)', // primary-tinted surface, like MUI's "selected" state
+  // Active-toggle tones follow the operator Footer: warning for hidden content, error for black.
+  warn: '#ffa726', // MUI dark warning.main
+  warnBg: 'rgba(255,167,38,0.16)',
+  danger: '#f44336', // MUI dark error.main
+  dangerBg: 'rgba(244,67,54,0.16)',
+  ok: '#66bb6a', // MUI dark success.main
 };
 
 // ── Inline SVG icons (feather-style, stroke = currentColor) ───────────────────
@@ -213,7 +227,9 @@ const Tile = ({
   onClick,
   active,
   big,
-  accent,
+  tone = 'warn',
+  pending,
+  confirmed,
 }: {
   icon: ReactNode;
   label: string;
@@ -222,37 +238,59 @@ const Tile = ({
   active?: boolean;
   /** Taller primary tile (block navigation) */
   big?: boolean;
-  /** Accented border (the "main" action) */
-  accent?: boolean;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    style={{
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      minHeight: big ? 118 : 92,
-      border: `1px solid ${active ? C.warn : accent ? C.accent : C.border}`,
-      borderRadius: 16,
-      background: active ? C.warnBg : accent ? C.accentBg : C.panel,
-      color: active ? C.warn : C.text,
-      fontSize: 14,
-      fontWeight: 600,
-      cursor: 'pointer',
-      userSelect: 'none',
-      WebkitUserSelect: 'none',
-      WebkitTapHighlightColor: 'transparent',
-      touchAction: 'manipulation',
-      padding: 10,
-    }}
-  >
-    {icon}
-    <span>{label}</span>
-  </button>
-);
+  /** Which highlight the active state uses — matches the operator Footer's icon colors. */
+  tone?: 'warn' | 'danger';
+  /** Command sent, operator has not confirmed it yet — shows a spinner. */
+  pending?: boolean;
+  /** The operator's broadcast came back — brief red ring, then back to resting. */
+  confirmed?: boolean;
+}) => {
+  const activeColor = tone === 'danger' ? C.danger : C.warn;
+  const activeBg = tone === 'danger' ? C.dangerBg : C.warnBg;
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        minHeight: big ? 118 : 92,
+        border: `1px solid ${active ? activeColor : C.border}`,
+        borderRadius: 16,
+        background: active ? activeBg : C.panel,
+        color: active ? activeColor : C.text,
+        // The acknowledgement ring sits outside the border so it composes with any state.
+        boxShadow: confirmed ? `0 0 0 2px ${C.accentSolid}` : 'none',
+        transition: 'box-shadow 0.15s ease-out',
+        fontSize: 14,
+        fontWeight: 600,
+        cursor: 'pointer',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        WebkitTapHighlightColor: 'transparent',
+        touchAction: 'manipulation',
+        padding: 10,
+      }}
+    >
+      {/* While in flight the spinner takes the icon's place — same box, so nothing shifts. */}
+      <span
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: big ? 38 : 32,
+          height: big ? 38 : 32,
+        }}
+      >
+        {pending ? <span className="ctl-spinner-md" /> : icon}
+      </span>
+      <span>{label}</span>
+    </button>
+  );
+};
 
 const HeaderButton = ({ icon, onClick, active }: { icon: ReactNode; onClick: () => void; active?: boolean }) => (
   <button
@@ -284,72 +322,86 @@ const PanelList = ({
   entries,
   activeIndex,
   onPick,
+  pendingIndex,
 }: {
   title: string;
   entries: { label: string; sub?: string }[];
   activeIndex: number;
   onPick: (index: number) => void;
-}) => (
-  <div
-    style={{
-      flex: 1,
-      minHeight: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      background: C.panel,
-      border: `1px solid ${C.border}`,
-      borderRadius: 16,
-      overflow: 'hidden',
-    }}
-  >
-    <div style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.8 }}>
-      {title}
-    </div>
-    <div style={{ overflowY: 'auto', flex: 1, WebkitOverflowScrolling: 'touch' }}>
-      {entries.map((e, i) => {
-        const active = i === activeIndex;
-        return (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onPick(i)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              width: '100%',
-              textAlign: 'left',
-              border: 'none',
-              borderTop: `1px solid ${C.border}`,
-              background: active ? C.accentBg : 'transparent',
-              color: active ? C.accent : C.text,
-              fontSize: 16,
-              fontWeight: active ? 700 : 500,
-              padding: '14px 16px',
-              cursor: 'pointer',
-              WebkitTapHighlightColor: 'transparent',
-              touchAction: 'manipulation',
-            }}
-          >
-            <span
+  /** Row whose jump was sent but not yet confirmed by the operator — shows a spinner. */
+  pendingIndex?: number | null;
+}) => {
+  // The order panel stays open while blocks advance (from here, the operator or another
+  // remote), so follow the active row instead of leaving it scrolled out of sight.
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [activeIndex, entries.length]);
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        background: C.panel,
+        border: `1px solid ${C.border}`,
+        borderRadius: 16,
+        overflow: 'hidden',
+      }}
+    >
+      <div style={{ padding: '10px 16px', fontSize: 12, fontWeight: 700, color: C.dim, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+        {title}
+      </div>
+      <div style={{ overflowY: 'auto', flex: 1, WebkitOverflowScrolling: 'touch' }}>
+        {entries.map((e, i) => {
+          const active = i === activeIndex;
+          return (
+            <button
+              key={i}
+              type="button"
+              ref={active ? activeRef : undefined}
+              onClick={() => onPick(i)}
               style={{
-                flexShrink: 0,
-                width: 26,
-                fontSize: 13,
-                fontWeight: 700,
-                color: active ? C.accent : C.dim,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                width: '100%',
+                textAlign: 'left',
+                border: 'none',
+                borderTop: `1px solid ${C.border}`,
+                background: active ? C.accentBg : 'transparent',
+                color: active ? C.accent : C.text,
+                fontSize: 16,
+                fontWeight: active ? 700 : 500,
+                padding: '14px 16px',
+                cursor: 'pointer',
+                WebkitTapHighlightColor: 'transparent',
+                touchAction: 'manipulation',
               }}
             >
-              {i + 1}
-            </span>
-            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.label}</span>
-            {e.sub && <span style={{ flexShrink: 0, fontSize: 12, color: C.dim }}>{e.sub}</span>}
-          </button>
-        );
-      })}
+              <span
+                style={{
+                  flexShrink: 0,
+                  width: 26,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: active ? C.accent : C.dim,
+                }}
+              >
+                {i + 1}
+              </span>
+              <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.label}</span>
+              {i === pendingIndex && <span className="ctl-spinner-sm" style={{ flexShrink: 0 }} />}
+              {e.sub && <span style={{ flexShrink: 0, fontSize: 12, color: C.dim }}>{e.sub}</span>}
+            </button>
+          );
+        })}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const spinnerCss = `
 @keyframes ctl-spin { to { transform: rotate(360deg); } }
@@ -357,6 +409,17 @@ const spinnerCss = `
   width: 44px; height: 44px; border-radius: 50%;
   border: 4px solid ${C.border}; border-top-color: ${C.accent};
   animation: ctl-spin 0.9s linear infinite;
+}
+.ctl-spinner-sm {
+  display: block; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid ${C.border}; border-top-color: ${C.accent};
+  animation: ctl-spin 0.7s linear infinite;
+}
+/* Stands in for a tile's icon while its command is in flight. */
+.ctl-spinner-md {
+  display: block; width: 26px; height: 26px; border-radius: 50%;
+  border: 3px solid ${C.border}; border-top-color: ${C.accent};
+  animation: ctl-spin 0.7s linear infinite;
 }`;
 
 const ControlApp = () => {
@@ -384,16 +447,62 @@ const ControlApp = () => {
   const reconnectRef = useRef<(() => void) | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const stoppedRef = useRef(false);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const wakeLockWantedRef = useRef(true);
+
+  // ── Command acknowledgement ─────────────────────────────────────────────────
+  // A command is fire-and-forget over the relay, so the only proof it landed is the
+  // operator's next musician_sync. Until that arrives the control shows a spinner
+  // ("sent, not applied yet"), then flashes a red ring. A command the operator ignores
+  // (next_block on the last block, a denied permission) never produces a broadcast, so
+  // the spinner simply times out — no false "done".
+  // Keys are the command id, or `set_block:<index>` / `set_item:<index>` for list jumps.
+  const [pendingCmd, setPendingCmd] = useState<string | null>(null);
+  const [confirmedCmd, setConfirmedCmd] = useState<string | null>(null);
+  const pendingRef = useRef<string | null>(null);
+  const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const confirmTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markPending = useCallback((key: string) => {
+    pendingRef.current = key;
+    setPendingCmd(key);
+    setConfirmedCmd(null);
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
+    pendingTimerRef.current = setTimeout(() => {
+      if (pendingRef.current !== key) return;
+      pendingRef.current = null;
+      setPendingCmd(null);
+    }, COMMAND_ACK_TIMEOUT_MS);
+  }, []);
+
+  /** Called on every incoming musician_sync — the operator moved, so our command landed. */
+  const confirmPending = useCallback(() => {
+    const key = pendingRef.current;
+    if (!key) return;
+    pendingRef.current = null;
+    setPendingCmd(null);
+    setConfirmedCmd(key);
+    if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    confirmTimerRef.current = setTimeout(() => setConfirmedCmd((c) => (c === key ? null : c)), COMMAND_CONFIRM_MS);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
+      if (confirmTimerRef.current) clearTimeout(confirmTimerRef.current);
+    },
+    [],
+  );
 
   // ── WebSocket connection ────────────────────────────────────────────────────
   useEffect(() => {
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    // Per-effect-run flag (NOT a ref): StrictMode's mount → cleanup → mount would leave a
+    // ref stuck at `true`, so the remounted page never connects again in dev.
+    let stopped = false;
 
     const connect = (url: string, account: number) => {
-      if (stoppedRef.current) return;
+      if (stopped) return;
       let ws: WebSocket;
       try {
         ws = new WebSocket(url);
@@ -403,7 +512,9 @@ const ControlApp = () => {
       }
       wsRef.current = ws;
 
-      ws.onopen = () => ws.send(JSON.stringify({ action: 'auth', account }));
+      // `client` tells the relay what we are, so the operator's connected-clients chip can
+      // list this phone as a remote control rather than an anonymous connection.
+      ws.onopen = () => ws.send(JSON.stringify({ action: 'auth', account, client: { role: 'remote' } }));
 
       ws.onmessage = (event) => {
         try {
@@ -414,6 +525,7 @@ const ControlApp = () => {
             ws.send(JSON.stringify({ type: 'broadcast', action: 'get_state' }));
           } else if (msg.action === 'musician_sync' && msg.data) {
             const data = msg.data as SyncState;
+            confirmPending();
             // Merge only the fields present — musician clients broadcast partial states
             setSync((prev) => {
               const next = { ...prev };
@@ -429,7 +541,7 @@ const ControlApp = () => {
       };
 
       ws.onclose = (event) => {
-        if (stoppedRef.current) return;
+        if (stopped) return;
         setConnected(false);
         wsRef.current = null;
         // Deliberately cleared by the operator — retrying on a timer would put us straight
@@ -471,7 +583,7 @@ const ControlApp = () => {
       });
 
     return () => {
-      stoppedRef.current = true;
+      stopped = true;
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (wsRef.current) {
         wsRef.current.onclose = null;
@@ -479,7 +591,8 @@ const ControlApp = () => {
         wsRef.current = null;
       }
     };
-  }, []);
+    // confirmPending is stable (useCallback with no deps) — listed so the handler is never stale.
+  }, [confirmPending]);
 
   // Fallback: if a (pre-permissions) operator never sends a command list, reveal the
   // tiles anyway shortly after connecting (appliedCommands stays undefined = all allowed).
@@ -565,14 +678,24 @@ const ControlApp = () => {
   }, []);
 
   // ── Commands ────────────────────────────────────────────────────────────────
-  const sendCommand = useCallback((command: string) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({ type: 'broadcast', action: 'remote_command', data: { command } }));
-  }, []);
+  const sendCommand = useCallback(
+    (command: string) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ type: 'broadcast', action: 'remote_command', data: { command } }));
+      markPending(command);
+    },
+    [markPending],
+  );
 
   /** Filter by the debounced applied list; undefined (old operator) = everything allowed. */
   const allowed = useCallback((command: string) => !appliedCommands || appliedCommands.includes(command), [appliedCommands]);
+
+  /** Row index awaiting acknowledgement in a list panel, from the `<command>:<index>` key. */
+  const pendingIndexFor = (command: 'set_item' | 'set_block') => {
+    if (!pendingCmd?.startsWith(`${command}:`)) return null;
+    return Number(pendingCmd.slice(command.length + 1));
+  };
 
   const isBlack = sync.isBlack === true;
   const isTextHidden = sync.isTextHidden === true;
@@ -597,30 +720,46 @@ const ControlApp = () => {
     }
   }, [expanded, canExpandAgenda, canExpandOrder]);
 
-  const pickItem = useCallback((index: number) => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'broadcast', action: 'remote_command', data: { command: 'set_item', index } }));
-    }
-    setExpanded('none');
-  }, []);
-  const pickBlock = useCallback((index: number) => {
-    const ws = wsRef.current;
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'broadcast', action: 'remote_command', data: { command: 'set_block', index } }));
-    }
-    setExpanded('none');
-  }, []);
+  const pickItem = useCallback(
+    (index: number) => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'broadcast', action: 'remote_command', data: { command: 'set_item', index } }));
+        markPending(`set_item:${index}`);
+      }
+      setExpanded('none');
+    },
+    [markPending],
+  );
+  // Deliberately does NOT collapse the panel: jumping around within a song usually means
+  // several picks in a row, so the order list stays up until the chip is tapped again.
+  const pickBlock = useCallback(
+    (index: number) => {
+      const ws = wsRef.current;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'broadcast', action: 'remote_command', data: { command: 'set_block', index } }));
+        markPending(`set_block:${index}`);
+      }
+    },
+    [markPending],
+  );
 
-  const tiles: { id: string; icon: ReactNode; label: string; active?: boolean; big?: boolean; accent?: boolean }[] = [
+  const tiles: {
+    id: string;
+    icon: ReactNode;
+    label: string;
+    active?: boolean;
+    big?: boolean;
+    tone?: 'warn' | 'danger';
+  }[] = [
     { id: 'prev_block', icon: icons.chevronLeft, label: T.prevBlock, big: true },
-    { id: 'next_block', icon: icons.chevronRight, label: T.nextBlock, big: true, accent: true },
+    { id: 'next_block', icon: icons.chevronRight, label: T.nextBlock, big: true },
     { id: 'prev_item', icon: icons.skipBack, label: T.prevItem },
     { id: 'next_item', icon: icons.skipForward, label: T.nextItem },
     { id: 'toggle_text', icon: icons.text, label: T.text, active: isTextHidden },
     { id: 'toggle_video', icon: icons.image, label: T.background, active: videoHidden },
     { id: 'toggle_video_playback', icon: icons.playPause, label: T.videoPlayback },
-    { id: 'toggle_black', icon: icons.moon, label: T.black, active: isBlack },
+    { id: 'toggle_black', icon: icons.moon, label: T.black, active: isBlack, tone: 'danger' as const },
   ].filter((t) => allowed(t.id));
 
   const showOverlay = phase === 'loading' || phase === 'error' || (phase === 'ready' && !connected);
@@ -730,8 +869,8 @@ const ControlApp = () => {
               fontSize: 12,
               fontWeight: 700,
               color: expanded === 'order' ? '#fff' : C.accent,
-              background: expanded === 'order' ? C.accent : C.accentBg,
-              border: `1px solid ${C.accent}66`,
+              background: expanded === 'order' ? C.accentSolid : C.accentBg,
+              border: `1px solid ${C.accentSolid}`,
               borderRadius: 8,
               padding: '6px 10px',
               textTransform: 'uppercase',
@@ -757,6 +896,7 @@ const ControlApp = () => {
           entries={agenda.map((a) => ({ label: a.label }))}
           activeIndex={sync.activeItemIndex ?? -1}
           onPick={pickItem}
+          pendingIndex={pendingIndexFor('set_item')}
         />
       ) : expanded === 'order' ? (
         <PanelList
@@ -764,6 +904,7 @@ const ControlApp = () => {
           entries={blockNames.map((n) => ({ label: n }))}
           activeIndex={sync.activeBlockIndex ?? -1}
           onPick={pickBlock}
+          pendingIndex={pendingIndexFor('set_block')}
         />
       ) : !commandsKnown ? (
         <div style={{ flex: 1 }} />
@@ -776,7 +917,9 @@ const ControlApp = () => {
               label={t.label}
               active={t.active}
               big={t.big}
-              accent={t.accent}
+              tone={t.tone}
+              pending={pendingCmd === t.id}
+              confirmed={confirmedCmd === t.id}
               onClick={() => sendCommand(t.id)}
             />
           ))}

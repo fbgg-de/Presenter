@@ -20,6 +20,11 @@ services:
       # Base URL of the PHP backend — required for viewer token authentication.
       # The WS server calls /rest/ValidateToken?token=... to resolve tokens.
       BACKEND_URL: 'https://presenter.efsh.de'
+      # How long the last selection stays current, in seconds (default 3600 = 1 hour).
+      # After this long without an update the relay drops the cached text and tells the
+      # viewers, so a screen left running does not keep showing last week's verse.
+      # Any new selection restarts the clock. Set to 0 to never expire.
+      SYNC_TTL_SECONDS: '3600'
     # Expose port to host only — put a reverse proxy (nginx/Caddy/Traefik) in
     # front to terminate TLS so clients can connect with wss://.
     ports:

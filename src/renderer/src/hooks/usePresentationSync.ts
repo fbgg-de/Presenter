@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
-import { broadcastContent, setWindowStyleResolver } from '@/utils/presentationBridge';
+import { broadcastContent, invalidateSentContentCache, setWindowStyleResolver } from '@/utils/presentationBridge';
 import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
 import type { ContentType, PresentationBlock, PresentationContent, PresentationLine } from '@/presentation/types';
 import { DEFAULT_STYLE, mergeStyles, type ResolvedStyle, resolveStyleCascade, resolveStyleData } from '@/utils/styleUtils';
@@ -20,6 +20,7 @@ import {
   toggleTextHidden,
   toggleVideoVisible,
   setWsConnectedCount,
+  setWsPeers,
   setWsMidiSyncAt,
   setWsOperatorConnected,
 } from '@/store/presentationSlice';
@@ -139,6 +140,23 @@ export const usePresentationSync = (): void => {
     return () => window.removeEventListener('presenter:force-broadcast', handler);
   }, []);
 
+  // A presentation window (re)mounted its renderer. Main already replayed what it had,
+  // but that snapshot predates this session's style/show state — re-broadcast from here
+  // so the window gets content resolved through the current per-window style cascade.
+  // Without this, windows restored on app start stay black until the operator navigates.
+  useEffect(() => {
+    const cleanup = window.api?.onPresentationWindowReady?.(({ id }) => {
+      // The window we "already sent" this content to is a fresh renderer that never
+      // received it — clear the dedupe snapshot or the re-broadcast below is a no-op.
+      invalidateSentContentCache(id);
+      lastKeyRef.current = '';
+      setForceBroadcastCount((c) => c + 1);
+    });
+    return () => {
+      if (typeof cleanup === 'function') cleanup();
+    };
+  }, []);
+
   // ── Remote-control commands (mobile control page, relayed as 'remote_command') ──
   // Context ref is assigned further below once song/show/order are derived.
   const remoteCtxRef = useRef<{
@@ -253,6 +271,7 @@ export const usePresentationSync = (): void => {
     broadcast: wsBroadcast,
     connected: wsOperatorConnected,
     connectedCount,
+    peers: wsPeers,
     lastMidiSyncAt,
     lastPeersDisconnected,
   } = useWsOperator(wsUrl, wsAccount, handleMusicianSync, handleGetState, handleRemoteCommand);
@@ -293,6 +312,10 @@ export const usePresentationSync = (): void => {
   useEffect(() => {
     dispatch(setWsConnectedCount(Math.max(0, connectedCount)));
   }, [connectedCount, dispatch]);
+
+  useEffect(() => {
+    dispatch(setWsPeers(wsPeers));
+  }, [wsPeers, dispatch]);
 
   useEffect(() => {
     dispatch(setWsOperatorConnected(wsOperatorConnected));

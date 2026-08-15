@@ -37,6 +37,8 @@ import { useGetSettings } from '@/store/settingsSlice';
 import { useGetSessionQuery } from '@/api/session.api';
 import { type CtEvent } from '@/api/churchtools.api';
 import { EventPicker } from '@/components/show/EventPicker';
+import { RowActionMenu } from '@/components/common/RowActionMenu';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { SONG_CUSTOM_NUMBER_LIMIT } from '@/song';
 import ccliIcon from '@/assets/ccli.svg';
 
@@ -79,6 +81,7 @@ const resolveShowTemplate = (template: string, date?: Date): string => {
 export const Shows = ({ open, onShowSelected, onClose, allowClose = false, currentShowTitle }: ShowsProps) => {
   const { LL } = useI18nContext();
   const { showSaveFormat } = useGetSettings();
+  const isMobile = useIsMobile();
 
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
   const [newShowTitle, setNewShowTitle] = useState('');
@@ -276,6 +279,9 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
         open={open}
         maxWidth="sm"
         fullWidth
+        // This dialog is the entry point of the app on mobile — give it the whole screen so the
+        // list gets the height instead of the backdrop.
+        fullScreen={isMobile}
         onClose={
           allowClose
             ? onClose
@@ -306,7 +312,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
             )}
           </Stack>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, px: { xs: 2, sm: 3 } }}>
           {isCreatingNew ? (
             <Stack spacing={3} sx={{ mt: 1 }}>
               <Alert severity="info" icon={<AddIcon />}>
@@ -342,7 +348,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
               )}
             </Stack>
           ) : (
-            <Stack spacing={2}>
+            <Stack spacing={2} sx={{ flex: 1, minHeight: 0 }}>
               {isLoading && shows.length === 0 ? (
                 <Box
                   sx={{
@@ -382,80 +388,123 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                   >
                     {LL.SHOWS.SELECT_PROMPT()}
                   </Typography>
-                  <Paper variant="outlined">
-                    <List sx={{ maxHeight: 450, overflow: 'auto' }} onScroll={handleShowsScroll}>
+                  <Paper variant="outlined" sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                    <List sx={{ flex: 1, minHeight: 0, maxHeight: { xs: 'none', sm: 450 }, overflow: 'auto' }} onScroll={handleShowsScroll}>
                       {shows.map((show, index) => {
                         const isCurrentShow = !!(currentShowTitle && show.title === currentShowTitle);
                         const isSelected = selectedShow?.title === show.title;
+
+                        const renameShow = () => {
+                          setShowToRename(show);
+                          setRenameTitle(show.title);
+                          setRenameEvent(
+                            show.eventId ? { id: show.eventId, name: show.eventName ?? `#${show.eventId}`, startDate: null } : null,
+                          );
+                        };
+
+                        // Four unlabelled icons do not fit next to a date-stamped title on a
+                        // phone, so there they collapse into one menu that can name each action.
+                        const rowActions = isMobile ? (
+                          <RowActionMenu
+                            actions={[
+                              {
+                                key: 'save',
+                                label: LL.SHOWS.SAVE_CURRENT_TOOLTIP(),
+                                icon: <UploadIcon fontSize="small" />,
+                                onClick: () => setConfirmOverride(show),
+                              },
+                              {
+                                key: 'ccli',
+                                label: LL.SHOWS.CCLI_REPORT(),
+                                icon: <Box component="img" src={ccliIcon} alt="" sx={{ width: 18, height: 18 }} />,
+                                onClick: () => openCcliReport(show),
+                                disabled: getCcliSongNumbers(show).length === 0,
+                              },
+                              {
+                                key: 'rename',
+                                label: LL.SHOWS.RENAME_TOOLTIP(),
+                                icon: <EditIcon fontSize="small" />,
+                                onClick: renameShow,
+                              },
+                              {
+                                key: 'delete',
+                                label: LL.SHOWS.DELETE_TOOLTIP(),
+                                icon: <DeleteIcon fontSize="small" />,
+                                onClick: () => setShowToDelete(show.title),
+                                disabled: isCurrentShow,
+                                destructive: true,
+                              },
+                            ]}
+                          />
+                        ) : (
+                          <Stack direction="row" spacing={0.5}>
+                            <Tooltip title={LL.SHOWS.SAVE_CURRENT_TOOLTIP()}>
+                              <IconButton
+                                edge="end"
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmOverride(show);
+                                }}
+                              >
+                                <UploadIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title={LL.SHOWS.CCLI_REPORT()}>
+                              <span>
+                                <IconButton
+                                  edge="end"
+                                  size="small"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openCcliReport(show);
+                                  }}
+                                  disabled={getCcliSongNumbers(show).length === 0}
+                                >
+                                  <Box component="img" src={ccliIcon} alt="CCLI" sx={{ width: 16, height: 16 }} />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title={LL.SHOWS.RENAME_TOOLTIP()}>
+                              <IconButton
+                                edge="end"
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  renameShow();
+                                }}
+                              >
+                                <EditIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title={LL.SHOWS.DELETE_TOOLTIP()}>
+                              <IconButton
+                                edge="end"
+                                size="small"
+                                color="error"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowToDelete(show.title);
+                                }}
+                                disabled={isCurrentShow}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Stack>
+                        );
 
                         return (
                           <ListItem
                             key={show.title}
                             disablePadding
                             divider={index < shows.length - 1}
-                            secondaryAction={
-                              <Stack direction="row" spacing={0.5}>
-                                <Tooltip title={LL.SHOWS.SAVE_CURRENT_TOOLTIP()}>
-                                  <IconButton
-                                    edge="end"
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setConfirmOverride(show);
-                                    }}
-                                  >
-                                    <UploadIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title={LL.SHOWS.CCLI_REPORT()}>
-                                  <span>
-                                    <IconButton
-                                      edge="end"
-                                      size="small"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openCcliReport(show);
-                                      }}
-                                      disabled={getCcliSongNumbers(show).length === 0}
-                                    >
-                                      <Box component="img" src={ccliIcon} alt="CCLI" sx={{ width: 16, height: 16 }} />
-                                    </IconButton>
-                                  </span>
-                                </Tooltip>
-                                <Tooltip title={LL.SHOWS.RENAME_TOOLTIP()}>
-                                  <IconButton
-                                    edge="end"
-                                    size="small"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setShowToRename(show);
-                                      setRenameTitle(show.title);
-                                      setRenameEvent(
-                                        show.eventId
-                                          ? { id: show.eventId, name: show.eventName ?? `#${show.eventId}`, startDate: null }
-                                          : null,
-                                      );
-                                    }}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                                <Tooltip title={LL.SHOWS.DELETE_TOOLTIP()}>
-                                  <IconButton
-                                    edge="end"
-                                    size="small"
-                                    color="error"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setShowToDelete(show.title);
-                                    }}
-                                    disabled={isCurrentShow}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </Tooltip>
-                              </Stack>
-                            }
+                            secondaryAction={rowActions}
+                            sx={{
+                              // Keep the row text clear of the absolutely positioned actions:
+                              // one menu button on mobile, the four-icon cluster on desktop.
+                              '& > .MuiListItemButton-root': { pr: { xs: '48px', sm: '150px' } },
+                            }}
                           >
                             <ListItemButton
                               selected={isSelected}
@@ -463,6 +512,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                               sx={{
                                 borderLeft: isCurrentShow ? 4 : 0,
                                 borderColor: 'success.main',
+                                minWidth: 0,
                               }}
                             >
                               <ListItemText
@@ -472,11 +522,20 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                                     spacing={1}
                                     sx={{
                                       alignItems: 'center',
+                                      minWidth: 0,
                                     }}
                                   >
-                                    <Typography variant="body1">{show.title}</Typography>
+                                    <Typography variant="body1" noWrap sx={{ minWidth: 0 }}>
+                                      {show.title}
+                                    </Typography>
                                     {isCurrentShow && (
-                                      <Chip label={LL.SHOWS.CURRENT()} size="small" color="success" icon={<CheckCircleIcon />} />
+                                      <Chip
+                                        label={LL.SHOWS.CURRENT()}
+                                        size="small"
+                                        color="success"
+                                        icon={<CheckCircleIcon />}
+                                        sx={{ flexShrink: 0 }}
+                                      />
                                     )}
                                   </Stack>
                                 }
@@ -509,6 +568,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
                                 slotProps={{
                                   secondary: { component: 'div' } as object,
                                 }}
+                                sx={{ minWidth: 0, my: 0 }}
                               />
                             </ListItemButton>
                           </ListItem>

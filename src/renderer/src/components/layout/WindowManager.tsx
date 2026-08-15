@@ -41,6 +41,7 @@ import {
   CropFree as FramelessIcon,
   VerticalAlignTop as OnTopIcon,
   Opacity as TransparentIcon,
+  Tune as TuneIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
@@ -59,6 +60,7 @@ import {
   listScreens,
   updateWindowConfigInBridge,
 } from '@/utils/presentationBridge';
+import { ScreenPicker, screenIdForBounds, type ScreenInfo, type ScreenPickerWindow } from './ScreenPicker';
 
 interface WindowManagerProps {
   open: boolean;
@@ -71,6 +73,7 @@ const WindowConfigForm = ({
   cfg,
   onChange,
   screens,
+  openWindows,
   styles,
   onSubmit,
   submitLabel,
@@ -89,7 +92,9 @@ const WindowConfigForm = ({
     positionY?: number | undefined;
   };
   onChange: (patch: Partial<typeof cfg>) => void;
-  screens: Array<{ id: number; label: string; bounds: { x: number; y: number; width: number; height: number }; isPrimary: boolean }>;
+  screens: ScreenInfo[];
+  /** Open windows with live bounds, drawn onto the screen map. */
+  openWindows: ScreenPickerWindow[];
   styles: Array<{ id: number; name: string }>;
   onSubmit: () => void;
   submitLabel: string;
@@ -137,59 +142,74 @@ const WindowConfigForm = ({
         </MenuItem>
       </Select>
     </Stack>
-    {/* Size + Position in one row */}
-    <Stack direction="row" spacing={1}>
-      <TextField
-        label={LL.WINDOW.WIDTH()}
-        type="number"
-        value={cfg.width}
-        onChange={(e) => onChange({ width: Number(e.target.value) })}
-        size="small"
-        sx={{ flex: 1 }}
-      />
-      <TextField
-        label={LL.WINDOW.HEIGHT()}
-        type="number"
-        value={cfg.height}
-        onChange={(e) => onChange({ height: Number(e.target.value) })}
-        size="small"
-        sx={{ flex: 1 }}
-      />
-      <TextField
-        label={LL.WINDOW.POSITION_X()}
-        type="number"
-        value={cfg.positionX ?? ''}
-        onChange={(e) => onChange({ positionX: e.target.value === '' ? undefined : Number(e.target.value) })}
-        size="small"
-        placeholder="auto"
-        sx={{ flex: 1 }}
-      />
-      <TextField
-        label={LL.WINDOW.POSITION_Y()}
-        type="number"
-        value={cfg.positionY ?? ''}
-        onChange={(e) => onChange({ positionY: e.target.value === '' ? undefined : Number(e.target.value) })}
-        size="small"
-        placeholder="auto"
-        sx={{ flex: 1 }}
-      />
-    </Stack>
-    {screens.length > 1 && (
-      <Select
-        value={cfg.screenId ?? ''}
-        onChange={(e) => onChange({ screenId: e.target.value as number | '' })}
-        size="small"
-        fullWidth
-        displayEmpty
-      >
-        <MenuItem value="">Auto</MenuItem>
-        {screens.map((s) => (
-          <MenuItem key={s.id} value={s.id}>
-            {s.label} ({s.bounds.width}×{s.bounds.height}){s.isPrimary ? ' ★' : ''}
-          </MenuItem>
-        ))}
-      </Select>
-    )}
+    {/* Screen assignment — the normal way to place a window. Picking a screen fills in
+        its bounds, so size/coordinates never have to be typed for the common case. */}
+    <ScreenPicker
+      screens={screens}
+      value={cfg.screenId ?? ''}
+      windows={openWindows}
+      onChange={(screenId) => {
+        const target = screens.find((s) => s.id === screenId);
+        if (!target) return;
+        onChange({
+          screenId,
+          positionX: target.bounds.x,
+          positionY: target.bounds.y,
+          width: target.bounds.width,
+          height: target.bounds.height,
+        });
+      }}
+    />
+    {/* Everything below is expert territory: exact pixel geometry. Collapsed by default so
+        the common path (pick a screen, name it, go) stays a three-decision form. */}
+    <Accordion disableGutters elevation={0} sx={{ '&:before': { display: 'none' }, bgcolor: 'transparent' }}>
+      <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={{ minHeight: 36, px: 0, '& .MuiAccordionSummary-content': { my: 0.5 } }}>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
+          <TuneIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {LL.WINDOW.ADVANCED_GEOMETRY()}
+          </Typography>
+        </Stack>
+      </AccordionSummary>
+      <AccordionDetails sx={{ px: 0, pt: 0 }}>
+        <Stack direction="row" spacing={1}>
+          <TextField
+            label={LL.WINDOW.WIDTH()}
+            type="number"
+            value={cfg.width}
+            onChange={(e) => onChange({ width: Number(e.target.value) })}
+            size="small"
+            sx={{ flex: 1 }}
+          />
+          <TextField
+            label={LL.WINDOW.HEIGHT()}
+            type="number"
+            value={cfg.height}
+            onChange={(e) => onChange({ height: Number(e.target.value) })}
+            size="small"
+            sx={{ flex: 1 }}
+          />
+          <TextField
+            label={LL.WINDOW.POSITION_X()}
+            type="number"
+            value={cfg.positionX ?? ''}
+            onChange={(e) => onChange({ positionX: e.target.value === '' ? undefined : Number(e.target.value) })}
+            size="small"
+            placeholder="auto"
+            sx={{ flex: 1 }}
+          />
+          <TextField
+            label={LL.WINDOW.POSITION_Y()}
+            type="number"
+            value={cfg.positionY ?? ''}
+            onChange={(e) => onChange({ positionY: e.target.value === '' ? undefined : Number(e.target.value) })}
+            size="small"
+            placeholder="auto"
+            sx={{ flex: 1 }}
+          />
+        </Stack>
+      </AccordionDetails>
+    </Accordion>
     {/* Switches in 2 columns */}
     <Grid container spacing={0.5} sx={{ paddingX: 2 }}>
       <Grid size={6}>
@@ -323,16 +343,18 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
   const { data: styles = [] } = useGetStylesQuery();
 
   const [openWindowsList, setOpenWindowsList] = useState<Array<{ id: string; config: WindowConfig; closed: boolean }>>([]);
-  const [screens, setScreens] = useState<
-    Array<{ id: number; label: string; bounds: { x: number; y: number; width: number; height: number }; isPrimary: boolean }>
-  >([]);
+  const [screens, setScreens] = useState<ScreenInfo[]>([]);
   const [hiddenWindows, setHiddenWindows] = useState<Set<string>>(new Set());
+  /** Live geometry per window id — drives the screen map and the per-window screen badge. */
+  const [windowBounds, setWindowBounds] = useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
 
   const refreshHiddenWindows = useCallback(async () => {
     if (window.api?.getWindowStates) {
       try {
-        const states: Array<{ id: string; hidden?: boolean }> = await window.api.getWindowStates();
+        const states: Array<{ id: string; hidden?: boolean; bounds?: { x: number; y: number; width: number; height: number } }> =
+          await window.api.getWindowStates();
         setHiddenWindows(new Set(states.filter((s) => s.hidden).map((s) => s.id)));
+        setWindowBounds(Object.fromEntries(states.filter((s) => s.bounds).map((s) => [s.id, s.bounds!])));
       } catch {
         /* ignore */
       }
@@ -373,10 +395,11 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
       getOpenWindows()
         .then(setOpenWindowsList)
         .catch(() => setOpenWindowsList(getOpenWindowsSync()));
+      // Bounds move when the user drags a window — keep the map honest while it is open.
+      void refreshHiddenWindows();
     };
     const interval = setInterval(refreshWindows, 1000);
     refreshWindows();
-    refreshHiddenWindows();
     if (openWithNew) setCreateExpanded(true);
     listScreens()
       .then(setScreens)
@@ -385,6 +408,13 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
   }, [open, refreshHiddenWindows]);
 
   const activeWindows = openWindowsList.filter((w) => !w.closed);
+
+  /** Open windows in the shape the screen map wants (name + live bounds). */
+  const mappedWindows: ScreenPickerWindow[] = activeWindows.map((w) => ({
+    id: w.id,
+    name: w.config.name || 'Window',
+    bounds: windowBounds[w.id],
+  }));
 
   // When accordion opens for a window, pre-fill edit config from current config
   const handleToggleEdit = (windowId: string, currentCfg: WindowConfig & { _runtimeId?: string; styleId?: number }) => {
@@ -395,7 +425,13 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
       if (!editConfigs[windowId]) {
         setEditConfigs((prev) => ({
           ...prev,
-          [windowId]: { ...currentCfg, styleId: currentCfg.styleId ?? 0, screenId: '' },
+          [windowId]: {
+            ...currentCfg,
+            styleId: currentCfg.styleId ?? 0,
+            // Preselect the screen the window actually sits on, so the map opens showing
+            // where this window IS rather than an empty choice.
+            screenId: screenIdForBounds(windowBounds[windowId], screens) ?? '',
+          },
         }));
       }
     }
@@ -403,6 +439,10 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
 
   const handleCreateWindow = useCallback(async () => {
     const selectedScreen = screens.find((s) => s.id === newCfg.screenId);
+    // The screen picker writes position+size into the form, so those are the source of
+    // truth here; the selected screen only fills in for a form that was never touched.
+    const positionX = newCfg.positionX ?? selectedScreen?.bounds.x;
+    const positionY = newCfg.positionY ?? selectedScreen?.bounds.y;
     const id = await openPresentationWindow({
       name: newCfg.name,
       displayMode: newCfg.displayMode,
@@ -413,10 +453,14 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
       hideMouse: newCfg.hideMouse,
       width: newCfg.width,
       height: newCfg.height,
-      left: selectedScreen?.bounds.x,
-      top: selectedScreen?.bounds.y,
+      positionX,
+      positionY,
+      left: positionX,
+      top: positionY,
     });
-    // Persist the new config so the window can be restored after restart
+    // Persist the new config so the window can be restored after restart. Position must be
+    // part of it — without it a restored window lands on the primary screen instead of the
+    // beamer it was created for.
     const newConfig = {
       name: newCfg.name,
       displayMode: newCfg.displayMode,
@@ -427,6 +471,8 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
       hideMouse: newCfg.hideMouse,
       width: newCfg.width,
       height: newCfg.height,
+      positionX,
+      positionY,
       styleId: newCfg.styleId || undefined,
       _runtimeId: id,
     };
@@ -590,6 +636,9 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
                 const savedCfg = (savedConfigs || []).find((c) => c._runtimeId === entry.id);
                 const cfg = savedCfg || entry.config;
                 const isEditExpanded = expandedWindowId === entry.id;
+                // Which physical display this window is on right now — the single most
+                // useful fact about a presentation window, and previously nowhere in the UI.
+                const onScreen = screens.find((s) => s.id === screenIdForBounds(windowBounds[entry.id], screens));
 
                 return (
                   <ListItem key={entry.id} disablePadding sx={{ borderBottom: 1, borderColor: 'divider', display: 'block' }}>
@@ -620,6 +669,15 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
                       >
                         {name}
                       </Typography>
+                      {onScreen && (
+                        <Chip
+                          icon={<NormalIcon sx={{ fontSize: '0.7rem' }} />}
+                          label={onScreen.label}
+                          size="small"
+                          variant="outlined"
+                          sx={{ height: 18, fontSize: '0.62rem', maxWidth: 150 }}
+                        />
+                      )}
 
                       <Box sx={{ flexGrow: 1 }} />
                       <Tooltip title={hiddenWindows.has(entry.id) ? LL.FOOTER.SHOW_WINDOW() : LL.FOOTER.HIDE_WINDOW()}>
@@ -646,7 +704,7 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
                           <FreezeIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Edit settings">
+                      <Tooltip title={LL.WINDOW.EDIT_SETTINGS()}>
                         <IconButton
                           size="small"
                           onClick={() => handleToggleEdit(entry.id, cfg as WindowConfig & { styleId?: number })}
@@ -683,9 +741,10 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
                             }}
                             onChange={(patch) => setEditConfigs((prev) => ({ ...prev, [entry.id]: { ...prev[entry.id], ...patch } }))}
                             screens={screens}
+                            openWindows={mappedWindows}
                             styles={styles}
                             onSubmit={() => handleApplyEdit(entry.id)}
-                            submitLabel="Apply"
+                            submitLabel={LL.COMMON.APPLY()}
                             isEdit
                             LL={LL}
                           />
@@ -731,6 +790,7 @@ export const WindowManager = ({ open, onClose, openWithNew }: WindowManagerProps
                 cfg={newCfg}
                 onChange={(patch) => setNewCfg((prev) => ({ ...prev, ...patch }))}
                 screens={screens}
+                openWindows={mappedWindows}
                 styles={styles}
                 onSubmit={handleCreateWindow}
                 submitLabel={LL.WINDOW.CREATE()}

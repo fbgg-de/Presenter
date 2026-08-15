@@ -1,16 +1,5 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import {
-  Stack,
-  Box,
-  useMediaQuery,
-  useTheme,
-  BottomNavigation,
-  BottomNavigationAction,
-  Paper,
-  Snackbar,
-  Alert,
-  Button,
-} from '@mui/material';
+import { Stack, Box, BottomNavigation, BottomNavigationAction, Paper, Snackbar, Alert, Button } from '@mui/material';
 import { ViewList as ShowListIcon, TouchApp as ControlIcon } from '@mui/icons-material';
 import Footer from '@/components/layout/Footer';
 import Sidebar, { type SidebarHandle } from '@/components/layout/Sidebar';
@@ -29,6 +18,7 @@ import PresentationSyncHost from '@/components/layout/PresentationSyncHost';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { formatRelativeTime } from '@/utils/relativeTime';
 import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
 import { useGetAccountSettingsQuery, useGetSessionQuery } from '@/api/session.api';
@@ -38,8 +28,7 @@ import { useGetMusicianSettings } from '@/store/musicianSlice';
 export const MainPage = () => {
   const dispatch = useAppDispatch();
   const { LL, locale } = useI18nContext();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isMobile = useIsMobile();
   const [mobileTab, setMobileTab] = useState(0); // 0 = show list / sidebar, 1 = control
 
   const { currentShow, isShowSelectorOpen } = useGetShow();

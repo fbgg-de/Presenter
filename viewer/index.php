@@ -90,6 +90,8 @@ $debugMode  = isset($_GET['debug']);
       --accent: #4a90d9;
       --error: #e05252;
       --fade: 0.35s ease;
+      /* Lyrics size multiplier — set by the size picker, persisted in localStorage. */
+      --scale: 1;
     }
 
     html, body {
@@ -102,19 +104,19 @@ $debugMode  = isset($_GET['debug']);
       overflow-x: hidden;
     }
 
-    /* ── Status bar (connection indicator only, top) ─────────────────────────── */
+    /* ── Status pill (connection indicator) — top left, out of the text's way ── */
     #status-bar {
-      position: absolute;
-      bottom: 0;
-      width: 100%;
-      height: 32px;
+      position: fixed;
+      top: 0;
+      left: 0;
       display: flex;
       align-items: center;
       gap: 8px;
-      padding: 0 16px;
+      padding: 7px 14px;
       background: rgba(10,10,10,0.85);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
+      border-bottom-right-radius: 8px;
       font-size: 11px;
       color: var(--meta);
       z-index: 100;
@@ -156,14 +158,14 @@ $debugMode  = isset($_GET['debug']);
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: calc(100vh - 32px - 28px); /* viewport minus status-bar minus info-bar */
+      min-height: calc(100vh - 34px); /* viewport minus the info bar; the status pill floats */
       padding: 3vh 0;
       text-align: center;
     }
 
     /* Lyrics — large, bold, tight */
     #lyrics {
-      font-size: clamp(28px, 4.5vw, 96px);
+      font-size: calc(clamp(28px, 4.5vw, 96px) * var(--scale));
       line-height: 1.25;
       font-weight: 700;
       letter-spacing: 0.01em;
@@ -196,12 +198,13 @@ $debugMode  = isset($_GET['debug']);
       position: sticky;
       bottom: 0;
       width: 100%;
-      height: 28px;
+      height: 34px;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 12px;
-      padding: 0 16px;
+      /* Symmetric padding keeps the text centred despite the menu button on the right. */
+      padding: 0 44px;
       background: rgba(10,10,10,0.85);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
@@ -211,13 +214,105 @@ $debugMode  = isset($_GET['debug']);
       text-transform: uppercase;
       z-index: 100;
     }
-    #info-bar .separator { opacity: 0.3; }
-    #info-bar #block-name { color: var(--accent); }
+    /* One line, always: on a narrow screen the show title gives way first and the block
+       name — the most useful part — is never truncated. */
+    #info-bar > span { white-space: nowrap; }
+    #info-bar #meta-show,
+    #info-bar #meta-song { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+    #info-bar .separator { opacity: 0.3; flex-shrink: 0; }
+    #info-bar #block-name { color: var(--accent); flex-shrink: 0; }
+
+    /* ── Menu — one small button at the right end of the info bar ────────────── */
+    #menu-btn {
+      position: absolute;
+      right: 6px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 24px;
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 5px;
+      background: transparent;
+      color: var(--meta);
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    #menu-btn:hover,
+    #menu-btn[aria-expanded="true"] { color: var(--text); border-color: rgba(255,255,255,0.35); }
+
+    /* Opens upwards — the bar sits at the bottom of the page. */
+    #menu {
+      position: absolute;
+      right: 6px;
+      bottom: 40px;
+      min-width: 160px;
+      padding: 6px;
+      background: rgba(20,20,20,0.97);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      box-shadow: 0 8px 26px rgba(0,0,0,0.55);
+      z-index: 120;
+    }
+    #menu[hidden], #menu [hidden] { display: none; }
+    #menu .menu-title {
+      padding: 4px 8px 6px;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.35);
+    }
+    #menu .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      width: 100%;
+      padding: 8px;
+      border: none;
+      border-radius: 5px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      font-size: 12px;
+      /* The info bar is uppercase + tracked out; menu entries read as normal text. */
+      text-transform: none;
+      letter-spacing: normal;
+      text-align: left;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    #menu .menu-item:hover { background: rgba(255,255,255,0.07); }
+    #menu .menu-item.active { color: var(--accent); }
+    #menu .menu-item .check { opacity: 0; }
+    #menu .menu-item.active .check { opacity: 1; }
+    /* Read-only entry: the loaded show, which the bar only shows briefly. */
+    #menu .menu-info {
+      padding: 0 8px 6px;
+      max-width: 220px;
+      font-size: 12px;
+      color: var(--text);
+      text-transform: none;
+      letter-spacing: normal;
+      white-space: normal;
+      line-height: 1.35;
+    }
+    #menu .menu-sep {
+      height: 1px;
+      margin: 4px 6px 6px;
+      background: rgba(255,255,255,0.1);
+    }
 
     /* Debug log */
     #debug-log {
       position: fixed;
-      bottom: 28px; left: 0; right: 0;
+      bottom: 34px; left: 0; right: 0;
       max-height: 180px;
       overflow-y: auto;
       background: rgba(0,0,0,0.82);
@@ -236,7 +331,7 @@ $debugMode  = isset($_GET['debug']);
     #debug-log .entry.ok    { color: #4caf50; }
     #debug-toggle {
       position: fixed;
-      bottom: 32px; right: 12px;
+      bottom: 38px; left: 12px;
       font-size: 10px;
       color: rgba(255,255,255,0.2);
       cursor: pointer;
@@ -266,6 +361,30 @@ $debugMode  = isset($_GET['debug']);
     <span id="meta-song"></span>
     <span class="separator" id="sep-block" style="display:none">·</span>
     <span id="block-name"></span>
+
+    <!-- Menu: text size presets, remembered per device -->
+    <button type="button" id="menu-btn" aria-label="Menu" aria-haspopup="true" aria-expanded="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/>
+      </svg>
+    </button>
+    <div id="menu" role="menu" aria-label="Viewer options" hidden>
+      <div class="menu-title">SHOW</div>
+      <div class="menu-info" id="menu-show">—</div>
+      <div class="menu-sep"></div>
+      <div class="menu-title">TEXT SIZE</div>
+      <button type="button" class="menu-item" role="menuitemradio" data-scale="0.7">Small<span class="check">✓</span></button>
+      <button type="button" class="menu-item" role="menuitemradio" data-scale="1">Normal<span class="check">✓</span></button>
+      <button type="button" class="menu-item" role="menuitemradio" data-scale="1.35">Large<span class="check">✓</span></button>
+      <button type="button" class="menu-item" role="menuitemradio" data-scale="1.8">Huge<span class="check">✓</span></button>
+      <!-- Hidden when the browser has no element fullscreen (e.g. iPhone Safari). -->
+      <div id="fs-section">
+        <div class="menu-sep"></div>
+        <div class="menu-title">DISPLAY</div>
+        <button type="button" class="menu-item" role="menuitemcheckbox" id="menu-fullscreen">Fullscreen<span class="check">✓</span></button>
+      </div>
+    </div>
   </div>
 
   <div id="debug-log"></div>
@@ -281,6 +400,19 @@ $debugMode  = isset($_GET['debug']);
       const WS_URL    = <?= $wsUrlJson ?>;
       const RECONNECT = 3000;
 
+      // Empty-state wording: before anything has been presented vs. after the selection
+      // went stale (see "Selection expiry" below).
+      const WAITING_TEXT = 'Waiting for presenter…';
+      const NO_TEXT_TEXT = 'No text is currently available.';
+
+      // Fallback if the relay does not advertise its TTL (older server): 1 hour.
+      const DEFAULT_TTL_MS = 3600000;
+      const SIZE_KEY = 'presenter-viewer-text-scale';
+
+      // How long the bar names the loaded show before making room for song · block.
+      // It reappears whenever the show changes, and stays readable in the menu.
+      const SHOW_TITLE_MS = 10000;
+
       // ── DOM refs ────────────────────────────────────────────────────────────
       const dot         = document.getElementById('status-dot');
       const statusText  = document.getElementById('status-text');
@@ -295,6 +427,11 @@ $debugMode  = isset($_GET['debug']);
       const statusBar   = document.getElementById('status-bar');
       const debugLog    = document.getElementById('debug-log');
       const debugToggle = document.getElementById('debug-toggle');
+      const menuBtn     = document.getElementById('menu-btn');
+      const menu        = document.getElementById('menu');
+      const menuShow    = document.getElementById('menu-show');
+      const fsItem      = document.getElementById('menu-fullscreen');
+      const fsSection   = document.getElementById('fs-section');
 
       const DEBUG = <?= $debugMode ? 'true' : 'false' ?>;
 
@@ -306,6 +443,148 @@ $debugMode  = isset($_GET['debug']);
       let permanentStop  = false;  // permanent stop (invalid token — never reconnect)
       let hideTimer      = null;
       let reconnectCount = 0;
+      let syncTtlMs      = DEFAULT_TTL_MS;  // overridden by auth_ok
+      let expiryTimer    = null;
+
+      // ── Menu + text size ────────────────────────────────────────────────────
+      // A viewer screen can be anything from a phone to a projector, so the size is a
+      // per-device choice rather than something the presenter controls. It lives behind
+      // the menu button so the bar itself stays free for show · song · block.
+      function applyScale(scale, persist) {
+        document.documentElement.style.setProperty('--scale', String(scale));
+        Array.prototype.forEach.call(menu.querySelectorAll('.menu-item'), function (b) {
+          const on = parseFloat(b.dataset.scale) === scale;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        if (persist) {
+          try { localStorage.setItem(SIZE_KEY, String(scale)); } catch (e) { /* private mode */ }
+        }
+      }
+
+      (function initScale() {
+        var stored = 1;
+        try {
+          var v = parseFloat(localStorage.getItem(SIZE_KEY));
+          if (v > 0) stored = v;
+        } catch (e) { /* private mode */ }
+        applyScale(stored, false);
+      })();
+
+      function setMenuOpen(open) {
+        menu.hidden = !open;
+        menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      }
+
+      menuBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        setMenuOpen(menu.hidden);
+      });
+
+      // Picking a size deliberately leaves the menu open, so sizes can be compared
+      // against the live text without reopening it each time.
+      menu.addEventListener('click', function (e) {
+        const item = e.target.closest('.menu-item[data-scale]');
+        if (item) applyScale(parseFloat(item.dataset.scale), true);
+      });
+
+      document.addEventListener('click', function (e) {
+        if (!menu.hidden && !menu.contains(e.target) && !menuBtn.contains(e.target)) setMenuOpen(false);
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') setMenuOpen(false);
+      });
+
+      // ── Fullscreen ──────────────────────────────────────────────────────────
+      // Replaces the old double-click-anywhere gesture, which was undiscoverable and
+      // fired by accident. Hidden entirely where the API does not exist, rather than
+      // offering a control that silently does nothing.
+      if (!document.documentElement.requestFullscreen) {
+        fsSection.hidden = true;
+      } else {
+        function syncFullscreenItem() {
+          const on = !!document.fullscreenElement;
+          fsItem.classList.toggle('active', on);
+          fsItem.setAttribute('aria-checked', on ? 'true' : 'false');
+        }
+        fsItem.addEventListener('click', function () {
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(function (err) { dbg('Exit fullscreen failed: ' + err.message, 'warn'); });
+          } else {
+            document.documentElement.requestFullscreen().catch(function (err) {
+              dbg('Fullscreen request failed: ' + err.message, 'warn');
+            });
+          }
+          setMenuOpen(false);   // one-shot action, unlike comparing text sizes
+        });
+        // Also catches leaving fullscreen via Esc or the browser's own UI.
+        document.addEventListener('fullscreenchange', syncFullscreenItem);
+        syncFullscreenItem();
+      }
+
+      // ── Info bar ────────────────────────────────────────────────────────────
+      // Rendered from these three, so the show title can drop out on a timer without the
+      // next sync putting it straight back.
+      let currentShow      = '';
+      let currentSong      = '';
+      let currentBlock     = '';
+      let showTitleVisible = false;
+      let showTitleTimer   = null;
+
+      function updateInfoBar() {
+        const showText = showTitleVisible ? currentShow : '';
+        metaShow.textContent    = showText;
+        metaSong.textContent    = currentSong;
+        blockNameEl.textContent = currentBlock;
+        metaShow.style.display  = showText ? '' : 'none';
+        sepShow.style.display   = (showText && currentSong) ? '' : 'none';
+        sepBlock.style.display  = ((showText || currentSong) && currentBlock) ? '' : 'none';
+      }
+
+      /** Name the show for SHOW_TITLE_MS, then hand the space back to song · block. */
+      function noteShowTitle(showTitle) {
+        if (showTitle === currentShow) return;   // same show — do not restart the timer
+        currentShow = showTitle;
+        menuShow.textContent = showTitle || '—';
+        clearTimeout(showTitleTimer);
+        showTitleVisible = !!showTitle;
+        if (showTitle) {
+          showTitleTimer = setTimeout(function () {
+            showTitleVisible = false;
+            updateInfoBar();
+          }, SHOW_TITLE_MS);
+        }
+      }
+
+      // ── Selection expiry ────────────────────────────────────────────────────
+      // Showing a block for days after the service is worse than showing nothing, so the
+      // relay expires its cached selection (SYNC_TTL_SECONDS) and pushes `sync_expired`.
+      // We run the same countdown locally as well, so the text still clears if the relay
+      // restarts or the connection dies while this page keeps sitting on screen.
+      function armExpiry(ageMs) {
+        clearTimeout(expiryTimer);
+        if (!(syncTtlMs > 0)) return;   // 0 = expiry disabled server-side
+        const remaining = Math.max(0, syncTtlMs - (ageMs > 0 ? ageMs : 0));
+        expiryTimer = setTimeout(function () {
+          dbg('Selection expired locally after ' + syncTtlMs + 'ms', 'warn');
+          showNoText();
+        }, remaining);
+      }
+
+      /** Clear everything and state plainly that nothing is being presented. */
+      function showNoText() {
+        clearTimeout(expiryTimer);
+        clearTimeout(showTitleTimer);
+        lyricsEl.innerHTML = '';
+        // Reset the show too, so whatever comes next is announced again for 10 s.
+        currentShow = currentSong = currentBlock = '';
+        showTitleVisible = false;
+        menuShow.textContent = '—';
+        updateInfoBar();
+        blackOver.classList.remove('active');
+        waitingEl.textContent = NO_TEXT_TEXT;
+        waitingEl.classList.add('visible');
+      }
 
       // ── Debug log ───────────────────────────────────────────────────────────
       if (debugToggle) {
@@ -337,7 +616,10 @@ $debugMode  = isset($_GET['debug']);
       }
 
       // ── Render ──────────────────────────────────────────────────────────────
-      function render(data) {
+      // `ageMs` is set on replayed selections: the countdown must run from when the
+      // selection was made, not from when this page happened to connect.
+      function render(data, ageMs) {
+        armExpiry(ageMs);
         blackOver.classList.toggle('active', !!data.isBlack);
 
         const lines     = Array.isArray(data.blockLines) ? data.blockLines : [];
@@ -345,12 +627,11 @@ $debugMode  = isset($_GET['debug']);
         const songTitle = data.songTitle || '';
         const showTitle = data.showTitle || '';
 
-        // Info bar — show · song · block
-        metaShow.textContent    = showTitle;
-        metaSong.textContent    = songTitle;
-        blockNameEl.textContent = blockName;
-        sepShow.style.display   = (showTitle && songTitle)  ? '' : 'none';
-        sepBlock.style.display  = ((showTitle || songTitle) && blockName) ? '' : 'none';
+        // Info bar — song · block, preceded by the show for its first 10 s only.
+        noteShowTitle(showTitle);
+        currentSong  = songTitle;
+        currentBlock = blockName;
+        updateInfoBar();
 
         lyricsEl.classList.add('fade-out');
         setTimeout(function () {
@@ -365,6 +646,7 @@ $debugMode  = isset($_GET['debug']);
             waitingEl.classList.remove('visible');
             lyricsEl.style.opacity = '';
           } else {
+            waitingEl.textContent = WAITING_TEXT;
             waitingEl.classList.add('visible');
           }
           lyricsEl.classList.remove('fade-out');
@@ -390,7 +672,9 @@ $debugMode  = isset($_GET['debug']);
         ws.onopen = function () {
           if (permanentStop || stopped) { ws.close(); return; }
           dbg('Socket open — sending auth token');
-          ws.send(JSON.stringify({ action: 'auth', token: TOKEN }));
+          // `client` is descriptive only — it lets the operator's connected-clients
+          // tooltip count this page as a text viewer.
+          ws.send(JSON.stringify({ action: 'auth', token: TOKEN, client: { role: 'viewer' } }));
         };
 
         ws.onmessage = function (event) {
@@ -404,8 +688,20 @@ $debugMode  = isset($_GET['debug']);
 
           if (msg.type === 'auth_ok') {
             dbg('Authenticated — account ' + msg.account, 'ok');
+            if (typeof msg.syncTtlSeconds === 'number' && msg.syncTtlSeconds >= 0) {
+              syncTtlMs = msg.syncTtlSeconds * 1000;
+              dbg('Selection TTL from relay: ' + (syncTtlMs ? syncTtlMs + 'ms' : 'disabled'));
+            }
             setStatus('connected', 'Connected');
+            // A replayed selection (if any) arrives right after this and overwrites it.
+            waitingEl.textContent = WAITING_TEXT;
             waitingEl.classList.add('visible');
+            return;
+          }
+
+          if (msg.type === 'sync_expired') {
+            dbg('Relay reports the selection expired', 'warn');
+            showNoText();
             return;
           }
 
@@ -425,8 +721,9 @@ $debugMode  = isset($_GET['debug']);
           }
 
           if (msg.action === 'musician_sync' && msg.data) {
-            dbg('Sync received — block: ' + (msg.data.blockName || '(empty)'), 'ok');
-            render(msg.data);
+            dbg('Sync received — block: ' + (msg.data.blockName || '(empty)') +
+                (msg.replay ? ' (replay, age ' + (msg.ageMs || 0) + 'ms)' : ''), 'ok');
+            render(msg.data, msg.ageMs);
           }
         };
 
@@ -467,16 +764,7 @@ $debugMode  = isset($_GET['debug']);
         }
       });
 
-      // Double-click anywhere → toggle fullscreen
-      document.addEventListener('dblclick', function () {
-        if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().catch(function (err) {
-            dbg('Fullscreen request failed: ' + err.message, 'warn');
-          });
-        } else {
-          document.exitFullscreen();
-        }
-      });
+      // (Fullscreen lives in the menu — the old double-click-anywhere gesture is gone.)
     })();
   </script>
 </body>

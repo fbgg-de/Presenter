@@ -12,6 +12,19 @@ export type WsSyncStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 /** Close code the relay uses when the operator clears the connected clients. */
 export const WS_CLOSE_OPERATOR_DISCONNECT = 4010;
 
+/**
+ * Self-description sent to the relay on auth. The relay mirrors it to the account's
+ * other clients, which is how the operator footer can tell a musician following the
+ * operator apart from one on MIDI, a mobile remote, or a text viewer.
+ */
+export interface WsClientInfo {
+  role: 'operator' | 'musician' | 'remote' | 'viewer';
+  /** Musicians: their current sync mode ('midi' | 'operator' | 'off'). */
+  mode?: string;
+  /** Shown in the operator's tooltip when set (musician name). */
+  name?: string;
+}
+
 export interface WsSyncState {
   /**
    * Identifies the client that produced this state. Musician pages tag their own
@@ -44,14 +57,27 @@ interface UseWsSyncOptions {
   account: number | null;
   enabled: boolean;
   onStateUpdate?: (state: WsSyncState) => void;
+  /** Who this client is — relayed to the operator for the connected-clients breakdown. */
+  clientInfo?: WsClientInfo;
+  /**
+   * Ask the operator to re-broadcast its state on connect (default). Turn it off for a
+   * client that is only present to be seen — it would make the operator broadcast for
+   * state this client then throws away.
+   */
+  requestState?: boolean;
 }
 
 const RECONNECT_DELAY_MS = 3000;
 
-export const useWsSync = ({ url, account, enabled, onStateUpdate }: UseWsSyncOptions) => {
+export const useWsSync = ({ url, account, enabled, onStateUpdate, clientInfo, requestState = true }: UseWsSyncOptions) => {
   const [status, setStatus] = useState<WsSyncStatus>('disconnected');
   const onStateUpdateRef = useRef(onStateUpdate);
   onStateUpdateRef.current = onStateUpdate;
+  const requestStateRef = useRef(requestState);
+  requestStateRef.current = requestState;
+  // Read inside the socket callbacks, so a descriptor change never re-opens the socket.
+  const clientInfoRef = useRef(clientInfo);
+  clientInfoRef.current = clientInfo;
   // The live socket, so callers can send on the connection this hook already owns instead
   // of opening a second one (which the relay would also count as an extra peer).
   const wsRef = useRef<WebSocket | null>(null);
@@ -90,7 +116,7 @@ export const useWsSync = ({ url, account, enabled, onStateUpdate }: UseWsSyncOpt
         }
         setStatus('connecting');
         try {
-          ws.send(JSON.stringify({ action: 'auth', account }));
+          ws.send(JSON.stringify({ action: 'auth', account, client: clientInfoRef.current }));
         } catch (err) {
           console.warn('[WsSync] failed to send auth:', err);
         }
@@ -103,10 +129,12 @@ export const useWsSync = ({ url, account, enabled, onStateUpdate }: UseWsSyncOpt
             authedRef.current = true;
             setStatus('connected');
             // Request current state from the operator
-            try {
-              ws.send(JSON.stringify({ action: 'get_state', id: 'init' }));
-            } catch (err) {
-              console.warn('[WsSync] failed to send get_state:', err);
+            if (requestStateRef.current) {
+              try {
+                ws.send(JSON.stringify({ action: 'get_state', id: 'init' }));
+              } catch (err) {
+                console.warn('[WsSync] failed to send get_state:', err);
+              }
             }
             return;
           }
@@ -159,6 +187,35 @@ export const useWsSync = ({ url, account, enabled, onStateUpdate }: UseWsSyncOpt
       setStatus('disconnected');
     };
   }, [url, account, enabled, reconnectNonce]);
+
+  // A client that starts following mid-session (musician leaving independent mode) keeps the
+  // socket it already has, so the auth-time get_state never runs again — ask here instead,
+  // otherwise it would sit on a stale position until the operator happens to broadcast.
+  const wasRequestingStateRef = useRef(requestState);
+  useEffect(() => {
+    const wanted = requestState && !wasRequestingStateRef.current;
+    wasRequestingStateRef.current = requestState;
+    const ws = wsRef.current;
+    if (!wanted || status !== 'connected' || !ws || ws.readyState !== WebSocket.OPEN || !authedRef.current) return;
+    try {
+      ws.send(JSON.stringify({ action: 'get_state', id: 'resync' }));
+    } catch (err) {
+      console.warn('[WsSync] failed to send get_state:', err);
+    }
+  }, [requestState, status]);
+
+  // Tell the relay when our description changes (musician switching sync mode, renaming
+  // themselves) so the operator's breakdown follows without dropping the connection.
+  const clientInfoKey = clientInfo ? JSON.stringify(clientInfo) : '';
+  useEffect(() => {
+    const ws = wsRef.current;
+    if (!clientInfoKey || status !== 'connected' || !ws || ws.readyState !== WebSocket.OPEN || !authedRef.current) return;
+    try {
+      ws.send(JSON.stringify({ action: 'client_info', client: JSON.parse(clientInfoKey) }));
+    } catch {
+      // a failed descriptor update is cosmetic — never surface it
+    }
+  }, [clientInfoKey, status]);
 
   /** Re-open after the operator dropped us (the only case that does not retry on its own). */
   const reconnect = useCallback(() => setReconnectNonce((n) => n + 1), []);

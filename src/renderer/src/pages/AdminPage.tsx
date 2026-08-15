@@ -9,12 +9,13 @@ import { useUpdateSetting } from '@/store/settingsSlice';
 import { oidcLogoutUrl } from '@/utils';
 import { Accounts } from '@/admin/Accounts';
 import { Providers } from '@/admin/Providers';
+import { Songs } from '@/admin/Songs';
 import { Metrics } from '@/admin/Metrics';
 import { Logs } from '@/admin/Logs';
 import { Database } from '@/admin/Database';
 import { Config } from '@/admin/Config';
 
-const TAB_SLUGS = ['accounts', 'providers', 'metrics', 'logs', 'database', 'config'] as const;
+const TAB_SLUGS = ['accounts', 'providers', 'songs', 'metrics', 'logs', 'database', 'config'] as const;
 type TabSlug = (typeof TAB_SLUGS)[number];
 
 export const AdminPage = () => {
@@ -95,6 +96,7 @@ export const AdminPage = () => {
                 <Tabs value={activeTab} onChange={handleTabChange} variant="scrollable" scrollButtons="auto">
                   <Tab label={LL.ADMIN.ACCOUNTS()} />
                   <Tab label={LL.ADMIN.OIDC_PROVIDERS()} />
+                  <Tab label={LL.ADMIN_SONGS.NAV_TITLE()} />
                   <Tab label={LL.METRICS.METRICS()} />
                   <Tab label={LL.ADMIN_LOGS.NAV_TITLE()} />
                   <Tab
@@ -113,10 +115,11 @@ export const AdminPage = () => {
               {/* Tab content */}
               {activeTab === 0 && <Accounts />}
               {activeTab === 1 && <Providers />}
-              {activeTab === 2 && <Metrics />}
-              {activeTab === 3 && <Logs />}
-              {activeTab === 4 && <Database />}
-              {activeTab === 5 && <Config />}
+              {activeTab === 2 && <Songs />}
+              {activeTab === 3 && <Metrics />}
+              {activeTab === 4 && <Logs />}
+              {activeTab === 5 && <Database />}
+              {activeTab === 6 && <Config />}
             </Stack>
           </CardContent>
         </Card>

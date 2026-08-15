@@ -24,6 +24,10 @@ type RootTranslation = {
 		 */
 		APPLY: string
 		/**
+		 * D​o​n​e
+		 */
+		DONE: string
+		/**
 		 * C​o​n​f​i​r​m
 		 */
 		CONFIRM: string
@@ -83,6 +87,10 @@ type RootTranslation = {
 		 * A​c​t​i​o​n​s
 		 */
 		ACTIONS: string
+		/**
+		 * M​o​r​e​ ​a​c​t​i​o​n​s
+		 */
+		MORE_ACTIONS: string
 		/**
 		 * A​c​t​i​v​e
 		 */
@@ -793,6 +801,222 @@ type RootTranslation = {
 		 */
 		SHOWING: RequiredParams<'shown' | 'total'>
 	}
+	ADMIN_SONGS: {
+		/**
+		 * S​o​n​g​s
+		 */
+		NAV_TITLE: string
+		/**
+		 * S​o​n​g​ ​L​i​b​r​a​r​y
+		 */
+		TITLE: string
+		/**
+		 * A​c​c​o​u​n​t
+		 */
+		ACCOUNT: string
+		/**
+		 * S​e​l​e​c​t​ ​a​n​ ​a​c​c​o​u​n​t​ ​t​o​ ​b​r​o​w​s​e​ ​i​t​s​ ​s​o​n​g​ ​l​i​b​r​a​r​y​.
+		 */
+		SELECT_ACCOUNT: string
+		/**
+		 * S​e​a​r​c​h​ ​t​i​t​l​e​,​ ​a​u​t​h​o​r​,​ ​C​C​L​I​ ​o​r​ ​n​u​m​b​e​r​…
+		 */
+		FILTER: string
+		/**
+		 * O​n​l​y​ ​s​u​s​p​e​c​t​e​d​ ​d​u​p​l​i​c​a​t​e​s
+		 */
+		ONLY_DUPLICATES: string
+		/**
+		 * F​a​i​l​e​d​ ​t​o​ ​l​o​a​d​ ​t​h​e​ ​s​o​n​g​ ​l​i​b​r​a​r​y
+		 */
+		FAILED_TO_LOAD: string
+		/**
+		 * T​h​i​s​ ​a​c​c​o​u​n​t​ ​h​a​s​ ​n​o​ ​s​o​n​g​s​.
+		 */
+		NO_SONGS: string
+		/**
+		 * N​o​ ​s​o​n​g​ ​m​a​t​c​h​e​s​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​f​i​l​t​e​r​.
+		 */
+		NO_MATCHES: string
+		/**
+		 * {​c​o​u​n​t​}​ ​s​o​n​g​{​{​s​}​}
+		 * @param {number} count
+		 */
+		SONG_COUNT: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​s​u​s​p​e​c​t​e​d​ ​d​u​p​l​i​c​a​t​e​ ​g​r​o​u​p​{​{​s​}​}
+		 * @param {number} count
+		 */
+		GROUP_COUNT: RequiredParams<'count'>
+		/**
+		 * N​u​m​b​e​r
+		 */
+		COL_NUMBER: string
+		/**
+		 * T​i​t​l​e
+		 */
+		COL_TITLE: string
+		/**
+		 * A​u​t​h​o​r​s
+		 */
+		COL_AUTHORS: string
+		/**
+		 * C​C​L​I
+		 */
+		COL_CCLI: string
+		/**
+		 * K​e​y
+		 */
+		COL_KEY: string
+		/**
+		 * C​o​n​t​e​n​t
+		 */
+		COL_CONTENT: string
+		/**
+		 * U​s​e​d​ ​i​n
+		 */
+		COL_USAGE: string
+		/**
+		 * D​u​p​l​i​c​a​t​e
+		 */
+		COL_DUPLICATE: string
+		/**
+		 * G​r​o​u​p​ ​{​i​d​}
+		 * @param {number} id
+		 */
+		GROUP_BADGE: RequiredParams<'id'>
+		/**
+		 * s​a​m​e​ ​C​C​L​I​ ​n​u​m​b​e​r
+		 */
+		REASON_CCLI: string
+		/**
+		 * s​a​m​e​ ​t​i​t​l​e
+		 */
+		REASON_TITLE: string
+		/**
+		 * {​c​o​u​n​t​}​ ​n​a​m​e​d​ ​o​r​d​e​r​{​{​s​}​}
+		 * @param {number} count
+		 */
+		ORDERS_COUNT: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​b​l​o​c​k​{​{​s​}​}
+		 * @param {number} count
+		 */
+		BLOCKS_COUNT: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​P​D​F​{​{​s​}​}
+		 * @param {number} count
+		 */
+		PDFS_COUNT: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​a​n​n​o​t​a​t​i​o​n​{​{​s​}​}
+		 * @param {number} count
+		 */
+		ANNOTATIONS_COUNT: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​s​h​o​w​{​{​s​}​}
+		 * @param {number} count
+		 */
+		SHOWS_COUNT: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​s​e​t​ ​l​i​s​t​{​{​s​}​}
+		 * @param {number} count
+		 */
+		SET_LISTS_COUNT: RequiredParams<'count'>
+		/**
+		 * n​o​t​ ​u​s​e​d
+		 */
+		NOT_USED: string
+		/**
+		 * R​e​p​l​a​c​e​ ​t​h​i​s​ ​s​o​n​g​ ​b​y​ ​a​n​o​t​h​e​r​ ​o​n​e
+		 */
+		MERGE: string
+		/**
+		 * R​e​p​l​a​c​e​ ​s​o​n​g​ ​#​{​n​u​m​b​e​r​}
+		 * @param {number} number
+		 */
+		MERGE_TITLE: RequiredParams<'number'>
+		/**
+		 * "​{​t​i​t​l​e​}​"​ ​(​#​{​n​u​m​b​e​r​}​)​ ​w​i​l​l​ ​b​e​ ​d​e​l​e​t​e​d​.​ ​E​v​e​r​y​ ​r​e​f​e​r​e​n​c​e​ ​t​o​ ​i​t​ ​i​s​ ​m​o​v​e​d​ ​t​o​ ​t​h​e​ ​s​o​n​g​ ​y​o​u​ ​k​e​e​p​ ​f​i​r​s​t​,​ ​s​o​ ​k​e​y​s​ ​a​n​d​ ​t​a​g​s​ ​i​n​ ​s​h​o​w​s​ ​a​n​d​ ​s​e​t​ ​l​i​s​t​s​ ​s​u​r​v​i​v​e​.
+		 * @param {number} number
+		 * @param {unknown} title
+		 */
+		MERGE_INTRO: RequiredParams<'number' | 'title'>
+		/**
+		 * T​h​e​ ​s​o​n​g​ ​y​o​u​ ​k​e​e​p​ ​i​s​ ​n​o​t​ ​m​o​d​i​f​i​e​d​ ​—​ ​b​l​o​c​k​s​,​ ​l​y​r​i​c​s​,​ ​n​a​m​e​d​ ​o​r​d​e​r​s​ ​a​n​d​ ​P​D​F​s​ ​s​t​a​y​ ​e​x​a​c​t​l​y​ ​a​s​ ​t​h​e​y​ ​a​r​e​.​ ​T​h​e​ ​d​e​l​e​t​e​d​ ​s​o​n​g​'​s​ ​o​w​n​ ​c​o​n​t​e​n​t​ ​a​n​d​ ​P​D​F​s​ ​a​r​e​ ​d​i​s​c​a​r​d​e​d​.
+		 */
+		MERGE_UNTOUCHED: string
+		/**
+		 * S​o​n​g​ ​t​o​ ​k​e​e​p
+		 */
+		MERGE_TARGET: string
+		/**
+		 * A​l​l​ ​r​e​f​e​r​e​n​c​e​s​ ​o​f​ ​#​{​n​u​m​b​e​r​}​ ​a​r​e​ ​m​o​v​e​d​ ​t​o​ ​t​h​i​s​ ​s​o​n​g​.
+		 * @param {number} number
+		 */
+		MERGE_TARGET_HELP: RequiredParams<'number'>
+		/**
+		 * s​u​s​p​e​c​t​e​d​ ​d​u​p​l​i​c​a​t​e
+		 */
+		SUSPECTED_DUPLICATE: string
+		/**
+		 * W​h​a​t​ ​w​i​l​l​ ​h​a​p​p​e​n
+		 */
+		PREVIEW_TITLE: string
+		/**
+		 * C​a​l​c​u​l​a​t​i​n​g​…
+		 */
+		PREVIEW_LOADING: string
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​c​a​l​c​u​l​a​t​e​ ​t​h​e​ ​p​r​e​v​i​e​w
+		 */
+		PREVIEW_FAILED: string
+		/**
+		 * T​h​i​s​ ​s​o​n​g​ ​i​s​ ​n​o​t​ ​r​e​f​e​r​e​n​c​e​d​ ​a​n​y​w​h​e​r​e​ ​—​ ​n​o​t​h​i​n​g​ ​h​a​s​ ​t​o​ ​b​e​ ​m​o​v​e​d​.
+		 */
+		PREVIEW_NO_REFERENCES: string
+		/**
+		 * S​h​o​w​s​ ​m​o​v​e​d​ ​t​o​ ​t​h​e​ ​k​e​p​t​ ​s​o​n​g​:​ ​{​l​i​s​t​}
+		 * @param {unknown} list
+		 */
+		PREVIEW_SHOWS_REPOINTED: RequiredParams<'list'>
+		/**
+		 * S​h​o​w​s​ ​t​h​a​t​ ​a​l​r​e​a​d​y​ ​c​o​n​t​a​i​n​ ​t​h​e​ ​k​e​p​t​ ​s​o​n​g​,​ ​e​n​t​r​y​ ​i​s​ ​d​r​o​p​p​e​d​:​ ​{​l​i​s​t​}
+		 * @param {unknown} list
+		 */
+		PREVIEW_SHOWS_DROPPED: RequiredParams<'list'>
+		/**
+		 * S​e​t​ ​l​i​s​t​s​ ​m​o​v​e​d​ ​t​o​ ​t​h​e​ ​k​e​p​t​ ​s​o​n​g​:​ ​{​l​i​s​t​}
+		 * @param {unknown} list
+		 */
+		PREVIEW_SET_LISTS_REPOINTED: RequiredParams<'list'>
+		/**
+		 * S​e​t​ ​l​i​s​t​s​ ​t​h​a​t​ ​a​l​r​e​a​d​y​ ​c​o​n​t​a​i​n​ ​t​h​e​ ​k​e​p​t​ ​s​o​n​g​,​ ​e​n​t​r​y​ ​i​s​ ​d​r​o​p​p​e​d​:​ ​{​l​i​s​t​}
+		 * @param {unknown} list
+		 */
+		PREVIEW_SET_LISTS_DROPPED: RequiredParams<'list'>
+		/**
+		 * {​c​o​u​n​t​}​ ​r​e​f​e​r​e​n​c​e​{​{​s​}​}​ ​t​o​ ​a​ ​n​a​m​e​d​ ​o​r​d​e​r​ ​i​s​ ​c​l​e​a​r​e​d​ ​—​ ​t​h​e​ ​k​e​p​t​ ​s​o​n​g​ ​h​a​s​ ​n​o​ ​o​r​d​e​r​ ​w​i​t​h​ ​t​h​a​t​ ​n​a​m​e​.
+		 * @param {number} count
+		 */
+		PREVIEW_CLEARED_ORDERS: RequiredParams<'count'>
+		/**
+		 * D​e​l​e​t​e​d​ ​t​o​g​e​t​h​e​r​ ​w​i​t​h​ ​t​h​e​ ​s​o​n​g​:​ ​{​b​l​o​c​k​s​}​ ​b​l​o​c​k​s​,​ ​{​p​d​f​s​}​ ​P​D​F​ ​f​i​l​e​s​,​ ​{​a​n​n​o​t​a​t​i​o​n​s​}​ ​a​n​n​o​t​a​t​i​o​n​s​.
+		 * @param {unknown} annotations
+		 * @param {unknown} blocks
+		 * @param {unknown} pdfs
+		 */
+		PREVIEW_DELETED: RequiredParams<'annotations' | 'blocks' | 'pdfs'>
+		/**
+		 * R​e​p​l​a​c​e​ ​&​ ​d​e​l​e​t​e​ ​#​{​n​u​m​b​e​r​}
+		 * @param {number} number
+		 */
+		CONFIRM: RequiredParams<'number'>
+		/**
+		 * T​h​e​ ​m​e​r​g​e​ ​f​a​i​l​e​d
+		 */
+		MERGE_FAILED: string
+	}
 	SONGS: {
 		/**
 		 * S​o​n​g​ ​L​i​b​r​a​r​y
@@ -1344,6 +1568,80 @@ type RootTranslation = {
 		 * C​o​n​t​r​o​l
 		 */
 		TITLE: string
+		/**
+		 * R​e​s​e​t​ ​t​o​ ​1​0​0​%
+		 */
+		RESET_ZOOM: string
+	}
+	VIEWER_TOKEN: {
+		/**
+		 * V​i​e​w​e​r​ ​t​o​k​e​n
+		 */
+		TITLE: string
+		/**
+		 * N​o​t​ ​s​e​t
+		 */
+		NOT_SET: string
+		/**
+		 * G​e​n​e​r​a​t​e​ ​a​ ​t​o​k​e​n​ ​t​o​ ​e​n​a​b​l​e​ ​t​h​e​ ​s​t​a​n​d​a​l​o​n​e​ ​v​i​e​w​e​r​ ​p​a​g​e​.​ ​I​t​ ​c​a​n​ ​b​e​ ​d​e​p​l​o​y​e​d​ ​o​n​ ​a​n​y​ ​s​u​b​d​o​m​a​i​n​ ​a​n​d​ ​s​h​o​w​s​ ​t​h​e​ ​l​i​v​e​ ​b​l​o​c​k​ ​t​e​x​t​ ​w​i​t​h​o​u​t​ ​a​ ​l​o​g​i​n​.
+		 */
+		DESCRIPTION: string
+		/**
+		 * G​e​n​e​r​a​t​e
+		 */
+		GENERATE: string
+		/**
+		 * R​e​g​e​n​e​r​a​t​e
+		 */
+		REGENERATE: string
+		/**
+		 * R​e​v​o​k​e
+		 */
+		REVOKE: string
+		/**
+		 * R​e​v​o​k​e​ ​t​o​k​e​n​ ​—​ ​v​i​e​w​e​r​ ​a​c​c​e​s​s​ ​w​i​l​l​ ​s​t​o​p​ ​i​m​m​e​d​i​a​t​e​l​y
+		 */
+		REVOKE_HINT: string
+		/**
+		 * R​e​v​o​k​e​ ​t​h​e​ ​v​i​e​w​e​r​ ​t​o​k​e​n​?​ ​A​n​y​ ​a​c​t​i​v​e​ ​v​i​e​w​e​r​ ​p​a​g​e​s​ ​w​i​l​l​ ​l​o​s​e​ ​a​c​c​e​s​s​ ​i​m​m​e​d​i​a​t​e​l​y​.
+		 */
+		REVOKE_CONFIRM: string
+		/**
+		 * V​i​e​w​e​r​ ​t​o​k​e​n​ ​g​e​n​e​r​a​t​e​d
+		 */
+		GENERATED_TITLE: string
+		/**
+		 * C​o​p​y​ ​t​h​i​s​ ​t​o​k​e​n​ ​n​o​w​ ​—​ ​i​t​ ​w​i​l​l​ ​n​o​t​ ​b​e​ ​s​h​o​w​n​ ​a​g​a​i​n​.
+		 */
+		GENERATED_WARNING: string
+		/**
+		 * T​o​k​e​n
+		 */
+		TOKEN: string
+		/**
+		 * V​i​e​w​e​r​ ​U​R​L
+		 */
+		VIEWER_URL: string
+		/**
+		 * C​o​p​y​ ​t​o​k​e​n
+		 */
+		COPY_TOKEN: string
+		/**
+		 * C​o​p​y​ ​U​R​L
+		 */
+		COPY_URL: string
+		/**
+		 * C​o​p​i​e​d
+		 */
+		COPIED: string
+		/**
+		 * C​o​p​y​i​n​g​ ​i​s​ ​u​n​a​v​a​i​l​a​b​l​e​ ​h​e​r​e​ ​—​ ​s​e​l​e​c​t​ ​t​h​e​ ​t​e​x​t​ ​a​n​d​ ​c​o​p​y​ ​i​t​ ​m​a​n​u​a​l​l​y​.
+		 */
+		COPY_FAILED: string
+		/**
+		 * O​p​e​n​ ​v​i​e​w​e​r​ ​p​a​g​e
+		 */
+		OPEN_VIEWER: string
 	}
 	STYLE: {
 		/**
@@ -1836,6 +2134,22 @@ type RootTranslation = {
 		 */
 		BROWSE: string
 		/**
+		 * F​i​l​e​ ​n​o​t​ ​f​o​u​n​d​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r
+		 */
+		MEDIA_NOT_FOUND: string
+		/**
+		 * M​e​d​i​a​ ​s​e​r​v​e​r​ ​n​o​t​ ​r​u​n​n​i​n​g
+		 */
+		MEDIA_SERVER_DOWN: string
+		/**
+		 * h​t​t​p​s​:​/​/​ ​o​r​ ​r​e​l​a​t​i​v​e​ ​p​a​t​h
+		 */
+		MEDIA_PATH_PLACEHOLDER: string
+		/**
+		 * A​d​d​ ​f​a​l​l​b​a​c​k​ ​f​o​n​t​…
+		 */
+		ADD_FALLBACK_FONT: string
+		/**
 		 * P​i​c​k​ ​a​ ​f​i​l​e
 		 */
 		PICK_FILE: string
@@ -2113,6 +2427,18 @@ type RootTranslation = {
 		 * P​r​i​m​a​r​y
 		 */
 		PRIMARY_SCREEN: string
+		/**
+		 * E​d​i​t​ ​w​i​n​d​o​w​ ​s​e​t​t​i​n​g​s
+		 */
+		EDIT_SETTINGS: string
+		/**
+		 * S​i​z​e​ ​a​n​d​ ​p​o​s​i​t​i​o​n​ ​(​a​d​v​a​n​c​e​d​)
+		 */
+		ADVANCED_GEOMETRY: string
+		/**
+		 * C​l​i​c​k​ ​a​ ​s​c​r​e​e​n​ ​t​o​ ​p​l​a​c​e​ ​t​h​i​s​ ​w​i​n​d​o​w​ ​o​n​ ​i​t​.​ ​F​i​n​e​-​t​u​n​e​ ​t​h​e​ ​e​x​a​c​t​ ​s​i​z​e​ ​a​n​d​ ​p​o​s​i​t​i​o​n​ ​b​e​l​o​w​.
+		 */
+		SCREEN_PICKER_HINT: string
 	}
 	HEADER: {
 		/**
@@ -2321,10 +2647,59 @@ type RootTranslation = {
 		 */
 		SHOW_TEXT: string
 		/**
-		 * {​c​o​u​n​t​}​ ​m​u​s​i​c​i​a​n​{​{​s​}​}​ ​c​o​n​n​e​c​t​e​d
+		 * {​c​o​u​n​t​}​ ​c​l​i​e​n​t​{​{​s​}​}​ ​c​o​n​n​e​c​t​e​d
 		 * @param {number} count
 		 */
 		WS_CLIENTS: RequiredParams<'count'>
+		/**
+		 * N​o​ ​c​l​i​e​n​t​s​ ​c​o​n​n​e​c​t​e​d
+		 */
+		WS_CLIENTS_NONE: string
+		/**
+		 * M​u​s​i​c​i​a​n​s​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_MUSICIANS: RequiredParams<'count'>
+		/**
+		 * M​I​D​I​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_MUSICIAN_MIDI: RequiredParams<'count'>
+		/**
+		 * F​o​l​l​o​w​i​n​g​ ​o​p​e​r​a​t​o​r​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_MUSICIAN_FOLLOWING: RequiredParams<'count'>
+		/**
+		 * I​n​d​e​p​e​n​d​e​n​t​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_MUSICIAN_INDEPENDENT: RequiredParams<'count'>
+		/**
+		 * M​o​d​e​ ​u​n​k​n​o​w​n​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_MUSICIAN_UNKNOWN_MODE: RequiredParams<'count'>
+		/**
+		 * M​o​b​i​l​e​ ​r​e​m​o​t​e​ ​c​o​n​t​r​o​l​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_REMOTE: RequiredParams<'count'>
+		/**
+		 * T​e​x​t​ ​v​i​e​w​e​r​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_VIEWER: RequiredParams<'count'>
+		/**
+		 * O​t​h​e​r​ ​p​r​e​s​e​n​t​e​r​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_OPERATOR: RequiredParams<'count'>
+		/**
+		 * U​n​i​d​e​n​t​i​f​i​e​d​:​ ​{​c​o​u​n​t​}
+		 * @param {number} count
+		 */
+		WS_CLIENTS_UNKNOWN: RequiredParams<'count'>
 		/**
 		 * W​e​b​S​o​c​k​e​t​ ​r​e​l​a​y​ ​n​o​t​ ​c​o​n​n​e​c​t​e​d
 		 */
@@ -5195,6 +5570,10 @@ export type TranslationFunctions = {
 		 */
 		APPLY: () => LocalizedString
 		/**
+		 * Done
+		 */
+		DONE: () => LocalizedString
+		/**
 		 * Confirm
 		 */
 		CONFIRM: () => LocalizedString
@@ -5254,6 +5633,10 @@ export type TranslationFunctions = {
 		 * Actions
 		 */
 		ACTIONS: () => LocalizedString
+		/**
+		 * More actions
+		 */
+		MORE_ACTIONS: () => LocalizedString
 		/**
 		 * Active
 		 */
@@ -5951,6 +6334,200 @@ export type TranslationFunctions = {
 		 */
 		SHOWING: (arg: { shown: unknown, total: unknown }) => LocalizedString
 	}
+	ADMIN_SONGS: {
+		/**
+		 * Songs
+		 */
+		NAV_TITLE: () => LocalizedString
+		/**
+		 * Song Library
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Account
+		 */
+		ACCOUNT: () => LocalizedString
+		/**
+		 * Select an account to browse its song library.
+		 */
+		SELECT_ACCOUNT: () => LocalizedString
+		/**
+		 * Search title, author, CCLI or number…
+		 */
+		FILTER: () => LocalizedString
+		/**
+		 * Only suspected duplicates
+		 */
+		ONLY_DUPLICATES: () => LocalizedString
+		/**
+		 * Failed to load the song library
+		 */
+		FAILED_TO_LOAD: () => LocalizedString
+		/**
+		 * This account has no songs.
+		 */
+		NO_SONGS: () => LocalizedString
+		/**
+		 * No song matches the current filter.
+		 */
+		NO_MATCHES: () => LocalizedString
+		/**
+		 * {count} song{{s}}
+		 */
+		SONG_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} suspected duplicate group{{s}}
+		 */
+		GROUP_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Number
+		 */
+		COL_NUMBER: () => LocalizedString
+		/**
+		 * Title
+		 */
+		COL_TITLE: () => LocalizedString
+		/**
+		 * Authors
+		 */
+		COL_AUTHORS: () => LocalizedString
+		/**
+		 * CCLI
+		 */
+		COL_CCLI: () => LocalizedString
+		/**
+		 * Key
+		 */
+		COL_KEY: () => LocalizedString
+		/**
+		 * Content
+		 */
+		COL_CONTENT: () => LocalizedString
+		/**
+		 * Used in
+		 */
+		COL_USAGE: () => LocalizedString
+		/**
+		 * Duplicate
+		 */
+		COL_DUPLICATE: () => LocalizedString
+		/**
+		 * Group {id}
+		 */
+		GROUP_BADGE: (arg: { id: number }) => LocalizedString
+		/**
+		 * same CCLI number
+		 */
+		REASON_CCLI: () => LocalizedString
+		/**
+		 * same title
+		 */
+		REASON_TITLE: () => LocalizedString
+		/**
+		 * {count} named order{{s}}
+		 */
+		ORDERS_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} block{{s}}
+		 */
+		BLOCKS_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} PDF{{s}}
+		 */
+		PDFS_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} annotation{{s}}
+		 */
+		ANNOTATIONS_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} show{{s}}
+		 */
+		SHOWS_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} set list{{s}}
+		 */
+		SET_LISTS_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * not used
+		 */
+		NOT_USED: () => LocalizedString
+		/**
+		 * Replace this song by another one
+		 */
+		MERGE: () => LocalizedString
+		/**
+		 * Replace song #{number}
+		 */
+		MERGE_TITLE: (arg: { number: number }) => LocalizedString
+		/**
+		 * "{title}" (#{number}) will be deleted. Every reference to it is moved to the song you keep first, so keys and tags in shows and set lists survive.
+		 */
+		MERGE_INTRO: (arg: { number: number, title: unknown }) => LocalizedString
+		/**
+		 * The song you keep is not modified — blocks, lyrics, named orders and PDFs stay exactly as they are. The deleted song's own content and PDFs are discarded.
+		 */
+		MERGE_UNTOUCHED: () => LocalizedString
+		/**
+		 * Song to keep
+		 */
+		MERGE_TARGET: () => LocalizedString
+		/**
+		 * All references of #{number} are moved to this song.
+		 */
+		MERGE_TARGET_HELP: (arg: { number: number }) => LocalizedString
+		/**
+		 * suspected duplicate
+		 */
+		SUSPECTED_DUPLICATE: () => LocalizedString
+		/**
+		 * What will happen
+		 */
+		PREVIEW_TITLE: () => LocalizedString
+		/**
+		 * Calculating…
+		 */
+		PREVIEW_LOADING: () => LocalizedString
+		/**
+		 * Could not calculate the preview
+		 */
+		PREVIEW_FAILED: () => LocalizedString
+		/**
+		 * This song is not referenced anywhere — nothing has to be moved.
+		 */
+		PREVIEW_NO_REFERENCES: () => LocalizedString
+		/**
+		 * Shows moved to the kept song: {list}
+		 */
+		PREVIEW_SHOWS_REPOINTED: (arg: { list: unknown }) => LocalizedString
+		/**
+		 * Shows that already contain the kept song, entry is dropped: {list}
+		 */
+		PREVIEW_SHOWS_DROPPED: (arg: { list: unknown }) => LocalizedString
+		/**
+		 * Set lists moved to the kept song: {list}
+		 */
+		PREVIEW_SET_LISTS_REPOINTED: (arg: { list: unknown }) => LocalizedString
+		/**
+		 * Set lists that already contain the kept song, entry is dropped: {list}
+		 */
+		PREVIEW_SET_LISTS_DROPPED: (arg: { list: unknown }) => LocalizedString
+		/**
+		 * {count} reference{{s}} to a named order is cleared — the kept song has no order with that name.
+		 */
+		PREVIEW_CLEARED_ORDERS: (arg: { count: number }) => LocalizedString
+		/**
+		 * Deleted together with the song: {blocks} blocks, {pdfs} PDF files, {annotations} annotations.
+		 */
+		PREVIEW_DELETED: (arg: { annotations: unknown, blocks: unknown, pdfs: unknown }) => LocalizedString
+		/**
+		 * Replace & delete #{number}
+		 */
+		CONFIRM: (arg: { number: number }) => LocalizedString
+		/**
+		 * The merge failed
+		 */
+		MERGE_FAILED: () => LocalizedString
+	}
 	SONGS: {
 		/**
 		 * Song Library
@@ -6494,6 +7071,80 @@ export type TranslationFunctions = {
 		 * Control
 		 */
 		TITLE: () => LocalizedString
+		/**
+		 * Reset to 100%
+		 */
+		RESET_ZOOM: () => LocalizedString
+	}
+	VIEWER_TOKEN: {
+		/**
+		 * Viewer token
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Not set
+		 */
+		NOT_SET: () => LocalizedString
+		/**
+		 * Generate a token to enable the standalone viewer page. It can be deployed on any subdomain and shows the live block text without a login.
+		 */
+		DESCRIPTION: () => LocalizedString
+		/**
+		 * Generate
+		 */
+		GENERATE: () => LocalizedString
+		/**
+		 * Regenerate
+		 */
+		REGENERATE: () => LocalizedString
+		/**
+		 * Revoke
+		 */
+		REVOKE: () => LocalizedString
+		/**
+		 * Revoke token — viewer access will stop immediately
+		 */
+		REVOKE_HINT: () => LocalizedString
+		/**
+		 * Revoke the viewer token? Any active viewer pages will lose access immediately.
+		 */
+		REVOKE_CONFIRM: () => LocalizedString
+		/**
+		 * Viewer token generated
+		 */
+		GENERATED_TITLE: () => LocalizedString
+		/**
+		 * Copy this token now — it will not be shown again.
+		 */
+		GENERATED_WARNING: () => LocalizedString
+		/**
+		 * Token
+		 */
+		TOKEN: () => LocalizedString
+		/**
+		 * Viewer URL
+		 */
+		VIEWER_URL: () => LocalizedString
+		/**
+		 * Copy token
+		 */
+		COPY_TOKEN: () => LocalizedString
+		/**
+		 * Copy URL
+		 */
+		COPY_URL: () => LocalizedString
+		/**
+		 * Copied
+		 */
+		COPIED: () => LocalizedString
+		/**
+		 * Copying is unavailable here — select the text and copy it manually.
+		 */
+		COPY_FAILED: () => LocalizedString
+		/**
+		 * Open viewer page
+		 */
+		OPEN_VIEWER: () => LocalizedString
 	}
 	STYLE: {
 		/**
@@ -6985,6 +7636,22 @@ export type TranslationFunctions = {
 		 */
 		BROWSE: () => LocalizedString
 		/**
+		 * File not found in the media folder
+		 */
+		MEDIA_NOT_FOUND: () => LocalizedString
+		/**
+		 * Media server not running
+		 */
+		MEDIA_SERVER_DOWN: () => LocalizedString
+		/**
+		 * https:// or relative path
+		 */
+		MEDIA_PATH_PLACEHOLDER: () => LocalizedString
+		/**
+		 * Add fallback font…
+		 */
+		ADD_FALLBACK_FONT: () => LocalizedString
+		/**
 		 * Pick a file
 		 */
 		PICK_FILE: () => LocalizedString
@@ -7260,6 +7927,18 @@ export type TranslationFunctions = {
 		 * Primary
 		 */
 		PRIMARY_SCREEN: () => LocalizedString
+		/**
+		 * Edit window settings
+		 */
+		EDIT_SETTINGS: () => LocalizedString
+		/**
+		 * Size and position (advanced)
+		 */
+		ADVANCED_GEOMETRY: () => LocalizedString
+		/**
+		 * Click a screen to place this window on it. Fine-tune the exact size and position below.
+		 */
+		SCREEN_PICKER_HINT: () => LocalizedString
 	}
 	HEADER: {
 		/**
@@ -7467,9 +8146,49 @@ export type TranslationFunctions = {
 		 */
 		SHOW_TEXT: () => LocalizedString
 		/**
-		 * {count} musician{{s}} connected
+		 * {count} client{{s}} connected
 		 */
 		WS_CLIENTS: (arg: { count: number }) => LocalizedString
+		/**
+		 * No clients connected
+		 */
+		WS_CLIENTS_NONE: () => LocalizedString
+		/**
+		 * Musicians: {count}
+		 */
+		WS_CLIENTS_MUSICIANS: (arg: { count: number }) => LocalizedString
+		/**
+		 * MIDI: {count}
+		 */
+		WS_CLIENTS_MUSICIAN_MIDI: (arg: { count: number }) => LocalizedString
+		/**
+		 * Following operator: {count}
+		 */
+		WS_CLIENTS_MUSICIAN_FOLLOWING: (arg: { count: number }) => LocalizedString
+		/**
+		 * Independent: {count}
+		 */
+		WS_CLIENTS_MUSICIAN_INDEPENDENT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Mode unknown: {count}
+		 */
+		WS_CLIENTS_MUSICIAN_UNKNOWN_MODE: (arg: { count: number }) => LocalizedString
+		/**
+		 * Mobile remote control: {count}
+		 */
+		WS_CLIENTS_REMOTE: (arg: { count: number }) => LocalizedString
+		/**
+		 * Text viewer: {count}
+		 */
+		WS_CLIENTS_VIEWER: (arg: { count: number }) => LocalizedString
+		/**
+		 * Other presenter: {count}
+		 */
+		WS_CLIENTS_OPERATOR: (arg: { count: number }) => LocalizedString
+		/**
+		 * Unidentified: {count}
+		 */
+		WS_CLIENTS_UNKNOWN: (arg: { count: number }) => LocalizedString
 		/**
 		 * WebSocket relay not connected
 		 */

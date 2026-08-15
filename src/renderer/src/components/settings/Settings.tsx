@@ -40,6 +40,8 @@ import { ColorSwatchButton } from '@/components/style/ColorPicker';
 import { useMetrics } from '@/hooks/useMetrics';
 import { exportSettings, importSettings, applyImportedSettings } from '@/utils/settingsExport';
 import { CompanionHelper } from '@/components/settings/CompanionHelper';
+import { SettingsImportReview } from '@/components/settings/SettingsImportReview';
+import type { SettingsDiff } from '@/utils/settingsExport';
 import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
 import { AutoUpdaterSection } from '@/components/settings/AutoUpdaterSection';
 import { CredentialsSection } from '@/components/settings/CredentialsSection';
@@ -123,6 +125,8 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
   const [updateAccountSettings] = useUpdateAccountSettingsMutation();
   const [filter, setFilter] = useState('');
   const [companionOpen, setCompanionOpen] = useState(false);
+  /** Pending settings import — reviewed in a diff dialog before anything is applied. */
+  const [importDiff, setImportDiff] = useState<SettingsDiff | null>(null);
   const [desktopAppModalOpen, setDesktopAppModalOpen] = useState(false);
   const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
 
@@ -191,6 +195,16 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
     <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right">
       <CompanionHelper open={companionOpen} onClose={() => setCompanionOpen(false)} />
       <DesktopAppDownloadModal open={desktopAppModalOpen} onClose={() => setDesktopAppModalOpen(false)} />
+      <SettingsImportReview
+        open={!!importDiff}
+        diff={importDiff}
+        onCancel={() => setImportDiff(null)}
+        onConfirm={async () => {
+          const diff = importDiff;
+          setImportDiff(null);
+          if (diff) await applyImportedSettings(diff);
+        }}
+      />
       <Stack sx={{ width: 'min(90vw, 600px)', height: '100%' }}>
         {/* Header */}
         <Stack
@@ -216,25 +230,11 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
             <IconButton
               size="small"
               onClick={async () => {
+                // Hand the diff to the review dialog — it lists every setting that would
+                // change, which a confirm() with a bare count never could. It also renders
+                // the "nothing to import" case, so no alert() is needed either.
                 const diff = await importSettings();
-                if (diff) {
-                  const changeCount = Object.keys(diff.added).length + Object.keys(diff.changed).length;
-                  if (changeCount > 0) {
-                    if (
-                      window.confirm(
-                        LL.SETTINGS.IMPORT_CONFIRM({
-                          count: changeCount,
-                          added: Object.keys(diff.added).length,
-                          changed: Object.keys(diff.changed).length,
-                        }),
-                      )
-                    ) {
-                      await applyImportedSettings(diff);
-                    }
-                  } else {
-                    window.alert(LL.SETTINGS.NO_CHANGES());
-                  }
-                }
+                if (diff) setImportDiff(diff);
               }}
             >
               <ImportIcon fontSize="small" />

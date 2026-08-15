@@ -294,6 +294,22 @@ export async function broadcastContent(content: PresentationContent): Promise<vo
 }
 
 /**
+ * Drop the per-window dedupe snapshots so the next broadcast is actually sent.
+ *
+ * Needed whenever a presentation window's renderer restarts: the payload we "already sent"
+ * was received by the PREVIOUS renderer instance (or by none at all, if it was still
+ * bootstrapping), so byte-identical content must be allowed through again.
+ */
+export function invalidateSentContentCache(id?: string): void {
+  if (id) {
+    const entry = openWindows.get(id);
+    if (entry) entry.lastSentSerialized = undefined;
+    return;
+  }
+  for (const [, entry] of openWindows) entry.lastSentSerialized = undefined;
+}
+
+/**
  * Update an open window's stored config in the bridge registry.
  * MUST be called whenever per-window settings (especially `styleId`) change in
  * Redux/localStorage so the windowStyleResolver picks up the new value on the

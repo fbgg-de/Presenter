@@ -132,6 +132,12 @@ export const registerIpcHandlers = (windowManager: PresentationWindowManager) =>
     windowManager.updatePresentationContent(id, content);
   });
 
+  // A presentation window's renderer signals its listeners are attached — replay
+  // the content it may have missed during bootstrap (fixes black windows on start).
+  ipcMain.on('presentation-ready', (event) => {
+    windowManager.handlePresentationReady(event.sender);
+  });
+
   ipcMain.on('broadcast-presentation-content', (_event, content: PresentationContentIPC) => {
     windowManager.broadcastContent(content);
   });

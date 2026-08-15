@@ -174,9 +174,30 @@ belonging to account `12345` will never receive messages from account `67890`.
 
 ## Environment variables
 
-| Variable | Default | Description                    |
-| -------- | ------- | ------------------------------ |
-| `PORT`   | `9001`  | TCP port the server listens on |
+| Variable           | Default | Description                                                 |
+| ------------------ | ------- | ----------------------------------------------------------- |
+| `PORT`             | `9001`  | TCP port the server listens on                              |
+| `BACKEND_URL`      | –       | Base URL of the PHP backend; required for viewer-token auth |
+| `SYNC_TTL_SECONDS` | `3600`  | How long the last selection stays current (`0` = forever)   |
+
+### Selection TTL
+
+The relay caches the last `musician_sync` per account so a client connecting mid-service
+sees the current position immediately. `SYNC_TTL_SECONDS` bounds how long that cache counts
+as **current** — one hour by default.
+
+- Every new selection restarts the clock, so an active service never expires.
+- When the TTL lapses the relay drops the cached selection and sends
+  `{ type: "sync_expired" }` to every client of that account. The live viewer clears its
+  text and shows that nothing is being presented.
+- Clients connecting after expiry get no replay, so they start empty rather than showing a
+  selection from days ago.
+- Note that this measures time since the last **change**. A single block left up longer
+  than the TTL expires too, even with the operator still connected — raise the value (or
+  set `0`) if you intentionally hold one text for hours.
+
+`auth_ok` carries `syncTtlSeconds` so clients can run the same countdown locally and still
+clear their display if the relay restarts while they are watching.
 
 ---
 
@@ -184,14 +205,32 @@ belonging to account `12345` will never receive messages from account `67890`.
 
 ### Client → Server
 
-| Message                                 | When          | Description                                |
-| --------------------------------------- | ------------- | ------------------------------------------ |
-| `{ action: "auth", account: <number> }` | First message | Authenticate with an account number        |
-| Any JSON                                | After auth    | Relayed to all peers with the same account |
+| Message                                             | When          | Description                                        |
+| --------------------------------------------------- | ------------- | -------------------------------------------------- |
+| `{ action: "auth", account: <number>, client?: {} }` | First message | Authenticate with an account number                |
+| `{ action: "client_info", client: {} }`             | After auth    | Update this client's descriptor (no reconnect)     |
+| `{ action: "disconnect_peers" }`                    | After auth    | Close every other client of the account (op. only) |
+| Any JSON                                            | After auth    | Relayed to all peers with the same account         |
+
+The optional `client` descriptor is `{ role, mode?, name? }` with `role` one of
+`operator`, `musician`, `remote`, `viewer` (anything else becomes `unknown`),
+`mode` a musician's sync mode (`midi`, `operator`, `off`) and `name` an optional
+display name. It is never used for routing — the relay only mirrors it back to
+the account's peers so the operator can see **what** is connected, not just how
+many. Clients that omit it keep working and appear as `unknown`.
 
 ### Server → Client
 
-| Message                                  | Description               |
-| ---------------------------------------- | ------------------------- |
-| `{ type: "auth_ok", account: <number> }` | Authentication successful |
-| `{ type: "error", error: "..." }`        | Protocol error            |
+| Message                                                            | Description                                         |
+| ------------------------------------------------------------------ | --------------------------------------------------- |
+| `{ type: "auth_ok", account, count, others, peers: [], syncTtlSeconds }` | Authentication successful                      |
+| `{ type: "peer_count", count, others, peers: [] }`                 | Peer count + descriptors changed (also every 30 s)  |
+| `{ type: "peers_disconnected", count }`                            | Answer to `disconnect_peers`                        |
+| `{ type: "sync_expired", ttlSeconds }`                             | The cached selection went stale — clear the display |
+| `{ type: "error", error: "..." }`                                  | Protocol error                                      |
+
+A replayed selection additionally carries `replay: true` and `ageMs` (how long ago it was
+set), so a client can start its local expiry countdown from the right moment.
+
+`peers` lists the descriptors of the recipient's **other** clients, so
+`peers.length === others`.

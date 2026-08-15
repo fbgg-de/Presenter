@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { useAppSelector } from './hooks';
+import type { WsPeerInfo } from '@/hooks/useWsOperator';
 
 export interface PresentationState {
   activeItemIndex: number;
@@ -12,6 +13,12 @@ export interface PresentationState {
   keyboardDisabled: boolean;
   videoVisible: boolean;
   wsConnectedCount: number;
+  /**
+   * What the connected clients are (musician + sync mode, mobile remote, viewer), as
+   * reported by the relay. May be shorter than `wsConnectedCount` when clients or the
+   * relay predate the descriptor handshake — the remainder is of unknown kind.
+   */
+  wsPeers: WsPeerInfo[];
   wsMidiSyncAt: number;
   /** Whether the operator's own WS connection to the relay is established. */
   wsOperatorConnected: boolean;
@@ -28,6 +35,7 @@ const initialState: PresentationState = {
   keyboardDisabled: false,
   videoVisible: true,
   wsConnectedCount: 0,
+  wsPeers: [],
   wsMidiSyncAt: 0,
   wsOperatorConnected: false,
 };
@@ -137,6 +145,9 @@ export const presentationSlice = createSlice({
     setWsConnectedCount: (state, action: PayloadAction<number>) => {
       state.wsConnectedCount = action.payload;
     },
+    setWsPeers: (state, action: PayloadAction<WsPeerInfo[]>) => {
+      state.wsPeers = action.payload;
+    },
     setWsMidiSyncAt: (state, action: PayloadAction<number>) => {
       state.wsMidiSyncAt = action.payload;
     },
@@ -174,6 +185,7 @@ export const {
   setVideoVisible,
   toggleVideoVisible,
   setWsConnectedCount,
+  setWsPeers,
   setWsMidiSyncAt,
   setWsOperatorConnected,
   setActiveItemAndBlock,

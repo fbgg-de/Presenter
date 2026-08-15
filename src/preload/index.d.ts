@@ -115,6 +115,8 @@ export interface FrontendAPI {
   onPresentationWindowBoundsChanged: (
     callback: (data: { id: string; bounds: { x: number; y: number; width: number; height: number } }) => void,
   ) => (() => void) | void;
+  /** A presentation window finished mounting — the operator should re-send current content. */
+  onPresentationWindowReady: (callback: (data: { id: string }) => void) => (() => void) | void;
 }
 
 export interface VideoStatus {
@@ -132,6 +134,8 @@ export interface VideoStatus {
 export interface PresentationAPI {
   onContentUpdate: (callback: (data: unknown) => void) => void;
   onCommand: (callback: (data: unknown) => void) => void;
+  /** Tells main this window's React app is mounted — main replays the last content on it. */
+  signalReady?: () => void;
   removeAllListeners: () => void;
   reportVideoStatus?: (status: VideoStatus) => void;
 }

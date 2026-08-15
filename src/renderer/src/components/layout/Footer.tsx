@@ -79,7 +79,8 @@ const ConnectedWebsocketClients = ({
 }: {
   wsClientCount: number;
   connected: boolean;
-  connectedLabel: string;
+  /** Multi-line breakdown of what is connected (see Footer's `wsClientsTooltip`). */
+  connectedLabel: ReactNode;
   disconnectedLabel: string;
   /** Provided when there is something to clear — makes the chip clickable. */
   onDisconnectAll?: () => void;
@@ -125,6 +126,7 @@ const Footer = () => {
     isTextHidden,
     frozenWindows,
     wsConnectedCount: wsClientCount,
+    wsPeers,
     wsMidiSyncAt,
     wsOperatorConnected,
   } = useGetPresentationSettings();
@@ -168,6 +170,65 @@ const Footer = () => {
       setDisconnectResult({ severity: 'warning', text: LL.FOOTER.WS_DISCONNECT_NO_REPLY() });
     }, 4000);
   };
+
+  /**
+   * Tooltip of the connected-clients chip: one line per kind of client, so a glance tells
+   * whether the tablet that stopped following is on MIDI, independent, or simply gone.
+   *
+   * Clients that never described themselves (old musician/viewer builds) and the clients a
+   * pre-breakdown relay only counts are folded into one "unidentified" line — the total
+   * always adds up to the number on the chip, whatever the peers reported.
+   */
+  const wsClientsTooltip = useMemo(() => {
+    if (wsClientCount <= 0) return LL.FOOTER.WS_CLIENTS_NONE();
+
+    const musicians = wsPeers.filter((p) => p.role === 'musician');
+    const byMode = (mode: string) =>
+      musicians.filter((p) => (p.mode === 'midi' || p.mode === 'operator' || p.mode === 'off' ? p.mode : 'unknown') === mode);
+    /**
+     * Append the names, so "1 independent" also answers "which tablet?". Only when EVERY
+     * member of the group is named — a partial list next to a count reads as if the count
+     * were wrong, which is the opposite of helpful when hunting a missing client.
+     */
+    const withNames = (label: string, list: typeof wsPeers) => {
+      const names = list.map((p) => p.name).filter((n): n is string => !!n);
+      return names.length === list.length ? `${label} (${names.join(', ')})` : label;
+    };
+    const indent = (line: string) => `    ${line}`;
+
+    const lines: string[] = [LL.FOOTER.WS_CLIENTS({ count: wsClientCount })];
+
+    if (musicians.length > 0) {
+      lines.push(LL.FOOTER.WS_CLIENTS_MUSICIANS({ count: musicians.length }));
+      const modeLines: [string, (arg: { count: number }) => string][] = [
+        ['midi', LL.FOOTER.WS_CLIENTS_MUSICIAN_MIDI],
+        ['operator', LL.FOOTER.WS_CLIENTS_MUSICIAN_FOLLOWING],
+        ['off', LL.FOOTER.WS_CLIENTS_MUSICIAN_INDEPENDENT],
+        ['unknown', LL.FOOTER.WS_CLIENTS_MUSICIAN_UNKNOWN_MODE],
+      ];
+      for (const [mode, label] of modeLines) {
+        const group = byMode(mode);
+        if (group.length > 0) lines.push(indent(withNames(label({ count: group.length }), group)));
+      }
+    }
+
+    const remotes = wsPeers.filter((p) => p.role === 'remote');
+    if (remotes.length > 0) lines.push(LL.FOOTER.WS_CLIENTS_REMOTE({ count: remotes.length }));
+
+    const viewers = wsPeers.filter((p) => p.role === 'viewer');
+    if (viewers.length > 0) lines.push(LL.FOOTER.WS_CLIENTS_VIEWER({ count: viewers.length }));
+
+    const operators = wsPeers.filter((p) => p.role === 'operator');
+    if (operators.length > 0) lines.push(LL.FOOTER.WS_CLIENTS_OPERATOR({ count: operators.length }));
+
+    // Peers of unknown role, plus any client the relay counted but did not describe.
+    const unidentified = wsPeers.filter((p) => p.role === 'unknown').length + Math.max(0, wsClientCount - wsPeers.length);
+    if (unidentified > 0) lines.push(LL.FOOTER.WS_CLIENTS_UNKNOWN({ count: unidentified }));
+
+    // pre-wrap, not pre-line: the sub-lines are indented with plain spaces, which pre-line
+    // would collapse away.
+    return <Box sx={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{lines.join('\n')}</Box>;
+  }, [LL, wsClientCount, wsPeers]);
 
   const MIDI_ACTIVE_TTL_MS = 10_000;
   const [midiSyncActive, setMidiSyncActive] = useState(false);
@@ -1032,7 +1093,7 @@ const Footer = () => {
                   <ConnectedWebsocketClients
                     connected={wsOperatorConnected}
                     wsClientCount={wsClientCount}
-                    connectedLabel={LL.FOOTER.WS_CLIENTS({ count: wsClientCount })}
+                    connectedLabel={wsClientsTooltip}
                     disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
                     onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
                   />
@@ -1108,7 +1169,7 @@ const Footer = () => {
                 <ConnectedWebsocketClients
                   connected={wsOperatorConnected}
                   wsClientCount={wsClientCount}
-                  connectedLabel={LL.FOOTER.WS_CLIENTS({ count: wsClientCount })}
+                  connectedLabel={wsClientsTooltip}
                   disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
                   onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
                 />

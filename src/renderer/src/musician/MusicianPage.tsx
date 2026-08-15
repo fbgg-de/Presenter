@@ -185,13 +185,21 @@ export const MusicianPage = () => {
   const operatorItemIndexRef = useRef(0);
   const operatorBlockIndexRef = useRef(0);
 
-  const wsEnabled = (syncMode === 'operator' || syncMode === 'midi') && !!wsUrl && wsAccount !== null;
+  // Connected in every sync mode, including 'off': an independent musician follows nothing,
+  // but the operator still needs to see them in the connected-clients breakdown (and be able
+  // to clear them). Incoming state is dropped below instead of never arriving.
+  const wsEnabled = !!wsUrl && wsAccount !== null;
   const { status: wsStatus, broadcast: wsSend, reconnect: wsReconnect } = useWsSync({
     url: wsUrl,
     account: wsAccount,
     enabled: wsEnabled,
+    clientInfo: { role: 'musician', mode: syncMode, name: musicianName || undefined },
+    requestState: syncMode !== 'off',
     onStateUpdate: useCallback(
       (state) => {
+        // Independent: this page navigates on its own, so nothing from the relay applies.
+        if (syncMode === 'off') return;
+
         // Our own broadcast, bounced back by the relay — applying it would re-enter the
         // navigation path for a position we just set ourselves.
         if (state.clientId && state.clientId === WS_CLIENT_ID) return;

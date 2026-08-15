@@ -35,6 +35,8 @@ import type { SongListItem } from '@/api/songs.api';
 import { SONG_CUSTOM_NUMBER_LIMIT } from '@/song';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useMetrics } from '@/hooks/useMetrics';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { RowActionMenu } from '@/components/common/RowActionMenu';
 
 type SortOrder = 'lexicographic' | 'numeric';
 
@@ -46,6 +48,7 @@ type Props = {
 
 export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
   const { LL } = useI18nContext();
+  const isMobile = useIsMobile();
   const [filter, setFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('lexicographic');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -111,16 +114,31 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          {LL.SONGS.LIBRARY()}
-          {filteredSongs && <Chip label={filteredSongs.length} size="small" variant="outlined" />}
+      <Dialog
+        open={open}
+        onClose={onClose}
+        maxWidth="md"
+        fullWidth
+        // A phone has no room for a dialog inside a dialog — take the whole screen.
+        fullScreen={isMobile}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, px: { xs: 2, sm: 3 } }}>
+          <Typography variant="h6" component="span" noWrap sx={{ minWidth: 0 }}>
+            {LL.SONGS.LIBRARY()}
+          </Typography>
+          {filteredSongs && <Chip label={filteredSongs.length} size="small" variant="outlined" sx={{ flexShrink: 0 }} />}
           <Box
             sx={{
               flexGrow: 1,
             }}
           />
-          <ToggleButtonGroup value={sortOrder} exclusive onChange={(_e, val) => val && setSortOrder(val)} size="small" sx={{ mr: 1 }}>
+          <ToggleButtonGroup
+            value={sortOrder}
+            exclusive
+            onChange={(_e, val) => val && setSortOrder(val)}
+            size="small"
+            sx={{ mr: { xs: 0, sm: 1 }, flexShrink: 0 }}
+          >
             <ToggleButton value="lexicographic">
               <Tooltip title={LL.SONGS.SORT_BY_NAME()}>
                 <SortByAlphaIcon fontSize="small" />
@@ -132,11 +150,13 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
               </Tooltip>
             </ToggleButton>
           </ToggleButtonGroup>
-          <IconButton size="small" onClick={onClose}>
+          <IconButton size="small" onClick={onClose} sx={{ flexShrink: 0 }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
-        <DialogContent>
+        {/* Column layout so the list — not the dialog — owns the scrolling and can fill a
+            full-screen phone instead of stopping at 60% of it. */}
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, px: { xs: 2, sm: 3 } }}>
           <TextField
             fullWidth
             placeholder={LL.SONGS.FILTER()}
@@ -167,63 +187,104 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
               <CircularProgress />
             </Box>
           ) : filteredSongs && filteredSongs.length > 0 ? (
-            <List dense sx={{ maxHeight: '60vh', overflow: 'auto' }}>
+            <List dense sx={{ flex: 1, minHeight: 0, maxHeight: { xs: 'none', sm: '60vh' }, overflow: 'auto' }}>
               {filteredSongs.map((song) => (
                 <ListItem
                   key={song.songNumber}
                   disablePadding
+                  // The actions are absolutely positioned; without this the row text slides
+                  // underneath them on a narrow screen.
+                  sx={{ '& > .MuiListItemButton-root': { pr: isMobile || !showDeleteFromDb ? '48px' : '84px' } }}
                   secondaryAction={
-                    <Stack direction="row" spacing={0.5}>
-                      {/* Custom songs can be promoted to a CCLI number. */}
-                      {song.songNumber < SONG_CUSTOM_NUMBER_LIMIT && (
-                        <Tooltip title={LL.SONGS.SET_CCLI()}>
-                          <IconButton
-                            edge="end"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                    isMobile ? (
+                      <RowActionMenu
+                        actions={[
+                          {
+                            key: 'ccli',
+                            label: LL.SONGS.SET_CCLI(),
+                            icon: <CcliIcon fontSize="small" />,
+                            onClick: () => {
                               setCcliSong(song);
                               setCcliInput('');
                               setCcliError(null);
-                            }}
-                          >
-                            <CcliIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {showDeleteFromDb && (
-                        <Tooltip title={LL.COMMON.DELETE()}>
-                          <IconButton
-                            edge="end"
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
+                            },
+                            // Custom songs can be promoted to a CCLI number; real ones already have one.
+                            hidden: song.songNumber >= SONG_CUSTOM_NUMBER_LIMIT,
+                          },
+                          {
+                            key: 'delete',
+                            label: LL.COMMON.DELETE(),
+                            icon: <DeleteIcon fontSize="small" />,
+                            onClick: () => {
                               setSongToDelete(song);
                               setDeleteConfirmOpen(true);
-                            }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                    </Stack>
+                            },
+                            destructive: true,
+                            hidden: !showDeleteFromDb,
+                          },
+                        ]}
+                      />
+                    ) : (
+                      <Stack direction="row" spacing={0.5}>
+                        {/* Custom songs can be promoted to a CCLI number. */}
+                        {song.songNumber < SONG_CUSTOM_NUMBER_LIMIT && (
+                          <Tooltip title={LL.SONGS.SET_CCLI()}>
+                            <IconButton
+                              edge="end"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCcliSong(song);
+                                setCcliInput('');
+                                setCcliError(null);
+                              }}
+                            >
+                              <CcliIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {showDeleteFromDb && (
+                          <Tooltip title={LL.COMMON.DELETE()}>
+                            <IconButton
+                              edge="end"
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSongToDelete(song);
+                                setDeleteConfirmOpen(true);
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Stack>
+                    )
                   }
                 >
-                  <ListItemButton onClick={() => onSongSelected(song)} sx={{ gap: 1.5, py: 0.75 }}>
-                    <Chip
-                      label={`#${song.songNumber}`}
-                      size="small"
-                      variant="outlined"
-                      color="primary"
-                      sx={{ fontWeight: 600, fontSize: '0.75rem', minWidth: 56 }}
-                    />
+                  <ListItemButton onClick={() => onSongSelected(song)} sx={{ gap: { xs: 1, sm: 1.5 }, py: 0.75, minWidth: 0 }}>
+                    {/* Desktop keeps the number as a leading column to scan by. On a phone that
+                        column costs the title real width for a nice-to-know, so there the chip
+                        moves down to the detail line (rendered below). */}
+                    {!isMobile && (
+                      <Chip
+                        label={`#${song.songNumber}`}
+                        size="small"
+                        variant="outlined"
+                        color="primary"
+                        sx={{ fontWeight: 600, fontSize: '0.75rem', minWidth: 56, flexShrink: 0 }}
+                      />
+                    )}
                     <ListItemText
                       primary={
+                        // One line per row on desktop; on a phone the title keeps the first line
+                        // to itself and the details drop underneath rather than being clipped.
                         <Stack
-                          direction="row"
-                          spacing={1}
+                          direction={{ xs: 'column', sm: 'row' }}
+                          spacing={{ xs: 0, sm: 1 }}
                           sx={{
-                            alignItems: 'center',
+                            alignItems: { xs: 'flex-start', sm: 'center' },
+                            minWidth: 0,
                           }}
                         >
                           <Typography
@@ -233,36 +294,49 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
                               fontWeight: 500,
                               flexShrink: 1,
                               minWidth: 0,
+                              maxWidth: '100%',
                             }}
                           >
                             {song.title}
                           </Typography>
-                          {song.authors && song.authors !== 'Unknown' && (
-                            <Typography
-                              variant="caption"
-                              noWrap
-                              sx={{
-                                color: 'text.secondary',
-                                flexShrink: 1,
-                                minWidth: 0,
-                              }}
-                            >
-                              {song.authors}
-                            </Typography>
-                          )}
-                          {Number(song.orderCount ?? 0) > 0 && (
-                            <Chip
-                              label={LL.SONG_EDITOR.ORDERS_COUNT({ count: song.orderCount! })}
-                              size="small"
-                              variant="outlined"
-                              sx={{ fontSize: '0.65rem', height: 18, flexShrink: 0 }}
-                            />
-                          )}
+                          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', minWidth: 0, maxWidth: '100%' }}>
+                            {isMobile && (
+                              <Chip
+                                label={`#${song.songNumber}`}
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                sx={{ fontWeight: 600, fontSize: '0.65rem', height: 18, flexShrink: 0 }}
+                              />
+                            )}
+                            {song.authors && song.authors !== 'Unknown' && (
+                              <Typography
+                                variant="caption"
+                                noWrap
+                                sx={{
+                                  color: 'text.secondary',
+                                  flexShrink: 1,
+                                  minWidth: 0,
+                                }}
+                              >
+                                {song.authors}
+                              </Typography>
+                            )}
+                            {Number(song.orderCount ?? 0) > 0 && (
+                              <Chip
+                                label={LL.SONG_EDITOR.ORDERS_COUNT({ count: song.orderCount! })}
+                                size="small"
+                                variant="outlined"
+                                sx={{ fontSize: '0.65rem', height: 18, flexShrink: 0 }}
+                              />
+                            )}
+                          </Stack>
                         </Stack>
                       }
                       slotProps={{
                         primary: { component: 'div' },
                       }}
+                      sx={{ minWidth: 0, my: 0 }}
                     />
                   </ListItemButton>
                 </ListItem>

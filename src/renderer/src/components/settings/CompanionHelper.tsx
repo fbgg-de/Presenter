@@ -26,6 +26,7 @@ import {
 } from '@mui/material';
 import { ContentCopy as CopyIcon, Close as CloseIcon, Cable as CableIcon, WifiTethering as WifiTetheringIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useGetWindows } from '@/store/windowSlice';
 
@@ -219,16 +220,19 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
     return JSON.stringify(cmd);
   };
 
+  // Both copies go through the shared helper: `navigator.clipboard` is undefined on the
+  // plain-HTTP LAN deployments this dialog is most used on, where the bare call threw and
+  // left the button showing nothing at all.
   const handleCopy = async (action: WSAction) => {
     const text = buildCommand(action);
-    await navigator.clipboard.writeText(text);
+    if (!(await copyTextToClipboard(text))) return;
     setCopiedAction(action.action);
     setTimeout(() => setCopiedAction(null), 2000);
   };
 
   const handleCopyConnectionUrl = async () => {
     if (!selectedWsUrl) return;
-    await navigator.clipboard.writeText(selectedWsUrl);
+    if (!(await copyTextToClipboard(selectedWsUrl))) return;
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2000);
   };

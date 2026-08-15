@@ -14,6 +14,7 @@ import {
 import { Close as CloseIcon, ContentCopy as CopyIcon, Check as CheckIcon, QrCode2 as QrCodeIcon } from '@mui/icons-material';
 import { QRCodeSVG } from 'qrcode.react';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface QrCodeShareProps {
   open: boolean;
@@ -34,21 +35,9 @@ export const QrCodeShare = ({ open, onClose }: QrCodeShareProps) => {
   const qrPayload = musicianUrl;
 
   const handleCopyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(musicianUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Fallback for browsers without clipboard API
-      const input = document.createElement('input');
-      input.value = musicianUrl;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+    if (!(await copyTextToClipboard(musicianUrl))) return;
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (

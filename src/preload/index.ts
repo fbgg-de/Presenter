@@ -176,6 +176,14 @@ const api = {
       ipcRenderer.removeListener('presentation-window-bounds-changed', handler);
     };
   },
+
+  onPresentationWindowReady: (callback: (data: { id: string }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { id: string });
+    ipcRenderer.on('presentation-window-ready', handler);
+    return () => {
+      ipcRenderer.removeListener('presentation-window-ready', handler);
+    };
+  },
 };
 
 // Use `contextBridge` APIs to expose Electron APIs to

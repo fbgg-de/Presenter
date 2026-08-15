@@ -2,7 +2,7 @@
  * Presentation Window Manager — Electron main process.
  * Creates, tracks, and controls presentation BrowserWindows (§7.2, §12, §13).
  */
-import { BrowserWindow, screen } from 'electron';
+import { BrowserWindow, screen, type WebContents } from 'electron';
 import { join } from 'path';
 import { is } from '@electron-toolkit/utils';
 import type { WindowConfig, WindowState, ScreenInfo, MusicianViewConfig, PresentationContentIPC } from '../shared/types';
@@ -246,6 +246,33 @@ export class PresentationWindowManager {
       }
     }
     this.musicianWindows.clear();
+  }
+
+  /**
+   * A presentation window's renderer finished mounting and attached its IPC listeners.
+   * Anything sent before that moment was dropped silently (webContents.send has no queue),
+   * which left restored windows black on app start until the next navigation. Replay the
+   * last payload this window was meant to show, and tell the operator renderer so it can
+   * follow up with the freshest content through its own per-window style resolution.
+   */
+  handlePresentationReady(sender: WebContents): void {
+    for (const [id, managed] of this.windows) {
+      if (managed.browserWindow.isDestroyed()) continue;
+      if (managed.browserWindow.webContents !== sender) continue;
+      if (managed.lastSentPayload) {
+        try {
+          const content = JSON.parse(managed.lastSentPayload) as PresentationContentIPC;
+          managed.lastSentPayload = null; // reset dedup so the replay is actually sent
+          this._sendContent(managed, content);
+        } catch {
+          /* corrupt snapshot — the operator's follow-up broadcast covers it */
+        }
+      }
+      if (this.mainWindow && !this.mainWindow.isDestroyed()) {
+        this.mainWindow.webContents.send('presentation-window-ready', { id });
+      }
+      return;
+    }
   }
 
   /**
