@@ -1,3 +1,7 @@
+# Shell scripts must keep LF — a CRLF checkout on Windows makes them fail on the
+# deploy target with "bad interpreter: /usr/bin/env bash^M".
+*.sh                 text eol=lf
+
 /.yarn/**            linguist-vendored
 /.yarn/releases/*    binary
 /.yarn/plugins/**/*  binary

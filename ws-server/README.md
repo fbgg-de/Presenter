@@ -69,6 +69,37 @@ sudo docker-compose down
 sudo docker-compose build --no-cache
 ```
 
+The relay prints its version on the first log line, so `docker-compose logs` tells you
+which build is actually running:
+
+```
+[WS Relay] Presenter WebSocket relay v1.1.0 (node v22.19.0)
+```
+
+### 2b. Updating an existing deployment
+
+Run `npm run deploy` from `ws-server/` on your development machine. It builds the
+TypeScript, resolves production-only dependencies and packages both into two files:
+`ws-server-deploy.zip` and `redeploy.sh`. Upload both into the folder that holds the
+running deployment — the one with `docker-compose.yml` — and run:
+
+```bash
+sudo ./redeploy.sh
+```
+
+It stops the stack, removes `dist/`, `node_modules/`, `Dockerfile` and `package.json`,
+unpacks the zip in their place, then rebuilds with `--no-cache` and starts again,
+finishing by printing the startup log so you can confirm the version.
+
+`docker-compose.yml` is never touched, and the zip does not contain one by default —
+it holds this host's `BACKEND_URL`, published port and `SYNC_TTL_SECONDS`, which must
+survive a redeploy. Build with `node scripts/deploy.js --with-compose` only when
+bootstrapping a host that has no compose file yet.
+
+The script verifies the zip, the compose file and `unzip` are all present *before* it
+deletes anything, so a bad upload cannot leave you with a half-emptied folder. Pass
+`-y` to skip the confirmation prompt.
+
 ### 3. Configure a reverse proxy (TLS termination)
 
 Clients need `wss://`. The WS relay can share the **same hostname** as your PHP

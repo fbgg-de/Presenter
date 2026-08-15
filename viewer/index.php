@@ -90,8 +90,9 @@ $debugMode  = isset($_GET['debug']);
       --accent: #4a90d9;
       --error: #e05252;
       --fade: 0.35s ease;
-      /* Lyrics size multiplier — set by the size picker, persisted in localStorage. */
+      /* Lyrics size multiplier and alignment — set from the menu, kept in localStorage. */
       --scale: 1;
+      --align: center;
     }
 
     html, body {
@@ -159,13 +160,16 @@ $debugMode  = isset($_GET['debug']);
       align-items: center;
       justify-content: center;
       min-height: calc(100vh - 34px); /* viewport minus the info bar; the status pill floats */
-      padding: 3vh 0;
+      /* Horizontal padding matters for left/right alignment — text must not touch the
+         screen edge, which a projector's overscan can clip. */
+      padding: 3vh 4%;
       text-align: center;
     }
 
     /* Lyrics — large, bold, tight */
     #lyrics {
       font-size: calc(clamp(28px, 4.5vw, 96px) * var(--scale));
+      text-align: var(--align);
       line-height: 1.25;
       font-weight: 700;
       letter-spacing: 0.01em;
@@ -251,6 +255,9 @@ $debugMode  = isset($_GET['debug']);
       right: 6px;
       bottom: 40px;
       min-width: 160px;
+      /* Never taller than the window — matters in landscape on a phone. */
+      max-height: calc(100vh - 60px);
+      overflow-y: auto;
       padding: 6px;
       background: rgba(20,20,20,0.97);
       backdrop-filter: blur(8px);
@@ -357,7 +364,6 @@ $debugMode  = isset($_GET['debug']);
   <!-- Info bar: show · song · block — one slim row at the bottom -->
   <div id="info-bar">
     <span id="meta-show"></span>
-    <span class="separator" id="sep-show" style="display:none">·</span>
     <span id="meta-song"></span>
     <span class="separator" id="sep-block" style="display:none">·</span>
     <span id="block-name"></span>
@@ -378,6 +384,11 @@ $debugMode  = isset($_GET['debug']);
       <button type="button" class="menu-item" role="menuitemradio" data-scale="1">Normal<span class="check">✓</span></button>
       <button type="button" class="menu-item" role="menuitemradio" data-scale="1.35">Large<span class="check">✓</span></button>
       <button type="button" class="menu-item" role="menuitemradio" data-scale="1.8">Huge<span class="check">✓</span></button>
+      <div class="menu-sep"></div>
+      <div class="menu-title">TEXT ALIGNMENT</div>
+      <button type="button" class="menu-item" role="menuitemradio" data-align="left">Left<span class="check">✓</span></button>
+      <button type="button" class="menu-item" role="menuitemradio" data-align="center">Center<span class="check">✓</span></button>
+      <button type="button" class="menu-item" role="menuitemradio" data-align="right">Right<span class="check">✓</span></button>
       <!-- Hidden when the browser has no element fullscreen (e.g. iPhone Safari). -->
       <div id="fs-section">
         <div class="menu-sep"></div>
@@ -407,7 +418,9 @@ $debugMode  = isset($_GET['debug']);
 
       // Fallback if the relay does not advertise its TTL (older server): 1 hour.
       const DEFAULT_TTL_MS = 3600000;
-      const SIZE_KEY = 'presenter-viewer-text-scale';
+      const SIZE_KEY  = 'presenter-viewer-text-scale';
+      const ALIGN_KEY = 'presenter-viewer-text-align';
+      const ALIGNMENTS = ['left', 'center', 'right'];
 
       // How long the bar names the loaded show before making room for song · block.
       // It reappears whenever the show changes, and stays readable in the menu.
@@ -418,7 +431,6 @@ $debugMode  = isset($_GET['debug']);
       const statusText  = document.getElementById('status-text');
       const metaShow    = document.getElementById('meta-show');
       const metaSong    = document.getElementById('meta-song');
-      const sepShow     = document.getElementById('sep-show');
       const sepBlock    = document.getElementById('sep-block');
       const blockNameEl = document.getElementById('block-name');
       const lyricsEl    = document.getElementById('lyrics');
@@ -462,13 +474,29 @@ $debugMode  = isset($_GET['debug']);
         }
       }
 
-      (function initScale() {
-        var stored = 1;
+      function applyAlign(align, persist) {
+        document.documentElement.style.setProperty('--align', align);
+        Array.prototype.forEach.call(menu.querySelectorAll('.menu-item[data-align]'), function (b) {
+          const on = b.dataset.align === align;
+          b.classList.toggle('active', on);
+          b.setAttribute('aria-checked', on ? 'true' : 'false');
+        });
+        if (persist) {
+          try { localStorage.setItem(ALIGN_KEY, align); } catch (e) { /* private mode */ }
+        }
+      }
+
+      (function initPreferences() {
+        var scale = 1;
+        var align = 'center';
         try {
           var v = parseFloat(localStorage.getItem(SIZE_KEY));
-          if (v > 0) stored = v;
+          if (v > 0) scale = v;
+          var a = localStorage.getItem(ALIGN_KEY);
+          if (ALIGNMENTS.indexOf(a) !== -1) align = a;
         } catch (e) { /* private mode */ }
-        applyScale(stored, false);
+        applyScale(scale, false);
+        applyAlign(align, false);
       })();
 
       function setMenuOpen(open) {
@@ -481,11 +509,13 @@ $debugMode  = isset($_GET['debug']);
         setMenuOpen(menu.hidden);
       });
 
-      // Picking a size deliberately leaves the menu open, so sizes can be compared
-      // against the live text without reopening it each time.
+      // Picking a size or alignment deliberately leaves the menu open, so they can be
+      // compared against the live text without reopening it each time.
       menu.addEventListener('click', function (e) {
-        const item = e.target.closest('.menu-item[data-scale]');
-        if (item) applyScale(parseFloat(item.dataset.scale), true);
+        const sizeItem = e.target.closest('.menu-item[data-scale]');
+        if (sizeItem) applyScale(parseFloat(sizeItem.dataset.scale), true);
+        const alignItem = e.target.closest('.menu-item[data-align]');
+        if (alignItem) applyAlign(alignItem.dataset.align, true);
       });
 
       document.addEventListener('click', function (e) {
@@ -531,14 +561,21 @@ $debugMode  = isset($_GET['debug']);
       let showTitleVisible = false;
       let showTitleTimer   = null;
 
+      // The bar shows EITHER the show title (its first 10 s) OR song · block — never both,
+      // so whichever is on screen has the full width and nothing shuffles sideways.
       function updateInfoBar() {
-        const showText = showTitleVisible ? currentShow : '';
-        metaShow.textContent    = showText;
-        metaSong.textContent    = currentSong;
-        blockNameEl.textContent = currentBlock;
-        metaShow.style.display  = showText ? '' : 'none';
-        sepShow.style.display   = (showText && currentSong) ? '' : 'none';
-        sepBlock.style.display  = ((showText || currentSong) && currentBlock) ? '' : 'none';
+        const naming = showTitleVisible && !!currentShow;
+
+        metaShow.textContent   = naming ? currentShow : '';
+        metaShow.style.display = naming ? '' : 'none';
+
+        metaSong.textContent   = naming ? '' : currentSong;
+        metaSong.style.display = (!naming && currentSong) ? '' : 'none';
+
+        blockNameEl.textContent   = naming ? '' : currentBlock;
+        blockNameEl.style.display = (!naming && currentBlock) ? '' : 'none';
+
+        sepBlock.style.display = (!naming && currentSong && currentBlock) ? '' : 'none';
       }
 
       /** Name the show for SHOW_TITLE_MS, then hand the space back to song · block. */
@@ -721,6 +758,19 @@ $debugMode  = isset($_GET['debug']);
           }
 
           if (msg.action === 'musician_sync' && msg.data) {
+            // Two very different messages share this action. The operator broadcasts the
+            // full presentation state; a musician on MIDI sync broadcasts a bare position
+            // report (item/block/line/songNumber only) addressed at the operator, which
+            // happens to reach us as well. Rendering that one blanked the text, cleared
+            // song and block from the bar and dropped the black overlay — repaired only
+            // when the operator's next broadcast happened to come, and not at all when
+            // the musician's position was one the operator was already on.
+            //
+            // Only the operator's payload carries `contentType`, so that is the tell.
+            if (typeof msg.data.contentType !== 'string') {
+              dbg('Position report from a peer ignored — not a presentation state');
+              return;
+            }
             dbg('Sync received — block: ' + (msg.data.blockName || '(empty)') +
                 (msg.replay ? ' (replay, age ' + (msg.ageMs || 0) + 'ms)' : ''), 'ok');
             render(msg.data, msg.ageMs);

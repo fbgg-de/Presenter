@@ -2,6 +2,10 @@
 
 Tooling for running and inspecting the app without a real backend.
 
+- `mock-backend/` — fixture HTTP server standing in for the PHP API (below).
+- `ws-sync/` — integration test for the WebSocket relay and the sync protocol, run with
+  `npm run test:ws`. See [ws-sync/README.md](ws-sync/README.md).
+
 ## Mock backend
 
 `mock-backend/` is a small Node HTTP server that answers `/rest/*` with fixture JSON in the same

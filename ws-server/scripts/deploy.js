@@ -10,13 +10,14 @@
  * needed on the target machine.
  *
  * Usage (from the ws-server/ directory):
- *   node scripts/deploy.js
+ *   node scripts/deploy.js                  # zip without docker-compose.yml
+ *   node scripts/deploy.js --with-compose   # include it (first-time bootstrap)
  *
- * Output: ws-server-deploy.zip
+ * Output: ws-server-deploy.zip  +  redeploy.sh (upload both to the target)
  */
 
 const { execSync } = require('node:child_process');
-const { cpSync, mkdirSync, rmSync, writeFileSync, existsSync, statSync, createWriteStream } = require('node:fs');
+const { cpSync, chmodSync, mkdirSync, rmSync, writeFileSync, existsSync, statSync, createWriteStream } = require('node:fs');
 const { join, dirname } = require('node:path');
 const { ZipArchive } = require('archiver');
 
@@ -24,6 +25,15 @@ const root = dirname(__dirname); // ws-server/
 const deployDir = join(root, 'deploy');
 const tmpNmDir = join(root, '.tmp-prod-nm');
 const zipPath = join(root, 'ws-server-deploy.zip');
+
+/**
+ * docker-compose.yml carries the TARGET host's settings — BACKEND_URL, the published
+ * port, SYNC_TTL_SECONDS. Shipping it in the zip means every redeploy silently
+ * overwrites them with whatever happens to be in the repo, so it is left out unless
+ * explicitly asked for. Pass --with-compose when bootstrapping a host that has no
+ * compose file yet.
+ */
+const withCompose = process.argv.slice(2).includes('--with-compose');
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -75,8 +85,10 @@ function log(msg, color) {
 
   cpSync(builtFile, join(deployDir, 'dist', 'server.js'));
   cpSync(join(root, 'package.json'), join(deployDir, 'package.json'));
-  cpSync(join(root, 'docker-compose.yml'), join(deployDir, 'docker-compose.yml'));
   cpSync(join(tmpNmDir, 'node_modules'), join(deployDir, 'node_modules'), { recursive: true });
+  if (withCompose) {
+    cpSync(join(root, 'docker-compose.yml'), join(deployDir, 'docker-compose.yml'));
+  }
 
   // Simple Dockerfile — COPYs pre-built files, no npm install in Docker
   writeFileSync(
@@ -121,19 +133,41 @@ function log(msg, color) {
     archive.finalize();
   });
 
-  // ── 6. Report ──────────────────────────────────────────────────────────────
+  // ── 6. Redeploy helper, next to the zip so both get uploaded together ──────
+
+  const redeployPath = join(root, 'redeploy.sh');
+  cpSync(join(__dirname, 'redeploy.sh'), redeployPath);
+  // Best effort — a no-op on Windows, and SFTP tends to drop the bit anyway, which
+  // is why the hint below also offers `bash redeploy.sh`.
+  try {
+    chmodSync(redeployPath, 0o755);
+  } catch {
+    /* ignore */
+  }
+
+  // ── 7. Report ──────────────────────────────────────────────────────────────
 
   rmrf(tmpNmDir);
 
   const sizeMB = (statSync(zipPath).size / 1_048_576).toFixed(1);
   log(`\n✅  ws-server-deploy.zip  (${sizeMB} MB)`, 'green');
+  log(`✅  redeploy.sh`, 'green');
   log(
     [
       '',
-      'Next steps:',
-      '  1. Edit deploy/docker-compose.yml — set BACKEND_URL to your presenter URL',
-      '  2. Upload ws-server-deploy.zip to the Synology and extract it',
-      '  3. Run:  docker compose up -d',
+      withCompose
+        ? 'This zip INCLUDES docker-compose.yml — it will overwrite the one on the target.'
+        : 'This zip does NOT include docker-compose.yml, so the target keeps its own settings.',
+      '',
+      'Updating an existing deployment:',
+      '  1. Upload ws-server-deploy.zip and redeploy.sh next to the running',
+      '     deployment (the folder holding docker-compose.yml)',
+      '  2. Run:  sudo ./redeploy.sh        (or: sudo bash redeploy.sh)',
+      '',
+      'First-time setup on a fresh host:',
+      '  1. Re-run with --with-compose, or copy ws-server/docker-compose.yml over by hand',
+      '  2. Edit docker-compose.yml — set BACKEND_URL to your presenter URL',
+      '  3. Extract the zip beside it and run:  docker compose up -d',
       '',
     ].join('\n'),
     'yellow',

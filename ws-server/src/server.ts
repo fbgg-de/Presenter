@@ -28,8 +28,30 @@
 
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
-const PORT        = Number(process.env.PORT ?? 9001);
+/**
+ * Read the version out of package.json at startup and print it, so the container log
+ * says which build is actually running — the relay is deployed as a pre-built zip and
+ * there is otherwise no way to tell one image from another after the fact.
+ *
+ * `package.json` sits one level above both `src/` (ts-node) and `dist/` (the container's
+ * `/app/dist/server.js`), and the Dockerfile copies it into the image for exactly this.
+ * A missing or unreadable file must never stop the relay from starting.
+ */
+function readVersion(): string {
+  try {
+    const pkg = JSON.parse(readFileSync(join(__dirname, '..', 'package.json'), 'utf8')) as { version?: unknown };
+    return typeof pkg.version === 'string' ? pkg.version : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
+
+const VERSION = readVersion();
+
+const PORT = Number(process.env.PORT ?? 9001);
 const BACKEND_URL = (process.env.BACKEND_URL ?? '').replace(/\/$/, '');
 
 /**
@@ -197,11 +219,22 @@ function expireSync(account: number) {
   sendToAccount(account, { type: 'sync_expired', ttlSeconds: SYNC_TTL_SECONDS });
 }
 
-/** Cache a fresh selection and restart its expiry countdown. */
-function cacheSync(account: number, payload: string) {
+/**
+ * Cache a fresh selection and restart its expiry countdown.
+ *
+ * `replacePayload` is false for a bare position report — see the relay branch below.
+ * Such a message still proves the account is live, so it restarts the countdown, but it
+ * must not become what the next client is replayed.
+ */
+function cacheSync(account: number, payload: string, replacePayload = true) {
   const previous = lastSyncPerAccount.get(account);
   if (previous?.timer) clearTimeout(previous.timer);
-  const entry: CachedSync = { payload, at: Date.now(), timer: null };
+  if (!replacePayload && !previous) return; // nothing worth keeping yet
+  const entry: CachedSync = {
+    payload: replacePayload ? payload : previous!.payload,
+    at: Date.now(),
+    timer: null,
+  };
   if (SYNC_TTL_MS > 0) {
     entry.timer = setTimeout(() => expireSync(account), SYNC_TTL_MS);
     // Never hold the process open just to expire a cache entry.
@@ -242,12 +275,12 @@ const pingInterval = setInterval(() => {
 }, 30_000);
 
 wss.on('listening', () => {
+  console.log(`[WS Relay] Presenter WebSocket relay v${VERSION} (node ${process.version})`);
   console.log(`[WS Relay] Listening on port ${PORT}`);
   console.log(
-    SYNC_TTL_SECONDS > 0
-      ? `[WS Relay] Selection TTL: ${SYNC_TTL_SECONDS}s`
-      : '[WS Relay] Selection TTL: disabled (SYNC_TTL_SECONDS=0)',
+    SYNC_TTL_SECONDS > 0 ? `[WS Relay] Selection TTL: ${SYNC_TTL_SECONDS}s` : '[WS Relay] Selection TTL: disabled (SYNC_TTL_SECONDS=0)',
   );
+  console.log(BACKEND_URL ? `[WS Relay] Backend: ${BACKEND_URL}` : '[WS Relay] Backend: not configured — viewer token auth unavailable');
 });
 
 wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
@@ -320,7 +353,11 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
           } else {
             const replay = taggedReplay(cached);
             if (replay) {
-              try { ws.send(replay); } catch { /* ignore */ }
+              try {
+                ws.send(replay);
+              } catch {
+                /* ignore */
+              }
             }
           }
         }
@@ -341,7 +378,12 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 
       // ── Direct account number auth ────────────────────────────────────────
       if (typeof msg.account !== 'number') {
-        ws.send(JSON.stringify({ type: 'error', error: 'Provide account number or viewer token: { action: "auth", account: <number> } or { action: "auth", token: "<hex>" }' }));
+        ws.send(
+          JSON.stringify({
+            type: 'error',
+            error: 'Provide account number or viewer token: { action: "auth", account: <number> } or { action: "auth", token: "<hex>" }',
+          }),
+        );
         ws.close(4002, 'Authentication required');
         return;
       }
@@ -384,10 +426,19 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 
     // Cache musician_sync so new clients can be replayed on auth. This also restarts the
     // selection's TTL, so an account that keeps presenting never expires.
+    //
+    // Two kinds of message share the `musician_sync` action: the operator's full
+    // presentation state (song, block name, lyrics, black flag — what a display needs),
+    // and a MIDI musician's bare position report (item/block/line/songNumber), which is
+    // addressed at the operator. Only the first is worth replaying: caching a position
+    // report meant the next viewer to connect was handed a state with no song and no
+    // lyrics, and showed an empty screen until the operator next happened to broadcast.
+    // A position report still restarts the TTL — it proves the account is live.
     try {
       const parsed = JSON.parse(payload) as Record<string, unknown>;
-      if (parsed.action === 'musician_sync' && parsed.data) {
-        cacheSync(client.account, payload);
+      const data = parsed.data as Record<string, unknown> | undefined;
+      if (parsed.action === 'musician_sync' && data) {
+        cacheSync(client.account, payload, typeof data.contentType === 'string');
       }
     } catch {
       /* ignore */

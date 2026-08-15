@@ -2,3 +2,5 @@ deploy/
 dist/
 node_modules/
 ws-server-deploy.zip
+# Copy that deploy.js drops next to the zip; the tracked original is scripts/redeploy.sh
+/redeploy.sh

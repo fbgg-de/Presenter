@@ -160,6 +160,8 @@ const urlName = params.get('name');
 const urlLines = params.get('lines');
 const urlLanguages = params.get('languages');
 const urlTransparent = params.get('transparent');
+/** Bridge registry id, set when this page was opened by the operator as a popup. */
+const urlWindowId = params.get('wid');
 
 // Apply transparent background for OBS Browser Source
 const el = document.getElementById('presentation-root')!;
@@ -355,6 +357,24 @@ window.addEventListener('message', (event) => {
     updatePresentation(restored);
   }
 });
+
+// The listener above is attached — anything the opener sent before this point never
+// arrived. Tell it so, the same way the Electron path calls `signalReady()` below.
+//
+// The opener cannot work this out on its own: a `load` listener it registers on the
+// popup belongs to the about:blank global the popup starts on and is discarded when we
+// navigate here, so its initial push was silently dropped and this window stayed black
+// until the operator changed the block. Announcing also covers a manual reload of this
+// page, which the opener has no other way of noticing.
+//
+// A page loaded directly (an OBS browser source) has no opener and simply skips this.
+if (!window.presentationApi && window.opener) {
+  try {
+    (window.opener as Window).postMessage({ type: 'PRESENTATION_READY', id: urlWindowId }, '*');
+  } catch {
+    // opener already gone, or not same-origin — nothing to announce to
+  }
+}
 
 // Method 2: Electron IPC (presentation preload — used when loaded as a BrowserWindow)
 if (window.presentationApi) {

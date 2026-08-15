@@ -177,6 +177,10 @@ function openPresentationWindowBrowser(config: WindowConfig): string {
     queryParams.set('transparent', '1');
   }
 
+  // The popup announces itself with this id once its message listener is live — see
+  // the PRESENTATION_READY handler below.
+  queryParams.set('wid', id);
+
   const queryString = queryParams.toString();
   const url = `./presentation.html${queryString ? `?${queryString}` : ''}`;
 
@@ -201,14 +205,52 @@ function openPresentationWindowBrowser(config: WindowConfig): string {
         clearInterval(checkClosed);
       }
     }, 1000);
-
-    // Push current content once the window has loaded
-    if (lastBroadcastContent) {
-      win.addEventListener('load', () => sendContent(id, lastBroadcastContent!));
-    }
   }
 
+  // Nothing is pushed here on purpose. The popup tells US when it is ready
+  // (PRESENTATION_READY, handled below) — see that handler for why.
+
   return id;
+}
+
+/**
+ * A browser presentation window reporting that its message listener is attached.
+ *
+ * The opener cannot observe this for itself. A `load` listener registered on the popup
+ * is registered against the about:blank global the popup starts on, and is thrown away
+ * when it navigates to presentation.html — so the content pushed from it usually never
+ * arrived, and the window sat black until the operator changed the block, which was the
+ * first thing to produce a fresh broadcast.
+ *
+ * So the popup announces itself instead, exactly as the Electron window does via
+ * `signalReady()`. Both the immediate push and the force-broadcast are wanted: the push
+ * makes it instant, and the broadcast covers a window opened before there was any
+ * content to send and re-resolves the per-window style cascade.
+ */
+function handlePresentationReady(event: MessageEvent): void {
+  if (event.data?.type !== 'PRESENTATION_READY') return;
+
+  // Prefer the id the popup was opened with; fall back to matching the source window,
+  // which also catches a popup the user reloaded by hand.
+  let entry = typeof event.data.id === 'string' ? openWindows.get(event.data.id) : undefined;
+  if (!entry) {
+    for (const [, candidate] of openWindows) {
+      if (!candidate.isElectron && candidate.window && candidate.window === event.source) {
+        entry = candidate;
+        break;
+      }
+    }
+  }
+  if (!entry || entry.isElectron) return;
+
+  // Whatever we "already sent" went to a document that no longer exists.
+  entry.lastSentSerialized = undefined;
+  if (lastBroadcastContent) void sendContent(entry.id, lastBroadcastContent);
+  window.dispatchEvent(new CustomEvent('presenter:force-broadcast'));
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', handlePresentationReady);
 }
 
 /**
