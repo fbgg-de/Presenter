@@ -174,18 +174,22 @@ export const DesktopAppBanner = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [hintOpen, setHintOpen] = useState(false);
 
+  // Declared above the early returns below: dismissing sets `desktopAppDismissed`, so the
+  // very next render bails out early — and a hook after that point would make the hook
+  // count drop between renders, which React rejects ("Rendered fewer hooks than expected")
+  // and which took the banner's whole subtree down through the error boundary.
+  const handleDismiss = useCallback(() => {
+    updateSetting('desktopAppDismissed', true);
+    setHintOpen(true);
+    setModalOpen(false);
+  }, [updateSetting]);
+
   if (isElectronApp()) {
     return null;
   }
   if (desktopAppDismissed) {
     return null;
   }
-
-  const handleDismiss = useCallback(() => {
-    updateSetting('desktopAppDismissed', true);
-    setHintOpen(true);
-    setModalOpen(false);
-  }, [updateSetting]);
 
   return (
     <>

@@ -3,31 +3,29 @@
  * Presenter Live Viewer
  *
  * Connects to the WebSocket relay server and shows the currently active
- * presenter block text in real time.
+ * presenter block text in real time. No database connection needed — the relay
+ * resolves the viewer token to an account on its own.
  *
- * This file is self-contained — no database connection needed.
- * Edit the CONFIGURATION block below before deploying.
+ * Settings live in `config.php` (copy `config-example.php` to create it). Keeping
+ * them out of this file means the token is never committed and pulling a new
+ * version of the viewer cannot overwrite a deployment's settings.
+ *
+ * The token can come from either side:
+ *   - `?token=…` in the URL — the link the app builds under Settings → Viewer Token
+ *   - `token` in config.php — for a fixed screen that is opened without arguments
+ * The URL wins, so one deployed copy serves both uses.
  */
 
-// ══════════════════════════════════════════════════════════════════════════════
-// CONFIGURATION — edit these values before deploying
-// ══════════════════════════════════════════════════════════════════════════════
+// ── Configuration ─────────────────────────────────────────────────────────────
 
-// Viewer token — copy it from the account settings in the presenter admin panel
-const TOKEN = '14b368400c7105bb83e01bdc0c73bf6e89418a559b5be994f35d7d532cc0932e';
+$configFile = __DIR__ . '/config.php';
+$config = is_file($configFile) ? require $configFile : [];
+if (!is_array($config)) {
+    $config = [];
+}
 
-// WebSocket relay server
-// Set 'wss' => true when the server is behind a TLS-terminating reverse proxy.
-// 'path' is optional; use a sub-path (e.g. '/ws') when the WS server shares
-// the same hostname as the PHP app and is routed by path in the reverse proxy.
-const WS_HOST = [
-    'wss'  => true,
-    'host' => 'presenter.intranet.efsh.de',
-    'port' => 443,
-    'path' => '/',
-];
-
-// ══════════════════════════════════════════════════════════════════════════════
+$configuredToken = is_string($config['token'] ?? null) ? trim($config['token']) : '';
+$wsHost = is_array($config['ws_host'] ?? null) ? $config['ws_host'] : [];
 
 // ── Helper: render a minimal error page ───────────────────────────────────────
 function renderError(string $title, string $message): void
@@ -39,35 +37,59 @@ function renderError(string $title, string $message): void
     echo '<div><h1>' . htmlspecialchars($title) . '</h1><p>' . htmlspecialchars($message) . '</p></div></body></html>';
 }
 
-// ── Validate token format ─────────────────────────────────────────────────────
+// ── Resolve the token ─────────────────────────────────────────────────────────
+// A token in the URL overrides the configured one, so the same deployed copy can
+// serve a fixed screen and per-account links. A malformed one is refused rather
+// than quietly falling back to the house token — otherwise a mistyped link would
+// silently show someone else's service.
 
-if (!preg_match('/^[0-9a-f]{64}$/', TOKEN)) {
+$queryToken = trim($_GET['token'] ?? '');
+
+if ($queryToken !== '' && !preg_match('/^[0-9a-f]{64}$/', $queryToken)) {
+    http_response_code(400);
+    renderError('Invalid Token', 'The token in the address is not a valid viewer token.');
+    exit;
+}
+
+$token = $queryToken !== '' ? $queryToken : $configuredToken;
+
+if (!preg_match('/^[0-9a-f]{64}$/', $token)) {
     http_response_code(503);
-    renderError('Not Configured', 'Please set a valid viewer token in the configuration section of this file.');
+    renderError(
+        'Not Configured',
+        is_file($configFile)
+            ? 'Set a valid viewer token in config.php, or open this page with ?token=…'
+            : 'Copy config-example.php to config.php and set your viewer token, or open this page with ?token=…'
+    );
     exit;
 }
 
 // ── Build WS URL ──────────────────────────────────────────────────────────────
 
 $wsUrl = '';
-if (!empty(WS_HOST['host'])) {
-    $scheme = !empty(WS_HOST['wss']) ? 'wss' : 'ws';
-    $host   = WS_HOST['host'];
-    $port   = (int) (WS_HOST['port'] ?? 443);
-    $path   = WS_HOST['path'] ?? '';
+if (!empty($wsHost['host'])) {
+    $scheme = !empty($wsHost['wss']) ? 'wss' : 'ws';
+    $host   = $wsHost['host'];
+    $port   = (int) ($wsHost['port'] ?? 443);
+    $path   = $wsHost['path'] ?? '';
     $path   = ($path && $path !== '/') ? $path : '';
     $wsUrl  = "{$scheme}://{$host}:{$port}{$path}";
 }
 
 if (empty($wsUrl)) {
     http_response_code(503);
-    renderError('Not Configured', 'The WebSocket relay server is not configured in this file.');
+    renderError(
+        'Not Configured',
+        is_file($configFile)
+            ? 'Set ws_host in config.php so the viewer knows which relay to connect to.'
+            : 'Copy config-example.php to config.php and set ws_host.'
+    );
     exit;
 }
 
 // ── Render viewer page ────────────────────────────────────────────────────────
 
-$tokenJson  = json_encode(TOKEN);
+$tokenJson  = json_encode($token);
 $wsUrlJson  = json_encode($wsUrl);
 $debugMode  = isset($_GET['debug']);
 
@@ -424,7 +446,7 @@ $debugMode  = isset($_GET['debug']);
 
       // How long the bar names the loaded show before making room for song · block.
       // It reappears whenever the show changes, and stays readable in the menu.
-      const SHOW_TITLE_MS = 10000;
+      const SHOW_TITLE_MS = 3000;
 
       // ── DOM refs ────────────────────────────────────────────────────────────
       const dot         = document.getElementById('status-dot');

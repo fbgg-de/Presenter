@@ -727,6 +727,8 @@ const en = {
       'The relay did not answer. It is probably running a build from before this feature — redeploy the WebSocket relay.',
     WS_DISCONNECT_ALL_CONFIRM:
       'Disconnect {count:number} connected client{{s}}? They are notified and can reconnect themselves — nothing reconnects automatically.',
+    STORAGE_FULL_FREED: 'Storage was full — offline data was removed to keep your settings saved ({freed}).',
+    STORAGE_FULL_UNSAVED: 'Storage is full. Settings still work now but will be lost on restart. Free up space or reload the page.',
   },
 
   UNIFIED_SEARCH: {

@@ -5,6 +5,9 @@ Tooling for running and inspecting the app without a real backend.
 - `mock-backend/` — fixture HTTP server standing in for the PHP API (below).
 - `ws-sync/` — integration test for the WebSocket relay and the sync protocol, run with
   `npm run test:ws`. See [ws-sync/README.md](ws-sync/README.md).
+- `viewport/` — small-screen layout test: drives the app in a headless browser at phone size
+  and fails on anything that does not fit, run with `npm run test:screens`. See
+  [viewport/README.md](viewport/README.md).
 
 ## Mock backend
 
@@ -28,10 +31,11 @@ npm run dev:mock
 
 ### Options
 
-| Env var      | Effect                                                                   |
-| ------------ | ------------------------------------------------------------------------ |
-| `MOCK_PORT`  | Port to listen on (default `8000`, which is what the Vite proxy expects) |
-| `MOCK_ADMIN` | `1` returns an `oidc_admin` session, unlocking `/admin`                  |
+| Env var           | Effect                                                                                 |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| `MOCK_PORT`       | Port to listen on (default `8000`, which is what the Vite proxy expects)               |
+| `MOCK_ADMIN`      | `1` returns an `oidc_admin` session, unlocking `/admin`                                |
+| `MOCK_VIEWER_URL` | Sets `settings.viewerUrl` (i.e. `VIEWER_URL` in config.php), for the Viewer Token link |
 
 ```bash
 MOCK_ADMIN=1 npm run dev:mock
@@ -64,3 +68,7 @@ Add a case by editing that file; add an endpoint by extending `handlers` in `ser
 The mobile layouts assume MUI's `sm` breakpoint (< 600px) via `useIsMobile()`. When checking a
 change, look at 375×812 (phone) and something ≥ 900px (desktop) — several components swap their
 structure rather than just reflowing, so a change that looks right on one can regress the other.
+
+`npm run test:screens` automates the phone half of that: it walks the login and operator
+screens at 375×667 and reports anything past the edge of the screen or cut off by a container,
+with an annotated screenshot per failure.

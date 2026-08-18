@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { useAppDispatch, useAppSelector } from './hooks';
 import type { MidiAction } from '@/hooks/useMidi';
+import { persistState } from './persist';
 
 type TrackingMaster = 'operator' | 'midi';
 
@@ -79,7 +80,7 @@ export const musicianSlice = createSlice({
     updateMusicianSetting: (state, action: PayloadAction<{ key: keyof MusicianState; value: MusicianState[keyof MusicianState] }>) => {
       const { key, value } = action.payload;
       (state as any)[key] = value;
-      localStorage.setItem(MUSICIAN_SETTINGS_KEY, JSON.stringify(state));
+      persistState(MUSICIAN_SETTINGS_KEY, state);
     },
   },
 });

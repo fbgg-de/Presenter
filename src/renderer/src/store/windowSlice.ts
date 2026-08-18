@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { useAppSelector, useAppDispatch } from './hooks';
 import { useCallback } from 'react';
+import { persistState } from './persist';
 
 export const WINDOWS_KEY = 'presenter_windows';
 
@@ -57,7 +58,7 @@ export const windowSlice = createSlice({
     updateWindowSetting: (state, action: PayloadAction<{ key: keyof WindowState; value: unknown }>) => {
       const { key, value } = action.payload;
       (state as any)[key] = value;
-      localStorage.setItem(WINDOWS_KEY, JSON.stringify(state));
+      persistState(WINDOWS_KEY, state);
     },
   },
 });

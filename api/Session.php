@@ -66,6 +66,12 @@ class Session extends RestController
                                 'wss'  => !empty(WS_HOST['wss']),
                               ]
                             : null,
+                        // Where the text viewer is deployed. Usually its own subdomain, so it
+                        // cannot be derived from this app's address. Trailing slash trimmed so
+                        // the client can append '/?token=…' without doubling it.
+                        'viewerUrl' => defined('VIEWER_URL') && is_string(VIEWER_URL) && trim(VIEWER_URL) !== ''
+                            ? rtrim(trim(VIEWER_URL), '/')
+                            : null,
                     ],
                 ]);
         }

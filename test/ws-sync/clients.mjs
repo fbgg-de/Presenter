@@ -616,12 +616,12 @@ export class MusicianClient extends BaseClient {
 // ── Text viewer ─────────────────────────────────────────────────────────────
 
 /**
- * Mirrors the text viewer page (`viewer.php`).
+ * Mirrors the text viewer page (`viewer/index.php`).
  *
- * - render()      → viewer.php:592-625
- * - showNoText()  → viewer.php:563-575
- * - auth_ok       → viewer.php:652-660
- * - sync_expired  → viewer.php:663-666
+ * - render()      → viewer/index.php:680
+ * - showNoText()  → viewer/index.php:634
+ * - auth_ok       → viewer/index.php:748
+ * - sync_expired  → viewer/index.php:761
  *
  * `renders` keeps every rendered frame, because the interesting failures here are
  * transient: a frame that briefly blanks the lyrics is a visible flicker on a screen
@@ -649,7 +649,7 @@ export class ViewerClient extends BaseClient {
     }
     if (msg.action === 'musician_sync' && msg.data) {
       // A bare position report from a musician is not a presentation state — only the
-      // operator's payload carries `contentType` (viewer.php:675-685).
+      // operator's payload carries `contentType` (viewer/index.php:792).
       if (typeof msg.data.contentType !== 'string') {
         this.ignored.push(msg.data);
         return;

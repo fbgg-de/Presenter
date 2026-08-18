@@ -25,6 +25,8 @@ const state = {
   songDetails: structuredClone(fixtures.songDetails),
   shows: structuredClone(fixtures.shows),
   setLists: structuredClone(fixtures.setLists),
+  /** Viewer token, minted on POST /rest/AccountTokens. Null until one is generated. */
+  viewerToken: null,
 };
 
 /** GET /rest/Session — an authenticated, non-admin session for account 1. */
@@ -33,7 +35,12 @@ const session = () => ({
   mail: fixtures.account.mail,
   isAuthenticated: true,
   authType: 'oidc',
-  settings: { bibleEnabled: true, churchToolsEnabled: true, wsHost: null },
+  // `viewerUrl` mirrors VIEWER_URL in config.php — a viewer deployed on its own
+  // subdomain, which is the case the fallback (<app>/viewer/) gets wrong.
+  // `viewerUrl` mirrors VIEWER_URL in config.php. Null by default (the viewer is then
+  // assumed to sit under this app's origin); set MOCK_VIEWER_URL to exercise the common
+  // real-world case of the viewer living on its own subdomain.
+  settings: { bibleEnabled: true, churchToolsEnabled: true, wsHost: null, viewerUrl: process.env.MOCK_VIEWER_URL ?? null },
 });
 
 /** Admin session variant: run with MOCK_ADMIN=1 to reach the /admin routes. */
@@ -48,7 +55,22 @@ const handlers = {
     req.method === 'DELETE' ? { message: 'logged out' } : { ...session(), authType: isAdmin ? 'oidc_admin' : 'oidc' },
   '/rest/Accounts': () => [{ license: fixtures.account.license, name: fixtures.account.name }],
   '/rest/AccountSettings': () => ({ defaultStyleId: null, showTitleTemplate: 'Show {dd}.{MM}.{yyyy}' }),
-  '/rest/AccountTokens': () => [],
+  // Viewer token. GET reports whether one exists; POST mints one and returns it in full
+  // (the only time the server ever does), DELETE revokes. Kept in `state` so the reveal
+  // dialog and the "token exists" chip behave like the real thing for the life of the run.
+  '/rest/AccountTokens': (req) => {
+    if (req.method === 'POST') {
+      state.viewerToken = Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+      return { token: state.viewerToken, message: 'Token generated' };
+    }
+    if (req.method === 'DELETE') {
+      state.viewerToken = null;
+      return { message: 'Token revoked' };
+    }
+    return state.viewerToken
+      ? { hasToken: true, tokenPrefix: `${state.viewerToken.slice(0, 8)}...` }
+      : { hasToken: false, tokenPrefix: null };
+  },
 
   '/rest/SongsAll': () => state.songs,
   '/rest/SongsSearch': (req) => filterSongs(req.query.q),

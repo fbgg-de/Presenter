@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { Show, ShowGroup, ShowItem } from '@/api/shows.api';
 import { DEFAULT_GROUP_ID, normalizeShowGroups } from '@/utils/showGroups';
 import { useAppSelector } from './hooks';
+import { persistState } from './persist';
 
 const SHOW_STORAGE_KEY = 'presenter_show';
 
@@ -54,14 +55,14 @@ export const showSlice = createSlice({
       state.serverSnapshot = show ? JSON.parse(JSON.stringify(show)) : null;
       state.isDirty = false;
 
-      localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+      persistState(SHOW_STORAGE_KEY, state);
     },
     /** Replace the show's group metadata (rename/recolor/collapse/add/remove). */
     setShowGroups: (state, action: PayloadAction<ShowGroup[]>) => {
       if (state.currentShow) {
         state.currentShow.groups = action.payload;
         state.isDirty = true;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     /** Replace both the flat order and the group metadata atomically (move group / move item / delete group). */
@@ -70,22 +71,22 @@ export const showSlice = createSlice({
         state.currentShow.order = action.payload.order;
         state.currentShow.groups = action.payload.groups;
         state.isDirty = true;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     updateShowOrder: (state, action: PayloadAction<ShowItem[]>) => {
       if (state.currentShow) {
         state.currentShow.order = action.payload;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     setShowSelectorOpen: (state, action: PayloadAction<boolean>) => {
       state.isShowSelectorOpen = action.payload;
-      localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+      persistState(SHOW_STORAGE_KEY, state);
     },
     closeShowSelector: (state) => {
       state.isShowSelectorOpen = false;
-      localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+      persistState(SHOW_STORAGE_KEY, state);
     },
     addShowItem: (state, action: PayloadAction<ShowItem>) => {
       if (state.currentShow) {
@@ -98,7 +99,7 @@ export const showSlice = createSlice({
         }
         order.push(item);
         state.isDirty = true;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     insertShowItem: (state, action: PayloadAction<{ index: number; item: ShowItem }>) => {
@@ -112,14 +113,14 @@ export const showSlice = createSlice({
         }
         order.splice(index, 0, item);
         state.isDirty = true;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     removeShowItem: (state, action: PayloadAction<number>) => {
       if (state.currentShow) {
         state.currentShow.order.splice(action.payload, 1);
         state.isDirty = true;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     reorderShowItems: (state, action: PayloadAction<{ source: number; destination: number }>) => {
@@ -130,7 +131,7 @@ export const showSlice = createSlice({
         items.splice(destination, 0, removed);
         state.currentShow.order = items;
         state.isDirty = true;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     updateShowItem: (state, action: PayloadAction<{ index: number; item: Partial<ShowItem> }>) => {
@@ -140,7 +141,7 @@ export const showSlice = createSlice({
           ...action.payload.item,
         };
         state.isDirty = true;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     setDirty: (state, action: PayloadAction<boolean>) => {
@@ -148,14 +149,14 @@ export const showSlice = createSlice({
       // When explicitly marking as clean (e.g. after save), sync the server snapshot
       if (!action.payload && state.currentShow) {
         state.serverSnapshot = JSON.parse(JSON.stringify(state.currentShow));
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
     setShowStyleId: (state, action: PayloadAction<number | undefined>) => {
       if (state.currentShow) {
         state.currentShow.styleId = action.payload;
         state.isDirty = true;
-        localStorage.setItem(SHOW_STORAGE_KEY, JSON.stringify(state));
+        persistState(SHOW_STORAGE_KEY, state);
       }
     },
   },

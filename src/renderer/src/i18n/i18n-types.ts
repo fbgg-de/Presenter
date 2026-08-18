@@ -2722,6 +2722,15 @@ type RootTranslation = {
 		 * @param {number} count
 		 */
 		WS_DISCONNECT_ALL_CONFIRM: RequiredParams<'count'>
+		/**
+		 * S​t​o​r​a​g​e​ ​w​a​s​ ​f​u​l​l​ ​—​ ​o​f​f​l​i​n​e​ ​d​a​t​a​ ​w​a​s​ ​r​e​m​o​v​e​d​ ​t​o​ ​k​e​e​p​ ​y​o​u​r​ ​s​e​t​t​i​n​g​s​ ​s​a​v​e​d​ ​(​{​f​r​e​e​d​}​)​.
+		 * @param {unknown} freed
+		 */
+		STORAGE_FULL_FREED: RequiredParams<'freed'>
+		/**
+		 * S​t​o​r​a​g​e​ ​i​s​ ​f​u​l​l​.​ ​S​e​t​t​i​n​g​s​ ​s​t​i​l​l​ ​w​o​r​k​ ​n​o​w​ ​b​u​t​ ​w​i​l​l​ ​b​e​ ​l​o​s​t​ ​o​n​ ​r​e​s​t​a​r​t​.​ ​F​r​e​e​ ​u​p​ ​s​p​a​c​e​ ​o​r​ ​r​e​l​o​a​d​ ​t​h​e​ ​p​a​g​e​.
+		 */
+		STORAGE_FULL_UNSAVED: string
 	}
 	UNIFIED_SEARCH: {
 		/**
@@ -8209,6 +8218,14 @@ export type TranslationFunctions = {
 		 * Disconnect {count} connected client{{s}}? They are notified and can reconnect themselves — nothing reconnects automatically.
 		 */
 		WS_DISCONNECT_ALL_CONFIRM: (arg: { count: number }) => LocalizedString
+		/**
+		 * Storage was full — offline data was removed to keep your settings saved ({freed}).
+		 */
+		STORAGE_FULL_FREED: (arg: { freed: unknown }) => LocalizedString
+		/**
+		 * Storage is full. Settings still work now but will be lost on restart. Free up space or reload the page.
+		 */
+		STORAGE_FULL_UNSAVED: () => LocalizedString
 	}
 	UNIFIED_SEARCH: {
 		/**

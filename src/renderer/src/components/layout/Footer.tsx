@@ -160,6 +160,27 @@ const Footer = () => {
 
   useEffect(() => () => clearTimeout(disconnectTimeoutRef.current ?? undefined), []);
 
+  /**
+   * Storage ran out. Worth interrupting for: the operator otherwise finds out only when a
+   * setting or the open show has quietly forgotten itself after a restart. The two cases
+   * differ in what to do about it — offline data was sacrificed and everything is saved
+   * (informational), or nothing could be saved at all (needs action), so they are shown at
+   * different severities and the second one stays up until dismissed.
+   */
+  const [storageWarning, setStorageWarning] = useState<{ severity: 'info' | 'error'; text: string } | null>(null);
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ freed: string[]; saved: boolean }>).detail;
+      if (detail?.saved) {
+        setStorageWarning({ severity: 'info', text: LL.FOOTER.STORAGE_FULL_FREED({ freed: (detail.freed ?? []).join(', ') }) });
+      } else {
+        setStorageWarning({ severity: 'error', text: LL.FOOTER.STORAGE_FULL_UNSAVED() });
+      }
+    };
+    window.addEventListener('presenter:storage-full', handler);
+    return () => window.removeEventListener('presenter:storage-full', handler);
+  }, [LL]);
+
   const handleDisconnectAllClients = () => {
     setDisconnectConfirmOpen(false);
     setDisconnectResult(null);
@@ -238,6 +259,27 @@ const Footer = () => {
     const t = setTimeout(() => setMidiSyncActive(false), MIDI_ACTIVE_TTL_MS);
     return () => clearTimeout(t);
   }, [wsMidiSyncAt]);
+
+  // The chip carries two independent facts and the click only changes one of them:
+  //   `followingMidi`  — are we taking our position from the musician? (what the click toggles)
+  //   `midiSyncActive` — is a musician broadcasting at all? (nothing to do with us)
+  // Filling the chip for either one made "stop following" look like it had done nothing
+  // while the musician kept playing, so the fill now tracks the toggle alone and the
+  // musician's presence only lifts the dimming.
+  const followingMidi = midiTrackingMaster === 'midi';
+  const midiChipProps = {
+    color: 'success' as const,
+    variant: followingMidi ? ('filled' as const) : ('outlined' as const),
+    tooltip: followingMidi ? LL.MIDI.FOLLOW_MIDI_ACTIVE() : LL.MIDI.SYNC_ACTIVE(),
+    onClick: () => updateMusicianSetting('midiTrackingMaster', followingMidi ? 'operator' : 'midi'),
+    sx: {
+      alignSelf: 'center',
+      fontSize: '0.7rem',
+      cursor: 'pointer',
+      opacity: followingMidi || midiSyncActive ? 1 : 0.25,
+      transition: 'opacity 0.4s ease-in-out',
+    },
+  };
 
   const { data: styles = [] } = useGetStylesQuery();
 
@@ -755,6 +797,18 @@ const Footer = () => {
           {disconnectResult?.text ?? ''}
         </Alert>
       </Snackbar>
+      <Snackbar
+        open={!!storageWarning}
+        // Nothing could be saved: leave it up until acknowledged, since ignoring it costs
+        // the operator their settings at the next restart.
+        autoHideDuration={storageWarning?.severity === 'error' ? null : 8000}
+        onClose={() => setStorageWarning(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={storageWarning?.severity ?? 'info'} onClose={() => setStorageWarning(null)}>
+          {storageWarning?.text ?? ''}
+        </Alert>
+      </Snackbar>
       <AppBar
         position="static"
         color="default"
@@ -1097,21 +1151,15 @@ const Footer = () => {
                     disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
                     onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
                   />
-                  <Tooltip title={midiTrackingMaster === 'midi' ? LL.MIDI.FOLLOW_MIDI_ACTIVE() : LL.MIDI.SYNC_ACTIVE()}>
+                  <Tooltip title={midiChipProps.tooltip}>
                     <Chip
                       icon={<MidiActiveIcon sx={{ pl: '0.25rem' }} />}
                       label="MIDI"
                       size="small"
-                      color="success"
-                      variant={midiSyncActive || midiTrackingMaster === 'midi' ? 'filled' : 'outlined'}
-                      onClick={() => updateMusicianSetting('midiTrackingMaster', midiTrackingMaster === 'midi' ? 'operator' : 'midi')}
-                      sx={{
-                        alignSelf: 'center',
-                        fontSize: '0.7rem',
-                        cursor: 'pointer',
-                        opacity: midiSyncActive || midiTrackingMaster === 'midi' ? 1 : 0.25,
-                        transition: 'opacity 0.4s ease-in-out',
-                      }}
+                      color={midiChipProps.color}
+                      variant={midiChipProps.variant}
+                      onClick={midiChipProps.onClick}
+                      sx={midiChipProps.sx}
                     />
                   </Tooltip>
                 </Stack>
@@ -1173,21 +1221,15 @@ const Footer = () => {
                   disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
                   onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
                 />
-                <Tooltip title={midiTrackingMaster === 'midi' ? LL.MIDI.FOLLOW_MIDI_ACTIVE() : LL.MIDI.SYNC_ACTIVE()}>
+                <Tooltip title={midiChipProps.tooltip}>
                   <Chip
                     icon={<MidiActiveIcon sx={{ pl: '0.25rem' }} />}
                     label="MIDI"
                     size="small"
-                    color="success"
-                    variant={midiSyncActive || midiTrackingMaster === 'midi' ? 'filled' : 'outlined'}
-                    onClick={() => updateMusicianSetting('midiTrackingMaster', midiTrackingMaster === 'midi' ? 'operator' : 'midi')}
-                    sx={{
-                      alignSelf: 'center',
-                      fontSize: '0.7rem',
-                      cursor: 'pointer',
-                      opacity: midiSyncActive || midiTrackingMaster === 'midi' ? 1 : 0.25,
-                      transition: 'opacity 0.4s ease-in-out',
-                    }}
+                    color={midiChipProps.color}
+                    variant={midiChipProps.variant}
+                    onClick={midiChipProps.onClick}
+                    sx={midiChipProps.sx}
                   />
                 </Tooltip>
 

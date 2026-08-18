@@ -733,6 +733,9 @@ const de: Translation = {
       'Das Relay hat nicht geantwortet. Es läuft vermutlich noch ein Build von vor dieser Funktion — bitte das WebSocket-Relay neu deployen.',
     WS_DISCONNECT_ALL_CONFIRM:
       '{count} verbundene Clients trennen? Sie werden benachrichtigt und können sich selbst wieder verbinden — es verbindet sich nichts automatisch.',
+    STORAGE_FULL_FREED: 'Speicher war voll — Offline-Daten wurden entfernt, damit die Einstellungen gespeichert bleiben ({freed}).',
+    STORAGE_FULL_UNSAVED:
+      'Der Speicher ist voll. Einstellungen wirken jetzt noch, gehen aber beim Neustart verloren. Bitte Speicher freigeben oder die Seite neu laden.',
   },
 
   UNIFIED_SEARCH: {

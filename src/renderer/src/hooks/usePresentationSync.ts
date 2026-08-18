@@ -608,7 +608,7 @@ export const usePresentationSync = (): void => {
 
       // Broadcast musician_sync via WebSocket relay server
       // Include the current block's name and text lines so viewer clients
-      // (viewer.php) can display the lyrics without an extra API call.
+      // (viewer/index.php) can display the lyrics without an extra API call.
       const activeBlock = cb.blocks[nav.activeBlockIndex];
 
       // A display title for the ACTIVE item, always a string so the control page's

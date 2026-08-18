@@ -3,6 +3,7 @@ import type { ISong } from '@/song';
 import { Song } from '@/song';
 import type { Show } from '@/api/shows.api';
 import { useAppSelector } from './hooks';
+import { registerEvictor, EVICT_PRIORITY } from './persist';
 
 // Lazy import to avoid circular dependency
 let _songsApi: typeof import('@/api/songs.api').songsApi | null = null;
@@ -58,11 +59,85 @@ function loadCache(): CacheData {
   }
 }
 
+/**
+ * Soft cap for the whole cache blob, in characters (≈ bytes for this mostly-ASCII data).
+ *
+ * `songs` accumulates every song ever opened and is never pruned by the reducers, so
+ * without a cap it grows for as long as the app is used and eventually takes the origin's
+ * whole budget — which then breaks the small, irreplaceable writes (settings, open show)
+ * rather than itself. 2 MB leaves ample room for those inside a typical 5 MB origin quota
+ * while still holding a large show plus a good number of extra songs.
+ */
+const CACHE_SOFT_CAP_CHARS = 2_000_000;
+
+/**
+ * Bring the cache under the soft cap by giving up the optional parts, cheapest first.
+ * The songs of the current show (`order`) are the minimum offline data and are kept even
+ * if that leaves the blob over the cap — a show too big to cache is still worth caching.
+ *
+ * Returns the (possibly reduced) cache and what was dropped.
+ */
+function trimToBudget(cache: CacheData): { cache: CacheData; dropped: string[] } {
+  const dropped: string[] = [];
+  const size = (c: CacheData) => {
+    try {
+      return JSON.stringify(c).length;
+    } catch {
+      return Number.MAX_SAFE_INTEGER;
+    }
+  };
+  if (size(cache) <= CACHE_SOFT_CAP_CHARS) return { cache, dropped };
+
+  // 1. Songs that no longer belong to the open show — re-fetched when that show is opened.
+  const keep = new Set((cache.order ?? []).map(String));
+  if (cache.songs) {
+    const kept: Record<string, unknown> = {};
+    let removed = 0;
+    for (const [num, song] of Object.entries(cache.songs)) {
+      if (keep.has(num)) kept[num] = song;
+      else removed++;
+    }
+    if (removed > 0) {
+      cache = { ...cache, songs: kept as CacheData['songs'] };
+      dropped.push(`${removed} song(s) outside the current show`);
+      if (size(cache) <= CACHE_SOFT_CAP_CHARS) return { cache, dropped };
+    }
+  }
+
+  // 2. Cached styles — purely a rendering nicety offline, and refetched as soon as online.
+  if (cache.styles?.length) {
+    cache = { ...cache, styles: [] };
+    dropped.push('cached styles');
+  }
+
+  return { cache, dropped };
+}
+
+/**
+ * Merge `patch` into the cache and store it, staying inside the soft cap and never
+ * throwing. This is the *proactive* half of the storage strategy: keeping this blob
+ * bounded is what stops the quota being reached at all.
+ */
 function saveCache(patch: Partial<CacheData>): void {
+  let next: CacheData;
   try {
-    const current = loadCache();
-    localStorage.setItem(CACHE_KEY, JSON.stringify({ ...current, ...patch }));
-  } catch {}
+    next = { ...loadCache(), ...patch };
+  } catch {
+    return;
+  }
+
+  const { cache, dropped } = trimToBudget(next);
+  if (dropped.length > 0) {
+    console.info(`[cache] over ${CACHE_SOFT_CAP_CHARS} chars — dropped ${dropped.join(', ')}`);
+  }
+
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+  } catch {
+    // Already trimmed and still rejected: the space is being used by something else.
+    // The cache is optional, so this stays silent — persistState raises the alarm when
+    // a write that actually matters cannot be made.
+  }
 }
 
 const loadSongs = (): Record<number, ISong> => {
@@ -95,9 +170,67 @@ const initialState: SongsState = {
   songOrders: loadSongOrders(),
 };
 
-// ── Helpers exported for settingsSlice (cachedStyles) ────────────────────────
-export const loadCachedStyles = (): object[] => loadCache().styles ?? [];
-export const saveCachedStyles = (styles: object[]): void => saveCache({ styles });
+// NOTE: `cachedStyles` does NOT live here. Despite the `styles` field on CacheData, the
+// style cache is a field of the settings blob (settingsSlice), which registers its own
+// evictor for it. `CacheData.styles` only ever holds data migrated from the pre-2025
+// `presenter_cached_styles` key, so the evictor below exists to reclaim that and nothing
+// else. Two exported helpers for reading/writing it had no callers at all and were
+// removed; if you are looking for the style cache, it is in settingsSlice.
+
+// ── Eviction, for when a write that MUST succeed finds storage full ──────────
+// Registered in the order things may be given up. `persistState` runs these one tier at a
+// time and retries in between, so an overflow costs the least data that resolves it.
+
+/** Rewrite the cache blob directly — the evictors bypass the budget path they serve. */
+const writeCache = (cache: CacheData): boolean => {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+registerEvictor({
+  name: 'migrated style cache',
+  priority: EVICT_PRIORITY.OPTIONAL_CACHE,
+  run: () => {
+    const cache = loadCache();
+    if (!cache.styles?.length) return false;
+    return writeCache({ ...cache, styles: [] });
+  },
+});
+
+registerEvictor({
+  name: 'songs outside the current show',
+  priority: EVICT_PRIORITY.OPTIONAL_CACHE + 1,
+  run: () => {
+    const cache = loadCache();
+    if (!cache.songs) return false;
+    const keep = new Set((cache.order ?? []).map(String));
+    const kept: Record<string, unknown> = {};
+    let removed = 0;
+    for (const [num, song] of Object.entries(cache.songs)) {
+      if (keep.has(num)) kept[num] = song;
+      else removed++;
+    }
+    if (removed === 0) return false;
+    return writeCache({ ...cache, songs: kept as CacheData['songs'] });
+  },
+});
+
+registerEvictor({
+  // Last resort: this is the offline data for the show being presented. Losing it means
+  // the current show can no longer be presented without a server — worth it only to keep
+  // the settings and the show itself saveable.
+  name: 'offline songs for the current show',
+  priority: EVICT_PRIORITY.CURRENT_SHOW_CACHE,
+  run: () => {
+    const cache = loadCache();
+    if (!cache.songs || Object.keys(cache.songs).length === 0) return false;
+    return writeCache({ ...cache, songs: {} });
+  },
+});
 
 /**
  * Async thunk that fetches all songs referenced in a show via RTK Query,

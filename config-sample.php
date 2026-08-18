@@ -57,6 +57,19 @@ const WS_HOST = [
     // 'path' => '/ws',
 ];
 
+// Text Viewer
+// Base URL of the deployed viewer page (viewer/index.php). It is commonly hosted on its
+// own subdomain rather than alongside this app, so the link and QR code offered under
+// Settings → Viewer Token cannot be derived from this app's own address.
+//
+// Give the URL the viewer is reached at, with no query string — a trailing slash is
+// optional. '?token=…' is appended to it.
+//   e.g. 'https://text.example.com'  or  'https://example.com/viewer'
+//
+// Leave empty to fall back to '<this app>/viewer/', which is correct only when the
+// viewer is served from this same host.
+const VIEWER_URL = '';
+
 // Bible API Configuration
 // Only JSON-based APIs are supported. The translation is user-selectable at runtime.
 const BIBLE_API = [

@@ -62,7 +62,7 @@ The relay also cached position reports, so the next viewer to connect was replay
 state with no song in it.
 
 Fixed by teaching the viewer and the relay's cache to tell the two apart (`contentType` is
-present only on the operator's payload) — `viewer.php`, `viewer/index.php`,
+present only on the operator's payload) — `viewer/index.php` and
 `ws-server/src/server.ts`. Scenarios 3, 4, 5 and 7 cover it.
 
 ## Adding a scenario

@@ -257,8 +257,7 @@ const LanguageStyleEditor = ({
    * nothing on screen, because `langEntryToCss` skips any property whose `*Enabled` flag
    * is not set. The row's toggle still turns it back off.
    */
-  const setEnabled = (patch: Partial<LanguageStyleEntry>, enableKey: keyof LanguageStyleEntry) =>
-    onChange({ ...patch, [enableKey]: true });
+  const setEnabled = (patch: Partial<LanguageStyleEntry>, enableKey: keyof LanguageStyleEntry) => onChange({ ...patch, [enableKey]: true });
 
   return (
     <Stack spacing={1}>
@@ -282,10 +281,18 @@ const LanguageStyleEditor = ({
         onToggle={(e) => onChange({ fontStyleEnabled: e })}
       >
         <ToggleButtonGroup size="small">
-          <ToggleButton value="bold" selected={entry.fontBold || false} onClick={() => setEnabled({ fontBold: !entry.fontBold }, 'fontStyleEnabled')}>
+          <ToggleButton
+            value="bold"
+            selected={entry.fontBold || false}
+            onClick={() => setEnabled({ fontBold: !entry.fontBold }, 'fontStyleEnabled')}
+          >
             <BoldIcon />
           </ToggleButton>
-          <ToggleButton value="italic" selected={entry.fontItalic || false} onClick={() => setEnabled({ fontItalic: !entry.fontItalic }, 'fontStyleEnabled')}>
+          <ToggleButton
+            value="italic"
+            selected={entry.fontItalic || false}
+            onClick={() => setEnabled({ fontItalic: !entry.fontItalic }, 'fontStyleEnabled')}
+          >
             <ItalicIcon />
           </ToggleButton>
           <ToggleButton
@@ -317,9 +324,21 @@ const LanguageStyleEditor = ({
             alignItems: 'flex-start',
           }}
         >
-          <CssUnitInput value={sx} onChange={(v) => setEnabled({ textShadow: `${v} ${sy} ${sb}` }, 'textShadowEnabled')} label={LL.STYLE.SHADOW_X()} />
-          <CssUnitInput value={sy} onChange={(v) => setEnabled({ textShadow: `${sx} ${v} ${sb}` }, 'textShadowEnabled')} label={LL.STYLE.SHADOW_Y()} />
-          <CssUnitInput value={sb} onChange={(v) => setEnabled({ textShadow: `${sx} ${sy} ${v}` }, 'textShadowEnabled')} label={LL.STYLE.SHADOW_BLUR()} />
+          <CssUnitInput
+            value={sx}
+            onChange={(v) => setEnabled({ textShadow: `${v} ${sy} ${sb}` }, 'textShadowEnabled')}
+            label={LL.STYLE.SHADOW_X()}
+          />
+          <CssUnitInput
+            value={sy}
+            onChange={(v) => setEnabled({ textShadow: `${sx} ${v} ${sb}` }, 'textShadowEnabled')}
+            label={LL.STYLE.SHADOW_Y()}
+          />
+          <CssUnitInput
+            value={sb}
+            onChange={(v) => setEnabled({ textShadow: `${sx} ${sy} ${v}` }, 'textShadowEnabled')}
+            label={LL.STYLE.SHADOW_BLUR()}
+          />
           <Stack
             sx={{
               alignItems: 'center',
@@ -334,7 +353,10 @@ const LanguageStyleEditor = ({
             >
               {LL.STYLE.SHADOW_COLOR()}
             </Typography>
-            <ColorSwatchButton value={entry.textShadowColor || '#000000'} onChange={(c) => setEnabled({ textShadowColor: c }, 'textShadowEnabled')} />
+            <ColorSwatchButton
+              value={entry.textShadowColor || '#000000'}
+              onChange={(c) => setEnabled({ textShadowColor: c }, 'textShadowEnabled')}
+            />
           </Stack>
         </Stack>
       </StylePropRow>
@@ -351,7 +373,11 @@ const LanguageStyleEditor = ({
             alignItems: 'flex-start',
           }}
         >
-          <CssUnitInput value={sw} onChange={(v) => setEnabled({ textStroke: `${v} ${sc}` }, 'textStrokeEnabled')} label={LL.STYLE.STROKE_WIDTH()} />
+          <CssUnitInput
+            value={sw}
+            onChange={(v) => setEnabled({ textStroke: `${v} ${sc}` }, 'textStrokeEnabled')}
+            label={LL.STYLE.STROKE_WIDTH()}
+          />
           <Stack
             sx={{
               alignItems: 'center',
@@ -399,7 +425,10 @@ const LanguageStyleEditor = ({
             checked={entry.nextLinePreview || false}
             onChange={(e2) => setEnabled({ nextLinePreview: e2.target.checked }, 'nextLinePreviewEnabled')}
           />
-          <ColorSwatchButton value={entry.nextLinePreviewColor || '#AAAAAA'} onChange={(c) => setEnabled({ nextLinePreviewColor: c }, 'nextLinePreviewEnabled')} />
+          <ColorSwatchButton
+            value={entry.nextLinePreviewColor || '#AAAAAA'}
+            onChange={(c) => setEnabled({ nextLinePreviewColor: c }, 'nextLinePreviewEnabled')}
+          />
           <Stack
             spacing={0}
             sx={{
@@ -688,8 +717,6 @@ interface StyleEditorProps {
 
 type WindowOverride = { window_name: string; override_style_id: number };
 
-const LAST_EDITED_STYLE_KEY = 'presenter_last_edited_style_id';
-
 /** Small 16:9 canvas that renders a mini-preview of a style. */
 export const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew?: boolean }) => {
   const resolved = useMemo(() => {
@@ -940,7 +967,6 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   /** Open a style in the editor view. */
   const openEdit = (style: StyleEntity) => {
     setSelectedStyleId(style.id);
-    localStorage.setItem(LAST_EDITED_STYLE_KEY, String(style.id));
     loadStyleEntity(style);
     setNameEditing(false);
     setEditTab(0);
@@ -1088,11 +1114,9 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
         const result = await createStyleMutation({ name: styleName, enabled: styleEnabled, data: styleData }).unwrap();
         id = result.id;
         setSelectedStyleId(id);
-        localStorage.setItem(LAST_EDITED_STYLE_KEY, String(id));
         if (windowOverrides.length > 0) await updateStyleMutation({ id, windowOverrides } as never).unwrap();
       } else {
         id = selectedStyleId;
-        localStorage.setItem(LAST_EDITED_STYLE_KEY, String(id));
         await updateStyleMutation({ id, name: styleName, enabled: styleEnabled, data: styleData, windowOverrides } as never).unwrap();
       }
       setIsDirty(false);

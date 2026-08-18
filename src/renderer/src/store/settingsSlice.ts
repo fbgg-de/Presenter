@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { useAppSelector, useAppDispatch } from './hooks';
 import { useCallback } from 'react';
+import { persistState, registerEvictor, EVICT_PRIORITY } from './persist';
 
 export const SETTINGS_KEY = 'presenter_settings';
 
@@ -179,7 +180,7 @@ export const settingsSlice = createSlice({
     updateSetting: (state, action: PayloadAction<{ key: keyof SettingsState; value: unknown }>) => {
       const { key, value } = action.payload;
       (state as any)[key] = value;
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state));
+      persistState(SETTINGS_KEY, state);
     },
     toggleTheme: (state) => {
       switch (state.themeMode) {
@@ -192,12 +193,39 @@ export const settingsSlice = createSlice({
         default:
           state.themeMode = 'dark';
       }
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(state));
+      persistState(SETTINGS_KEY, state);
     },
   },
 });
 
 export const { toggleTheme } = settingsSlice.actions;
+
+/**
+ * `cachedStyles` is the offline copy of the style library and is refetched the moment the
+ * app is online, but it is stored inside the settings blob — the one key that must never
+ * be given up. Left alone that inverts the whole storage priority: the biggest optional
+ * payload would sit in the most protected key and push the irreplaceable settings out.
+ *
+ * So the field is evictable even though its container is not. Only the persisted copy is
+ * stripped; the in-memory value stays, so the current session keeps rendering offline
+ * styles and the next successful fetch writes them back.
+ */
+registerEvictor({
+  name: 'cached styles',
+  priority: EVICT_PRIORITY.OPTIONAL_CACHE,
+  run: () => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      if (!Array.isArray(parsed.cachedStyles) || parsed.cachedStyles.length === 0) return false;
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...parsed, cachedStyles: [] }));
+      return true;
+    } catch {
+      return false;
+    }
+  },
+});
 
 export const getSetting = <K extends keyof SettingsState>(k: K): SettingsState[K] => {
   try {

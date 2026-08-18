@@ -22,22 +22,30 @@ import {
   Refresh as RegenerateIcon,
   Tv as ViewerIcon,
 } from '@mui/icons-material';
-import {
-  useGetViewerTokenQuery,
-  useGenerateViewerTokenMutation,
-  useRevokeViewerTokenMutation,
-} from '@/api/viewer.api';
+import { useGetViewerTokenQuery, useGenerateViewerTokenMutation, useRevokeViewerTokenMutation } from '@/api/viewer.api';
 import { useGetSessionQuery } from '@/api/session.api';
 import { getBackendBaseUrl } from '@/api/base.api';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { copyTextToClipboard } from '@/utils/clipboard';
 
-/** Build the viewer URL from the backend base URL and a token */
-function buildViewerUrl(token: string): string {
+/**
+ * Build the link to the deployed text viewer for a token.
+ *
+ * The viewer (`viewer/index.php`) reads the token from the query string and falls back to
+ * the one in its own config.php, so a single deployed copy serves both a fixed screen and
+ * these per-account links.
+ *
+ * `viewerUrl` comes from `VIEWER_URL` in config.php because the viewer is commonly hosted
+ * on its own subdomain (a display server, an intranet host) and cannot be derived from
+ * this app's address. It arrives without a trailing slash. When it is unset we fall back
+ * to `<this app>/viewer/`, which is right only when both are served from the same host.
+ */
+function buildViewerUrl(token: string, viewerUrl?: string | null): string {
+  if (viewerUrl) return `${viewerUrl}/?token=${token}`;
   const base = getBackendBaseUrl();
   const root = base ? `${base}/` : `${window.location.origin}/`;
-  return `${root}viewer.php?token=${token}`;
+  return `${root}viewer/?token=${token}`;
 }
 
 export const ViewerTokenSection = () => {
@@ -45,6 +53,7 @@ export const ViewerTokenSection = () => {
   const { offlineMode } = useGetSettings();
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
   const isAuthenticated = !offlineMode && session?.isAuthenticated === true;
+  const viewerUrl = session?.settings?.viewerUrl;
 
   const { data: tokenInfo, isLoading } = useGetViewerTokenQuery(undefined, {
     skip: !isAuthenticated,
@@ -94,12 +103,7 @@ export const ViewerTokenSection = () => {
   return (
     <>
       {/* New-token reveal dialog */}
-      <Dialog
-        open={newTokenDialog.open}
-        onClose={() => setNewTokenDialog({ open: false, token: null })}
-        maxWidth="sm"
-        fullWidth
-      >
+      <Dialog open={newTokenDialog.open} onClose={() => setNewTokenDialog({ open: false, token: null })} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <ViewerIcon fontSize="small" />
           {LL.VIEWER_TOKEN.GENERATED_TITLE()}
@@ -138,7 +142,7 @@ export const ViewerTokenSection = () => {
               />
               <TextField
                 label={LL.VIEWER_TOKEN.VIEWER_URL()}
-                value={buildViewerUrl(newTokenDialog.token)}
+                value={buildViewerUrl(newTokenDialog.token, viewerUrl)}
                 slotProps={{
                   input: {
                     readOnly: true,
@@ -146,14 +150,14 @@ export const ViewerTokenSection = () => {
                       <InputAdornment position="end">
                         <Stack direction="row">
                           <Tooltip title={copied ? LL.VIEWER_TOKEN.COPIED() : LL.VIEWER_TOKEN.COPY_URL()}>
-                            <IconButton size="small" onClick={() => handleCopy(buildViewerUrl(newTokenDialog.token!))}>
+                            <IconButton size="small" onClick={() => handleCopy(buildViewerUrl(newTokenDialog.token!, viewerUrl))}>
                               <CopyIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                           <Tooltip title={LL.VIEWER_TOKEN.OPEN_VIEWER()}>
                             <IconButton
                               size="small"
-                              onClick={() => window.open(buildViewerUrl(newTokenDialog.token!), '_blank')}
+                              onClick={() => window.open(buildViewerUrl(newTokenDialog.token!, viewerUrl), '_blank')}
                             >
                               <OpenIcon fontSize="small" />
                             </IconButton>
@@ -247,5 +251,3 @@ export const ViewerTokenSection = () => {
     </>
   );
 };
-
-

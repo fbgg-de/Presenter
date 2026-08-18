@@ -17,6 +17,12 @@ export type SessionInfo = {
     bibleEnabled: boolean;
     churchToolsEnabled?: boolean;
     wsHost?: WsHost;
+    /**
+     * Base URL of the deployed text viewer (`VIEWER_URL` in config.php), without a
+     * trailing slash. Null when unset — the viewer is then assumed to sit under this
+     * app's own origin.
+     */
+    viewerUrl?: string | null;
   };
 };
 
