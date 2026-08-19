@@ -76,6 +76,8 @@ const useActionLabel = (): ((action: ActionId) => string) => {
           return LL.KEYBOARD.ACTION_PREV_LINE();
         case 'next_line':
           return LL.KEYBOARD.ACTION_NEXT_LINE();
+        case 'jump_to_start':
+          return LL.KEYBOARD.ACTION_JUMP_TO_START();
         case 'toggle_black':
           return LL.KEYBOARD.ACTION_TOGGLE_BLACK();
         case 'toggle_text_hidden':

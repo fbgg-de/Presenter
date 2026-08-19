@@ -163,7 +163,7 @@ export const screens = [
   },
   {
     id: 'settings-general',
-    name: 'Settings — General expanded',
+    name: 'Settings — General category',
     open: async (ui) => {
       await ui.loadShow();
       await ui.tab('Shows');
@@ -175,8 +175,9 @@ export const screens = [
   },
   {
     id: 'settings-remote',
-    name: 'Settings — Remote Control expanded',
+    name: 'Settings — Remote Control category',
     // The viewer-token block and its QR code live here; both are fixed-size by nature.
+    // At phone width the category list is a scrollable tab strip, so this taps a tab.
     open: async (ui) => {
       await ui.loadShow();
       await ui.tab('Shows');
@@ -188,7 +189,7 @@ export const screens = [
   },
   {
     id: 'settings-presentation',
-    name: 'Settings — Presentation expanded',
+    name: 'Settings — Presentation category',
     open: async (ui) => {
       await ui.loadShow();
       await ui.tab('Shows');

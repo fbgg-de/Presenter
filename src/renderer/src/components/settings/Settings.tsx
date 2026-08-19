@@ -1,195 +1,97 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useMemo, useState } from 'react';
 import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
   Box,
-  Button,
+  Divider,
   Drawer,
   IconButton,
-  Menu,
-  MenuItem,
-  OutlinedInput,
-  Select,
+  InputAdornment,
+  List,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
   Stack,
-  Switch,
+  Tab,
+  Tabs,
   TextField,
-  Tooltip,
   Typography,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
-import {
-  Close as CloseIcon,
-  Download as DownloadIcon,
-  ExpandMore as ExpandMoreIcon,
-  FileDownload as ExportIcon,
-  FileUpload as ImportIcon,
-  FolderOpen as FolderOpenIcon,
-  Cable as CableIcon,
-  Language as LanguageIcon,
-  LightMode,
-  DarkMode,
-  SettingsBrightness,
-} from '@mui/icons-material';
+import { Close as CloseIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { useAppDispatch } from '@/store';
-import { useUpdateSetting, type SettingsState, useGetSettings, toggleTheme } from '@/store/settingsSlice';
-import { useGetStylesQuery } from '@/api/styles.api';
-import { useGetAccountSettingsQuery, useUpdateAccountSettingsMutation } from '@/api/session.api';
+import { useGetSettings } from '@/store/settingsSlice';
 import { KeyboardMappingEditor } from '@/components/settings/KeyboardMappingEditor';
-import { ColorSwatchButton } from '@/components/style/ColorPicker';
-import { useMetrics } from '@/hooks/useMetrics';
-import { exportSettings, importSettings, applyImportedSettings } from '@/utils/settingsExport';
+import { exportSettings, importSettings, applyImportedSettings, type SettingsDiff } from '@/utils/settingsExport';
 import { CompanionHelper } from '@/components/settings/CompanionHelper';
 import { SettingsImportReview } from '@/components/settings/SettingsImportReview';
-import type { SettingsDiff } from '@/utils/settingsExport';
 import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
 import { AutoUpdaterSection } from '@/components/settings/AutoUpdaterSection';
 import { CredentialsSection } from '@/components/settings/CredentialsSection';
 import { ViewerTokenSection } from '@/components/settings/ViewerTokenSection';
+import { SettingRow } from '@/components/settings/SettingRow';
+import {
+  BackupBlock,
+  CompanionBlock,
+  DesktopDownloadBlock,
+  GlobalStyleRow,
+  PrivacyNoticeBlock,
+  RemoteCommandsBlock,
+  ShowTitleTemplateRow,
+} from '@/components/settings/SettingsBlocks';
+import { buildSettingsCatalog, type SettingsCategory, type SettingsSection } from '@/components/settings/settingsCatalog';
 import { isElectronApp } from '@/utils';
-import { REMOTE_COMMAND_IDS, type RemoteCommandId } from '@/utils/remoteCommands';
 
-type SettingConfig = {
-  key: keyof SettingsState;
-  type: 'string' | 'number' | 'boolean' | 'select' | 'color';
-  values?: string[];
-  group: string;
-  label?: string;
-  description?: string;
-};
+const NAV_WIDTH = 210;
 
-const SETTINGS_CONFIG: SettingConfig[] = [
-  // General
-  { key: 'backendUrl', type: 'string', group: 'General', label: 'Backend URL' },
-  // Behavior (includes confirmations)
-  { key: 'songClick', type: 'select', values: ['click', 'double-click'], group: 'Behavior', label: 'Song click' },
-  { key: 'verseClick', type: 'select', values: ['click', 'double-click'], group: 'Behavior', label: 'Block click' },
-  { key: 'defaultNewVerseName', type: 'string', group: 'Behavior', label: 'Default new block name' },
-  { key: 'overrideSongImport', type: 'boolean', group: 'Behavior', label: 'Override on import' },
-  { key: 'showDeleteFromDb', type: 'boolean', group: 'Behavior', label: 'Show delete from DB' },
-  { key: 'touchDuration', type: 'number', group: 'Behavior', label: 'Long-press duration (ms)' },
-  { key: 'confirmPageLeave', type: 'boolean', group: 'Behavior', label: 'Confirm page leave' },
-  { key: 'confirmShowDeletion', type: 'boolean', group: 'Behavior', label: 'Confirm show deletion' },
-  { key: 'confirmShowOverwrite', type: 'boolean', group: 'Behavior', label: 'Confirm show overwrite' },
-  { key: 'confirmSongDelete', type: 'boolean', group: 'Behavior', label: 'Confirm song delete' },
-  // Notifications
-  { key: 'notificationCount', type: 'number', group: 'Notifications', label: 'Max visible' },
-  { key: 'notificationTime', type: 'number', group: 'Notifications', label: 'Auto-dismiss (ms)' },
-  { key: 'uploadNotifications', type: 'boolean', group: 'Notifications', label: 'Song upload notifications' },
-  { key: 'errorBoundaryNotification', type: 'boolean', group: 'Notifications', label: 'Show uncaught error notifications' },
-  // Presentation
-  { key: 'bibleTranslation', type: 'string', group: 'Presentation', label: 'Default Bible translation' },
-  { key: 'windowFooterVisible', type: 'boolean', group: 'Presentation', label: 'Show window footer bar' },
-  { key: 'transitionMode', type: 'select', values: ['cut', 'fade'], group: 'Presentation', label: 'Transition mode' },
-  { key: 'transitionDuration', type: 'number', group: 'Presentation', label: 'Transition duration (ms)' },
-  { key: 'hideTransitionMode', type: 'select', values: ['cut', 'fade'], group: 'Presentation', label: 'Hide transition' },
-  { key: 'hideTransitionDuration', type: 'number', group: 'Presentation', label: 'Hide transition duration (ms)' },
-  { key: 'videoFadeDuration', type: 'number', group: 'Presentation', label: 'Video play/stop fade duration (ms)' },
-  { key: 'showLicenseNumber', type: 'boolean', group: 'Presentation', label: 'Show license number' },
-  // Electron
-  { key: 'mediaPath', type: 'string', group: 'Electron', label: 'Media directory path' },
-  ...(isElectronApp()
-    ? ([
-        { key: 'autoCheckUpdates', type: 'boolean', group: 'Electron', label: 'Auto-check updates' },
-        { key: 'restoreWindowsOnStart', type: 'boolean', group: 'Electron', label: 'Restore windows on start' },
-      ] as SettingConfig[])
-    : []),
-  // Privacy — last
-  { key: 'metricsEnabled', type: 'boolean', group: 'Privacy', label: 'Send usage metrics' },
-];
-
-const GROUP_ORDER = ['General', 'Behavior', 'Notifications', 'Presentation', 'Keyboard', 'Remote', 'Electron', 'Privacy'];
-
+/**
+ * The settings panel: a category list on the left, the settings of one category on the
+ * right, and a search that cuts across both. What it can show comes from the catalog
+ * (`settingsCatalog.tsx`) — this file only decides how it is laid out and searched.
+ */
 export const Settings = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
   const { LL } = useI18nContext();
-  const dispatch = useAppDispatch();
-
+  const theme = useTheme();
   const settings = useGetSettings();
-  const _updateSetting = useUpdateSetting();
-  const { trackEvent } = useMetrics();
+  // Below this the two panes do not both fit; the categories become a tab strip on top.
+  const stacked = useMediaQuery(theme.breakpoints.down('md'));
 
-  const updateSetting = useCallback(
-    <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
-      // When the user opts out of metrics, fire a final event before disabling
-      if (key === 'metricsEnabled' && value === false) {
-        trackEvent('metrics_disabled');
-      }
-      _updateSetting(key, value);
-      trackEvent('setting_changed', 'setting', key, { value: String(value) });
-    },
-    [_updateSetting, trackEvent],
-  );
-
-  const { data: styles = [] } = useGetStylesQuery();
-  const { data: accountSettings } = useGetAccountSettingsQuery(undefined, { skip: settings.offlineMode });
-  const [updateAccountSettings] = useUpdateAccountSettingsMutation();
-  const [filter, setFilter] = useState('');
+  const [query, setQuery] = useState('');
+  const [activeCategoryId, setActiveCategoryId] = useState('general');
   const [companionOpen, setCompanionOpen] = useState(false);
+  const [desktopAppModalOpen, setDesktopAppModalOpen] = useState(false);
   /** Pending settings import — reviewed in a diff dialog before anything is applied. */
   const [importDiff, setImportDiff] = useState<SettingsDiff | null>(null);
-  const [desktopAppModalOpen, setDesktopAppModalOpen] = useState(false);
-  const [langAnchor, setLangAnchor] = useState<null | HTMLElement>(null);
 
-  const themeIcon =
-    settings.themeMode === 'dark' ? (
-      <DarkMode fontSize="small" />
-    ) : settings.themeMode === 'light' ? (
-      <LightMode fontSize="small" />
-    ) : (
-      <SettingsBrightness fontSize="small" />
-    );
+  const categories = buildSettingsCatalog(LL, {
+    isElectron: isElectronApp(),
+    offlineMode: settings.offlineMode,
+    slots: {
+      globalStyle: () => <GlobalStyleRow />,
+      showTitleTemplate: () => <ShowTitleTemplateRow />,
+      viewerToken: () => <ViewerTokenSection />,
+      remoteCommands: () => <RemoteCommandsBlock />,
+      keyboardMapping: () => <KeyboardMappingEditor />,
+      companion: () => <CompanionBlock onOpen={() => setCompanionOpen(true)} />,
+      autoUpdater: () => <AutoUpdaterSection />,
+      credentials: () => <CredentialsSection />,
+      desktopDownload: () => <DesktopDownloadBlock onOpen={() => setDesktopAppModalOpen(true)} />,
+      backup: () => (
+        <BackupBlock
+          onExport={() => exportSettings()}
+          onImport={async () => {
+            // The review dialog lists every setting that would change, which a confirm()
+            // with a bare count never could. It renders the "nothing to import" case too.
+            const diff = await importSettings();
+            if (diff) setImportDiff(diff);
+          }}
+        />
+      ),
+      privacyNotice: () => <PrivacyNoticeBlock />,
+    },
+  });
 
-  const getGroupLabel = (group: string): string => {
-    switch (group) {
-      case 'General':
-        return LL.SETTINGS.GROUP_GENERAL();
-      case 'Behavior':
-        return LL.SETTINGS.GROUP_BEHAVIOR();
-      case 'Keyboard':
-        return LL.SETTINGS.GROUP_KEYBOARD();
-      case 'Confirmations':
-        return LL.SETTINGS.GROUP_CONFIRMATIONS();
-      case 'Notifications':
-        return LL.SETTINGS.GROUP_NOTIFICATIONS();
-      case 'Privacy':
-        return LL.SETTINGS.GROUP_PRIVACY();
-      case 'Presentation':
-        return LL.SETTINGS.GROUP_PRESENTATION();
-      case 'Musician':
-        return LL.SETTINGS.GROUP_MUSICIAN();
-      case 'Remote':
-        return LL.SETTINGS.GROUP_REMOTE();
-      case 'Electron':
-        return LL.SETTINGS.GROUP_ELECTRON();
-      default:
-        return group;
-    }
-  };
-
-  // Group and filter settings — 'Keyboard' is handled specially (no config entries)
-  const groups: Record<string, SettingConfig[]> = {};
-  const filterLower = filter.toLowerCase();
-
-  for (const config of SETTINGS_CONFIG) {
-    const label = config.label || config.key;
-    if (filterLower && !label.toLowerCase().includes(filterLower) && !config.key.toLowerCase().includes(filterLower)) {
-      continue;
-    }
-    if (!groups[config.group]) groups[config.group] = [];
-    groups[config.group].push(config);
-  }
-
-  // Keyboard group: always present if filter matches
-  const keyboardVisible =
-    !filterLower ||
-    LL.KEYBOARD.MAPPING().toLowerCase().includes(filterLower) ||
-    LL.SETTINGS.GROUP_KEYBOARD().toLowerCase().includes(filterLower);
-  if (keyboardVisible && !groups['Keyboard']) groups['Keyboard'] = [];
-
-  // Remote-control group: always present if filter matches (no config entries — custom section)
-  const remoteVisible =
-    !filterLower || LL.REMOTE.TITLE().toLowerCase().includes(filterLower) || LL.SETTINGS.GROUP_REMOTE().toLowerCase().includes(filterLower);
-  if (remoteVisible && !groups['Remote']) groups['Remote'] = [];
+  const results = useSearchResults(categories, query);
+  const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? categories[0];
 
   return (
     <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right">
@@ -205,436 +107,212 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
           if (diff) await applyImportedSettings(diff);
         }}
       />
-      <Stack sx={{ width: 'min(90vw, 600px)', height: '100%' }}>
-        {/* Header */}
-        <Stack
-          direction="row"
-          sx={{
-            alignItems: 'center',
-            p: 2,
-            borderBottom: 1,
-            borderColor: 'divider',
-          }}
-        >
-          <Typography variant="h5" sx={{ fontWeight: 700, mr: 2 }}>
+
+      <Stack sx={{ width: { xs: '100vw', md: 'min(96vw, 920px)' }, height: '100%' }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 2, pt: 2, pb: 1.5 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, flex: 1 }}>
             {LL.SETTINGS.SETTINGS()}
           </Typography>
-
-          {/* Quick actions toolbar */}
-          <Tooltip title={LL.SETTINGS.EXPORT_BUTTON()}>
-            <IconButton size="small" onClick={() => exportSettings()}>
-              <ExportIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={LL.SETTINGS.IMPORT_BUTTON()}>
-            <IconButton
-              size="small"
-              onClick={async () => {
-                // Hand the diff to the review dialog — it lists every setting that would
-                // change, which a confirm() with a bare count never could. It also renders
-                // the "nothing to import" case, so no alert() is needed either.
-                const diff = await importSettings();
-                if (diff) setImportDiff(diff);
-              }}
-            >
-              <ImportIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={LL.COMPANION.HELPER_TITLE()}>
-            <IconButton size="small" onClick={() => setCompanionOpen(true)}>
-              <CableIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={LL.SETTINGS.THEME()}>
-            <IconButton size="small" onClick={() => dispatch(toggleTheme())}>
-              {themeIcon}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={LL.COMMON.LANGUAGE()}>
-            <IconButton size="small" onClick={(e) => setLangAnchor(e.currentTarget)}>
-              <LanguageIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Menu anchorEl={langAnchor} open={Boolean(langAnchor)} onClose={() => setLangAnchor(null)}>
-            <MenuItem
-              onClick={() => {
-                updateSetting('uiLanguage', 'en');
-                setLangAnchor(null);
-              }}
-              selected={settings.uiLanguage === 'en' || !settings.uiLanguage}
-            >
-              {LL.HEADER.LANGUAGE_EN()}
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                updateSetting('uiLanguage', 'de');
-                setLangAnchor(null);
-              }}
-              selected={settings.uiLanguage === 'de'}
-            >
-              {LL.HEADER.LANGUAGE_DE()}
-            </MenuItem>
-          </Menu>
-
-          <Box
-            sx={{
-              flexGrow: 1,
+          <TextField
+            size="small"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={LL.SETTINGS.FILTER()}
+            sx={{ width: { xs: 160, sm: 260 } }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+                  </InputAdornment>
+                ),
+                endAdornment: query ? (
+                  <InputAdornment position="end">
+                    <IconButton size="small" aria-label={LL.SETTINGS.SEARCH_CLEAR()} onClick={() => setQuery('')}>
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : undefined,
+              },
             }}
           />
-          <IconButton onClick={() => props.setOpen(false)}>
+          <IconButton onClick={() => props.setOpen(false)} aria-label={LL.COMMON.CLOSE()}>
             <CloseIcon />
           </IconButton>
         </Stack>
+        <Divider />
 
-        {/* Search */}
-        <Box sx={{ px: 2, py: 1 }}>
-          <TextField size="small" fullWidth placeholder={LL.SETTINGS.FILTER()} value={filter} onChange={(e) => setFilter(e.target.value)} />
-        </Box>
-
-        <Stack sx={{ flex: 1, overflow: 'auto', px: 1 }}>
-          {/* Setting groups */}
-          {GROUP_ORDER.filter((g) => groups[g] !== undefined).map((groupName) => (
-            <Accordion key={groupName} defaultExpanded={false}>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography sx={{ fontWeight: 600 }}>{getGroupLabel(groupName)}</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Stack spacing={1}>
-                  {/* Global Style selector — inside General group */}
-                  {groupName === 'General' && (
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', py: 0.5 }}>
-                      <Tooltip title={LL.SETTINGS.GLOBAL_STYLE_HINT()}>
-                        <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-                          {LL.SETTINGS.GLOBAL_STYLE()}
-                        </Typography>
-                      </Tooltip>
-                      <Box sx={{ flex: 1 }}>
-                        <Select
-                          size="small"
-                          fullWidth
-                          value={accountSettings?.defaultStyleId ?? settings.globalStyleId ?? 0}
-                          onChange={(e) => {
-                            const id = Number(e.target.value);
-                            updateSetting('globalStyleId', id);
-                            trackEvent('style_changed', 'style', String(id), { scope: 'global' });
-                            if (!settings.offlineMode) {
-                              updateAccountSettings({ defaultStyleId: id || null });
-                            }
-                          }}
-                        >
-                          <MenuItem value={0}>{LL.STYLE.NONE()}</MenuItem>
-                          {styles.map((s) => (
-                            <MenuItem key={s.id} value={s.id}>
-                              {s.name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </Box>
-                    </Stack>
-                  )}
-                  {/* Show Title Template — account-synced, inside General group */}
-                  {groupName === 'General' && (
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', py: 0.5 }}>
-                      <Tooltip title={LL.SETTINGS.OPTIONS.SHOW_TITLE_TEMPLATE.TITLE()}>
-                        <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-                          {LL.SETTINGS.OPTIONS.SHOW_TITLE_TEMPLATE.TITLE()}
-                        </Typography>
-                      </Tooltip>
-                      <Box sx={{ flex: 1 }}>
-                        <SettingInput
-                          key={`showSaveFormat-${accountSettings?.showTitleTemplate ?? settings.showSaveFormat}`}
-                          value={accountSettings?.showTitleTemplate ?? settings.showSaveFormat}
-                          type="string"
-                          onChange={(v) => {
-                            updateSetting('showSaveFormat', v);
-                            if (!settings.offlineMode) {
-                              updateAccountSettings({ showTitleTemplate: v || null });
-                            }
-                          }}
-                        />
-                      </Box>
-                    </Stack>
-                  )}
-                  {/* Viewer Token — inside General group */}
-                  {groupName === 'General' && !settings.offlineMode && <ViewerTokenSection />}
-                  {/* Regular setting rows */}
-                  {(groups[groupName] ?? []).map((config) => (
-                    <SettingRow key={config.key} config={config} value={settings[config.key] as string} />
-                  ))}
-                  {/* Keyboard mapping — inside Keyboard group */}
-                  {groupName === 'Keyboard' && <KeyboardMappingEditor />}
-                  {/* Remote-control command permissions — inside Remote group */}
-                  {groupName === 'Remote' && <RemoteControlSection />}
-                  {/* AutoUpdater — inside Electron group */}
-                  {groupName === 'Electron' && isElectronApp() && <AutoUpdaterSection />}
-                  {/* Saved credentials (OIDC auto-fill) — inside Electron group */}
-                  {groupName === 'Electron' && isElectronApp() && <CredentialsSection />}
-                  {/* Privacy description — inside Privacy group */}
-                  {groupName === 'Privacy' && (
-                    <Stack spacing={0.75} sx={{ pb: 0.5 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {LL.SETTINGS.PRIVACY_DESCRIPTION()}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {LL.SETTINGS.PRIVACY_METRICS_LIST()}
-                      </Typography>
-                    </Stack>
-                  )}
-                </Stack>
-              </AccordionDetails>
-            </Accordion>
-          ))}
-
-          {/* Desktop App Download — hidden inside Electron */}
-          {(!filterLower || LL.DESKTOP_APP.SETTINGS_SECTION().toLowerCase().includes(filterLower)) &&
-            !(typeof window !== 'undefined' && !!(window as { api?: unknown }).api) && (
-              <Accordion defaultExpanded={false}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                  <Typography
-                    sx={{
-                      fontWeight: 600,
-                    }}
+        {/* Searching cuts across every category, so the category nav steps aside for it. */}
+        {results ? (
+          <Box sx={{ flex: 1, overflow: 'auto', px: { xs: 2, md: 3 }, py: 2 }}>
+            <SearchResults results={results} query={query} />
+          </Box>
+        ) : stacked ? (
+          <Stack sx={{ flex: 1, minHeight: 0 }}>
+            <Tabs
+              value={activeCategory.id}
+              onChange={(_, id) => setActiveCategoryId(id)}
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 44 }}
+            >
+              {categories.map((category) => (
+                <Tab key={category.id} value={category.id} label={category.label} sx={{ minHeight: 44, textTransform: 'none' }} />
+              ))}
+            </Tabs>
+            <Box sx={{ flex: 1, overflow: 'auto', px: 2, py: 2 }}>
+              <CategoryPanel category={activeCategory} showHeading={false} />
+            </Box>
+          </Stack>
+        ) : (
+          <Stack direction="row" sx={{ flex: 1, minHeight: 0 }}>
+            <List dense sx={{ width: NAV_WIDTH, flexShrink: 0, borderRight: 1, borderColor: 'divider', overflow: 'auto', py: 1 }}>
+              {categories.map((category) => {
+                const Icon = category.icon;
+                return (
+                  <ListItemButton
+                    key={category.id}
+                    selected={category.id === activeCategory.id}
+                    onClick={() => setActiveCategoryId(category.id)}
+                    sx={{ borderRadius: 1, mx: 1, mb: 0.25 }}
                   >
-                    {LL.DESKTOP_APP.SETTINGS_SECTION()}
-                  </Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                  <Stack spacing={1}>
-                    <Button variant="outlined" startIcon={<DownloadIcon />} onClick={() => setDesktopAppModalOpen(true)}>
-                      {LL.DESKTOP_APP.SETTINGS_DOWNLOAD()}
-                    </Button>
-                  </Stack>
-                </AccordionDetails>
-              </Accordion>
-            )}
-        </Stack>
+                    <ListItemIcon sx={{ minWidth: 34 }}>
+                      <Icon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={category.label} />
+                  </ListItemButton>
+                );
+              })}
+            </List>
+            <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 2 }}>
+              <CategoryPanel category={activeCategory} showHeading />
+            </Box>
+          </Stack>
+        )}
       </Stack>
     </Drawer>
   );
 };
 
-/**
- * Remote-control permissions — which commands connected mobile control devices
- * (/control page) are allowed to trigger. Missing key = allowed; `false` = denied.
- */
-const RemoteControlSection = () => {
+/** One category: its heading, then each of its sections. */
+const CategoryPanel = ({ category, showHeading }: { category: SettingsCategory; showHeading: boolean }) => {
   const { LL } = useI18nContext();
-  const { remoteControlCommands } = useGetSettings();
-  const updateSetting = useUpdateSetting();
-
-  const commandLabel = (id: RemoteCommandId): string => {
-    switch (id) {
-      case 'prev_block':
-        return LL.REMOTE.CMD_PREV_BLOCK();
-      case 'next_block':
-        return LL.REMOTE.CMD_NEXT_BLOCK();
-      case 'prev_item':
-        return LL.REMOTE.CMD_PREV_ITEM();
-      case 'next_item':
-        return LL.REMOTE.CMD_NEXT_ITEM();
-      case 'toggle_text':
-        return LL.REMOTE.CMD_TOGGLE_TEXT();
-      case 'toggle_video':
-        return LL.REMOTE.CMD_TOGGLE_VIDEO();
-      case 'toggle_video_playback':
-        return LL.REMOTE.CMD_TOGGLE_VIDEO_PLAYBACK();
-      case 'toggle_black':
-        return LL.REMOTE.CMD_TOGGLE_BLACK();
-    }
-  };
+  const sections = category.sections;
 
   return (
-    <Stack spacing={0.5}>
-      <Typography variant="body2" color="text.secondary" sx={{ pb: 0.5 }}>
-        {LL.REMOTE.SETTINGS_HINT()}
-      </Typography>
-      {REMOTE_COMMAND_IDS.map((id) => (
-        <Stack key={id} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-            {commandLabel(id)}
+    <Stack spacing={1}>
+      {showHeading && (
+        <Box sx={{ pb: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            {category.label}
           </Typography>
-          <Switch
-            size="small"
-            checked={remoteControlCommands[id] !== false}
-            onChange={(e) => updateSetting('remoteControlCommands', { ...remoteControlCommands, [id]: e.target.checked })}
-          />
-        </Stack>
-      ))}
-    </Stack>
-  );
-};
-
-/** Individual setting row */
-const SettingRow = ({ config, value }: { config: SettingConfig; value: string | number }) => {
-  const { LL } = useI18nContext();
-  const _updateSetting = useUpdateSetting();
-  const { trackEvent } = useMetrics();
-  const updateSetting = useCallback(
-    <K extends keyof SettingsState>(key: K, val: SettingsState[K]) => {
-      _updateSetting(key, val);
-      trackEvent('setting_changed', 'setting', key, { value: String(val) });
-    },
-    [_updateSetting, trackEvent],
-  );
-
-  const getLabel = (cfg: SettingConfig) => {
-    switch (cfg.key) {
-      case 'backendUrl':
-        return LL.SETTINGS.OPTIONS.BACKEND_URL.TITLE();
-      case 'showSaveFormat':
-        return LL.SETTINGS.OPTIONS.SHOW_TITLE_TEMPLATE.TITLE();
-      case 'songClick':
-        return LL.SETTINGS.OPTIONS.SONG_CLICK_BEHAVIOUR.TITLE();
-      case 'verseClick':
-        return LL.SETTINGS.OPTIONS.VERSE_CLICK_BEHAVIOUR.TITLE();
-      case 'defaultNewVerseName':
-        return LL.SETTINGS.OPTIONS.DEFAULT_NEW_VERSE_NAME.TITLE();
-      case 'defaultVerseName':
-        return LL.SETTINGS.OPTIONS.DEFAULT_VERSE_NAME.TITLE();
-      case 'overrideSongImport':
-        return LL.SETTINGS.OPTIONS.OVERRIDE_SONG_BY_IMPORT.TITLE();
-      case 'showDeleteFromDb':
-        return LL.SETTINGS.OPTIONS.SHOW_REMOVE_SONG_FROM_DATABASE.TITLE();
-      case 'touchDuration':
-        return LL.SETTINGS.OPTIONS.TOUCH_DURATION.TITLE();
-      case 'confirmPageLeave':
-        return LL.SETTINGS.OPTIONS.CONFIRM_PAGE_LEAVE.TITLE();
-      case 'confirmShowDeletion':
-        return LL.SETTINGS.OPTIONS.CONFIRM_SHOW_DELETION.TITLE();
-      case 'confirmShowOverwrite':
-        return LL.SETTINGS.OPTIONS.CONFIRM_SHOW_OVERWRITE.TITLE();
-      case 'confirmSongDelete':
-        return LL.SETTINGS.OPTIONS.CONFIRM_SONG_DELETE.TITLE();
-      case 'notificationCount':
-        return LL.SETTINGS.OPTIONS.NOTIFICATION_COUNT.TITLE();
-      case 'notificationTime':
-        return LL.SETTINGS.OPTIONS.NOTIFICATION_DISAPPEAR_TIME.TITLE();
-      case 'uploadNotifications':
-        return LL.SETTINGS.OPTIONS.SHOW_SONG_UPLOAD_NOTIFICATIONS.TITLE();
-      case 'nextLinePreview':
-        return LL.SETTINGS.OPTIONS.NEXT_LINE_PREVIEW.TITLE();
-      case 'nextLinePreviewColor':
-        return LL.SETTINGS.OPTIONS.NEXT_LINE_PREVIEW_COLOR.TITLE();
-      case 'nextLineTranslation':
-        return LL.SETTINGS.OPTIONS.NEXT_LINE_TRANSLATION.TITLE();
-      case 'bibleTranslation':
-        return LL.SETTINGS.OPTIONS.BIBLE_TRANSLATION.TITLE();
-      case 'windowFooterVisible':
-        return LL.SETTINGS.OPTIONS.WINDOW_FOOTER_VISIBLE.TITLE();
-      case 'transitionMode':
-        return LL.SETTINGS.OPTIONS.TRANSITION_MODE.TITLE();
-      case 'transitionDuration':
-        return LL.SETTINGS.OPTIONS.TRANSITION_DURATION.TITLE();
-      case 'hideTransitionMode':
-        return LL.SETTINGS.OPTIONS.HIDE_TRANSITION_MODE.TITLE();
-      case 'hideTransitionDuration':
-        return LL.SETTINGS.OPTIONS.HIDE_TRANSITION_DURATION.TITLE();
-      case 'videoFadeDuration':
-        return LL.SETTINGS.OPTIONS.VIDEO_FADE_DURATION.TITLE();
-      case 'showLicenseNumber':
-        return LL.SETTINGS.OPTIONS.SHOW_LICENSE_NUMBER.TITLE();
-      case 'mediaPath':
-        return LL.SETTINGS.OPTIONS.MEDIA_PATH.TITLE();
-      case 'autoCheckUpdates':
-        return LL.SETTINGS.OPTIONS.AUTO_CHECK_UPDATES.TITLE();
-      case 'restoreWindowsOnStart':
-        return LL.SETTINGS.OPTIONS.RESTORE_WINDOWS_ON_START.TITLE();
-      default:
-        return cfg.label || String(cfg.key);
-    }
-  };
-
-  const label = getLabel(config);
-
-  return (
-    <Stack
-      direction="row"
-      spacing={1}
-      sx={{
-        alignItems: 'center',
-        py: 0.5,
-      }}
-    >
-      <Tooltip title={config.description || label}>
-        <Typography variant="body2" sx={{ flex: 1, minWidth: 0 }} noWrap>
-          {label}
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+            {category.description}
+          </Typography>
+        </Box>
+      )}
+      {sections.length === 0 ? (
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          {LL.SETTINGS.NOTHING_HERE()}
         </Typography>
-      </Tooltip>
-      <Box sx={{ flex: 1 }}>
-        {config.type === 'boolean' ? (
-          <Switch size="small" checked={Boolean(value)} onChange={(e) => updateSetting(config.key, e.target.checked)} />
-        ) : config.type === 'select' && config.values ? (
-          <Select size="small" fullWidth value={String(value)} onChange={(e) => updateSetting(config.key, e.target.value)}>
-            {config.values.map((v) => (
-              <MenuItem key={v} value={v}>
-                {v}
-              </MenuItem>
-            ))}
-          </Select>
-        ) : config.type === 'color' ? (
-          <ColorSwatchButton value={String(value) || '#000000'} onChange={(c) => updateSetting(config.key, c)} />
-        ) : config.key === 'mediaPath' ? (
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{
-              alignItems: 'center',
-            }}
-          >
-            <SettingInput value={value} type="string" onChange={(v) => updateSetting(config.key, v)} />
-            {window.api?.pickDirectory && (
-              <Tooltip title={LL.STYLE.BROWSE()}>
-                <IconButton
-                  size="small"
-                  onClick={async () => {
-                    const dir = await window.api.pickDirectory({ title: LL.SETTINGS.OPTIONS.MEDIA_PATH.DESCRIPTION() });
-                    if (dir) {
-                      updateSetting('mediaPath', dir);
-                    }
-                  }}
-                >
-                  <FolderOpenIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Stack>
-        ) : (
-          <SettingInput
-            value={value}
-            type={config.type === 'number' ? 'number' : 'string'}
-            onChange={(v) => updateSetting(config.key, v)}
-          />
-        )}
-      </Box>
+      ) : (
+        sections.map((section, index) => <SectionBlock key={section.id} section={section} divider={index > 0} />)
+      )}
     </Stack>
   );
 };
 
-/** Controlled input with local state for blur-to-save behavior */
-const SettingInput = <T extends string | number = string>({
-  value,
-  type,
-  onChange,
-}: {
-  value: T;
-  type: T extends number ? 'number' : 'string';
-  onChange: (v: T) => void;
-}) => {
-  const [localValue, setLocalValue] = useState<string>(String(value));
-  useEffect(() => {
-    setLocalValue(String(value ?? ''));
-  }, [value]);
+const SectionBlock = ({ section, divider }: { section: SettingsSection; divider: boolean }) => (
+  <Box>
+    {divider && <Divider sx={{ my: 1.5 }} />}
+    {section.title && (
+      <Typography variant="subtitle2" sx={{ fontWeight: 600, pt: 0.5 }}>
+        {section.title}
+      </Typography>
+    )}
+    {section.description && (
+      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', pb: 0.5 }}>
+        {section.description}
+      </Typography>
+    )}
+    {section.settings?.map((def) => (
+      <SettingRow key={def.key} def={def} />
+    ))}
+    {section.render?.()}
+  </Box>
+);
+
+type SearchHit = { category: SettingsCategory; sections: SettingsSection[] };
+
+/**
+ * Search across every category. A row matches on its label, description or storage key;
+ * a block that is not made of rows matches on its heading, its blurb or its keywords, and
+ * is then shown whole — half a keyboard editor would help nobody.
+ *
+ * Returns null when there is nothing to search for, which is what puts the panel back
+ * into its normal category view.
+ */
+const useSearchResults = (categories: SettingsCategory[], query: string): SearchHit[] | null =>
+  useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return null;
+    const hit = (text?: string) => !!text && text.toLowerCase().includes(needle);
+
+    const results: SearchHit[] = [];
+    for (const category of categories) {
+      const sections: SettingsSection[] = [];
+      for (const section of category.sections) {
+        const sectionMatches = hit(section.title) || hit(section.description) || (section.keywords ?? []).some((keyword) => hit(keyword));
+        if (sectionMatches) {
+          sections.push(section);
+          continue;
+        }
+        const settings = (section.settings ?? []).filter((def) => hit(def.label) || hit(def.description) || hit(def.key));
+        // Keep the row, drop the custom block: it did not match, and it is rarely small.
+        if (settings.length > 0) sections.push({ ...section, settings, render: undefined });
+      }
+      if (sections.length > 0) results.push({ category, sections });
+    }
+    return results;
+  }, [categories, query]);
+
+const SearchResults = ({ results, query }: { results: SearchHit[]; query: string }) => {
+  const { LL } = useI18nContext();
+
+  if (results.length === 0) {
+    return (
+      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+        {LL.SETTINGS.SEARCH_NO_RESULTS({ query })}
+      </Typography>
+    );
+  }
+
+  const count = results.reduce(
+    (total, hit) => total + hit.sections.reduce((n, section) => n + (section.settings?.length ?? (section.render ? 1 : 0)), 0),
+    0,
+  );
 
   return (
-    <OutlinedInput
-      size="small"
-      value={localValue}
-      fullWidth
-      type={type === 'number' ? 'number' : 'text'}
-      onChange={(e) => setLocalValue(e.target.value)}
-      onBlur={() => {
-        onChange((type === 'number' ? Number(localValue) : localValue) as T);
-      }}
-    />
+    <Stack spacing={2}>
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+        {LL.SETTINGS.SEARCH_RESULT_COUNT({ count })}
+      </Typography>
+      {results.map(({ category, sections }) => {
+        const Icon = category.icon;
+        return (
+          <Box key={category.id}>
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center', pb: 0.5 }}>
+              <Icon fontSize="small" sx={{ color: 'text.secondary' }} />
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.secondary' }}>
+                {category.label}
+              </Typography>
+            </Stack>
+            {sections.map((section) => (
+              <SectionBlock key={section.id} section={section} divider={false} />
+            ))}
+          </Box>
+        );
+      })}
+    </Stack>
   );
 };

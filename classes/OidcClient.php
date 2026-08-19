@@ -351,7 +351,14 @@ class OidcClient
      * producing a request the provider refuses, we drop the redirect and let the provider
      * show its own signed-out page. The local session is destroyed either way.
      */
-    public function getLogoutUrl(?string $idToken = null, ?string $redirectUrl = null): string
+    /**
+     * Build the provider's RP-initiated logout URL.
+     *
+     * `$redirectUrl` has to be one of the post-logout redirect URIs registered for this
+     * client, compared as an exact string — so pass a bare URL and put anything the app
+     * needs on the way back into `$state`, which the provider appends to the redirect.
+     */
+    public function getLogoutUrl(?string $idToken = null, ?string $redirectUrl = null, ?string $state = null): string
     {
         $discovery = $this->getDiscoveryDocument();
         $endSessionEndpoint = $discovery['end_session_endpoint'] ?? null;
@@ -371,6 +378,10 @@ class OidcClient
         $params = ['id_token_hint' => $idToken];
         if ($redirectUrl) {
             $params['post_logout_redirect_uri'] = $redirectUrl;
+            // Only meaningful together with a redirect URI — the provider echoes it back there.
+            if ($state !== null && $state !== '') {
+                $params['state'] = $state;
+            }
         }
 
         return $endSessionEndpoint . '?' . http_build_query($params);

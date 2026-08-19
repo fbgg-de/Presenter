@@ -1402,6 +1402,14 @@ type RootTranslation = {
 		 * S​o​n​g​ ​u​p​d​a​t​e​d
 		 */
 		SONG_UPDATE_APPLIED: string
+		/**
+		 * R​e​n​a​m​e
+		 */
+		RENAME: string
+		/**
+		 * L​e​a​v​e​ ​e​m​p​t​y​ ​t​o​ ​s​h​o​w​ ​t​h​e​ ​f​i​l​e​ ​n​a​m​e​ ​o​r​ ​U​R​L
+		 */
+		NAME_HINT: string
 	}
 	BIBLE: {
 		/**
@@ -1546,6 +1554,10 @@ type RootTranslation = {
 		 * L​o​o​p
 		 */
 		LOOP: string
+		/**
+		 * N​a​m​e​ ​(​o​p​t​i​o​n​a​l​)
+		 */
+		NAME_OPTIONAL: string
 	}
 	CONTROL: {
 		/**
@@ -2938,6 +2950,10 @@ type RootTranslation = {
 		 */
 		ACTION_NEXT_LINE: string
 		/**
+		 * J​u​m​p​ ​t​o​ ​F​i​r​s​t​ ​B​l​o​c​k
+		 */
+		ACTION_JUMP_TO_START: string
+		/**
 		 * T​o​g​g​l​e​ ​B​l​a​c​k
 		 */
 		ACTION_TOGGLE_BLACK: string
@@ -2964,9 +2980,31 @@ type RootTranslation = {
 		 */
 		SETTINGS: string
 		/**
-		 * F​i​l​t​e​r​ ​s​e​t​t​i​n​g​s​.​.​.
+		 * S​e​a​r​c​h​ ​s​e​t​t​i​n​g​s​.​.​.
 		 */
 		FILTER: string
+		/**
+		 * N​o​ ​s​e​t​t​i​n​g​ ​m​a​t​c​h​e​s​ ​"​{​q​u​e​r​y​}​"​.
+		 * @param {string} query
+		 */
+		SEARCH_NO_RESULTS: RequiredParams<'query'>
+		/**
+		 * {​c​o​u​n​t​}​ ​r​e​s​u​l​t​{​{​s​}​}
+		 * @param {number} count
+		 */
+		SEARCH_RESULT_COUNT: RequiredParams<'count'>
+		/**
+		 * C​l​e​a​r​ ​s​e​a​r​c​h
+		 */
+		SEARCH_CLEAR: string
+		/**
+		 * R​e​s​e​t​ ​t​o​ ​d​e​f​a​u​l​t
+		 */
+		RESET_TO_DEFAULT: string
+		/**
+		 * N​o​t​h​i​n​g​ ​t​o​ ​c​o​n​f​i​g​u​r​e​ ​h​e​r​e​ ​i​n​ ​t​h​i​s​ ​m​o​d​e​.
+		 */
+		NOTHING_HERE: string
 		/**
 		 * G​l​o​b​a​l​ ​S​t​y​l​e
 		 */
@@ -2988,10 +3026,6 @@ type RootTranslation = {
 		 */
 		GROUP_KEYBOARD: string
 		/**
-		 * C​o​n​f​i​r​m​a​t​i​o​n​s
-		 */
-		GROUP_CONFIRMATIONS: string
-		/**
 		 * N​o​t​i​f​i​c​a​t​i​o​n​s
 		 */
 		GROUP_NOTIFICATIONS: string
@@ -3012,17 +3046,17 @@ type RootTranslation = {
 		 */
 		GROUP_PRESENTATION: string
 		/**
-		 * M​u​s​i​c​i​a​n
-		 */
-		GROUP_MUSICIAN: string
-		/**
 		 * R​e​m​o​t​e​ ​C​o​n​t​r​o​l
 		 */
 		GROUP_REMOTE: string
 		/**
-		 * E​l​e​c​t​r​o​n
+		 * S​o​n​g​s​ ​&​ ​L​i​b​r​a​r​y
 		 */
-		GROUP_ELECTRON: string
+		GROUP_LIBRARY: string
+		/**
+		 * D​e​s​k​t​o​p​ ​A​p​p
+		 */
+		GROUP_DESKTOP: string
 		/**
 		 * E​x​p​o​r​t​ ​/​ ​I​m​p​o​r​t
 		 */
@@ -3107,6 +3141,172 @@ type RootTranslation = {
 		 * @param {unknown} count
 		 */
 		IMPORT_APPLY: RequiredParams<'count'>
+		GROUP_DESC: {
+			/**
+			 * L​a​n​g​u​a​g​e​,​ ​a​p​p​e​a​r​a​n​c​e​,​ ​a​c​c​o​u​n​t​-​w​i​d​e​ ​d​e​f​a​u​l​t​s​,​ ​a​n​d​ ​y​o​u​r​ ​s​e​t​t​i​n​g​s​ ​b​a​c​k​u​p​.
+			 */
+			GENERAL: string
+			/**
+			 * W​h​a​t​ ​t​h​e​ ​a​u​d​i​e​n​c​e​ ​s​e​e​s​,​ ​a​n​d​ ​h​o​w​ ​i​t​e​m​s​ ​c​h​a​n​g​e​ ​o​n​ ​s​c​r​e​e​n​.
+			 */
+			PRESENTATION: string
+			/**
+			 * H​o​w​ ​s​o​n​g​s​ ​a​r​e​ ​o​p​e​n​e​d​,​ ​e​d​i​t​e​d​,​ ​i​m​p​o​r​t​e​d​ ​a​n​d​ ​d​e​l​e​t​e​d​.
+			 */
+			LIBRARY: string
+			/**
+			 * M​e​s​s​a​g​e​s​ ​t​h​e​ ​a​p​p​ ​s​h​o​w​s​ ​y​o​u​,​ ​a​n​d​ ​t​h​e​ ​q​u​e​s​t​i​o​n​s​ ​i​t​ ​a​s​k​s​ ​b​e​f​o​r​e​ ​a​c​t​i​n​g​.
+			 */
+			NOTIFICATIONS: string
+			/**
+			 * S​h​o​r​t​c​u​t​s​ ​f​o​r​ ​r​u​n​n​i​n​g​ ​a​ ​s​h​o​w​ ​w​i​t​h​o​u​t​ ​t​h​e​ ​m​o​u​s​e​.
+			 */
+			KEYBOARD: string
+			/**
+			 * P​h​o​n​e​s​,​ ​v​i​e​w​e​r​ ​s​c​r​e​e​n​s​ ​a​n​d​ ​e​x​t​e​r​n​a​l​ ​c​o​n​t​r​o​l​l​e​r​s​ ​c​o​n​n​e​c​t​e​d​ ​t​o​ ​t​h​i​s​ ​p​r​e​s​e​n​t​e​r​.
+			 */
+			REMOTE: string
+			/**
+			 * O​p​t​i​o​n​s​ ​t​h​a​t​ ​o​n​l​y​ ​a​p​p​l​y​ ​t​o​ ​t​h​e​ ​i​n​s​t​a​l​l​e​d​ ​d​e​s​k​t​o​p​ ​a​p​p​.
+			 */
+			DESKTOP: string
+			/**
+			 * W​h​a​t​ ​t​h​i​s​ ​d​e​v​i​c​e​ ​r​e​p​o​r​t​s​ ​b​a​c​k​,​ ​a​n​d​ ​w​h​a​t​ ​i​s​ ​i​n​ ​i​t​.
+			 */
+			PRIVACY: string
+		}
+		SECTIONS: {
+			/**
+			 * A​p​p​e​a​r​a​n​c​e
+			 */
+			APPEARANCE: string
+			/**
+			 * A​c​c​o​u​n​t​ ​d​e​f​a​u​l​t​s
+			 */
+			ACCOUNT_DEFAULTS: string
+			/**
+			 * C​o​n​n​e​c​t​i​o​n
+			 */
+			CONNECTION: string
+			/**
+			 * T​r​a​n​s​i​t​i​o​n​s
+			 */
+			TRANSITIONS: string
+			/**
+			 * O​n​ ​s​c​r​e​e​n
+			 */
+			ON_SCREEN: string
+			/**
+			 * C​o​n​t​r​o​l​ ​v​i​e​w
+			 */
+			CONTROL_VIEW: string
+			/**
+			 * S​e​l​e​c​t​i​n​g​ ​a​n​d​ ​n​a​v​i​g​a​t​i​n​g
+			 */
+			SELECTING: string
+			/**
+			 * E​d​i​t​i​n​g​ ​s​o​n​g​s
+			 */
+			EDITING: string
+			/**
+			 * I​m​p​o​r​t​i​n​g​ ​a​n​d​ ​d​e​l​e​t​i​n​g
+			 */
+			IMPORTING: string
+			/**
+			 * B​i​b​l​e
+			 */
+			BIBLE: string
+			/**
+			 * C​o​n​f​i​r​m​a​t​i​o​n​ ​d​i​a​l​o​g​s
+			 */
+			CONFIRMATIONS: string
+			/**
+			 * T​o​a​s​t​ ​n​o​t​i​f​i​c​a​t​i​o​n​s
+			 */
+			TOASTS: string
+			/**
+			 * M​o​b​i​l​e​ ​r​e​m​o​t​e​ ​c​o​n​t​r​o​l
+			 */
+			REMOTE_COMMANDS: string
+			/**
+			 * T​e​x​t​ ​v​i​e​w​e​r​ ​p​a​g​e
+			 */
+			VIEWER: string
+			/**
+			 * E​x​t​e​r​n​a​l​ ​c​o​n​t​r​o​l
+			 */
+			COMPANION: string
+			/**
+			 * U​p​d​a​t​e​s
+			 */
+			UPDATES: string
+			/**
+			 * M​e​d​i​a​ ​f​i​l​e​s
+			 */
+			MEDIA: string
+			/**
+			 * P​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s
+			 */
+			WINDOWS: string
+			/**
+			 * S​a​v​e​d​ ​s​i​g​n​-​i​n
+			 */
+			SIGN_IN: string
+			/**
+			 * B​a​c​k​u​p​ ​a​n​d​ ​t​r​a​n​s​f​e​r
+			 */
+			BACKUP: string
+			/**
+			 * U​s​a​g​e​ ​m​e​t​r​i​c​s
+			 */
+			METRICS: string
+			/**
+			 * G​e​t​ ​t​h​e​ ​d​e​s​k​t​o​p​ ​a​p​p
+			 */
+			GET_DESKTOP: string
+		}
+		VALUES: {
+			/**
+			 * S​i​n​g​l​e​ ​c​l​i​c​k
+			 */
+			CLICK: string
+			/**
+			 * D​o​u​b​l​e​ ​c​l​i​c​k
+			 */
+			DOUBLE_CLICK: string
+			/**
+			 * C​u​t​ ​(​i​n​s​t​a​n​t​)
+			 */
+			CUT: string
+			/**
+			 * F​a​d​e
+			 */
+			FADE: string
+			/**
+			 * L​i​g​h​t
+			 */
+			THEME_LIGHT: string
+			/**
+			 * D​a​r​k
+			 */
+			THEME_DARK: string
+			/**
+			 * F​o​l​l​o​w​ ​s​y​s​t​e​m
+			 */
+			THEME_SYSTEM: string
+		}
+		/**
+		 * O​p​e​n​ ​t​h​e​ ​C​o​m​p​a​n​i​o​n​ ​/​ ​W​e​b​S​o​c​k​e​t​ ​h​e​l​p​e​r
+		 */
+		COMPANION_OPEN: string
+		/**
+		 * C​o​m​m​a​n​d​ ​r​e​f​e​r​e​n​c​e​ ​a​n​d​ ​c​o​n​n​e​c​t​i​o​n​ ​d​e​t​a​i​l​s​ ​f​o​r​ ​S​t​r​e​a​m​D​e​c​k​,​ ​B​i​t​f​o​c​u​s​ ​C​o​m​p​a​n​i​o​n​ ​a​n​d​ ​c​u​s​t​o​m​ ​s​c​r​i​p​t​s​.
+		 */
+		COMPANION_DESC: string
+		/**
+		 * S​a​v​e​ ​e​v​e​r​y​ ​s​e​t​t​i​n​g​ ​o​n​ ​t​h​i​s​ ​d​e​v​i​c​e​ ​t​o​ ​a​ ​J​S​O​N​ ​f​i​l​e​,​ ​o​r​ ​a​p​p​l​y​ ​o​n​e​ ​f​r​o​m​ ​a​n​o​t​h​e​r​ ​d​e​v​i​c​e​.​ ​I​m​p​o​r​t​s​ ​a​r​e​ ​r​e​v​i​e​w​e​d​ ​b​e​f​o​r​e​ ​a​n​y​t​h​i​n​g​ ​c​h​a​n​g​e​s​.
+		 */
+		EXPORT_DESC: string
 		OPTIONS: {
 			APP_DATA: {
 				/**
@@ -3363,6 +3563,36 @@ type RootTranslation = {
 				 */
 				DESCRIPTION: string
 			}
+			UI_LANGUAGE: {
+				/**
+				 * L​a​n​g​u​a​g​e
+				 */
+				TITLE: string
+				/**
+				 * L​a​n​g​u​a​g​e​ ​o​f​ ​t​h​e​ ​a​p​p​ ​i​n​t​e​r​f​a​c​e
+				 */
+				DESCRIPTION: string
+			}
+			THEME_MODE: {
+				/**
+				 * T​h​e​m​e
+				 */
+				TITLE: string
+				/**
+				 * L​i​g​h​t​,​ ​d​a​r​k​,​ ​o​r​ ​w​h​a​t​e​v​e​r​ ​t​h​e​ ​o​p​e​r​a​t​i​n​g​ ​s​y​s​t​e​m​ ​i​s​ ​s​e​t​ ​t​o
+				 */
+				DESCRIPTION: string
+			}
+			MEDIA_PREVIEW_ASPECT: {
+				/**
+				 * M​e​d​i​a​ ​p​r​e​v​i​e​w​ ​s​h​a​p​e
+				 */
+				TITLE: string
+				/**
+				 * A​s​p​e​c​t​ ​r​a​t​i​o​ ​t​h​e​ ​c​o​n​t​r​o​l​ ​v​i​e​w​ ​f​r​a​m​e​s​ ​m​e​d​i​a​ ​p​r​e​v​i​e​w​s​ ​i​n​ ​—​ ​s​e​t​ ​i​t​ ​t​o​ ​m​a​t​c​h​ ​y​o​u​r​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​s​c​r​e​e​n
+				 */
+				DESCRIPTION: string
+			}
 			METRICS_ENABLED: {
 				/**
 				 * S​e​n​d​ ​u​s​a​g​e​ ​m​e​t​r​i​c​s
@@ -3380,36 +3610,6 @@ type RootTranslation = {
 				TITLE: string
 				/**
 				 * D​i​s​p​l​a​y​ ​b​l​o​c​k​s​ ​a​s​ ​c​a​r​d​s​ ​(​b​o​x​e​d​)​ ​o​r​ ​a​s​ ​a​ ​l​i​s​t​ ​i​n​ ​t​h​e​ ​c​o​n​t​r​o​l​ ​v​i​e​w
-				 */
-				DESCRIPTION: string
-			}
-			NEXT_LINE_PREVIEW: {
-				/**
-				 * N​e​x​t​-​l​i​n​e​ ​p​r​e​v​i​e​w
-				 */
-				TITLE: string
-				/**
-				 * S​h​o​w​ ​t​h​e​ ​f​i​r​s​t​ ​l​i​n​e​ ​o​f​ ​t​h​e​ ​n​e​x​t​ ​b​l​o​c​k​ ​o​n​ ​t​h​e​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​s​c​r​e​e​n
-				 */
-				DESCRIPTION: string
-			}
-			NEXT_LINE_PREVIEW_COLOR: {
-				/**
-				 * P​r​e​v​i​e​w​ ​l​i​n​e​ ​c​o​l​o​r
-				 */
-				TITLE: string
-				/**
-				 * C​o​l​o​r​ ​o​f​ ​t​h​e​ ​n​e​x​t​-​b​l​o​c​k​ ​p​r​e​v​i​e​w​ ​l​i​n​e​ ​o​n​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s
-				 */
-				DESCRIPTION: string
-			}
-			NEXT_LINE_TRANSLATION: {
-				/**
-				 * P​r​e​v​i​e​w​ ​t​r​a​n​s​l​a​t​i​o​n​s
-				 */
-				TITLE: string
-				/**
-				 * I​n​c​l​u​d​e​ ​a​l​l​ ​d​i​s​p​l​a​y​e​d​ ​l​a​n​g​u​a​g​e​s​ ​i​n​ ​t​h​e​ ​n​e​x​t​-​l​i​n​e​ ​p​r​e​v​i​e​w
 				 */
 				DESCRIPTION: string
 			}
@@ -3485,11 +3685,11 @@ type RootTranslation = {
 			}
 			MEDIA_PATH: {
 				/**
-				 * M​e​d​i​a​ ​d​i​r​e​c​t​o​r​y​ ​p​a​t​h
+				 * M​e​d​i​a​ ​l​o​c​a​t​i​o​n
 				 */
 				TITLE: string
 				/**
-				 * L​o​c​a​l​ ​d​i​r​e​c​t​o​r​y​ ​f​o​r​ ​m​e​d​i​a​ ​f​i​l​e​s​ ​(​E​l​e​c​t​r​o​n​ ​o​n​l​y​)
+				 * W​h​e​r​e​ ​m​e​d​i​a​ ​f​i​l​e​s​ ​a​r​e​ ​r​e​a​d​ ​f​r​o​m​:​ ​a​ ​f​o​l​d​e​r​ ​o​n​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​ ​i​n​ ​t​h​e​ ​d​e​s​k​t​o​p​ ​a​p​p​,​ ​o​r​ ​t​h​e​ ​b​a​s​e​ ​U​R​L​ ​o​f​ ​y​o​u​r​ ​m​e​d​i​a​ ​s​e​r​v​e​r​ ​i​n​ ​t​h​e​ ​b​r​o​w​s​e​r
 				 */
 				DESCRIPTION: string
 			}
@@ -6914,6 +7114,14 @@ export type TranslationFunctions = {
 		 * Song updated
 		 */
 		SONG_UPDATE_APPLIED: () => LocalizedString
+		/**
+		 * Rename
+		 */
+		RENAME: () => LocalizedString
+		/**
+		 * Leave empty to show the file name or URL
+		 */
+		NAME_HINT: () => LocalizedString
 	}
 	BIBLE: {
 		/**
@@ -7058,6 +7266,10 @@ export type TranslationFunctions = {
 		 * Loop
 		 */
 		LOOP: () => LocalizedString
+		/**
+		 * Name (optional)
+		 */
+		NAME_OPTIONAL: () => LocalizedString
 	}
 	CONTROL: {
 		/**
@@ -8433,6 +8645,10 @@ export type TranslationFunctions = {
 		 */
 		ACTION_NEXT_LINE: () => LocalizedString
 		/**
+		 * Jump to First Block
+		 */
+		ACTION_JUMP_TO_START: () => LocalizedString
+		/**
 		 * Toggle Black
 		 */
 		ACTION_TOGGLE_BLACK: () => LocalizedString
@@ -8459,9 +8675,29 @@ export type TranslationFunctions = {
 		 */
 		SETTINGS: () => LocalizedString
 		/**
-		 * Filter settings...
+		 * Search settings...
 		 */
 		FILTER: () => LocalizedString
+		/**
+		 * No setting matches "{query}".
+		 */
+		SEARCH_NO_RESULTS: (arg: { query: string }) => LocalizedString
+		/**
+		 * {count} result{{s}}
+		 */
+		SEARCH_RESULT_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Clear search
+		 */
+		SEARCH_CLEAR: () => LocalizedString
+		/**
+		 * Reset to default
+		 */
+		RESET_TO_DEFAULT: () => LocalizedString
+		/**
+		 * Nothing to configure here in this mode.
+		 */
+		NOTHING_HERE: () => LocalizedString
 		/**
 		 * Global Style
 		 */
@@ -8483,10 +8719,6 @@ export type TranslationFunctions = {
 		 */
 		GROUP_KEYBOARD: () => LocalizedString
 		/**
-		 * Confirmations
-		 */
-		GROUP_CONFIRMATIONS: () => LocalizedString
-		/**
 		 * Notifications
 		 */
 		GROUP_NOTIFICATIONS: () => LocalizedString
@@ -8507,17 +8739,17 @@ export type TranslationFunctions = {
 		 */
 		GROUP_PRESENTATION: () => LocalizedString
 		/**
-		 * Musician
-		 */
-		GROUP_MUSICIAN: () => LocalizedString
-		/**
 		 * Remote Control
 		 */
 		GROUP_REMOTE: () => LocalizedString
 		/**
-		 * Electron
+		 * Songs & Library
 		 */
-		GROUP_ELECTRON: () => LocalizedString
+		GROUP_LIBRARY: () => LocalizedString
+		/**
+		 * Desktop App
+		 */
+		GROUP_DESKTOP: () => LocalizedString
 		/**
 		 * Export / Import
 		 */
@@ -8594,6 +8826,172 @@ export type TranslationFunctions = {
 		 * Apply {count} Change(s) & Reload
 		 */
 		IMPORT_APPLY: (arg: { count: unknown }) => LocalizedString
+		GROUP_DESC: {
+			/**
+			 * Language, appearance, account-wide defaults, and your settings backup.
+			 */
+			GENERAL: () => LocalizedString
+			/**
+			 * What the audience sees, and how items change on screen.
+			 */
+			PRESENTATION: () => LocalizedString
+			/**
+			 * How songs are opened, edited, imported and deleted.
+			 */
+			LIBRARY: () => LocalizedString
+			/**
+			 * Messages the app shows you, and the questions it asks before acting.
+			 */
+			NOTIFICATIONS: () => LocalizedString
+			/**
+			 * Shortcuts for running a show without the mouse.
+			 */
+			KEYBOARD: () => LocalizedString
+			/**
+			 * Phones, viewer screens and external controllers connected to this presenter.
+			 */
+			REMOTE: () => LocalizedString
+			/**
+			 * Options that only apply to the installed desktop app.
+			 */
+			DESKTOP: () => LocalizedString
+			/**
+			 * What this device reports back, and what is in it.
+			 */
+			PRIVACY: () => LocalizedString
+		}
+		SECTIONS: {
+			/**
+			 * Appearance
+			 */
+			APPEARANCE: () => LocalizedString
+			/**
+			 * Account defaults
+			 */
+			ACCOUNT_DEFAULTS: () => LocalizedString
+			/**
+			 * Connection
+			 */
+			CONNECTION: () => LocalizedString
+			/**
+			 * Transitions
+			 */
+			TRANSITIONS: () => LocalizedString
+			/**
+			 * On screen
+			 */
+			ON_SCREEN: () => LocalizedString
+			/**
+			 * Control view
+			 */
+			CONTROL_VIEW: () => LocalizedString
+			/**
+			 * Selecting and navigating
+			 */
+			SELECTING: () => LocalizedString
+			/**
+			 * Editing songs
+			 */
+			EDITING: () => LocalizedString
+			/**
+			 * Importing and deleting
+			 */
+			IMPORTING: () => LocalizedString
+			/**
+			 * Bible
+			 */
+			BIBLE: () => LocalizedString
+			/**
+			 * Confirmation dialogs
+			 */
+			CONFIRMATIONS: () => LocalizedString
+			/**
+			 * Toast notifications
+			 */
+			TOASTS: () => LocalizedString
+			/**
+			 * Mobile remote control
+			 */
+			REMOTE_COMMANDS: () => LocalizedString
+			/**
+			 * Text viewer page
+			 */
+			VIEWER: () => LocalizedString
+			/**
+			 * External control
+			 */
+			COMPANION: () => LocalizedString
+			/**
+			 * Updates
+			 */
+			UPDATES: () => LocalizedString
+			/**
+			 * Media files
+			 */
+			MEDIA: () => LocalizedString
+			/**
+			 * Presentation windows
+			 */
+			WINDOWS: () => LocalizedString
+			/**
+			 * Saved sign-in
+			 */
+			SIGN_IN: () => LocalizedString
+			/**
+			 * Backup and transfer
+			 */
+			BACKUP: () => LocalizedString
+			/**
+			 * Usage metrics
+			 */
+			METRICS: () => LocalizedString
+			/**
+			 * Get the desktop app
+			 */
+			GET_DESKTOP: () => LocalizedString
+		}
+		VALUES: {
+			/**
+			 * Single click
+			 */
+			CLICK: () => LocalizedString
+			/**
+			 * Double click
+			 */
+			DOUBLE_CLICK: () => LocalizedString
+			/**
+			 * Cut (instant)
+			 */
+			CUT: () => LocalizedString
+			/**
+			 * Fade
+			 */
+			FADE: () => LocalizedString
+			/**
+			 * Light
+			 */
+			THEME_LIGHT: () => LocalizedString
+			/**
+			 * Dark
+			 */
+			THEME_DARK: () => LocalizedString
+			/**
+			 * Follow system
+			 */
+			THEME_SYSTEM: () => LocalizedString
+		}
+		/**
+		 * Open the Companion / WebSocket helper
+		 */
+		COMPANION_OPEN: () => LocalizedString
+		/**
+		 * Command reference and connection details for StreamDeck, Bitfocus Companion and custom scripts.
+		 */
+		COMPANION_DESC: () => LocalizedString
+		/**
+		 * Save every setting on this device to a JSON file, or apply one from another device. Imports are reviewed before anything changes.
+		 */
+		EXPORT_DESC: () => LocalizedString
 		OPTIONS: {
 			APP_DATA: {
 				/**
@@ -8845,6 +9243,36 @@ export type TranslationFunctions = {
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
+			UI_LANGUAGE: {
+				/**
+				 * Language
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Language of the app interface
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			THEME_MODE: {
+				/**
+				 * Theme
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Light, dark, or whatever the operating system is set to
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			MEDIA_PREVIEW_ASPECT: {
+				/**
+				 * Media preview shape
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * Aspect ratio the control view frames media previews in — set it to match your presentation screen
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
 			METRICS_ENABLED: {
 				/**
 				 * Send usage metrics
@@ -8862,36 +9290,6 @@ export type TranslationFunctions = {
 				TITLE: () => LocalizedString
 				/**
 				 * Display blocks as cards (boxed) or as a list in the control view
-				 */
-				DESCRIPTION: () => LocalizedString
-			}
-			NEXT_LINE_PREVIEW: {
-				/**
-				 * Next-line preview
-				 */
-				TITLE: () => LocalizedString
-				/**
-				 * Show the first line of the next block on the presentation screen
-				 */
-				DESCRIPTION: () => LocalizedString
-			}
-			NEXT_LINE_PREVIEW_COLOR: {
-				/**
-				 * Preview line color
-				 */
-				TITLE: () => LocalizedString
-				/**
-				 * Color of the next-block preview line on presentation windows
-				 */
-				DESCRIPTION: () => LocalizedString
-			}
-			NEXT_LINE_TRANSLATION: {
-				/**
-				 * Preview translations
-				 */
-				TITLE: () => LocalizedString
-				/**
-				 * Include all displayed languages in the next-line preview
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
@@ -8967,11 +9365,11 @@ export type TranslationFunctions = {
 			}
 			MEDIA_PATH: {
 				/**
-				 * Media directory path
+				 * Media location
 				 */
 				TITLE: () => LocalizedString
 				/**
-				 * Local directory for media files (Electron only)
+				 * Where media files are read from: a folder on this computer in the desktop app, or the base URL of your media server in the browser
 				 */
 				DESCRIPTION: () => LocalizedString
 			}

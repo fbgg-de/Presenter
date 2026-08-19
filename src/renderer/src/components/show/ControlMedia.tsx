@@ -39,7 +39,7 @@ import { useAppDispatch } from '@/store';
 import { updateShowItem } from '@/store/showSlice';
 import CompactPositionPicker from '@/components/common/CompactPositionPicker';
 import { useGetPresentationSettings } from '@/store/presentationSlice';
-import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSettings, type MediaPreviewAspect } from '@/store/settingsSlice';
 import { formatTime } from '@/utils';
 
 // ── Shared utility ───────────────────────────────────────────────────────────
@@ -68,25 +68,51 @@ const sendSetVideoVisible = (visible: boolean, hideTransitionMode?: string, hide
 
 // ── Reusable sub-components ──────────────────────────────────────────────────
 
-/** Wrapper that constrains the preview area to 60vh, centered. */
-const PreviewFrame = ({ children, bgcolor = '#000' }: { children: ReactNode; bgcolor?: string }) => (
+/** Screen shapes the preview can be framed in (see the `mediaPreviewAspect` setting). */
+const ASPECT_RATIOS: Record<MediaPreviewAspect, number> = {
+  '16:9': 16 / 9,
+  '16:10': 16 / 10,
+  '4:3': 4 / 3,
+};
+
+/** Tallest the preview frame may get; the width follows from the aspect ratio. */
+const PREVIEW_MAX_HEIGHT = '45vh';
+
+/**
+ * Frames the preview in the configured screen shape so the operator sees the
+ * same crop the presentation window will show. The media inside fills the frame
+ * exactly the way MediaContent fills a presentation window.
+ */
+const PreviewFrame = ({ children, bgcolor = '#000', ratio }: { children: ReactNode; bgcolor?: string; ratio: number }) => (
   <Box
     sx={{
-      height: '45vh',
-      bgcolor,
       display: 'flex',
-      alignItems: 'center',
       justifyContent: 'center',
-      overflow: 'hidden',
+      // Letterbox around the frame, so its edges stay visible on a black image.
+      bgcolor: 'background.default',
     }}
   >
-    {children}
+    <Box
+      sx={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: `calc(${PREVIEW_MAX_HEIGHT} * ${ratio})`,
+        aspectRatio: `${ratio}`,
+        bgcolor,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      {children}
+    </Box>
   </Box>
 );
 
 /** Empty-state placeholder shown when no media path is available. */
-const MediaPlaceholder = ({ icon, label }: { icon: ReactNode; label: string }) => (
-  <PreviewFrame>
+const MediaPlaceholder = ({ icon, label, ratio }: { icon: ReactNode; label: string; ratio: number }) => (
+  <PreviewFrame ratio={ratio}>
     <Stack
       spacing={1}
       sx={{
@@ -434,7 +460,7 @@ interface ControlMediaProps {
 
 const ControlMedia = ({ item }: ControlMediaProps) => {
   const dispatch = useAppDispatch();
-  const { hideTransitionMode, hideTransitionDuration } = useGetSettings();
+  const { hideTransitionMode, hideTransitionDuration, mediaPreviewAspect } = useGetSettings();
   const { activeItemIndex } = useGetPresentationSettings();
 
   const resolvedPath = resolveMediaUrl(item.mediaPath);
@@ -530,12 +556,18 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
   const loop = item.mediaLoop !== false;
   const autoplay = item.mediaAutoplay !== false;
 
+  const ratio = ASPECT_RATIOS[mediaPreviewAspect] ?? ASPECT_RATIOS['16:9'];
+
+  // Mirrors MediaContent: fill the frame, then apply fit/position/zoom/blur.
   const mediaStyle: CSSProperties = {
-    maxWidth: '100%',
-    maxHeight: '45vh',
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
     objectFit,
     objectPosition,
     transform: zoom !== 100 ? `scale(${zoom / 100})` : undefined,
+    transformOrigin: objectPosition,
     filter: blur > 0 ? `blur(${blur}px)` : undefined,
     display: 'block',
   };
@@ -544,7 +576,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
     switch (item.mediaSubType) {
       case 'color':
         return (
-          <PreviewFrame bgcolor={item.mediaColor || '#000000'}>
+          <PreviewFrame bgcolor={item.mediaColor || '#000000'} ratio={ratio}>
             <Stack
               spacing={0.5}
               sx={{
@@ -562,7 +594,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
       case 'video':
         return resolvedPath ? (
           <>
-            <PreviewFrame>
+            <PreviewFrame ratio={ratio}>
               <Box
                 component="video"
                 ref={videoRef}
@@ -607,13 +639,13 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
             />
           </>
         ) : (
-          <MediaPlaceholder icon={<VideocamIcon sx={{ fontSize: 40 }} />} label={item.mediaPath || 'Video'} />
+          <MediaPlaceholder icon={<VideocamIcon sx={{ fontSize: 40 }} />} label={item.mediaPath || 'Video'} ratio={ratio} />
         );
 
       case 'image':
       default:
         return resolvedPath ? (
-          <PreviewFrame>
+          <PreviewFrame ratio={ratio}>
             <CardMedia
               component="img"
               image={resolvedPath}
@@ -625,7 +657,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
             />
           </PreviewFrame>
         ) : (
-          <MediaPlaceholder icon={<ImageIcon sx={{ fontSize: 40 }} />} label={item.mediaPath || item.label || 'Image'} />
+          <MediaPlaceholder icon={<ImageIcon sx={{ fontSize: 40 }} />} label={item.label || item.mediaPath || 'Image'} ratio={ratio} />
         );
     }
   };

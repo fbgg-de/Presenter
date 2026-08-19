@@ -350,7 +350,10 @@ const createWindow = () => {
     // End of the OIDC logout round-trip. The provider redirects to the backend's login
     // page, which in the desktop app must become the LOCAL login.html — otherwise the
     // window would be left sitting on the website instead of back in the app.
-    if (isCallbackFromBackend && parsed.searchParams.get('logged_out') === '1') {
+    // `state=logged_out` is what the provider echoes back (the redirect URI itself must
+    // stay query-free to match its registration); `logged_out=1` is the older marker.
+    const isLogoutReturn = parsed.searchParams.get('state') === 'logged_out' || parsed.searchParams.get('logged_out') === '1';
+    if (isCallbackFromBackend && isLogoutReturn) {
       event.preventDefault();
       mainWindow!.loadFile(HTML_PATHS['/login'], { query: { switch: '1' } });
       return;
@@ -457,40 +460,109 @@ const createWindow = () => {
           const el = document.querySelector(sel);
           if (el) { fill(el, password); filled++; break; }
         }
-        if (filled > 0 && autoLogin) {
-          setTimeout(() => {
-            const submitBtn = document.querySelector(
-              'button[type="submit"], input[type="submit"], form button:not([type="button"])'
-            );
-            if (submitBtn) {
-              submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-            } else {
-              const form = document.querySelector('form');
-              if (form) form.submit();
-            }
-          }, 500);
-        }
         return filled;
       })()
     `;
 
+    /**
+     * Submit the form the credentials were typed into, and say what happened.
+     *
+     * Runs as its own step rather than a setTimeout inside the fill script, so the outcome
+     * can actually be returned and logged. The old version clicked into the void: when the
+     * provider refused the submission there was no POST, no error and no log — which is
+     * what "it fills the fields but nothing happens" looks like from the outside.
+     *
+     * The refusal is usually constraint validation. The ChurchTools IdP renders its user
+     * field as <input type="email" required>, so a stored username without an "@" is
+     * rejected by the browser before any request is made. `reportValidity()` puts the
+     * provider's own message on screen instead of failing silently.
+     */
+    const submitScript = `
+      (() => {
+        // Scope to the form holding the password, not the first submit button in the
+        // document — a consent banner or a language picker can easily come first.
+        const pwd = document.querySelector('input[type="password"], input#password, input[name="password"]');
+        const form = (pwd && pwd.form) || document.querySelector('form');
+        if (!form) return { ok: false, reason: 'no-form' };
+
+        const submitBtn = form.querySelector(
+          'button[type="submit"], input[type="submit"], button:not([type="button"])'
+        );
+
+        if (typeof form.checkValidity === 'function' && !form.checkValidity()) {
+          const bad = form.querySelector(':invalid');
+          if (typeof form.reportValidity === 'function') form.reportValidity();
+          return {
+            ok: false,
+            reason: 'invalid',
+            field: bad ? (bad.name || bad.id || bad.type) : null,
+            message: bad ? bad.validationMessage : null,
+          };
+        }
+
+        // requestSubmit() is the spec'd equivalent of pressing the button: it fires the
+        // form's submit event, so any handler the provider attached still runs. Plain
+        // form.submit() skips both that event and validation, and is only a last resort.
+        if (typeof form.requestSubmit === 'function') {
+          form.requestSubmit(submitBtn || undefined);
+          return { ok: true, reason: submitBtn ? 'requestSubmit' : 'requestSubmit-no-button' };
+        }
+        if (submitBtn) {
+          submitBtn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window, detail: 1 }));
+          return { ok: true, reason: 'click' };
+        }
+        form.submit();
+        return { ok: true, reason: 'form.submit' };
+      })()
+    `;
+
+    /** Still on the page we started filling? */
+    const stillThere = () => !!mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents.getURL() === url;
+
     // Retry at increasing intervals to handle pages that render forms asynchronously.
     const retryDelays = [0, 400, 900, 1800, 3200];
+    let filledCount = 0;
     for (const delay of retryDelays) {
       if (delay > 0) await new Promise<void>((r) => setTimeout(r, delay));
-      if (!mainWindow || mainWindow.isDestroyed()) break;
-      // Abort if the user has already navigated to a different page
-      if (mainWindow.webContents.getURL() !== url) break;
+      if (!stillThere()) return;
       try {
-        const filled = (await mainWindow.webContents.executeJavaScript(fillScript)) as number;
-        if (filled > 0) {
-          console.log(`[Credentials] Auto-filled ${filled} field(s) on ${new URL(url).hostname}`);
+        filledCount = (await mainWindow!.webContents.executeJavaScript(fillScript)) as number;
+        if (filledCount > 0) {
+          console.log(`[Credentials] Auto-filled ${filledCount} field(s) on ${new URL(url).hostname}`);
           break;
         }
       } catch (err) {
         console.error('[Credentials] Auto-fill attempt failed:', err);
-        break;
+        return;
       }
+    }
+
+    if (filledCount === 0 || !autoLoginEnabled) return;
+
+    // Give the provider's own scripts a moment to react to the filled fields before
+    // asking the form to submit.
+    await new Promise<void>((r) => setTimeout(r, 500));
+    if (!stillThere()) return;
+
+    try {
+      const result = (await mainWindow!.webContents.executeJavaScript(submitScript)) as {
+        ok: boolean;
+        reason: string;
+        field?: string | null;
+        message?: string | null;
+      };
+      if (result.ok) {
+        console.log(`[Credentials] Auto-login submitted the form (${result.reason})`);
+      } else if (result.reason === 'invalid') {
+        console.warn(
+          `[Credentials] Auto-login blocked: the provider rejected the "${result.field}" field — ${result.message}. ` +
+            `Check that the saved username is in the format this provider expects.`,
+        );
+      } else {
+        console.warn(`[Credentials] Auto-login could not submit: ${result.reason}`);
+      }
+    } catch (err) {
+      console.error('[Credentials] Auto-login submit failed:', err);
     }
   };
 

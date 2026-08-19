@@ -44,17 +44,27 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import type { ShowGroup, ShowItem } from '@/api/shows.api';
 import { DEFAULT_GROUP_ID, GROUP_COLOR_PRESETS, groupDisplayName, makeDefaultGroup } from '@/utils/showGroups';
 
-/** Small name-prompt dialog shared by the group list (add) and the sidebar's add-item menu. */
+/**
+ * Small name-prompt dialog shared by the group list (add), the sidebar's add-item
+ * menu and the item rename action. `fieldLabel`/`placeholder`/`helperText` let
+ * callers repurpose it for names other than group names.
+ */
 export const GroupNameDialog = ({
   open,
   title,
   initialName = '',
+  fieldLabel,
+  placeholder,
+  helperText,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   title: string;
   initialName?: string;
+  fieldLabel?: string;
+  placeholder?: string;
+  helperText?: string;
   onClose: () => void;
   onSubmit: (name: string) => void;
 }) => {
@@ -81,7 +91,9 @@ export const GroupNameDialog = ({
           autoFocus
           fullWidth
           margin="dense"
-          label={LL.SHOW_GROUPS.NAME()}
+          label={fieldLabel ?? LL.SHOW_GROUPS.NAME()}
+          placeholder={placeholder}
+          helperText={helperText}
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {

@@ -88,14 +88,25 @@ export const redirectToLogin = (next?: string) => {
  * same user and the account can never be switched. The backend `oidc?logout=1` handler
  * destroys the local session AND redirects to the provider's end-session endpoint.
  *
- * `logged_out=1` marks the return trip so the Electron main process can pull the window
- * back to the local login page instead of leaving it on the website.
+ * The return URL is deliberately bare: a `post_logout_redirect_uri` must match one of the
+ * URIs registered for the OIDC client EXACTLY, query string included, so appending flags
+ * here is what makes providers answer the logout with `400 invalid_request —
+ * post_logout_redirect_uri not registered`. The backend instead sends `state=logged_out`,
+ * which the provider echoes back onto this URL, and {@link isPostLogoutReturn} reads it.
  */
 export const oidcLogoutUrl = (): string => {
   const origin = isElectronApp() ? getBackendOrigin() : window.location.origin;
-  const back = `${origin}/login?logged_out=1&switch=1`;
+  const back = `${origin}/login`;
   return `${origin}/oidc?logout=1&redirect=${encodeURIComponent(back)}`;
 };
+
+/**
+ * Does this URL mark the end of the logout round-trip? `state=logged_out` is what the
+ * provider returns today; `logged_out=1` is the older form, still accepted so a client
+ * built before this change keeps working against a newer backend and vice versa.
+ */
+export const isPostLogoutReturn = (params: URLSearchParams): boolean =>
+  params.get('state') === 'logged_out' || params.get('logged_out') === '1';
 
 export type DetectedOs = 'windows' | 'macos' | 'linux' | 'unknown';
 

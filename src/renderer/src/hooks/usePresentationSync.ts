@@ -57,7 +57,6 @@ export const usePresentationSync = (): void => {
   const dispatch = useAppDispatch();
   const {
     nextLinePreview,
-    nextLinePreviewColor,
     globalStyleId,
     transitionMode,
     transitionDuration,
@@ -495,7 +494,6 @@ export const usePresentationSync = (): void => {
     currentSongNumber,
     orderName,
     nextLinePreview,
-    nextLinePreviewColor,
     transitionMode,
     transitionDuration,
     agenda,
@@ -513,7 +511,6 @@ export const usePresentationSync = (): void => {
     currentSongNumber,
     orderName,
     nextLinePreview,
-    nextLinePreviewColor,
     transitionMode,
     transitionDuration,
     agenda,
@@ -599,7 +596,6 @@ export const usePresentationSync = (): void => {
         bibleRef: cb.activeItem?.bibleRef,
         bibleTranslation: cb.activeItem?.bibleTranslation,
         nextBlockPreviewLines,
-        nextLinePreviewColor: cb.nextLinePreviewColor,
         transitionMode: cb.transitionMode,
         transitionDuration: cb.transitionDuration,
       };
@@ -662,7 +658,7 @@ export const usePresentationSync = (): void => {
     // Deduplicate scheduling using a lightweight key (includes styleHash so style
     // edits actually re-broadcast and apply immediately).
     const ai = b.activeItem;
-    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${b.blocks.length}|${b.nextLinePreview}|${b.nextLinePreviewColor}|${ai?.mediaPath}|${ai?.mediaColor}|${ai?.mediaObjectFit}|${ai?.mediaObjectPosition}|${ai?.mediaZoom}|${ai?.mediaBlur}|${ai?.mediaAutoplay}|${ai?.mediaLoop}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${b.agenda.map((a) => a.label).join('~')}`;
+    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${b.blocks.length}|${b.nextLinePreview}|${ai?.mediaPath}|${ai?.mediaColor}|${ai?.mediaObjectFit}|${ai?.mediaObjectPosition}|${ai?.mediaZoom}|${ai?.mediaBlur}|${ai?.mediaAutoplay}|${ai?.mediaLoop}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${b.agenda.map((a) => a.label).join('~')}`;
     if (contentKey === lastKeyRef.current) return;
     lastKeyRef.current = contentKey;
 
@@ -687,7 +683,6 @@ export const usePresentationSync = (): void => {
     contentType,
     blocks.length,
     nextLinePreview,
-    nextLinePreviewColor,
     windowStylesSig,
     // Media-item display props (zoom/blur/fit/position/autoplay/loop/path/color)
     // — the user can edit these on the active item and we need to re-broadcast.

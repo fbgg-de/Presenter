@@ -16,6 +16,9 @@ class Auth extends DB
             if ($result) {
                 $_SESSION['account'] = intval($result['license']);
                 $_SESSION['mail'] = $result['mail'] ?? '';
+                // The account name is what the user picks on the login page, so it is what
+                // the app shows back to them. Falls back to the mail when the row has none.
+                $_SESSION['name'] = $result['name'] ?? '';
                 $_SESSION['authType'] = 'oidc';
                 return true;
             }
@@ -52,6 +55,7 @@ class Auth extends DB
         $_SESSION['account'] = 0;
         $_SESSION['admin_sub'] = $sub;
         $_SESSION['admin_name'] = $name;
+        $_SESSION['name'] = $name;
         $_SESSION['mail'] = $email ?? '';
     }
 }

@@ -45,13 +45,22 @@ class Session extends RestController
             default:
                 $account = $_SESSION['account'] ?? 0;
                 $ctEnabled = false;
+                // The name the user picked on the login page — shown instead of the mail
+                // address wherever the app names the current account.
+                $name = $_SESSION['name'] ?? $_SESSION['admin_name'] ?? '';
                 if ($account) {
-                    $ctStmt = self::prepare('SELECT `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
+                    $ctStmt = self::prepare('SELECT `name`, `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
                     $ctStmt->bind_param('i', $account)->execute()->fetchOne($ctRow)->close();
                     $ctEnabled = !empty($ctRow['church_tools_url']) && !empty($ctRow['church_tools_token']);
+                    // Sessions established before the name was stored have none — read it
+                    // from the account row instead of forcing a re-login.
+                    if ($name === '' && !empty($ctRow['name'])) {
+                        $name = $ctRow['name'];
+                    }
                 }
                 $res->success([
                     'account' => $account,
+                    'name' => $name,
                     'mail' => $_SESSION['mail'] ?? '',
                     'isAuthenticated' => isset($_SESSION['authType']) && !empty($_SESSION['authType']),
                     'authType' => $_SESSION['authType'] ?? null,

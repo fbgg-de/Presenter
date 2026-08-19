@@ -32,6 +32,8 @@ const state = {
 /** GET /rest/Session — an authenticated, non-admin session for account 1. */
 const session = () => ({
   account: fixtures.account.license,
+  // The account's display name — what the app labels the current session with.
+  name: fixtures.account.name,
   mail: fixtures.account.mail,
   isAuthenticated: true,
   authType: 'oidc',

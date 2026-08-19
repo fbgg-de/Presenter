@@ -32,29 +32,56 @@ if (isset($_GET['logout'])) {
     if (!str_starts_with($postLogout, BASE_URL)) {
         $postLogout = BASE_URL . 'login';
     }
+    // A post_logout_redirect_uri must match one of the URIs registered for the client
+    // EXACTLY — OpenID providers compare the full string, query included. Anything we
+    // append here (flags for the app, cache busters) therefore turns the logout into a
+    // "post_logout_redirect_uri not registered" 400 at the provider. Strip the query and
+    // fragment and carry the state we need in the `state` parameter instead, which the
+    // provider appends to the redirect for us.
+    $postLogoutBare = strtok($postLogout, '?#');
+    if ($postLogoutBare !== $postLogout) {
+        Logging::info('OIDC logout: dropped query/fragment from post_logout_redirect_uri ('
+            . $postLogout . ' -> ' . $postLogoutBare . '); register the bare URI at the provider.');
+        $postLogout = $postLogoutBare;
+    }
+    // Marks the return trip so the login page knows it is coming back from a logout and
+    // must offer the account picker instead of signing straight back in.
+    $logoutState = 'logged_out';
+    $localFallback = $postLogout . '?state=' . $logoutState;
 
-    // A tenant session was established through that account's own provider, so its
-    // end_session_endpoint is the one that has to be called — the global config only
-    // applies to admin logins. Using the global client here left the tenant's provider
-    // session alive, and the next login was silently re-authenticated with no prompt,
-    // making it impossible to switch accounts.
-    $oidc = null;
-    if ($providerId) {
-        $providerRow = lookupProviderById((int)$providerId);
-        if ($providerRow) {
-            $oidc = OidcClient::fromProvider($providerRow);
+    if (!$idToken) {
+        // No id_token to hand over. This is the normal shape of a repeated logout (a reload
+        // of this URL, or a second tab): the first call already ended the provider session
+        // and wiped ours. Calling end_session without an id_token_hint would either strand
+        // the user on the provider's own signed-out page (post_logout_redirect_uri is only
+        // honoured together with a hint) or be rejected outright, so go straight back to
+        // the app instead of bouncing off the provider.
+        Logging::info('OIDC logout without id_token — skipping the provider round-trip.');
+        $logoutUrl = $localFallback;
+    } else {
+        // A tenant session was established through that account's own provider, so its
+        // end_session_endpoint is the one that has to be called — the global config only
+        // applies to admin logins. Using the global client here left the tenant's provider
+        // session alive, and the next login was silently re-authenticated with no prompt,
+        // making it impossible to switch accounts.
+        $oidc = null;
+        if ($providerId) {
+            $providerRow = lookupProviderById((int)$providerId);
+            if ($providerRow) {
+                $oidc = OidcClient::fromProvider($providerRow);
+            }
         }
-    }
-    if ($oidc === null) {
-        $oidc = OidcClient::fromGlobalConfig();
-    }
+        if ($oidc === null) {
+            $oidc = OidcClient::fromGlobalConfig();
+        }
 
-    try {
-        $logoutUrl = $oidc->getLogoutUrl($idToken, $postLogout);
-    } catch (Throwable $e) {
-        // Discovery unreachable — still drop the local session and go back to the login page.
-        Logging::warning('OIDC logout URL lookup failed: ' . $e->getMessage());
-        $logoutUrl = $postLogout;
+        try {
+            $logoutUrl = $oidc->getLogoutUrl($idToken, $postLogout, $logoutState);
+        } catch (Throwable $e) {
+            // Discovery unreachable — still drop the local session and go back to the login page.
+            Logging::warning('OIDC logout URL lookup failed: ' . $e->getMessage());
+            $logoutUrl = $localFallback;
+        }
     }
 
     // Drop the local session completely (not just the OIDC keys), so a failed or

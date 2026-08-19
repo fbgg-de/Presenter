@@ -377,6 +377,8 @@ const de: Translation = {
     EMPTY_HINT_DROP: '.txt-Songdateien hier klicken oder ablegen',
     SONG_UPDATED: 'Dieser Song wurde auf dem Server geändert — klicken, um die Änderungen zu laden',
     SONG_UPDATE_APPLIED: 'Song aktualisiert',
+    RENAME: 'Umbenennen',
+    NAME_HINT: 'Leer lassen, um Dateiname oder URL anzuzeigen',
   },
 
   BIBLE: {
@@ -418,6 +420,7 @@ const de: Translation = {
     BLUR: 'Unschärfe',
     AUTOPLAY: 'Automatisch abspielen',
     LOOP: 'Wiederholen',
+    NAME_OPTIONAL: 'Name (optional)',
   },
 
   CONTROL: {
@@ -795,6 +798,7 @@ const de: Translation = {
     ACTION_NEXT_BLOCK: 'Nächster Block',
     ACTION_PREV_LINE: 'Vorherige Zeile',
     ACTION_NEXT_LINE: 'Nächste Zeile',
+    ACTION_JUMP_TO_START: 'Zum ersten Block springen',
     ACTION_TOGGLE_BLACK: 'Schwarz umschalten',
     ACTION_CLOSE_DRAWER: 'Drawer schließen',
     ACTION_TOGGLE_VIDEO: 'Video abspielen/pausieren',
@@ -804,14 +808,18 @@ const de: Translation = {
 
   SETTINGS: {
     SETTINGS: 'Einstellungen',
-    FILTER: 'Einstellungen filtern...',
+    FILTER: 'Einstellungen durchsuchen...',
+    SEARCH_NO_RESULTS: 'Keine Einstellung passt zu "{query}".',
+    SEARCH_RESULT_COUNT: '{count} Treffer',
+    SEARCH_CLEAR: 'Suche löschen',
+    RESET_TO_DEFAULT: 'Auf Standard zurücksetzen',
+    NOTHING_HERE: 'In diesem Modus gibt es hier nichts einzustellen.',
     GLOBAL_STYLE: 'Globaler Stil',
     GLOBAL_STYLE_HINT: 'Kontoweit synchronisiert – alle Benutzer dieses Kontos teilen denselben globalen Stil.',
     GROUP_GENERAL: 'Allgemein',
     GROUP_BEHAVIOR: 'Verhalten',
     GROUP_KEYBOARD: 'Tastatur',
     GROUP_REMOTE: 'Fernsteuerung',
-    GROUP_CONFIRMATIONS: 'Bestätigungen',
     GROUP_NOTIFICATIONS: 'Benachrichtigungen',
     GROUP_PRIVACY: 'Datenschutz',
     PRIVACY_DESCRIPTION:
@@ -819,8 +827,8 @@ const de: Translation = {
     PRIVACY_METRICS_LIST:
       'Gesammelte Ereignisse umfassen: Funktionsnutzung (z.B. ausgewählte Lieder, geöffnete Shows, navigierte Blöcke), UI-Interaktionen (z.B. Stiländerungen, Fensteraktionen), Fehlerberichte und App-Lebenszyklusereignisse (z.B. Anmeldung, Start). Jedes Ereignis ist mit einer anonymen Geräte-ID versehen.',
     GROUP_PRESENTATION: 'Präsentation',
-    GROUP_MUSICIAN: 'Musiker',
-    GROUP_ELECTRON: 'Electron',
+    GROUP_LIBRARY: 'Lieder & Bibliothek',
+    GROUP_DESKTOP: 'Desktop-App',
     EXPORT_IMPORT: 'Export / Import',
     EXPORT_IMPORT_DESC: 'Einstellungen als JSON-Datei exportieren oder importieren.',
     EXPORT_BUTTON: 'Exportieren',
@@ -840,6 +848,56 @@ const de: Translation = {
     IMPORT_TAG_CHANGED: 'GEÄNDERT',
     IMPORT_REMOVED_NOTICE: '{count} Einstellung(en) existieren lokal, sind aber nicht in der Importdatei. Sie werden nicht entfernt.',
     IMPORT_APPLY: 'Übernehme {count} Änderung(en) & Neu laden',
+    /** One-line intro shown under each category heading. */
+    GROUP_DESC: {
+      GENERAL: 'Sprache, Erscheinungsbild, kontoweite Standardwerte und die Sicherung deiner Einstellungen.',
+      PRESENTATION: 'Was das Publikum sieht und wie Inhalte auf der Leinwand wechseln.',
+      LIBRARY: 'Wie Lieder geöffnet, bearbeitet, importiert und gelöscht werden.',
+      NOTIFICATIONS: 'Meldungen, die die App einblendet, und die Rückfragen, die sie vor dem Handeln stellt.',
+      KEYBOARD: 'Tastenkürzel, um eine Show ohne Maus zu steuern.',
+      REMOTE: 'Handys, Anzeigeseiten und externe Steuergeräte, die mit diesem Presenter verbunden sind.',
+      DESKTOP: 'Optionen, die nur für die installierte Desktop-App gelten.',
+      PRIVACY: 'Was dieses Gerät zurückmeldet und was darin steht.',
+    },
+    /** Headings that split a category into readable blocks. */
+    SECTIONS: {
+      APPEARANCE: 'Erscheinungsbild',
+      ACCOUNT_DEFAULTS: 'Konto-Standards',
+      CONNECTION: 'Verbindung',
+      TRANSITIONS: 'Übergänge',
+      ON_SCREEN: 'Auf der Leinwand',
+      CONTROL_VIEW: 'Steuerungsansicht',
+      SELECTING: 'Auswählen und Navigieren',
+      EDITING: 'Lieder bearbeiten',
+      IMPORTING: 'Importieren und Löschen',
+      BIBLE: 'Bibel',
+      CONFIRMATIONS: 'Bestätigungsdialoge',
+      TOASTS: 'Kurzmeldungen',
+      REMOTE_COMMANDS: 'Mobile Fernsteuerung',
+      VIEWER: 'Textanzeige-Seite',
+      COMPANION: 'Externe Steuerung',
+      UPDATES: 'Updates',
+      MEDIA: 'Mediendateien',
+      WINDOWS: 'Präsentationsfenster',
+      SIGN_IN: 'Gespeicherte Anmeldung',
+      BACKUP: 'Sicherung und Übertragung',
+      METRICS: 'Nutzungsdaten',
+      GET_DESKTOP: 'Desktop-App holen',
+    },
+    /** Labels for the fixed choices of select settings. */
+    VALUES: {
+      CLICK: 'Einfachklick',
+      DOUBLE_CLICK: 'Doppelklick',
+      CUT: 'Hart (sofort)',
+      FADE: 'Überblenden',
+      THEME_LIGHT: 'Hell',
+      THEME_DARK: 'Dunkel',
+      THEME_SYSTEM: 'Wie das System',
+    },
+    COMPANION_OPEN: 'Companion-/WebSocket-Hilfe öffnen',
+    COMPANION_DESC: 'Befehlsübersicht und Verbindungsdaten für StreamDeck, Bitfocus Companion und eigene Skripte.',
+    EXPORT_DESC:
+      'Alle Einstellungen dieses Geräts als JSON-Datei sichern oder die eines anderen Geräts übernehmen. Importe werden vor dem Anwenden geprüft.',
     OPTIONS: {
       APP_DATA: { TITLE: 'App-Daten', DESCRIPTION: 'Speicherort der Anwendungsdaten' },
       BACKEND_URL: { TITLE: 'Backend-URL', DESCRIPTION: 'Die URL des PHP-REST-API-Servers' },
@@ -911,23 +969,17 @@ const de: Translation = {
         TITLE: 'Fehlerbenachrichtigungen anzeigen',
         DESCRIPTION: 'Eine Benachrichtigung anzeigen, wenn ein unerwarteter Anwendungsfehler auftritt',
       },
+      UI_LANGUAGE: { TITLE: 'Sprache', DESCRIPTION: 'Sprache der Benutzeroberfläche' },
+      THEME_MODE: { TITLE: 'Design', DESCRIPTION: 'Hell, dunkel oder wie das Betriebssystem eingestellt ist' },
+      MEDIA_PREVIEW_ASPECT: {
+        TITLE: 'Format der Medienvorschau',
+        DESCRIPTION: 'Seitenverhältnis des Vorschaurahmens in der Steuerungsansicht — passend zur Präsentationsfläche wählen',
+      },
       METRICS_ENABLED: {
         TITLE: 'Nutzungsmetriken senden',
         DESCRIPTION: 'Anonyme Nutzungsdaten erfassen, um das Produkt zu verbessern. Beim Deaktivieren wird ein letztes Ereignis gesendet.',
       },
       CONTROL_LAYOUT: { TITLE: 'Steuerungs-Layout', DESCRIPTION: 'Blöcke als Karten (boxed) oder als Liste in der Steuerung anzeigen' },
-      NEXT_LINE_PREVIEW: {
-        TITLE: 'Nächste-Zeile-Vorschau',
-        DESCRIPTION: 'Erste Zeile des nächsten Blocks auf dem Präsentationsbildschirm anzeigen',
-      },
-      NEXT_LINE_PREVIEW_COLOR: {
-        TITLE: 'Vorschau-Zeilenfarbe',
-        DESCRIPTION: 'Farbe der Nächster-Block-Vorschauzeile auf Präsentationsfenstern',
-      },
-      NEXT_LINE_TRANSLATION: {
-        TITLE: 'Vorschau-Übersetzungen',
-        DESCRIPTION: 'Alle angezeigten Sprachen in der Nächste-Zeile-Vorschau einbeziehen',
-      },
       BIBLE_TRANSLATION: { TITLE: 'Standard-Bibelübersetzung', DESCRIPTION: 'Die Standard-Bibelübersetzung im Versauswahldialog' },
       WINDOW_FOOTER_VISIBLE: {
         TITLE: 'Fenster-Fußleiste anzeigen',
@@ -938,7 +990,11 @@ const de: Translation = {
       MUSICIAN_PAGE_VIEW: { TITLE: 'Seitenansicht', DESCRIPTION: 'Wie PDF-Seiten angezeigt werden: Einzel, Doppel oder fortlaufend' },
       MUSICIAN_BLOCK_INDICATOR: { TITLE: 'Block-Anzeige', DESCRIPTION: 'Aktuelle Block-Auswahl in der Musiker-Seitenleiste anzeigen' },
       MIDI_TRACKING_MASTER: { TITLE: 'Tracking-Master', DESCRIPTION: 'Wer steuert die Musiker-Ansicht: Operator oder MIDI-Gerät' },
-      MEDIA_PATH: { TITLE: 'Medienverzeichnis', DESCRIPTION: 'Lokales Verzeichnis für Mediendateien (nur Electron)' },
+      MEDIA_PATH: {
+        TITLE: 'Medienquelle',
+        DESCRIPTION:
+          'Woher Mediendateien gelesen werden: ein Ordner auf diesem Rechner in der Desktop-App oder die Basis-URL des Medienservers im Browser',
+      },
       WS_URL: {
         TITLE: 'WebSocket-Server-URL',
         DESCRIPTION:

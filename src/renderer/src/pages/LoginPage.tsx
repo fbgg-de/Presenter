@@ -5,12 +5,18 @@ import { useLocation } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetAccountsQuery, useGetAdminOidcAuthUrlQuery, useGetOidcAuthUrlQuery } from '@/api/session.api';
 import { useUpdateSetting, useGetSettings, Account } from '@/store/settingsSlice';
-import { getOidcRedirectUrl, nextParamToPath, isElectronApp, electronFileUrl, getBackendOrigin } from '@/utils';
+import { getOidcRedirectUrl, nextParamToPath, isElectronApp, electronFileUrl, getBackendOrigin, isPostLogoutReturn } from '@/utils';
 import { useBackendConfig } from '@/components/settings/ConnectivityChecker';
 
 const useQueryParam = (name: string): string | null => {
   const { search } = useLocation();
   return useMemo(() => new URLSearchParams(search).get(name), [search, name]);
+};
+
+/** True when this page was reached by the provider's post-logout redirect. */
+const useCameFromLogout = (): boolean => {
+  const { search } = useLocation();
+  return useMemo(() => isPostLogoutReturn(new URLSearchParams(search)), [search]);
 };
 
 export const LoginPage = () => {
@@ -51,8 +57,13 @@ export const LoginPage = () => {
    * restoring the previous one and the Electron auto-proceed below must stay out of the
    * way — otherwise the page bounces straight back to the provider and the account select
    * can never be reached.
+   *
+   * `switch=1` is set by the Electron main process when it catches the return trip; in the
+   * browser the marker is the provider's echoed `state=logged_out` instead, because the
+   * post-logout redirect URI has to stay free of query parameters to remain registrable.
    */
-  const switchAccount = useQueryParam('switch') === '1';
+  const cameFromLogout = useCameFromLogout();
+  const switchAccount = useQueryParam('switch') === '1' || cameFromLogout;
 
   // License selection - load from localStorage on mount
   const { data: accounts, isLoading: accountsLoading, error: accountsError } = useGetAccountsQuery();
@@ -172,7 +183,11 @@ export const LoginPage = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 2 }}>
+    // Flex, not grid: under `place-items: center` the auto column track sizes itself to the
+    // card's max-content, so the card's own `maxWidth: '100%'` resolved against 480px and
+    // never did anything — on a 375px phone the card hung 121px off the right edge, taking
+    // the account dropdown (anchored to its width) with it.
+    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 2 }}>
       <Card sx={{ width: 480, maxWidth: '100%' }}>
         <CardContent>
           <Stack

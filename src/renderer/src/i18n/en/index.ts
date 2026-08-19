@@ -369,6 +369,8 @@ const en = {
     EMPTY_HINT_DROP: 'Click or drop .txt song files here',
     SONG_UPDATED: 'This song was updated on the server — click to load the changes',
     SONG_UPDATE_APPLIED: 'Song updated',
+    RENAME: 'Rename',
+    NAME_HINT: 'Leave empty to show the file name or URL',
   },
 
   BIBLE: {
@@ -410,6 +412,7 @@ const en = {
     BLUR: 'Blur',
     AUTOPLAY: 'Autoplay',
     LOOP: 'Loop',
+    NAME_OPTIONAL: 'Name (optional)',
   },
 
   CONTROL: {
@@ -788,6 +791,7 @@ const en = {
     ACTION_NEXT_BLOCK: 'Next Block',
     ACTION_PREV_LINE: 'Previous Line',
     ACTION_NEXT_LINE: 'Next Line',
+    ACTION_JUMP_TO_START: 'Jump to First Block',
     ACTION_TOGGLE_BLACK: 'Toggle Black',
     ACTION_CLOSE_DRAWER: 'Close Drawer',
     ACTION_TOGGLE_VIDEO: 'Toggle Video Play/Pause',
@@ -797,13 +801,17 @@ const en = {
 
   SETTINGS: {
     SETTINGS: 'Settings',
-    FILTER: 'Filter settings...',
+    FILTER: 'Search settings...',
+    SEARCH_NO_RESULTS: 'No setting matches "{query:string}".',
+    SEARCH_RESULT_COUNT: '{count:number} result{{s}}',
+    SEARCH_CLEAR: 'Clear search',
+    RESET_TO_DEFAULT: 'Reset to default',
+    NOTHING_HERE: 'Nothing to configure here in this mode.',
     GLOBAL_STYLE: 'Global Style',
     GLOBAL_STYLE_HINT: 'Synced account-wide — all users of this account share the same global style.',
     GROUP_GENERAL: 'General',
     GROUP_BEHAVIOR: 'Behavior',
     GROUP_KEYBOARD: 'Keyboard',
-    GROUP_CONFIRMATIONS: 'Confirmations',
     GROUP_NOTIFICATIONS: 'Notifications',
     GROUP_PRIVACY: 'Privacy',
     PRIVACY_DESCRIPTION:
@@ -811,9 +819,9 @@ const en = {
     PRIVACY_METRICS_LIST:
       'Collected events include: feature usage (e.g. songs selected, shows opened, blocks navigated), UI interactions (e.g. style changes, window actions), error reports, and app lifecycle events (e.g. login, startup). Each event is tagged with an anonymous device ID.',
     GROUP_PRESENTATION: 'Presentation',
-    GROUP_MUSICIAN: 'Musician',
     GROUP_REMOTE: 'Remote Control',
-    GROUP_ELECTRON: 'Electron',
+    GROUP_LIBRARY: 'Songs & Library',
+    GROUP_DESKTOP: 'Desktop App',
     EXPORT_IMPORT: 'Export / Import',
     EXPORT_IMPORT_DESC: 'Export or import all settings as a JSON file.',
     EXPORT_BUTTON: 'Export',
@@ -833,6 +841,56 @@ const en = {
     IMPORT_TAG_CHANGED: 'CHANGED',
     IMPORT_REMOVED_NOTICE: '{count} setting(s) exist locally but are not in the import file. They will not be removed.',
     IMPORT_APPLY: 'Apply {count} Change(s) & Reload',
+    /** One-line intro shown under each category heading. */
+    GROUP_DESC: {
+      GENERAL: 'Language, appearance, account-wide defaults, and your settings backup.',
+      PRESENTATION: 'What the audience sees, and how items change on screen.',
+      LIBRARY: 'How songs are opened, edited, imported and deleted.',
+      NOTIFICATIONS: 'Messages the app shows you, and the questions it asks before acting.',
+      KEYBOARD: 'Shortcuts for running a show without the mouse.',
+      REMOTE: 'Phones, viewer screens and external controllers connected to this presenter.',
+      DESKTOP: 'Options that only apply to the installed desktop app.',
+      PRIVACY: 'What this device reports back, and what is in it.',
+    },
+    /** Headings that split a category into readable blocks. */
+    SECTIONS: {
+      APPEARANCE: 'Appearance',
+      ACCOUNT_DEFAULTS: 'Account defaults',
+      CONNECTION: 'Connection',
+      TRANSITIONS: 'Transitions',
+      ON_SCREEN: 'On screen',
+      CONTROL_VIEW: 'Control view',
+      SELECTING: 'Selecting and navigating',
+      EDITING: 'Editing songs',
+      IMPORTING: 'Importing and deleting',
+      BIBLE: 'Bible',
+      CONFIRMATIONS: 'Confirmation dialogs',
+      TOASTS: 'Toast notifications',
+      REMOTE_COMMANDS: 'Mobile remote control',
+      VIEWER: 'Text viewer page',
+      COMPANION: 'External control',
+      UPDATES: 'Updates',
+      MEDIA: 'Media files',
+      WINDOWS: 'Presentation windows',
+      SIGN_IN: 'Saved sign-in',
+      BACKUP: 'Backup and transfer',
+      METRICS: 'Usage metrics',
+      GET_DESKTOP: 'Get the desktop app',
+    },
+    /** Labels for the fixed choices of select settings. */
+    VALUES: {
+      CLICK: 'Single click',
+      DOUBLE_CLICK: 'Double click',
+      CUT: 'Cut (instant)',
+      FADE: 'Fade',
+      THEME_LIGHT: 'Light',
+      THEME_DARK: 'Dark',
+      THEME_SYSTEM: 'Follow system',
+    },
+    COMPANION_OPEN: 'Open the Companion / WebSocket helper',
+    COMPANION_DESC: 'Command reference and connection details for StreamDeck, Bitfocus Companion and custom scripts.',
+    EXPORT_DESC:
+      'Save every setting on this device to a JSON file, or apply one from another device. Imports are reviewed before anything changes.',
     OPTIONS: {
       APP_DATA: { TITLE: 'App data', DESCRIPTION: 'Application data storage location' },
       BACKEND_URL: { TITLE: 'Backend URL', DESCRIPTION: 'The URL of the PHP REST API server' },
@@ -901,14 +959,17 @@ const en = {
         TITLE: 'Show uncaught error notifications',
         DESCRIPTION: 'Display a notification when an unexpected application error occurs',
       },
+      UI_LANGUAGE: { TITLE: 'Language', DESCRIPTION: 'Language of the app interface' },
+      THEME_MODE: { TITLE: 'Theme', DESCRIPTION: 'Light, dark, or whatever the operating system is set to' },
+      MEDIA_PREVIEW_ASPECT: {
+        TITLE: 'Media preview shape',
+        DESCRIPTION: 'Aspect ratio the control view frames media previews in — set it to match your presentation screen',
+      },
       METRICS_ENABLED: {
         TITLE: 'Send usage metrics',
         DESCRIPTION: 'Allow the app to collect anonymous usage data to improve the product. One final event is sent on opt-out.',
       },
       CONTROL_LAYOUT: { TITLE: 'Control layout', DESCRIPTION: 'Display blocks as cards (boxed) or as a list in the control view' },
-      NEXT_LINE_PREVIEW: { TITLE: 'Next-line preview', DESCRIPTION: 'Show the first line of the next block on the presentation screen' },
-      NEXT_LINE_PREVIEW_COLOR: { TITLE: 'Preview line color', DESCRIPTION: 'Color of the next-block preview line on presentation windows' },
-      NEXT_LINE_TRANSLATION: { TITLE: 'Preview translations', DESCRIPTION: 'Include all displayed languages in the next-line preview' },
       BIBLE_TRANSLATION: { TITLE: 'Default Bible translation', DESCRIPTION: 'The default Bible translation used in the verse picker' },
       WINDOW_FOOTER_VISIBLE: {
         TITLE: 'Show window footer bar',
@@ -925,7 +986,11 @@ const en = {
         DESCRIPTION: 'Display the current block selection in the musician sidebar',
       },
       MIDI_TRACKING_MASTER: { TITLE: 'Tracking master', DESCRIPTION: 'Who controls musician view navigation: the operator or MIDI device' },
-      MEDIA_PATH: { TITLE: 'Media directory path', DESCRIPTION: 'Local directory for media files (Electron only)' },
+      MEDIA_PATH: {
+        TITLE: 'Media location',
+        DESCRIPTION:
+          'Where media files are read from: a folder on this computer in the desktop app, or the base URL of your media server in the browser',
+      },
       WS_URL: {
         TITLE: 'WebSocket Server URL',
         DESCRIPTION:

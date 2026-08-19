@@ -43,8 +43,9 @@ does not. The half-visible settings gear in the sidebar toolbar is exactly that 
 Things it deliberately does **not** report, because they are normal design:
 
 - text truncated with `text-overflow: ellipsis`
-- content wider than a container that scrolls horizontally, including MUI's `Tabs` strip while
-  its arrow buttons are enabled
+- content wider than a container that scrolls horizontally, and anything measured across a
+  scroll boundary — above a scroller an element's position is a scroll offset, not a layout
+  fact (MUI's scrollable `Tabs` is exactly this shape)
 - anything below the fold of a scrollable dialog or a page that scrolls down
 
 When one container clips a dozen controls, only the three worst are listed and the rest are

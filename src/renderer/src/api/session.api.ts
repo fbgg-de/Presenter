@@ -10,6 +10,8 @@ export type WsHost = {
 
 export type SessionInfo = {
   account: number;
+  /** Display name of the account (the one picked on the login page). Empty when unset. */
+  name?: string;
   mail: string;
   isAuthenticated?: boolean;
   authType?: 'oidc' | 'oidc_admin' | null;

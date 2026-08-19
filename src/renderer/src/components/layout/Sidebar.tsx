@@ -26,6 +26,7 @@ import {
   Delete as DeleteIcon,
   Settings as SettingsIcon,
   Edit as EditIcon,
+  DriveFileRenameOutline as RenameIcon,
   MusicNote as MusicNoteIcon,
   Image as ImageIcon,
   MenuBook as MenuBookIcon,
@@ -160,6 +161,9 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [accountMenuAnchor, setAccountMenuAnchor] = useState<null | HTMLElement>(null);
 
   const { data: session } = useGetSessionQuery();
+  // The account name is what the user picks on the login page, so it is the more
+  // recognisable label here; the mail address is only a fallback for accounts without one.
+  const accountLabel = session?.name || session?.mail || '';
   const bibleEnabled = session?.settings?.bibleEnabled ?? false;
   const churchToolsEnabled = session?.settings?.churchToolsEnabled ?? false;
   // Detect songs that were changed on the server since they were cached locally.
@@ -222,6 +226,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [itemMenuAnchor, setItemMenuAnchor] = useState<null | HTMLElement>(null);
   const [itemMenuIndex, setItemMenuIndex] = useState<number>(-1);
   const [keySubmenuAnchor, setKeySubmenuAnchor] = useState<null | HTMLElement>(null);
+  // "Rename" dialog for media items (index captured before the menu closes)
+  const [renameIndex, setRenameIndex] = useState<number>(-1);
   const [orderSubmenuAnchor, setOrderSubmenuAnchor] = useState<null | HTMLElement>(null);
   // Direct item style submenu (sets item.styleId — applies to all windows)
   const [itemStyleAnchor, setItemStyleAnchor] = useState<null | HTMLElement>(null);
@@ -366,14 +372,15 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     trackEvent('bible_verse_added', 'bible', bibleRef);
   };
 
-  const handleMediaAdd = (mediaSubType: MediaSubType, mediaPath?: string, mediaColor?: string) => {
+  const handleMediaAdd = (mediaSubType: MediaSubType, mediaPath?: string, mediaColor?: string, label?: string) => {
     dispatch(
       addShowItem({
         type: 'media',
         mediaSubType,
-        mediaPath,
         mediaColor,
-        label: mediaSubType === 'color' ? mediaColor : mediaPath,
+        mediaPath,
+        // A name given on add wins; otherwise the path/color doubles as the label.
+        label: label || (mediaSubType === 'color' ? mediaColor : mediaPath),
       }),
     );
     trackEvent('media_added', 'media', mediaPath || mediaColor);
@@ -516,8 +523,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       case 'bible_verse':
         return item.bibleRef || item.label || LL.BIBLE.VERSE();
       case 'media':
-        if (item.mediaSubType === 'color') return item.mediaColor || LL.MEDIA.COLOR();
-        return item.mediaPath || item.label || LL.MEDIA.IMAGE();
+        if (item.mediaSubType === 'color') return item.label || item.mediaColor || LL.MEDIA.COLOR();
+        return item.label || item.mediaPath || LL.MEDIA.IMAGE();
       default:
         return `Item ${index + 1}`;
     }
@@ -586,12 +593,30 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         onDoubleClick={() => {
           if (songClick === 'double-click') dispatch(setActiveItemIndex(i));
         }}
-        secondaryAction={
+        sx={{
+          ...(i === activeItemIndex ? { background: palette.primary.main } : {}),
+          '&.dragging': { background: palette.primary.dark },
+        }}
+      >
+        {/* Icon and trailing chips live inside the button so hover/ripple cover the
+            whole row, and so a long label ellipsises instead of running under them. */}
+        <ListItemButton sx={{ pl: 1, pr: 0.5, minWidth: 0 }}>
+          <ListItemIcon sx={{ minWidth: 32 }}>
+            <ItemIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : itemColor }} />
+          </ListItemIcon>
+          <ListItemText
+            title={label}
+            primary={label}
+            slotProps={{ primary: { noWrap: true, sx: { color: i === activeItemIndex ? '#fff' : undefined } } }}
+            sx={{ my: 0, minWidth: 0 }}
+          />
           <Stack
             direction="row"
             sx={{
               gap: 0.5,
+              ml: 0.5,
               alignItems: 'center',
+              flexShrink: 0,
             }}
           >
             {/* Read-only chips */}
@@ -652,20 +677,11 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
               </Tooltip>
             )}
             {/* Context menu button */}
-            <IconButton edge="end" size="small" onClick={(e) => handleItemMenuOpen(e, i)}>
+            <IconButton size="small" onClick={(e) => handleItemMenuOpen(e, i)} sx={{ p: 0.25 }}>
               <MoreVertIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : undefined }} />
             </IconButton>
           </Stack>
-        }
-        sx={{
-          ...(i === activeItemIndex ? { background: palette.primary.main } : {}),
-          '&.dragging': { background: palette.primary.dark },
-        }}
-      >
-        <ListItemIcon sx={{ minWidth: 36, pl: 1 }}>
-          <ItemIcon fontSize="small" sx={{ color: i === activeItemIndex ? '#fff' : itemColor }} />
-        </ListItemIcon>
-        <ListItemButton sx={{ pl: 0.5 }}>{label}</ListItemButton>
+        </ListItemButton>
       </ListItem>
     );
   };
@@ -724,6 +740,15 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
       }
     }
     handleItemMenuClose();
+  };
+
+  /** Give a media item a short display name (empty resets it to the path/URL). */
+  const handleItemRename = (name: string) => {
+    if (renameIndex < 0) return;
+    const item = showItems[renameIndex];
+    const fallback = item?.mediaSubType === 'color' ? item.mediaColor : item?.mediaPath;
+    dispatch(updateShowItem({ index: renameIndex, item: { label: name || fallback } }));
+    setRenameIndex(-1);
   };
 
   const handleItemSetKey = (key: string | undefined) => {
@@ -811,14 +836,20 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const menuItem = itemMenuIndex >= 0 ? showItems[itemMenuIndex] : undefined;
   const menuItemSong = menuItem?.type === 'song' && menuItem.songNumber != null ? songs[menuItem.songNumber] : undefined;
   const menuItemOrders = menuItemSong?.order ? Object.keys(menuItemSong.order) : [];
+  const renameItem = renameIndex >= 0 ? showItems[renameIndex] : undefined;
+  const renameFallback = (renameItem?.mediaSubType === 'color' ? renameItem.mediaColor : renameItem?.mediaPath) ?? '';
 
   return (
     <Stack
       onDragOver={onDragOver}
       onDrop={onDrop}
       sx={{
-        width: 400,
-        minWidth: 400,
+        // 400px is the desktop column, where the sidebar sits beside the control pane and
+        // must not shrink. Below `sm` it is its own full-screen tab, and holding 400 there
+        // pushed the toolbar off a 375px screen — the settings gear ended up half visible.
+        // The breakpoint matches useIsMobile(), which is what swaps the two layouts.
+        width: { xs: '100%', sm: 400 },
+        minWidth: { xs: 0, sm: 400 },
         background: palette.background.default,
       }}
     >
@@ -1053,7 +1084,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
               anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
               transformOrigin={{ vertical: 'top', horizontal: 'right' }}
             >
-              {session?.mail && (
+              {accountLabel && (
                 <MenuItem disabled>
                   <ListItemText>
                     <Typography
@@ -1070,12 +1101,23 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
                         fontWeight: 600,
                       }}
                     >
-                      {session.mail}
+                      {accountLabel}
                     </Typography>
+                    {session?.name && session.mail && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: 'text.secondary',
+                          display: 'block',
+                        }}
+                      >
+                        {session.mail}
+                      </Typography>
+                    )}
                   </ListItemText>
                 </MenuItem>
               )}
-              {session?.mail && <Divider />}
+              {accountLabel && <Divider />}
               {session?.authType === 'oidc_admin' && (
                 <MenuItem
                   onClick={() => {
@@ -1144,6 +1186,20 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
+        {/* Rename (media only — songs/verses take their label from the source) */}
+        {menuItem?.type === 'media' && (
+          <MenuItem
+            onClick={() => {
+              setRenameIndex(itemMenuIndex);
+              handleItemMenuClose();
+            }}
+          >
+            <ListItemIcon>
+              <RenameIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{LL.SHOW_ITEMS.RENAME()}</ListItemText>
+          </MenuItem>
+        )}
         {/* Direct item style submenu (applies to all windows) */}
         {availableStyles.length > 0 && (
           <MenuItem onClick={(e) => setItemStyleAnchor(e.currentTarget)}>
@@ -1183,6 +1239,18 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
           <ListItemText sx={{ color: 'error.main' }}>{LL.MUSICIAN.ITEM_DELETE()}</ListItemText>
         </MenuItem>
       </Menu>
+      {/* Rename dialog for media items */}
+      <GroupNameDialog
+        open={renameIndex >= 0}
+        title={LL.SHOW_ITEMS.RENAME()}
+        fieldLabel={LL.MEDIA.NAME_OPTIONAL()}
+        // Pre-fill only a real name — an auto-label (the path/URL itself) starts empty.
+        initialName={renameItem && renameItem.label !== renameFallback ? (renameItem.label ?? '') : ''}
+        placeholder={renameFallback}
+        helperText={LL.SHOW_ITEMS.NAME_HINT()}
+        onClose={() => setRenameIndex(-1)}
+        onSubmit={handleItemRename}
+      />
       {/* Move-to-group submenu */}
       <Menu anchorEl={groupSubmenuAnchor} open={!!groupSubmenuAnchor} onClose={() => setGroupSubmenuAnchor(null)}>
         {groups

@@ -10,7 +10,8 @@ export type ThemeMode = 'dark' | 'light' | 'system';
 export type Account = number | 'admin' | '';
 type ClickBehaviour = 'click' | 'double-click';
 type Transition = 'cut' | 'fade';
-type Order = 'lexicographic' | 'numeric';
+/** Aspect ratio the control view frames media previews in (mirrors the presentation screen). */
+export type MediaPreviewAspect = '16:9' | '16:10' | '4:3';
 
 /**
  * Set List view state. Lives inside the settings object (rather than its own localStorage key)
@@ -37,7 +38,6 @@ export interface SettingsState {
   confirmSongDelete: boolean;
   companionCommandsEnabled: boolean;
   defaultNewVerseName: string;
-  defaultVerseName: string;
   desktopAppDismissed: boolean;
   deviceId: string;
   globalStyleId: number;
@@ -46,20 +46,16 @@ export interface SettingsState {
   /** When ChurchTools is enabled, include CCLI SongSelect results in the unified search. Persisted. */
   includeChurchToolsResults: boolean;
   keyboardMapping: Record<string, { enabled: boolean; key: string }>;
-  keyboardNavigationBlocks: boolean;
-  keyboardNavigationLines: boolean;
-  keyboardNavigationSongs: boolean;
   lastSelectedAccount?: Account;
   mediaPath: string;
+  /** Aspect ratio of the media preview frame in the control view. */
+  mediaPreviewAspect: MediaPreviewAspect;
   metricsEnabled: boolean;
   nextLinePreview: boolean;
-  nextLinePreviewColor: string;
-  nextLineTranslation: boolean;
   notificationCount: number;
   notificationTime: number;
   offlineMode: boolean;
   overrideSongImport: boolean;
-  reloadSongAfterEdit: boolean;
   /** Mobile remote (/control): which commands connected devices may trigger. Missing key = allowed. */
   remoteControlCommands: Record<string, boolean>;
   resetBlackOnSwitch: boolean;
@@ -68,10 +64,8 @@ export interface SettingsState {
   setLists: SetListsSettings;
   showDeleteFromDb: boolean;
   showLicenseNumber: boolean;
-  showLimit: number;
   showSaveFormat: string;
   songClick: ClickBehaviour;
-  songOrder: Order;
   themeMode: ThemeMode;
   touchDuration: number;
   transitionDuration: number;
@@ -96,7 +90,6 @@ const defaultState: SettingsState = {
   confirmSongDelete: true,
   companionCommandsEnabled: true,
   defaultNewVerseName: 'Vers 1',
-  defaultVerseName: 'Vers 1',
   desktopAppDismissed: false,
   // crypto.randomUUID() requires a secure context (HTTPS / localhost).
   // Guard against HTTP deployments (common on local networks) and older iOS Safari (<15.4).
@@ -109,30 +102,23 @@ const defaultState: SettingsState = {
   hideTransitionMode: 'cut',
   includeChurchToolsResults: true,
   keyboardMapping: {},
-  keyboardNavigationBlocks: true,
-  keyboardNavigationLines: true,
-  keyboardNavigationSongs: true,
   lastSelectedAccount: '',
   mediaPath: '',
+  mediaPreviewAspect: '16:9',
   metricsEnabled: true,
   nextLinePreview: true,
-  nextLinePreviewColor: '#AAAAAA',
-  nextLineTranslation: true,
   notificationCount: 4,
   notificationTime: 3500,
   offlineMode: false,
   overrideSongImport: false,
-  reloadSongAfterEdit: false,
   remoteControlCommands: {},
   resetBlackOnSwitch: false,
   restoreWindowsOnStart: true,
   setLists: { lastOpenedSetListId: null, accordionStateBySetListId: {}, usageShowCount: 8 },
   showDeleteFromDb: false,
   showLicenseNumber: true,
-  showLimit: 10,
   showSaveFormat: 'Show {dd}.{MM}.{yyyy}',
   songClick: 'double-click',
-  songOrder: 'lexicographic',
   themeMode: 'system',
   touchDuration: 300,
   transitionDuration: 500,
@@ -144,6 +130,9 @@ const defaultState: SettingsState = {
   videoFadeDuration: 0,
   windowFooterVisible: true,
 };
+
+/** The value every setting falls back to — the UI compares against this to offer a reset. */
+export const SETTINGS_DEFAULTS: Readonly<SettingsState> = defaultState;
 
 let initialState: SettingsState = { ...defaultState };
 try {
@@ -182,23 +171,8 @@ export const settingsSlice = createSlice({
       (state as any)[key] = value;
       persistState(SETTINGS_KEY, state);
     },
-    toggleTheme: (state) => {
-      switch (state.themeMode) {
-        case 'dark':
-          state.themeMode = 'light';
-          break;
-        case 'light':
-          state.themeMode = 'system';
-          break;
-        default:
-          state.themeMode = 'dark';
-      }
-      persistState(SETTINGS_KEY, state);
-    },
   },
 });
-
-export const { toggleTheme } = settingsSlice.actions;
 
 /**
  * `cachedStyles` is the offline copy of the style library and is refetched the moment the

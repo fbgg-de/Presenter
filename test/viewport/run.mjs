@@ -201,8 +201,23 @@ function makeUi(page, origin) {
       // Without this, every later step races the first render.
       await page.waitFor(appMounted, { label: 'the app to mount' });
     },
-    click: (sel) => page.evaluate(dom.click, sel),
-    type: (sel, value) => page.evaluate(dom.type, sel, value),
+    /**
+     * Click a control, waiting for it to show up first.
+     *
+     * The wait is the whole point. Nearly every step here follows a React state change —
+     * a tab switch, a dialog opening, a query resolving — and a bare click loses that race
+     * often enough to fail one screen per run while its neighbours, doing the same thing,
+     * pass. Waiting here rather than in each screen keeps the definitions readable and
+     * stops the suite reporting a layout problem when it really just clicked too early.
+     */
+    async click(sel, { timeout = 5000 } = {}) {
+      await ui.waitFor(sel, { timeout });
+      return page.evaluate(dom.click, sel);
+    },
+    async type(sel, value, { timeout = 5000 } = {}) {
+      await ui.waitFor(sel, { timeout });
+      return page.evaluate(dom.type, sel, value);
+    },
     exists: (sel) => page.evaluate(dom.exists, sel),
 
     /**

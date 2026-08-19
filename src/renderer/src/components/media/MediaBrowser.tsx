@@ -57,7 +57,7 @@ interface MediaBrowserProps {
   onClose: () => void;
   mode?: 'add' | 'pick';
   pickType?: 'image' | 'video' | 'any';
-  onAdd: (mediaSubType: MediaSubType, mediaPath?: string, mediaColor?: string) => void;
+  onAdd: (mediaSubType: MediaSubType, mediaPath?: string, mediaColor?: string, label?: string) => void;
   onPick?: (relativePath: string) => void;
 }
 
@@ -67,6 +67,7 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
   const [selectedColor, setSelectedColor] = useState('#000000');
   const [searchQuery, setSearchQuery] = useState('');
   const [urlInput, setUrlInput] = useState('');
+  const [urlName, setUrlName] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
 
   // Folder navigation
@@ -304,9 +305,10 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
     if (mode === 'pick' && onPick) {
       onPick(urlInput.trim());
     } else {
-      onAdd(isVideo ? 'video' : 'image', urlInput.trim());
+      onAdd(isVideo ? 'video' : 'image', urlInput.trim(), undefined, urlName.trim() || undefined);
     }
     setUrlInput('');
+    setUrlName('');
     onClose();
   };
 
@@ -401,6 +403,9 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
               placeholder={type === 'image' ? 'https://example.com/image.jpg' : 'https://example.com/video.mp4'}
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddUrl();
+              }}
               slotProps={{
                 input: {
                   startAdornment: (
@@ -413,6 +418,17 @@ export const MediaBrowser = ({ open, onClose, onAdd, mode = 'add', pickType = 'a
                     </InputAdornment>
                   ),
                 },
+              }}
+            />
+            {/* Optional short name — URLs are far too long to read in the show list. */}
+            <TextField
+              size="small"
+              sx={{ minWidth: 160 }}
+              label={LL.MEDIA.NAME_OPTIONAL()}
+              value={urlName}
+              onChange={(e) => setUrlName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddUrl();
               }}
             />
             <Button size="small" variant="contained" onClick={handleAddUrl} disabled={!urlInput.trim()} startIcon={<AddIcon />}>

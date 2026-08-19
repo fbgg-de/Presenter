@@ -100,25 +100,29 @@ export function collectFindings(opts) {
    */
   const clippingAncestors = (el) => {
     const out = [];
+    // Stop testing an axis once the walk crosses a container that scrolls on it. Above a
+    // scroll boundary the element's position is a scroll offset rather than a layout fact,
+    // so comparing it against an outer container measures where the content happens to be
+    // scrolled to, not whether anything is unreachable. MUI's scrollable Tabs is exactly
+    // this shape: the scroller holds the overflow, the Tabs root above it clips, and a tab
+    // parked past the edge is one arrow-button press away.
+    let checkX = true;
+    let checkY = true;
+
     // `body`/`html` are excluded: a control cut off by the document edge is the same fact as
     // the viewport overflow already reported above, and listing it twice buries the cases
     // where a control is clipped by a container that itself fits the screen perfectly.
     for (let p = el.parentElement; p && p !== document.body && p !== document.documentElement; p = p.parentElement) {
       const cs = getComputedStyle(p);
       if (cs.textOverflow === 'ellipsis') return out;
-      // MUI's Tabs strip clips with `overflow: hidden` and scrolls itself from JS when its
-      // arrow buttons are shown, so a tab past the end is reachable even though no CSS on the
-      // page says so. With the buttons switched off the same markup really does strand the
-      // tab, which is why this looks for an enabled button rather than for Tabs.
-      if (
-        p.classList.contains('MuiTabs-scroller') &&
-        p.closest('.MuiTabs-root')?.querySelector('.MuiTabs-scrollButtons:not(.Mui-disabled)')
-      ) {
-        return out;
-      }
-      const clipsX = cs.overflowX === 'hidden' || cs.overflowX === 'clip';
-      const clipsY = cs.overflowY === 'hidden' || cs.overflowY === 'clip';
+
+      const clipsX = checkX && (cs.overflowX === 'hidden' || cs.overflowX === 'clip');
+      const clipsY = checkY && (cs.overflowY === 'hidden' || cs.overflowY === 'clip');
       if (clipsX || clipsY) out.push({ el: p, clipsX, clipsY, box: clientBox(p) });
+
+      if ((cs.overflowX === 'auto' || cs.overflowX === 'scroll') && p.scrollWidth > p.clientWidth + 1) checkX = false;
+      if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && p.scrollHeight > p.clientHeight + 1) checkY = false;
+      if (!checkX && !checkY) return out;
     }
     return out;
   };
