@@ -37,6 +37,7 @@ import {
   PrivacyNoticeBlock,
   RemoteCommandsBlock,
   ShowTitleTemplateRow,
+  SongLanguagesBlock,
 } from '@/components/settings/SettingsBlocks';
 import { buildSettingsCatalog, type SettingsCategory, type SettingsSection } from '@/components/settings/settingsCatalog';
 import { isElectronApp } from '@/utils';
@@ -68,6 +69,7 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
     slots: {
       globalStyle: () => <GlobalStyleRow />,
       showTitleTemplate: () => <ShowTitleTemplateRow />,
+      songLanguages: () => <SongLanguagesBlock />,
       viewerToken: () => <ViewerTokenSection />,
       remoteCommands: () => <RemoteCommandsBlock />,
       keyboardMapping: () => <KeyboardMappingEditor />,

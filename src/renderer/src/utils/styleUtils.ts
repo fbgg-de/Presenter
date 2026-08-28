@@ -1,4 +1,5 @@
 import type { LanguageStyleEntry, StyleData, StyleEntity } from '@/api/styles.api';
+import { normaliseLanguageEntries } from '@/utils/languageSlots';
 import type { CSSProperties } from 'react';
 
 /**
@@ -44,14 +45,9 @@ export type ResolvedStyle = {
   opacity?: number;
   hideText?: boolean;
   hideBackground?: boolean;
-  /** Per-language typography overrides */
+  /** Per-slot typography and visibility; slot 1 is the song's main language. */
   languageStyles?: LanguageStyleEntry[];
-  /**
-   * Ordered list of language tags to display (derived from languageStyles non-default entries).
-   * When present and showAllLanguages is false, only these languages are shown in this order.
-   */
-  languageOrder?: string[];
-  /** When true, show all language lines regardless of languageOrder */
+  /** When true, every language of the song is shown, including slots this style does not define. */
   showAllLanguages?: boolean;
   /** Copyright section styles */
   copyrightFontFamily?: string;
@@ -169,12 +165,11 @@ export function resolveStyleData(data: StyleData | undefined): ResolvedStyle {
   set('backgroundVideoEaseOut', extractEnabled(data.backgroundVideoEaseOut));
   if (data.css) result.css = data.css;
   if (data.languageStyles?.enabled && data.languageStyles.value?.length) {
-    result.languageStyles = data.languageStyles.value;
-    // Build the full display order from the languageStyles array (including default '' entry).
-    // '' represents the primary/untagged language line.
-    if (data.languageStyles.value.length > 1) {
-      result.languageOrder = data.languageStyles.value.map((e) => (e.language === '' ? '' : e.language.toUpperCase()));
-    }
+    // Which languages this actually shows depends on the song, so it cannot be resolved here —
+    // `languagesForStyle` does it where both the style and the song are in hand. Slots are
+    // normalised at this boundary so nothing downstream has to know about the pre-migration
+    // shape a style may still be stored in.
+    result.languageStyles = normaliseLanguageEntries(data.languageStyles.value);
   }
 
   return result;

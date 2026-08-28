@@ -10,9 +10,20 @@
  *   Module scripts are always deferred; they cannot catch errors that occur
  *   during the initialisation of other modules that load in parallel.
  *
+ * Path note:
+ *   The tag's `src` is built from Vite's resolved `base`, NOT hard-coded as a
+ *   relative path. The web build serves client-side routes by rewriting them to
+ *   the same HTML file (`/admin/logs` → `admin.html`), so a relative `src`
+ *   resolves against the *route* rather than the document: the browser asked for
+ *   `/admin/error-fallback.js`, the SPA fallback answered with HTML, and the
+ *   script silently failed to load on every nested route — including the pages
+ *   where early errors matter most. `base` is `/` for the web build and `./`
+ *   for Electron (which loads its HTML over `file://`), so deriving from it is
+ *   correct for both, and for a deployment under a sub-path.
+ *
  * CSP note:
- *   The injected tag references `./error-fallback.js` – a same-origin file –
- *   so the existing `script-src 'self'` CSP rule already covers it.
+ *   The injected tag references a same-origin file, so the existing
+ *   `script-src 'self'` CSP rule already covers it.
  */
 
 import { build as esbuildBuild, type BuildOptions } from 'esbuild';
@@ -49,8 +60,15 @@ export function errorFallbackPlugin(): Plugin {
   /** Holds the compiled IIFE code during a build. */
   let compiledCode = '';
 
+  /** Vite's resolved `base`; always normalised to end with a slash. See the path note above. */
+  let base = '/';
+
   return {
     name: 'error-fallback',
+
+    configResolved(config) {
+      base = config.base || '/';
+    },
 
     // ── Build mode ──────────────────────────────────────────────────────────
 
@@ -108,7 +126,7 @@ export function errorFallbackPlugin(): Plugin {
         // Remove any existing error-fallback script tag (module or otherwise).
         const cleaned = html.replace(/<script\b[^>]*\bsrc="[^"]*error-fallback[^"]*"[^>]*>\s*<\/script>\n?/g, '');
 
-        const tag = '<script src="./error-fallback.js"></script>';
+        const tag = `<script src="${base}error-fallback.js"></script>`;
 
         // Locate the end of the <head> section so we only search within it.
         const headEndIdx = cleaned.search(/<\/head>/i);

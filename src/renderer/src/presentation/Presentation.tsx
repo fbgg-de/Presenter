@@ -12,6 +12,7 @@ import {
   StreamMode,
 } from '@/presentation';
 import { rampToVolume } from '@/presentation/videoUtils';
+import { MAIN_LANGUAGE_SLOT, entryForSlot } from '@/utils/languageSlots';
 
 /**
  * Legacy props interface — kept for backward compatibility.
@@ -137,6 +138,7 @@ const FadeOutLayer = ({
                   block={prevBlock.lines}
                   textStyle={prevTextCss}
                   languages={prevContent.languages}
+                  songLanguages={prevContent.songLanguages}
                   paragraphPadding={prevResolved.paragraphPadding}
                 />
               );
@@ -149,6 +151,7 @@ const FadeOutLayer = ({
               color={prevContent.nextLinePreviewColor || prevResolved.nextLinePreviewColor}
               textStyle={prevTextCss}
               languages={prevContent.languages}
+              songLanguages={prevContent.songLanguages}
               langStyles={prevResolved.languageStyles}
               paragraphPadding={prevResolved.paragraphPadding}
             />
@@ -334,6 +337,7 @@ export const Presentation = (props: PresentationProps) => {
               activeLineIndex={content.activeLineIndex}
               textStyle={textCss}
               languages={content.languages}
+              songLanguages={content.songLanguages}
               streamLines={content.streamLines}
               langStyles={resolvedStyle.languageStyles}
               paragraphPadding={resolvedStyle.paragraphPadding}
@@ -350,6 +354,7 @@ export const Presentation = (props: PresentationProps) => {
             block={activeBlock.lines}
             textStyle={textCss}
             languages={content.languages}
+            songLanguages={content.songLanguages}
             langStyles={resolvedStyle.languageStyles}
             paragraphPadding={resolvedStyle.paragraphPadding}
           />
@@ -446,13 +451,14 @@ export const Presentation = (props: PresentationProps) => {
             color={
               content.nextLinePreviewColor ||
               resolvedStyle.nextLinePreviewColor ||
-              resolvedStyle.languageStyles?.find((e) => e.language === '')?.nextLinePreviewColor
+              entryForSlot(resolvedStyle.languageStyles, MAIN_LANGUAGE_SLOT)?.nextLinePreviewColor
             }
             opacity={
-              resolvedStyle.nextLinePreviewOpacity ?? resolvedStyle.languageStyles?.find((e) => e.language === '')?.nextLinePreviewOpacity
+              resolvedStyle.nextLinePreviewOpacity ?? entryForSlot(resolvedStyle.languageStyles, MAIN_LANGUAGE_SLOT)?.nextLinePreviewOpacity
             }
             textStyle={textCss}
             languages={content.languages}
+            songLanguages={content.songLanguages}
             langStyles={resolvedStyle.languageStyles}
             paragraphPadding={resolvedStyle.paragraphPadding}
           />

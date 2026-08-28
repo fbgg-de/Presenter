@@ -59,4 +59,14 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
     },
   },
+  // ── CommonJS build scripts ──────────────────────────────────────────────────
+  // Packaging and release tooling that Node loads as CommonJS: electron-builder
+  // resolves its hooks with require(), and these scripts run outside any bundler.
+  // require() is the only import form available to them.
+  {
+    files: ['**/*.cjs', 'scripts/**/*.js', 'ws-server/scripts/**/*.js'],
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 );

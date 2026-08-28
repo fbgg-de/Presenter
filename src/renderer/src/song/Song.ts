@@ -11,6 +11,7 @@ export class Song implements ISong {
   account?: number;
   background?: string;
   css?: string;
+  languages?: string[];
   lastUpdate?: number;
   updatedAt?: string | null;
 
@@ -27,6 +28,7 @@ export class Song implements ISong {
       | 'account'
       | 'background'
       | 'css'
+      | 'languages'
       | 'lastUpdate'
       | 'updatedAt'
     >,
@@ -41,6 +43,7 @@ export class Song implements ISong {
     this.account = song?.account;
     this.background = song?.background ?? '';
     this.css = song?.css ?? '';
+    this.languages = song?.languages ?? [];
     this.lastUpdate = song?.lastUpdate ?? Date.now();
     this.updatedAt = song?.updatedAt ?? null;
   }

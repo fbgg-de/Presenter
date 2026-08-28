@@ -56,7 +56,7 @@ const handlers = {
   '/rest/Session': (req) =>
     req.method === 'DELETE' ? { message: 'logged out' } : { ...session(), authType: isAdmin ? 'oidc_admin' : 'oidc' },
   '/rest/Accounts': () => [{ license: fixtures.account.license, name: fixtures.account.name }],
-  '/rest/AccountSettings': () => ({ defaultStyleId: null, showTitleTemplate: 'Show {dd}.{MM}.{yyyy}' }),
+  '/rest/AccountSettings': () => ({ defaultStyleId: null, showTitleTemplate: 'Show {dd}.{MM}.{yyyy}', languages: ['EN', 'DE'] }),
   // Viewer token. GET reports whether one exists; POST mints one and returns it in full
   // (the only time the server ever does), DELETE revokes. Kept in `state` so the reveal
   // dialog and the "token exists" chip behave like the real thing for the life of the run.
@@ -134,7 +134,7 @@ const handlers = {
   '/rest/Pdfs': () => [],
   '/rest/BibleTranslations': () => [],
   '/rest/BibleVerses': () => ({ verses: [] }),
-  '/rest/LanguageTags': () => [],
+  '/rest/LanguageTags': () => ['DE', 'EN'],
   '/rest/Search': (req) => filterSongs(req.query.q ?? req.query.search),
   '/rest/Metrics': () => ({ message: 'recorded (mock)' }),
   '/rest/Log': () => ({ message: 'logged (mock)' }),
@@ -143,6 +143,21 @@ const handlers = {
   '/rest/ChurchToolsSongs': () => [],
 
   '/rest/AdminAccounts': () => fixtures.adminAccounts,
+
+  /**
+   * Monitor ticket for the admin WebSocket tab. Needs a relay to point at, so it only
+   * answers when MOCK_WS_URL is set — e.g.
+   *   MOCK_WS_URL=ws://127.0.0.1:9001 MOCK_ADMIN=1 npm run dev:mock
+   * Run that relay with BACKEND_URL pointing back here so it can validate the token below.
+   */
+  '/rest/AdminWsMonitor': () =>
+    process.env.MOCK_WS_URL
+      ? { token: 'mock-admin-monitor', expiresIn: 120, url: process.env.MOCK_WS_URL }
+      : { error: 'Set MOCK_WS_URL to use the WebSocket monitor against the mock backend.' },
+
+  /** Called by the relay, not the browser. Accepts only the fixed mock token above. */
+  '/rest/ValidateMonitorToken': (req) =>
+    (req.query?.token ?? '') === 'mock-admin-monitor' ? { scope: 'admin', account: null } : { error: 'Invalid monitor token.' },
   '/rest/AdminProviders': () => [],
   '/rest/AdminMigrations': () => ({ currentVersion: 19, latestVersion: 19, pendingCount: 0, migrations: [] }),
   '/rest/AdminConfig': () => ({

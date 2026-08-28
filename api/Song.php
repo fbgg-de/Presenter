@@ -31,7 +31,7 @@ class Song extends RestController
     private function fetchSongData(int $account, int $songNumber): ?array
     {
         $stmt = self::prepare('
-				SELECT `title`, `initialOrder`, `order`, `authors`, `copyright`, `background`, `css`, `style_id`, `ccli_number`, `song_key`, `updated_at`
+				SELECT `title`, `initialOrder`, `order`, `authors`, `copyright`, `background`, `css`, `style_id`, `ccli_number`, `song_key`, `languages`, `updated_at`
 				FROM `songs`
 				WHERE `songnumber` = ?
 				AND `account` = ?
@@ -62,8 +62,57 @@ class Song extends RestController
           'styleId' => $row['style_id'] ? (int)$row['style_id'] : null,
           'ccliNumber' => $row['ccli_number'],
           'key' => $row['song_key'],
+          'languages' => self::decodeLanguages($row['languages'] ?? null),
           'updatedAt' => $row['updated_at'] ?? null
         ];
+    }
+
+    /**
+     * The ordered language list of a song. The first entry is the default language; every entry
+     * corresponds to a `[XX] ` prefix on a stored lyric line. Codes are two to five letters,
+     * the same width the renderer's translation-line regex and LanguageTags both accept.
+     */
+    public static function decodeLanguages(?string $json): array
+    {
+        if ($json === null || $json === '') {
+            return [];
+        }
+
+        $decoded = json_decode($json, true);
+
+        return is_array($decoded) ? self::sanitiseLanguages($decoded) : [];
+    }
+
+    /** Uppercased, deduplicated, order preserved; anything that is not a language code is dropped. */
+    public static function sanitiseLanguages(array $raw): array
+    {
+        $languages = [];
+
+        foreach ($raw as $code) {
+            if (!is_string($code)) {
+                continue;
+            }
+
+            $code = strtoupper(trim($code));
+
+            if (preg_match('/^[A-Z]{2,5}$/', $code) && !in_array($code, $languages, true)) {
+                $languages[] = $code;
+            }
+        }
+
+        return $languages;
+    }
+
+    /** Request value → column value. `null` means "not supplied", which leaves the column alone. */
+    private function languagesParam(Request &$req): ?string
+    {
+        $raw = $req->params->get('languages', null, false);
+
+        if ($raw === null || $raw === false) {
+            return null;
+        }
+
+        return json_encode(self::sanitiseLanguages(is_array($raw) ? $raw : []));
     }
 
     private function fetchBlocks(int $account, int $songNumber): array
@@ -135,23 +184,26 @@ class Song extends RestController
             $orderValue = json_encode($initialOrder);
         }
 
+        $languagesValue = $this->languagesParam($req) ?? json_encode([]);
+
         $stmt = self::prepare('
 			INSERT INTO `songs` (
-				`account`, `songnumber`, `title`, `initialOrder`, `order`, `authors`, `copyright`
+				`account`, `songnumber`, `title`, `initialOrder`, `order`, `authors`, `copyright`, `languages`
 			) VALUES (
-				?, ?, ?, ?, ?, ?, ?
+				?, ?, ?, ?, ?, ?, ?, ?
 			)
 		');
 
         $stmt->bind_param(
-            'iisssss',
+            'iissssss',
             $account,
             $songNumber,
             $title,
             join(self::SEPARATOR_ORDER, $initialOrder),
             $orderValue,
             $authors,
-            $copyright
+            $copyright,
+            $languagesValue
         )->execute()->close();
 
         $this->insertBlocks($account, $songNumber, $blocks);
@@ -164,7 +216,8 @@ class Song extends RestController
             'order' => $order,
             'blocks' => $blocks,
             'authors' => $authors,
-            'copyright' => $copyright
+            'copyright' => $copyright,
+            'languages' => self::decodeLanguages($languagesValue)
         ]);
     }
 
@@ -192,27 +245,33 @@ class Song extends RestController
         // Upsert: update the song when it exists, otherwise create the row. The child `blocks`
         // rows have a FK to `songs`, so the parent must exist before insertBlocks() runs — a plain
         // UPDATE silently affects 0 rows for a missing song and the block insert then fails (1452).
+        // A caller that does not send `languages` (an older client, or a partial save) must not
+        // wipe the stored list — COALESCE keeps the existing column value in that case.
+        $languagesValue = $this->languagesParam($req);
+
         $stmt = self::prepare('
-			INSERT INTO `songs` (`account`, `songnumber`, `title`, `initialOrder`, `order`, `authors`, `copyright`)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+			INSERT INTO `songs` (`account`, `songnumber`, `title`, `initialOrder`, `order`, `authors`, `copyright`, `languages`)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			ON DUPLICATE KEY UPDATE
 				`title` = VALUES(`title`),
 				`initialOrder` = VALUES(`initialOrder`),
 				`order` = VALUES(`order`),
 				`authors` = VALUES(`authors`),
 				`copyright` = VALUES(`copyright`),
+				`languages` = COALESCE(VALUES(`languages`), `languages`),
 				`updated_at` = CURRENT_TIMESTAMP
 		');
 
         $stmt->bind_param(
-            'iisssss',
+            'iissssss',
             $account,
             $songNumber,
             $title,
             join(self::SEPARATOR_ORDER, $initialOrder),
             $orderValue,
             $authors,
-            $copyright
+            $copyright,
+            $languagesValue
         )->execute()->close();
 
         $this->insertBlocks($account, $songNumber, $blocks);
@@ -225,7 +284,8 @@ class Song extends RestController
             'order' => $order,
             'blocks' => $blocks,
             'authors' => $authors,
-            'copyright' => $copyright
+            'copyright' => $copyright,
+            'languages' => $languagesValue === null ? null : self::decodeLanguages($languagesValue)
         ]);
     }
 

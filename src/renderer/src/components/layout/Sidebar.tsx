@@ -103,6 +103,7 @@ import { useGetSessionQuery } from '@/api/session.api';
 import { useLazyGetSongQuery, useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useCcliSongImport } from '@/hooks/useCcliSongImport';
+import { useImportLanguage } from '@/hooks/useImportLanguage';
 import { useSongUpdatePoller } from '@/hooks/useSongUpdatePoller';
 import { useGetMusicianSettings } from '@/store/musicianSlice';
 import { loadShowSongs } from '@/store/songsSlice';
@@ -192,7 +193,8 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
   const [saveShowMutation] = useSaveShowMutation();
   const [createSongMutation] = useCreateSongMutation();
   const [updateSongMutation] = useUpdateSongMutation();
-  const importCcliSong = useCcliSongImport();
+  const { resolveImportLanguage, importLanguageDialog } = useImportLanguage();
+  const importCcliSong = useCcliSongImport(resolveImportLanguage);
   // True while a CCLI SongSelect import is resolving — drives a placeholder row in the list.
   const [isImportingCcli, setIsImportingCcli] = useState(false);
   const { data: availableStyles = [] } = useGetStylesQuery();
@@ -434,6 +436,13 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
     const doImport = async (content: string) => {
       const parsed = parseSongFile(file, content);
 
+      // Imported files do not say what language they are in, so it is read off the lyrics and
+      // written onto every line. Only an ambiguous result interrupts with a dialog.
+      const resolved = await resolveImportLanguage(parsed.blocks, parsed.title);
+      if (!resolved) return;
+      parsed.blocks = resolved.blocks;
+      parsed.languages = resolved.languages;
+
       try {
         // Always upload to the backend so it assigns the canonical song number.
         // Omit songNumber entirely — the backend defaults to 0 and auto-generates one.
@@ -444,6 +453,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
           initialOrder: parsed.initialOrder ?? [],
           order: parsed.order,
           blocks: parsed.blocks,
+          languages: parsed.languages,
         }).unwrap();
 
         const savedSong = new Song({ ...parsed, songNumber: result.songNumber });
@@ -1534,6 +1544,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
           />
         </Box>
       )}
+      {importLanguageDialog}
     </Stack>
   );
 });

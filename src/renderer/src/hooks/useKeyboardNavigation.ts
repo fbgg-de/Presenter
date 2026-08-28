@@ -12,12 +12,11 @@ import {
 } from '@/store/presentationSlice';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { DEFAULT_KEYBOARD_MAPPING } from '@/components/settings/KeyboardMappingEditor';
-import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
+import { countPrimaryLines } from '@/song';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useGetShow } from '@/store/showSlice';
 
 /** Count only primary (non-translated) lines in a raw block lines array. */
-const countPrimaryLines = (lines: string[]): number => lines.filter((l) => !SONG_TRANSLATION_LINE_REGEX.test(l)).length;
 
 /** Build a combo string from a keyboard event (matches KeyboardMappingEditor.eventToCombo) */
 const eventToCombo = (e: KeyboardEvent): string => {
@@ -163,7 +162,7 @@ export const useKeyboardNavigation = () => {
             dispatch(setActiveLineIndex(s.activeLineIndex - 1));
           } else if (s.activeBlockIndex > 0) {
             const prevBlockLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex - 1);
-            const primaryCount = countPrimaryLines(prevBlockLines);
+            const primaryCount = countPrimaryLines(prevBlockLines, s.currentSong.languages?.[0]);
             dispatch(setActiveBlockIndex(s.activeBlockIndex - 1));
             dispatch(setActiveLineIndex(Math.max(0, primaryCount - 1)));
           }
@@ -173,7 +172,7 @@ export const useKeyboardNavigation = () => {
       const nextLine = () => {
         if (s.currentSong) {
           const currentLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex);
-          const primaryCount = countPrimaryLines(currentLines);
+          const primaryCount = countPrimaryLines(currentLines, s.currentSong.languages?.[0]);
           if (s.activeLineIndex < primaryCount - 1) {
             dispatch(setActiveLineIndex(s.activeLineIndex + 1));
           } else {

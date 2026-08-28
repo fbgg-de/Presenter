@@ -33,21 +33,40 @@ the WebSocket connection is opened:
 
 ## Setup
 
-### 1. Build the TypeScript source
+### Getting the server
 
-Run this once on your **development machine** (not inside Docker):
+The easiest route is the **GitHub release**: every Presenter release carries
+`ws-server-<version>.zip` and `redeploy.sh` as assets, built from that same commit.
+(They are published by `npm run publish` / `npm run publish:artifacts` in the app repo —
+the relay can be re-released on its own, without rebuilding the desktop app.)
+Download both, skip to *2b. Updating an existing deployment* (or *2. Run with Docker
+Compose* for a fresh host), and ignore the build step below.
+
+### 1. Build it yourself
+
+Only needed when running from a checkout rather than a release. `ws-server` is a yarn
+workspace of the repo root, so its dependencies come from the root install — there is no
+separate `node_modules` here:
 
 ```bash
+yarn install       # in the repo ROOT, once
 cd ws-server
-npm install        # installs all dependencies incl. devDependencies for the build
-npm run build      # compiles src/ → dist/
+yarn deploy        # type-checks, bundles, and writes ws-server-deploy.zip
 ```
 
-> **Important:** the `node_modules/` folder and the compiled `dist/` folder must
-> both exist **before** running `docker compose up`. The Dockerfile copies them
-> directly into the image — no `npm install` runs inside the container.
-> This avoids DNS-related build failures that are common on Synology NAS and
-> other environments with restricted Docker bridge networking.
+The relay is **bundled into a single file** with esbuild — its one runtime dependency
+(`ws`) is inlined. There is no `node_modules` to ship, nothing to install on the target,
+and no dependency resolution inside Docker. That last part is what used to fail on Synology
+NAS boxes and other hosts with restricted Docker bridge networking.
+
+The zip contains exactly:
+
+```
+dist/server.js   the bundled relay (~150 KB)
+package.json     name and version only — the relay prints the version at startup
+Dockerfile       copies the two files above; no build step
+redeploy.sh      the upgrade script, so an upgrade carries its own deploy logic
+```
 
 ### 2. Run with Docker Compose
 
@@ -78,18 +97,28 @@ which build is actually running:
 
 ### 2b. Updating an existing deployment
 
-Run `npm run deploy` from `ws-server/` on your development machine. It builds the
-TypeScript, resolves production-only dependencies and packages both into two files:
-`ws-server-deploy.zip` and `redeploy.sh`. Upload both into the folder that holds the
-running deployment — the one with `docker-compose.yml` — and run:
+Take `ws-server-<version>.zip` from the GitHub release, or run `npm run deploy` from
+`ws-server/` to build `ws-server-deploy.zip` yourself. Upload it into the folder that holds
+the running deployment — the one with `docker-compose.yml` — and run:
 
 ```bash
 sudo ./redeploy.sh
 ```
 
+`redeploy.sh` ships **inside** the zip as well, so it only has to be uploaded separately
+the first time — after that every upgrade brings the current version of the script with it.
+It re-execs itself from a temporary copy before unpacking, which is what makes replacing
+itself mid-run safe.
+
 It stops the stack, removes `dist/`, `node_modules/`, `Dockerfile` and `package.json`,
 unpacks the zip in their place, then rebuilds with `--no-cache` and starts again,
-finishing by printing the startup log so you can confirm the version.
+finishing by printing the startup log so you can confirm the version. (`node_modules/` is
+still cleared even though the zip no longer ships one — an older deployment has one, and it
+must not be left behind.)
+
+The script finds the zip either way: it prefers `ws-server-deploy.zip` (a local build) and
+otherwise takes the single `ws-server-*.zip` in the folder (a release download). With
+several to choose from it stops rather than guessing.
 
 `docker-compose.yml` is never touched, and the zip does not contain one by default —
 it holds this host's `BACKEND_URL`, published port and `SYNC_TTL_SECONDS`, which must
@@ -210,6 +239,7 @@ belonging to account `12345` will never receive messages from account `67890`.
 | `PORT`             | `9001`  | TCP port the server listens on                              |
 | `BACKEND_URL`      | –       | Base URL of the PHP backend; required for viewer-token auth |
 | `SYNC_TTL_SECONDS` | `3600`  | How long the last selection stays current (`0` = forever)   |
+| `TRACE_BUFFER_SIZE` | `500`   | Messages kept per account for the admin monitor (50–5000)   |
 
 ### Selection TTL
 
@@ -241,6 +271,7 @@ clear their display if the relay restarts while they are watching.
 | `{ action: "auth", account: <number>, client?: {} }` | First message | Authenticate with an account number                |
 | `{ action: "client_info", client: {} }`             | After auth    | Update this client's descriptor (no reconnect)     |
 | `{ action: "disconnect_peers" }`                    | After auth    | Close every other client of the account (op. only) |
+| `{ action: "auth", role: "monitor", token, account }` | First message | Attach as an admin message monitor (see below)     |
 | Any JSON                                            | After auth    | Relayed to all peers with the same account         |
 
 The optional `client` descriptor is `{ role, mode?, name? }` with `role` one of
@@ -264,4 +295,96 @@ A replayed selection additionally carries `replay: true` and `ageMs` (how long a
 set), so a client can start its local expiry countdown from the right moment.
 
 `peers` lists the descriptors of the recipient's **other** clients, so
-`peers.length === others`.
+`peers.length === others`. Attached monitors are included in it, deliberately: an operator
+should be able to see that support is watching rather than being observed silently.
+
+---
+
+## Message monitoring (admin)
+
+The relay records every message it sees into a bounded, **in-memory** ring buffer per
+account and streams it live to attached monitors. This is what backs the admin panel's
+**WebSocket** tab.
+
+Nothing is persisted. Traces carry full payloads — including lyrics and musician names —
+so they are never written to disk or sent to the backend. A relay restart discards
+everything, and so does closing the admin tab.
+
+### Attaching
+
+A monitor authenticates like any other client, but with `role: "monitor"` and a token
+minted by the backend:
+
+```json
+{ "action": "auth", "role": "monitor", "token": "<payload.signature>", "account": 12345 }
+```
+
+- `account` is the account to watch; `null` watches every account.
+- The token is resolved against `BACKEND_URL/rest/ValidateMonitorToken`, which answers
+  `{ "scope": "admin" }` (may watch anything) or `{ "scope": "account", "account": n }`
+  (bound to one account, and cannot re-scope itself).
+- This is deliberately **not** the viewer-token endpoint. A viewer token authenticates a
+  display and must never be upgradeable into a subscription to an account's full traffic.
+- Monitor tokens are short-lived (see `classes/MonitorToken.php`), so mint a fresh one for
+  every connection attempt rather than caching one.
+
+A monitor is kept out of the relay's client registry entirely: it is never a relay target,
+never receives another client's messages as a peer, and never triggers the cached-selection
+replay.
+
+### Monitor protocol
+
+| Client → Server                                       | Description                                          |
+| ----------------------------------------------------- | ---------------------------------------------------- |
+| `{ action: "monitor_subscribe", account }`            | Switch watched account (`null` = all); replays backlog |
+| `{ action: "monitor_config", bufferSize }`            | Resize the ring buffer at runtime (50–5000)          |
+| `{ action: "monitor_clear" }`                         | Drop the buffer for the watched scope                |
+
+| Server → Client                                                     | Description                                    |
+| -------------------------------------------------------------------- | ---------------------------------------------- |
+| `{ type: "monitor_ok", account, bufferSize, limits, version, accounts, entries }` | Attached; `entries` is the backlog |
+| `{ type: "trace", entry }`                                          | One live event                                 |
+| `{ type: "monitor_peers", accounts, bufferSize }`                   | Live connection census, per account            |
+| `{ type: "monitor_config", bufferSize }`                            | Buffer size changed (by any monitor)           |
+| `{ type: "monitor_cleared", account }`                              | Buffer dropped                                 |
+| `{ type: "auth_error", error }`                                     | Token rejected; socket closes with 4004        |
+
+### Trace entry
+
+```ts
+{
+  seq: number;       // relay-wide counter — the only reliable ordering across accounts
+  ts: number;        // epoch ms
+  account: number;   // -1 for a socket that never authenticated
+  dir: 'in' | 'out' | 'sys';
+  clientId: string;  // relay-assigned socket id, groups rows by connection
+  role: 'operator' | 'musician' | 'remote' | 'viewer' | 'monitor' | 'unknown';
+  name?: string;
+  event: string;     // the message's action/type, or 'connect' | 'auth' | 'close' | 'error'
+  peers?: number;    // how many peers a relayed message actually reached
+  bytes: number;
+  payload?: string;  // the verbatim JSON, untruncated
+}
+```
+
+`peers` is the field most support cases turn on: it distinguishes "the operator never sent
+it" from "the operator sent it and nobody was listening".
+
+### Testing
+
+```bash
+npm run test:ws-monitor
+```
+
+Boots the real relay against a stand-in backend and asserts account separation, token
+rejection, live tracing, runtime buffer resizing, and that a monitor is never relayed to.
+
+Both WebSocket suites normally run `src/server.ts` through ts-node. To run them against the
+**bundle that actually ships** instead — worth doing before a release, since esbuild inlining
+`ws` is not something the source-level tests would catch:
+
+```bash
+npm run test:ws:bundle
+```
+
+(Or set `WS_RELAY_ENTRY=deploy/dist/server.js` for a single suite.)

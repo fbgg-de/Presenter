@@ -2,35 +2,26 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Snackbar } from '@mui/material';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useGetSettings } from '@/store/settingsSlice';
-import { useLogClientErrorMutation } from '@/api/logs.api';
+import { reportClientError, type ClientErrorSource } from '@/utils/clientErrorLog';
 
 interface ErrorInfo {
   message: string;
   stack?: string;
-  source?: string;
+  source?: ClientErrorSource;
 }
 
 /**
- * Global error handler component.
- * - Listens for uncaught errors and unhandled promise rejections.
- * - Sends all such errors to the metrics API.
- * - Shows a Snackbar notification (configurable via settings: errorBoundaryNotification).
+ * The in-app half of error handling: metrics, and the snackbar that tells the operator something
+ * broke (settings: errorBoundaryNotification).
  *
- * Place this inside the Redux Provider and TypesafeI18n context in App.tsx.
+ * Forwarding to the server log is not done here. `utils/clientErrorLog` owns that and starts
+ * listening before React does, so boot failures are reported too; this component only hands it
+ * the errors React catches on its own. Place inside the Redux Provider and TypesafeI18n context.
  */
 export const GlobalErrorHandler = ({ boundaryError }: { boundaryError?: Error | null }) => {
   const { trackEvent } = useMetrics();
   const { errorBoundaryNotification } = useGetSettings();
   const [notification, setNotification] = useState<ErrorInfo | null>(null);
-  const [logClientError] = useLogClientErrorMutation();
-
-  const getBrowserDetails = () => {
-    try {
-      return `UA=${navigator.userAgent}; Lang=${navigator.language}; Platform=${navigator.platform}; Screen=${screen.width}x${screen.height}`;
-    } catch {
-      return 'browser details unavailable';
-    }
-  };
 
   const report = useCallback(
     (info: ErrorInfo) => {
@@ -40,30 +31,28 @@ export const GlobalErrorHandler = ({ boundaryError }: { boundaryError?: Error | 
         source: info.source,
       });
 
-      // Also persist to server log
-      const browserDetails = getBrowserDetails();
-      const logMessage = `[CLIENT_ERROR] [${info.source ?? 'unknown'}] ${info.message}${info.stack ? ` | Stack: ${info.stack.slice(0, 800)}` : ''} | Browser: ${browserDetails}`;
-      logClientError({ message: logMessage }).catch(() => {
-        /* best-effort */
-      });
-
       if (errorBoundaryNotification) {
         setNotification(info);
       }
     },
-    [trackEvent, errorBoundaryNotification, logClientError],
+    [trackEvent, errorBoundaryNotification],
   );
 
-  // React ErrorBoundary errors passed via prop
+  // A render that threw never reaches the window handlers, so the boundary reports it itself.
   useEffect(() => {
-    if (boundaryError) {
-      report({ message: boundaryError.message, stack: boundaryError.stack, source: 'react_boundary' });
-    }
+    if (!boundaryError) return;
+
+    const info: ErrorInfo = { message: boundaryError.message, stack: boundaryError.stack, source: 'react_boundary' };
+
+    reportClientError({ ...info, source: 'react_boundary' });
+    report(info);
   }, [boundaryError, report]);
 
-  // Global window errors
+  // Uncaught errors and rejections are already on their way to the log — `clientErrorLog` has been
+  // listening since before this component existed. Mirror them into metrics and the snackbar.
   useEffect(() => {
     const handleError = (event: ErrorEvent) => {
+      if (!event.message) return; // a failed resource load, reported but not worth a toast
       report({ message: event.message, stack: event.error?.stack, source: 'window_onerror' });
     };
     const handleRejection = (event: PromiseRejectionEvent) => {

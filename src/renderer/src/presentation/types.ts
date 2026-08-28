@@ -119,6 +119,14 @@ export interface PresentationContent {
   /** Languages to display (filter). Empty = all languages. */
   languages?: string[];
 
+  /**
+   * The song's languages in its own order: the first anchors a lyric line, the rest hang off it
+   * as translations. This is what turns a style's positional slots into actual language codes,
+   * so it has to travel with the content. Undefined for songs saved before tagging became
+   * explicit, whose anchor lines are the ones carrying no tag at all.
+   */
+  songLanguages?: string[];
+
   /** Number of lines for stream mode */
   streamLines?: number;
 

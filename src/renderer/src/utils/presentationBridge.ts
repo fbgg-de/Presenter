@@ -1,5 +1,7 @@
 import type { PresentationContent } from '@/presentation/types';
+import type { LanguageStyleEntry } from '@/api/styles.api';
 import { WindowConfig } from '@/store/windowSlice';
+import { languagesForStyle } from '@/utils/languageSlots';
 
 interface PresentationWindowEntry {
   id: string;
@@ -567,15 +569,12 @@ function applyWindowOverrides(content: PresentationContent, config: WindowConfig
     }
   }
 
-  // Derive language filter from the resolved style when no explicit window-config override is set.
-  // Style-derived language order takes effect only when no window-level languages are configured.
+  // Which languages this window shows is the style's decision, but the style only names slots
+  // — "the second language" — so it can only be turned into actual codes here, where the song's
+  // own language order is also in hand. A window-level override still wins over both.
   if (!config.languages) {
-    const style = merged.style as { showAllLanguages?: boolean; languageOrder?: string[] } | undefined;
-    if (style?.showAllLanguages) {
-      merged.languages = undefined; // show all
-    } else if (style?.languageOrder && style.languageOrder.length > 0) {
-      merged.languages = style.languageOrder;
-    }
+    const style = merged.style as { showAllLanguages?: boolean; languageStyles?: LanguageStyleEntry[] } | undefined;
+    merged.languages = languagesForStyle(style?.languageStyles, merged.songLanguages, style?.showAllLanguages);
   }
 
   return merged;

@@ -1,10 +1,9 @@
-import { useRef, useEffect, useState, ReactNode } from 'react';
+import { useEffect, useMemo, useState, ReactNode } from 'react';
 import {
   Button,
-  SpeedDialIcon,
-  SpeedDial,
   Chip,
   Box,
+  Divider,
   Drawer,
   IconButton,
   InputAdornment,
@@ -15,30 +14,34 @@ import {
   TextField,
   Typography,
   Badge,
-  SpeedDialAction,
   TextFieldProps,
 } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
 import { SongOrderEditor } from './SongOrderEditor';
+import { LyricBlockEditor } from './LyricBlockEditor';
+import { SongLanguagesEditor } from './SongLanguagesEditor';
+import { Close as CloseIcon, Delete as DeleteIcon, Info as InfoIcon, Add as AddIcon, Save as SaveIcon } from '@mui/icons-material';
+import type { ISong, LyricEffect, LyricPage, TBlocks } from '@/song';
 import {
-  Close as CloseIcon,
-  Delete as DeleteIcon,
-  Info as InfoIcon,
-  Add as AddIcon,
-  InsertPageBreak as PageBreakIcon,
-  GTranslate as TranslateIcon,
-  Save as SaveIcon,
-} from '@mui/icons-material';
-import type { ISong, TBlocks } from '@/song';
-import { SONG_BLOCK_SEPARATOR, Song } from '@/song';
+  PRIMARY_LANGUAGE_KEY,
+  Song,
+  applyLyricEffects,
+  countLinesWithLanguage,
+  parseBlockLines,
+  resolvePrimaryLanguage,
+  seedSongLanguages,
+  serialiseBlockLines,
+} from '@/song';
 import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { addSongToStore, updateSongInStore } from '@/store/songsSlice';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useAccountLanguages } from '@/hooks/useAccountLanguages';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
-type Block = { name: string; lines: string[] };
+/** A block as the editor holds it: lyrics stay parsed until save. */
+type Block = { name: string; pages: LyricPage[] };
 
 const StyledInput = styled(TextField)(({ theme }) => ({
   background: theme.palette.background.paper,
@@ -59,22 +62,6 @@ const Input = (props: TextFieldProps & { startAdornment?: ReactNode; endAdornmen
   return <StyledInput {...inputProps} slotProps={customSlotProps} />;
 };
 
-const SpeedDialTranslate = styled(SpeedDial)`
-  margin: 4px;
-  width: 32px;
-  height: 32px;
-  & .MuiFab-root {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
-    background: transparent;
-  }
-  & .MuiSpeedDial-actions {
-    align-items: center;
-  }
-`;
-
 export const SongEditor = (props: {
   open: boolean;
   setOpen: (open: boolean) => void;
@@ -85,6 +72,7 @@ export const SongEditor = (props: {
   const dispatch = useAppDispatch();
   const { defaultNewVerseName } = useGetSettings();
   const isMobile = useIsMobile();
+  const { available: accountLanguages, defaultLanguage } = useAccountLanguages();
 
   const [createSongMutation] = useCreateSongMutation();
   const [updateSongMutation] = useUpdateSongMutation();
@@ -92,8 +80,6 @@ export const SongEditor = (props: {
 
   const { open, setOpen, song, onSongCreated } = props;
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [openTranslation, setOpenTranslation] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
   const [tab, setTab] = useState(0);
@@ -103,64 +89,76 @@ export const SongEditor = (props: {
   const [title, setTitle] = useState('');
   const [authors, setAuthors] = useState('');
   const [copyright, setCopyright] = useState('');
+  const [languages, setLanguages] = useState<string[]>([]);
+  /** Which languages the lyric editor shows. A view filter, reset whenever the list changes. */
+  const [visibleLanguages, setVisibleLanguages] = useState<string[]>([]);
   const [order, setOrder] = useState<string[]>([]);
   const [orders, setOrders] = useState<{ [key: string]: string[] }>({ Default: [] });
   const [currentOrder, setCurrentOrder] = useState<string>('Default');
-  const [block, setBlock] = useState('');
   const [newBlock, setNewBlock] = useState('');
 
-  const languages = ['EN', 'DE']; // TODO: derive from account settings
+  const markDirty = () => setIsDirty(true);
 
-  const setBlocks = (blocks: Block[]) => {
-    blocks.sort((a, b) => a.name.localeCompare(b.name));
-    _setBlocks(blocks);
-    setBlocksOrder(blocks.map((block) => block.name));
-    setOrder(order.filter((order) => !!blocks.find((block) => block.name === order)));
-    setIsDirty(true);
+  /** Adding or removing a block re-sorts the tabs and drops the block from every order. */
+  const setBlocks = (next: Block[]) => {
+    next.sort((a, b) => a.name.localeCompare(b.name));
+    _setBlocks(next);
+    setBlocksOrder(next.map((block) => block.name));
+    setOrder(order.filter((name) => !!next.find((block) => block.name === name)));
+    markDirty();
   };
 
   const init = () => {
-    if (song) {
-      setTab(0);
-      setIsDirty(false);
+    if (!song) return;
 
-      const blocks: Block[] = [];
+    setTab(0);
+    setIsDirty(false);
 
-      if (song.initialOrder && song.initialOrder.length > 0) {
-        song.initialOrder.forEach((blockName) => {
-          if (song.blocks[blockName]) {
-            blocks.push({ name: blockName, lines: song.blocks[blockName] });
-          }
-        });
-        for (const [name, lines] of Object.entries(song.blocks)) {
-          if (!song.initialOrder.includes(name)) {
-            blocks.push({ name, lines });
-          }
-        }
-      } else {
-        for (const [name, lines] of Object.entries(song.blocks)) {
-          blocks.push({ name, lines });
-        }
+    // Songs stored before the language list existed are read back off their own tags.
+    const stored = song.languages ?? [];
+    const seeded = stored.length > 0 ? stored : seedSongLanguages(song.blocks, [defaultLanguage, ...accountLanguages]);
+
+    // Which language actually anchors the lyric lines. Normally the first of the list, but a
+    // song whose list has drifted from its content would otherwise open with an empty first
+    // column and every line in the translation slots, so the content wins and the list follows.
+    const allLines = Object.values(song.blocks).flat();
+    const anchor = resolvePrimaryLanguage(allLines, seeded[0]);
+    const languages = anchor && seeded[0] !== anchor ? [anchor, ...seeded.filter((code) => code !== anchor)] : seeded;
+
+    const parsed: Block[] = [];
+    const push = (name: string, lines: string[]) => parsed.push({ name, pages: parseBlockLines(lines, anchor) });
+
+    if (song.initialOrder && song.initialOrder.length > 0) {
+      song.initialOrder.forEach((blockName) => {
+        if (song.blocks[blockName]) push(blockName, song.blocks[blockName]);
+      });
+      for (const [name, lines] of Object.entries(song.blocks)) {
+        if (!song.initialOrder.includes(name)) push(name, lines);
       }
+    } else {
+      for (const [name, lines] of Object.entries(song.blocks)) push(name, lines);
+    }
 
-      _setBlocks(blocks);
-      setBlocksOrder(blocks.map((b) => b.name));
+    _setBlocks(parsed);
+    setBlocksOrder(parsed.map((block) => block.name));
 
-      setTitle(song.title);
-      setAuthors(song.authors ?? '');
-      setCopyright(song.copyright ?? '');
+    setTitle(song.title);
+    setAuthors(song.authors ?? '');
+    setCopyright(song.copyright ?? '');
 
-      if (song.order && Object.keys(song.order).length > 0) {
-        setOrders(song.order);
-        const firstOrderName = Object.keys(song.order)[0];
-        setCurrentOrder(firstOrderName);
-        setOrder(song.order[firstOrderName] ?? []);
-      } else {
-        const defaultOrders = { Default: song.initialOrder || [] };
-        setOrders(defaultOrders);
-        setCurrentOrder('Default');
-        setOrder(song.initialOrder || []);
-      }
+    setLanguages(languages);
+    setVisibleLanguages(languages);
+
+    if (song.order && Object.keys(song.order).length > 0) {
+      setOrders(song.order);
+      const firstOrderName = Object.keys(song.order)[0];
+      setCurrentOrder(firstOrderName);
+      setOrder(song.order[firstOrderName] ?? []);
+    } else {
+      const defaultOrders = { Default: song.initialOrder || [] };
+      setOrders(defaultOrders);
+      setCurrentOrder('Default');
+      setOrder(song.initialOrder || []);
     }
   };
 
@@ -168,19 +166,48 @@ export const SongEditor = (props: {
     init();
   }, [song]);
 
-  useEffect(() => {
-    if (blocks && tab > 0) {
-      setBlock(blocks[tab - 1]?.lines.join('\n'));
-    }
-    setNewBlock(defaultNewVerseName);
-  }, [tab, blocks]);
+  /** How many lyric lines carry text per language, for the removal warning in the info tab. */
+  const languageUsage = useMemo(() => {
+    const usage: Record<string, number> = {};
 
-  const markDirty = () => setIsDirty(true);
+    languages.forEach((code, index) => {
+      const key = index === 0 ? PRIMARY_LANGUAGE_KEY : code;
+      usage[code] = blocks.reduce((total, block) => total + countLinesWithLanguage(block.pages, key), 0);
+    });
+
+    return usage;
+  }, [blocks, languages]);
+
+  /**
+   * A change to the language list can imply a rewrite of every block — promoting a language to
+   * default moves it into the untagged slot, and removing one deletes its text.
+   */
+  const handleLanguagesChange = (next: string[], effects: LyricEffect[]) => {
+    if (effects.length > 0) {
+      _setBlocks(blocks.map((block) => ({ ...block, pages: applyLyricEffects(block.pages, effects) })));
+    }
+
+    setLanguages(next);
+    setVisibleLanguages((visible) => {
+      const kept = visible.filter((code) => next.includes(code));
+      const added = next.filter((code) => !visible.includes(code));
+
+      // New languages start visible; a filter that would hide everything falls back to all.
+      const merged = [...kept, ...added];
+      return merged.length > 0 ? next.filter((code) => merged.includes(code)) : next;
+    });
+    markDirty();
+  };
+
+  const setBlockPages = (index: number, pages: LyricPage[]) => {
+    _setBlocks(blocks.map((block, i) => (i === index ? { ...block, pages } : block)));
+    markDirty();
+  };
 
   const saveSong = async () => {
     const newBlocks: TBlocks = {};
-    blocks.forEach(({ name, lines }) => {
-      newBlocks[name] = lines;
+    blocks.forEach(({ name, pages }) => {
+      newBlocks[name] = serialiseBlockLines(pages, languages);
     });
 
     const updatedOrders = { ...orders, [currentOrder]: order };
@@ -193,6 +220,7 @@ export const SongEditor = (props: {
       initialOrder: song?.initialOrder,
       order: updatedOrders,
       blocks: newBlocks,
+      languages,
     });
 
     try {
@@ -205,6 +233,7 @@ export const SongEditor = (props: {
           initialOrder: newSong.initialOrder || [],
           order: newSong.order,
           blocks: newSong.blocks,
+          languages,
         }).unwrap();
         dispatch(updateSongInStore(newSong));
         trackEvent('song_updated', 'song', String(newSong.songNumber), { via: 'editor' });
@@ -217,6 +246,7 @@ export const SongEditor = (props: {
           initialOrder: newSong.initialOrder || [],
           order: newSong.order,
           blocks: newSong.blocks,
+          languages,
         }).unwrap();
         const savedSong = new Song({ ...newSong, songNumber: result.songNumber });
         dispatch(addSongToStore(savedSong));
@@ -239,6 +269,8 @@ export const SongEditor = (props: {
   if (!song) {
     return null;
   }
+
+  const activeBlockIndex = tab > 0 && tab <= blocks.length ? tab - 1 : -1;
 
   return (
     // Without an onClose the backdrop is inert — on a phone that leaves the ✕ as the only exit.
@@ -267,7 +299,7 @@ export const SongEditor = (props: {
           <Typography variant={isMobile ? 'h6' : 'h4'} noWrap>
             {LL.SONG_EDITOR.TITLE()}
           </Typography>
-          {isDirty && <Chip label="Unsaved" size="small" color="warning" sx={{ ml: 2 }} />}
+          {isDirty && <Chip label={LL.SONG_EDITOR.UNSAVED()} size="small" color="warning" sx={{ ml: 2 }} />}
           <Box
             sx={{
               flexGrow: 1,
@@ -285,7 +317,16 @@ export const SongEditor = (props: {
             bgcolor: 'background.paper',
           }}
         >
-          <Tabs value={tab} onChange={(_, tab) => setTab(tab)} variant="scrollable" scrollButtons="auto">
+          <Tabs
+            value={tab}
+            onChange={(_, next) => {
+              setTab(next);
+              // The add-block tab starts from the configured default every time it is opened.
+              if (next > blocks.length) setNewBlock(defaultNewVerseName);
+            }}
+            variant="scrollable"
+            scrollButtons="auto"
+          >
             <Tab icon={<InfoIcon />} sx={{ minWidth: '50px' }} />
             {blocks.map(({ name }) => (
               <Tab key={name} label={name} />
@@ -296,135 +337,74 @@ export const SongEditor = (props: {
           {tab < 1 ? (
             <Stack
               sx={{
-                gap: 1,
+                gap: 2,
               }}
             >
-              <Input
-                value={title}
-                onChange={({ target }) => {
-                  setTitle(target.value);
-                  markDirty();
-                }}
-                startAdornment={LL.COMMON.TITLE()}
-                endAdornment={song.songNumber > 0 ? `# ${song.songNumber}` : undefined}
-              />
-              <Input
-                value={authors}
-                onChange={({ target }) => {
-                  setAuthors(target.value);
-                  markDirty();
-                }}
-                startAdornment={LL.COMMON.AUTHORS()}
-              />
-              <Input
-                value={copyright}
-                onChange={({ target }) => {
-                  setCopyright(target.value);
-                  markDirty();
-                }}
-                startAdornment={LL.COMMON.COPYRIGHT()}
+              <Stack sx={{ gap: 1 }}>
+                <Input
+                  value={title}
+                  onChange={({ target }) => {
+                    setTitle(target.value);
+                    markDirty();
+                  }}
+                  startAdornment={LL.COMMON.TITLE()}
+                  endAdornment={song.songNumber > 0 ? `# ${song.songNumber}` : undefined}
+                />
+                <Input
+                  value={authors}
+                  onChange={({ target }) => {
+                    setAuthors(target.value);
+                    markDirty();
+                  }}
+                  startAdornment={LL.COMMON.AUTHORS()}
+                />
+                <Input
+                  value={copyright}
+                  onChange={({ target }) => {
+                    setCopyright(target.value);
+                    markDirty();
+                  }}
+                  startAdornment={LL.COMMON.COPYRIGHT()}
+                />
+              </Stack>
+
+              <Divider />
+
+              <SongLanguagesEditor
+                languages={languages}
+                available={accountLanguages}
+                usage={languageUsage}
+                onChange={handleLanguagesChange}
               />
             </Stack>
-          ) : tab <= blocks.length ? (
-            // The block tools sit beside the lyrics on desktop; on a phone that column would eat
-            // a third of the width, so they move underneath as a toolbar row instead.
-            <Stack
-              direction={{ xs: 'column', sm: 'row' }}
-              sx={{
-                gap: { xs: 1, sm: 2 },
-              }}
-            >
-              <TextField
-                multiline
-                rows={isMobile ? 8 : 10}
-                sx={{ flexGrow: 1, minWidth: 0 }}
-                inputRef={inputRef}
-                value={block}
-                onChange={({ target }) => setBlock(target.value)}
-                onBlur={() => {
-                  _setBlocks(
-                    blocks.map(({ name, lines }, i) => ({
-                      name,
-                      lines: i === tab - 1 ? block.trim().split('\n') : lines,
-                    })),
-                  );
-                  markDirty();
-                }}
-              />
-              <Stack
-                direction={{ xs: 'row', sm: 'column' }}
-                sx={{
-                  gap: 1,
-                  alignItems: 'center',
-                }}
-              >
+          ) : activeBlockIndex >= 0 ? (
+            <Stack sx={{ gap: 1 }}>
+              <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+                <Typography variant="subtitle2" color="text.secondary" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
+                  {blocks[activeBlockIndex].name}
+                </Typography>
                 <IconButton
-                  title={LL.COMMON.DELETE()}
+                  title={LL.SONG_EDITOR.DELETE_BLOCK()}
+                  color="error"
                   onClick={(e) => {
                     e.stopPropagation();
-                    const newBlocks = [...blocks];
+                    const next = [...blocks];
                     if (tab > blocks.length - 1) setTab(tab - 1);
-                    newBlocks.splice(tab - 1, 1);
-                    setBlocks(newBlocks);
+                    next.splice(activeBlockIndex, 1);
+                    setBlocks(next);
                   }}
                 >
                   <DeleteIcon />
                 </IconButton>
-                <Box
-                  sx={{
-                    flexGrow: 1,
-                  }}
-                />
-                <SpeedDialTranslate
-                  title={LL.COMMON.LANGUAGE()}
-                  ariaLabel="translation"
-                  open={openTranslation}
-                  direction="left"
-                  onOpen={() => setOpenTranslation(true)}
-                  onClose={() => setOpenTranslation(false)}
-                  icon={<SpeedDialIcon icon={<TranslateIcon />} />}
-                >
-                  {languages.map((language) => (
-                    <SpeedDialAction
-                      key={language}
-                      icon={<Typography color="secondary">{language}</Typography>}
-                      onClick={() => {
-                        setOpenTranslation(false);
-                        const inputElement = inputRef.current;
-                        if (inputElement) {
-                          const cursorPosition = inputElement.selectionStart ?? 0;
-                          setBlock(`${block.substring(0, cursorPosition)}\n[${language}] \n${block.substring(cursorPosition)}`);
-                          setTimeout(() => {
-                            inputElement.selectionStart = inputElement.selectionEnd = cursorPosition + 6;
-                            inputElement.focus();
-                          }, 0);
-                        }
-                      }}
-                    />
-                  ))}
-                </SpeedDialTranslate>
-                <IconButton
-                  title={LL.COMMON.PAGE_BREAK()}
-                  onClick={() => {
-                    const inputElement = inputRef.current;
-                    if (inputElement) {
-                      const cursorPosition = inputElement.selectionStart ?? 0;
-                      setBlock(
-                        `${block.substring(0, cursorPosition)}\n${SONG_BLOCK_SEPARATOR}\n${block.substring(cursorPosition)}`.replace(
-                          `${SONG_BLOCK_SEPARATOR}\n\n`,
-                          `${SONG_BLOCK_SEPARATOR}\n`,
-                        ),
-                      );
-                      setTimeout(() => {
-                        inputElement.selectionStart = inputElement.selectionEnd = cursorPosition + 4;
-                        inputElement.focus();
-                      }, 0);
-                    }
-                  }}
-                >
-                  <PageBreakIcon />
-                </IconButton>
               </Stack>
+
+              <LyricBlockEditor
+                pages={blocks[activeBlockIndex].pages}
+                languages={languages}
+                visibleLanguages={visibleLanguages}
+                onVisibleLanguagesChange={setVisibleLanguages}
+                onChange={(pages) => setBlockPages(activeBlockIndex, pages)}
+              />
             </Stack>
           ) : (
             <Stack
@@ -437,7 +417,7 @@ export const SongEditor = (props: {
                 variant="contained"
                 onClick={() => {
                   if (!blocks.find((block) => block.name === newBlock)) {
-                    setBlocks([...blocks, { name: newBlock, lines: [] }]);
+                    setBlocks([...blocks, { name: newBlock, pages: parseBlockLines([]) }]);
                   }
                 }}
               >
@@ -459,7 +439,7 @@ export const SongEditor = (props: {
             currentOrder={currentOrder}
             order={order}
             availableBlocks={blocksOrder}
-            selectedBlockName={tab > 0 && tab <= blocks.length ? blocks[tab - 1].name : undefined}
+            selectedBlockName={activeBlockIndex >= 0 ? blocks[activeBlockIndex].name : undefined}
             onSelectBlock={(name) => {
               const blockIndex = blocks.findIndex((block) => block.name === name);
               if (blockIndex >= 0) {

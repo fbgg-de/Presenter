@@ -207,6 +207,18 @@ export type MergeSongsResult = {
   deleted: { blocks: number; pdfMappings: number; pdfAnnotations: number; pdfFiles: number };
 };
 
+/**
+ * A one-shot ticket for attaching to the WebSocket relay as a message monitor.
+ * Short-lived by design — request a fresh one for every connection attempt.
+ */
+export type WsMonitorTicket = {
+  token: string;
+  /** Seconds the token stays valid. */
+  expiresIn: number;
+  /** Relay URL derived from WS_HOST, e.g. wss://presenter.example.com:443/ws */
+  url: string;
+};
+
 const adminApi = presenterApi.injectEndpoints({
   endpoints: (build) => ({
     // ──────── Admin: Accounts ────────
@@ -285,6 +297,13 @@ const adminApi = presenterApi.injectEndpoints({
       query: () => 'rest/AdminConfig',
       providesTags: ['AdminConfig'],
     }),
+
+    // ──────── Admin: WebSocket monitor ────────
+    // A mutation rather than a query: it mints a credential with a side effect (a new
+    // token each time), so it must never be served from a cache.
+    createWsMonitorTicket: build.mutation<ApiSuccess<WsMonitorTicket>, void>({
+      query: () => ({ url: 'rest/AdminWsMonitor', method: 'POST' }),
+    }),
   }),
   overrideExisting: false,
 });
@@ -305,4 +324,5 @@ export const {
   useGetAdminMigrationsQuery,
   useRunAdminMigrationsMutation,
   useGetAdminConfigQuery,
+  useCreateWsMonitorTicketMutation,
 } = adminApi;

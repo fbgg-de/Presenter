@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Box, IconButton, InputAdornment, MenuItem, OutlinedInput, Select, Stack, Switch, Tooltip, Typography } from '@mui/material';
-import { FolderOpen as FolderOpenIcon, RestartAlt as ResetIcon } from '@mui/icons-material';
+import { FolderOpen as FolderOpenIcon, InfoOutlined as InfoIcon, RestartAlt as ResetIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSettings, SETTINGS_DEFAULTS, type SettingsState } from '@/store/settingsSlice';
 import { ColorSwatchButton } from '@/components/style/ColorPicker';
@@ -18,11 +18,17 @@ const CONTROL_WIDTH = { xs: 140, sm: 190 };
 export const SettingFrame = ({
   label,
   description,
+  info,
   action,
   control,
 }: {
   label: ReactNode;
   description?: ReactNode;
+  /**
+   * The long version, behind an info icon beside the label. For a setting whose consequences
+   * are worth spelling out but would bury the row if they were always on screen.
+   */
+  info?: ReactNode;
   /** Rendered between label and control (the reset button). */
   action?: ReactNode;
   control: ReactNode;
@@ -40,6 +46,13 @@ export const SettingFrame = ({
     <Stack sx={{ flex: 1, minWidth: 0 }}>
       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
         <Typography variant="body2">{label}</Typography>
+        {info && (
+          // enterTouchDelay 0 because on a phone the icon is the whole affordance — waiting out
+          // a long press to find out what it does is not a discovery anyone makes.
+          <Tooltip title={info} enterTouchDelay={0} leaveTouchDelay={10000}>
+            <InfoIcon sx={{ fontSize: 15, color: 'text.secondary', cursor: 'help' }} />
+          </Tooltip>
+        )}
         {action}
       </Stack>
       {description && (

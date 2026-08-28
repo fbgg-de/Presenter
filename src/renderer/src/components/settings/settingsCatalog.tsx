@@ -67,6 +67,7 @@ export type CatalogContext = {
   slots: {
     globalStyle: () => ReactNode;
     showTitleTemplate: () => ReactNode;
+    songLanguages: () => ReactNode;
     viewerToken: () => ReactNode;
     remoteCommands: () => ReactNode;
     keyboardMapping: () => ReactNode;
@@ -312,6 +313,12 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
             control: { kind: 'text' },
           },
         ],
+      },
+      {
+        id: 'languages',
+        title: S.LANGUAGES(),
+        render: ctx.slots.songLanguages,
+        keywords: ['language', 'translation', 'sprache', 'uebersetzung'],
       },
       {
         id: 'importing',

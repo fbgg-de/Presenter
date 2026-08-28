@@ -26,6 +26,123 @@ export interface SetListsSettings {
   usageShowCount: number;
 }
 
+/**
+ * The sample content the style editor's preview renders.
+ *
+ * A device preference rather than part of a style: it is what *you* want to look at while
+ * designing, and saving it into the style would push it out to every presentation window.
+ *
+ * `languages` is indexed by language slot — entry 0 is the main language, entry 1 the second —
+ * so the sample follows whatever slots a style defines rather than naming fixed languages.
+ */
+export type StylePreviewPaneId = 'labels' | 'sample' | 'copyright';
+
+export interface StylePreviewSample {
+  /**
+   * Which shipped sample this was derived from. See {@link STYLE_PREVIEW_VERSION}.
+   */
+  version: number;
+  /**
+   * The preview canvases, in the order they are stacked. `visible` decides which are drawn —
+   * the order is kept for the hidden ones too, so paging to one and back does not shuffle them.
+   */
+  panes: { id: StylePreviewPaneId; visible: boolean }[];
+  /**
+   * Sample lyrics per language slot. A `---` line splits the block being shown from the one
+   * that follows it, exactly as it does in a real song, so the next-block preview is written
+   * in the same box as the lyrics rather than a field of its own.
+   */
+  languages: { code: string; lines: string[] }[];
+  /** Metadata for the copyright canvas. */
+  title: string;
+  authors: string;
+  copyright: string;
+}
+
+/** Every pane, in the order a fresh install stacks them. */
+export const STYLE_PREVIEW_PANES: StylePreviewPaneId[] = ['labels', 'sample', 'copyright'];
+
+/**
+ * Bump this whenever the shipped sample below changes.
+ *
+ * The stored copy is merged *over* the defaults, which is right for a preference someone has
+ * adjusted — and wrong for one nobody has, because a stale `languages` array then shadows the
+ * shipped sample forever. That is what made edits to the default invisible during development:
+ * the code changed, the browser kept showing what it had saved. A version mismatch now replaces
+ * the stored sample outright instead of merging it.
+ */
+export const STYLE_PREVIEW_VERSION = 2;
+
+/**
+ * A private copy of the shipped sample.
+ *
+ * `DEFAULT_STYLE_PREVIEW` is a module constant, so handing it out directly would let a later
+ * edit mutate the fallback every future reset falls back to.
+ */
+export const freshStylePreview = (): StylePreviewSample => ({
+  ...DEFAULT_STYLE_PREVIEW,
+  panes: DEFAULT_STYLE_PREVIEW.panes.map((pane) => ({ ...pane })),
+  languages: DEFAULT_STYLE_PREVIEW.languages.map((entry) => ({ ...entry, lines: [...entry.lines] })),
+});
+
+/**
+ * What the preview starts out showing: two lyric lines in three languages, a following block
+ * after the `---`, and a copyright block — between them they exercise every text setting a
+ * style has.
+ *
+ * The lines are placeholder text written for this purpose rather than taken from a song, and
+ * they double as documentation for the `---` syntax. "Amazing Grace" names the sample in the
+ * copyright block, where title, author and licence are metadata rather than lyrics. Anyone who
+ * wants their own words here pastes them into the Preview tab, which is the point of it being
+ * editable.
+ */
+export const DEFAULT_STYLE_PREVIEW: StylePreviewSample = {
+  version: STYLE_PREVIEW_VERSION,
+  panes: [
+    { id: 'labels', visible: true },
+    { id: 'sample', visible: true },
+    { id: 'copyright', visible: false },
+  ],
+  languages: [
+    {
+      code: 'EN',
+      lines: [
+        'Amazing grace how sweet the sound',
+        'That saved a wretch like me',
+        "I once was lost but now I'm found",
+        'Was blind but now I see',
+        '---',
+        "'Twas grace that taught my heart to fear",
+      ],
+    },
+    {
+      code: 'DE',
+      lines: [
+        'Es klingt zu gut, um wahr zu sein',
+        'die Gnade fand auch mich.',
+        'Ich war verlorn, doch bin jetzt sein,',
+        'war blind, jetzt seh ich Licht.',
+        '---',
+        'Die Gnade lehrte Ehrfurcht mich,',
+      ],
+    },
+    {
+      code: 'FR',
+      lines: [
+        'Ô grâce infinie, qui vint sauver',
+        'Un pécheur tel que moi!',
+        "J'étais perdu : Il m'a trouvé;",
+        "J'étais aveugle : je vois!",
+        '---',
+        'Il me libère, brise mes chaînes,',
+      ],
+    },
+  ],
+  title: 'Amazing Grace',
+  authors: 'John Newton',
+  copyright: 'Public Domain',
+};
+
 export interface SettingsState {
   autoCheckUpdates: boolean;
   autoLogin: boolean;
@@ -62,6 +179,8 @@ export interface SettingsState {
   restoreWindowsOnStart: boolean;
   /** Set List manager view state (last opened list + per-list accordion expansion). */
   setLists: SetListsSettings;
+  /** Sample content shown in the style editor preview. */
+  stylePreview: StylePreviewSample;
   showDeleteFromDb: boolean;
   showLicenseNumber: boolean;
   showSaveFormat: string;
@@ -115,6 +234,7 @@ const defaultState: SettingsState = {
   resetBlackOnSwitch: false,
   restoreWindowsOnStart: true,
   setLists: { lastOpenedSetListId: null, accordionStateBySetListId: {}, usageShowCount: 8 },
+  stylePreview: DEFAULT_STYLE_PREVIEW,
   showDeleteFromDb: false,
   showLicenseNumber: true,
   showSaveFormat: 'Show {dd}.{MM}.{yyyy}',
@@ -156,6 +276,29 @@ try {
     };
     if (typeof initialState.setLists.accordionStateBySetListId !== 'object' || initialState.setLists.accordionStateBySetListId === null) {
       initialState.setLists.accordionStateBySetListId = {};
+    }
+    // The preview sample is only merged when it came from *this* build's shipped sample.
+    // Anything older is replaced outright — see STYLE_PREVIEW_VERSION for why.
+    const storedPreview = typeof parsed.stylePreview === 'object' && parsed.stylePreview !== null ? parsed.stylePreview : {};
+
+    if (storedPreview.version === STYLE_PREVIEW_VERSION) {
+      initialState.stylePreview = { ...freshStylePreview(), ...storedPreview };
+
+      // Same shallow-spread problem one level down: a stored half of an array would render an
+      // empty preview with no way to tell why.
+      if (!Array.isArray(initialState.stylePreview.languages) || initialState.stylePreview.languages.length === 0) {
+        initialState.stylePreview.languages = freshStylePreview().languages;
+      }
+      // Panes are rebuilt rather than trusted: one missing a pane would make that preview
+      // unreachable with no way to get it back.
+      const storedPanes = Array.isArray(initialState.stylePreview.panes) ? initialState.stylePreview.panes : [];
+      const known = storedPanes.filter((pane) => pane && STYLE_PREVIEW_PANES.includes(pane.id));
+      initialState.stylePreview.panes = [
+        ...known,
+        ...DEFAULT_STYLE_PREVIEW.panes.filter((fallback) => !known.some((pane) => pane.id === fallback.id)),
+      ];
+    } else {
+      initialState.stylePreview = freshStylePreview();
     }
   }
 } catch {

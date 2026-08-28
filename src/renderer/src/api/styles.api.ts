@@ -1,10 +1,18 @@
 import { presenterApi } from './base.api';
 import type { ApiSuccess } from './base.api';
 
-/** Per-language typography overrides stored inside a style. */
+/**
+ * Typography for one language *slot* of a style.
+ *
+ * Slots are positional, not named: slot 1 is whatever language the song lists first, slot 2 its
+ * second, and so on (see `utils/languageSlots.ts`). A style therefore describes "how the second
+ * language looks" once, and it holds for every song regardless of which languages those are.
+ */
 export interface LanguageStyleEntry {
-  /** '' = default (applies to all unmatched languages). */
-  language: string;
+  /** 1 = the song's main language, 2 its second, and so on. */
+  slot: number;
+  /** Whether lines in this slot are shown at all. Absent means shown. */
+  visible?: boolean;
   fontColorEnabled?: boolean;
   fontColor?: string;
   fontSizeEnabled?: boolean;
@@ -66,17 +74,11 @@ export type StyleData = {
   opacity?: { enabled: boolean; value: number };
   hideText?: boolean;
   hideBackground?: boolean;
-  /** When true, show all language lines regardless of the languageStyles order */
+  /** When true, every language of the song is shown, including slots this style does not define. */
   showAllLanguages?: boolean;
   nextLinePreviewColor?: { enabled: boolean; value: string };
   nextLinePreviewOpacity?: { enabled: boolean; value: number };
-  /** Language display overrides: "all", "EN", "EN,DE", … */
-  showLanguages?: { enabled: boolean; value: string };
-  /** The "primary" language tag rendered in the main style; others get translationColor. */
-  primaryLanguage?: { enabled: boolean; value: string };
-  /** Color for non-primary translation lines */
-  translationColor?: { enabled: boolean; value: string };
-  /** Per-language typography settings. First entry is 'default' (language: ''). */
+  /** Per-slot typography and visibility. Slot 1 is the song's main language. */
   languageStyles?: { enabled: boolean; value: LanguageStyleEntry[] };
   /** Copyright section styles */
   copyrightFontFamily?: { enabled: boolean; value: string };

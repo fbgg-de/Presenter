@@ -6,6 +6,7 @@ import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { useLazyGetChurchToolsCcliDetailQuery } from '@/api/churchtools.api';
 import { useMetrics } from '@/hooks/useMetrics';
 import { Song, type ISong } from '@/song';
+import type { ResolveImportLanguage } from '@/hooks/useImportLanguage';
 
 export interface CcliImportResult {
   ok: boolean;
@@ -24,7 +25,7 @@ export interface CcliImportResult {
  * not a reliable signal for DB presence); if the row already exists the duplicate error is caught
  * and turned into a lyrics-enriching update. Shared by the operator and musician search views.
  */
-export const useCcliSongImport = () => {
+export const useCcliSongImport = (resolveImportLanguage?: ResolveImportLanguage) => {
   const dispatch = useAppDispatch();
   const { songs } = useGetSongs();
   const [createSongMutation] = useCreateSongMutation();
@@ -82,11 +83,31 @@ export const useCcliSongImport = () => {
 
       // Commit to the local store + current show. Only (over)write the song data when we actually
       // have lyrics, or the local copy has none to lose — never clobber existing lyrics.
+      // CCLI lyrics arrive untagged, so the language is worked out from the text before the
+      // song is stored. A clear result is applied silently; an ambiguous one asks, unless the
+      // caller supplied no resolver, in which case the import proceeds untagged as before.
+      let languages: string[] = [];
+      if (hasLyrics && resolveImportLanguage) {
+        const resolved = await resolveImportLanguage(blocks, title);
+        if (!resolved) return { ok: false, isDuplicate: false, serverMessage: '' };
+        blocks = resolved.blocks;
+        languages = resolved.languages;
+      }
+
       const commit = (committedSongNumber: number) => {
         if (hasLyrics || !existingLocalHasLyrics) {
           dispatch(
             addSongToStore(
-              new Song({ songNumber: committedSongNumber, title, authors, copyright, initialOrder: order, order: orderMap, blocks }),
+              new Song({
+                songNumber: committedSongNumber,
+                title,
+                authors,
+                copyright,
+                initialOrder: order,
+                order: orderMap,
+                blocks,
+                languages,
+              }),
             ),
           );
         }
@@ -102,6 +123,7 @@ export const useCcliSongImport = () => {
           initialOrder: order,
           order: orderMap,
           blocks,
+          languages,
           ...(ccliNumber > 0 ? { songNumber: ccliNumber } : {}),
         }).unwrap();
 
@@ -143,6 +165,6 @@ export const useCcliSongImport = () => {
         return { ok: false, isDuplicate, serverMessage };
       }
     },
-    [songs, dispatch, createSongMutation, updateSongMutation, fetchCcliDetail, trackEvent],
+    [songs, dispatch, createSongMutation, updateSongMutation, fetchCcliDetail, trackEvent, resolveImportLanguage],
   );
 };

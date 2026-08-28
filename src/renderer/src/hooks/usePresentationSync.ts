@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { broadcastContent, invalidateSentContentCache, setWindowStyleResolver } from '@/utils/presentationBridge';
-import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
+import { SONG_TRANSLATION_LINE_REGEX, inferSongLanguages, resolvePrimaryLanguage } from '@/song';
 import type { ContentType, PresentationBlock, PresentationContent, PresentationLine } from '@/presentation/types';
 import { DEFAULT_STYLE, mergeStyles, type ResolvedStyle, resolveStyleCascade, resolveStyleData } from '@/utils/styleUtils';
 import { useGetStylesQuery } from '@/api/styles.api';
@@ -407,12 +407,13 @@ export const usePresentationSync = (): void => {
 
   // ── Memoize expensive computations ──
   // These only recompute when content changes (song/show/styles), NOT on every index change.
-  const { contentType, blocks, style, title, copyright, authors, licenseNumber } = useMemo(() => {
+  const { contentType, blocks, style, title, copyright, authors, licenseNumber, songLanguages } = useMemo(() => {
     let contentType: ContentType = 'empty';
     let blocks: PresentationBlock[] = [];
     let title: string | undefined;
     let copyright: string | undefined;
     let authors: string | undefined;
+    let songLanguages: string[] | undefined;
 
     if (activeItem) {
       switch (activeItem.type) {
@@ -424,6 +425,22 @@ export const usePresentationSync = (): void => {
             copyright = currentSong.copyright;
 
             const songBlocks = currentSong.getBlocks(orderName);
+            // The song's languages, in its own order — slot 1, slot 2, slot 3 for any style
+            // that wants to describe them positionally. The anchor is resolved from the song's
+            // own content rather than trusting the declared list alone, so a song whose list has
+            // drifted from its lyrics still groups its translations correctly, and the resolved
+            // anchor is put first so slot 1 always means what it says.
+            const declared = currentSong.languages ?? [];
+            const allLines = songBlocks.flatMap((b) => b.lines ?? []);
+            const anchor = resolvePrimaryLanguage(allLines, declared[0]);
+            // A song that has not recorded its languages yet still has them written into its
+            // lyrics. Without this fallback every translation resolves to no slot at all, and a
+            // style's per-language typography silently does nothing.
+            songLanguages = declared.length
+              ? anchor
+                ? [anchor, ...declared.filter((code) => code.toUpperCase() !== anchor.toUpperCase())]
+                : declared
+              : inferSongLanguages(allLines);
             blocks = songBlocks
               .filter((b) => !b.copyright)
               .map((b) => ({
@@ -475,7 +492,7 @@ export const usePresentationSync = (): void => {
     };
 
     const licenseNumber = currentSong ? (currentSong.account ?? undefined) : undefined;
-    return { contentType, blocks, style, title, copyright, authors, licenseNumber };
+    return { contentType, blocks, style, title, copyright, authors, licenseNumber, songLanguages };
   }, [currentSong, activeItem, orderName, allStyles, globalStyleId, currentShow?.styleId]);
 
   // Keep frequently-changing object refs accessible inside the broadcast effect
@@ -489,6 +506,7 @@ export const usePresentationSync = (): void => {
     copyright,
     authors,
     licenseNumber,
+    songLanguages,
     activeItem,
     currentShow,
     currentSongNumber,
@@ -506,6 +524,7 @@ export const usePresentationSync = (): void => {
     copyright,
     authors,
     licenseNumber,
+    songLanguages,
     activeItem,
     currentShow,
     currentSongNumber,
@@ -557,9 +576,11 @@ export const usePresentationSync = (): void => {
           if (nb && nb.lines.length > 0) {
             // Send only the first semantic group: first primary line + any immediately
             // following translation lines (lines with a language tag).
+            const primary = cb.songLanguages?.[0]?.toUpperCase();
+            const isAnchor = (line: PresentationLine) => !line.language || (!!primary && line.language.toUpperCase() === primary);
             const group: PresentationLine[] = [];
             for (const line of nb.lines) {
-              if (!line.language && group.length > 0) break; // stop at second primary line
+              if (isAnchor(line) && group.length > 0) break; // stop at the second anchor line
               group.push(line);
             }
             nextBlockPreviewLines = group;
@@ -573,6 +594,7 @@ export const usePresentationSync = (): void => {
         activeBlockIndex: nav.activeBlockIndex,
         activeLineIndex: nav.activeLineIndex,
         blocks: cb.blocks,
+        songLanguages: cb.songLanguages,
         style: cb.style,
         isBlack: nav.isBlack,
         hideText: nav.isTextHidden,

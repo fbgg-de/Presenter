@@ -5,6 +5,10 @@ Tooling for running and inspecting the app without a real backend.
 - `mock-backend/` — fixture HTTP server standing in for the PHP API (below).
 - `ws-sync/` — integration test for the WebSocket relay and the sync protocol, run with
   `npm run test:ws`. See [ws-sync/README.md](ws-sync/README.md).
+- `lyrics/` — parse/serialise round-trip test for the song editor's lyric-line model, run with
+  `npm run test:lyrics`. Pure node, no server needed.
+- `styles/` — unit tests for the style editor's pure helpers (CSS box shorthand, the custom-CSS
+  tokeniser), run with `npm run test:styles`. Pure node, no server needed.
 - `viewport/` — small-screen layout test: drives the app in a headless browser at phone size
   and fails on anything that does not fit, run with `npm run test:screens`. See
   [viewport/README.md](viewport/README.md).

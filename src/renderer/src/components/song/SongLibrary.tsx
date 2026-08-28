@@ -28,6 +28,7 @@ import {
   SortByAlpha as SortByAlphaIcon,
   Tag as SortByNumberIcon,
   Numbers as CcliIcon,
+  Translate as TranslateIcon,
 } from '@mui/icons-material';
 import { useGetSongsAllQuery, useDeleteSongMutation, useRenumberSongMutation } from '@/api/songs.api';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -37,6 +38,7 @@ import { useGetSettings } from '@/store/settingsSlice';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { RowActionMenu } from '@/components/common/RowActionMenu';
+import { SongLanguageReview } from '@/components/song/SongLanguageReview';
 
 type SortOrder = 'lexicographic' | 'numeric';
 
@@ -53,6 +55,7 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('lexicographic');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [songToDelete, setSongToDelete] = useState<SongListItem | null>(null);
+  const [languageReviewOpen, setLanguageReviewOpen] = useState(false);
 
   const { showDeleteFromDb } = useGetSettings();
 
@@ -114,6 +117,7 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
 
   return (
     <>
+      <SongLanguageReview open={languageReviewOpen} onClose={() => setLanguageReviewOpen(false)} />
       <Dialog
         open={open}
         onClose={onClose}
@@ -175,6 +179,16 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
               },
             }}
           />
+
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<TranslateIcon />}
+            onClick={() => setLanguageReviewOpen(true)}
+            sx={{ alignSelf: 'flex-start', mb: 2 }}
+          >
+            {LL.SONG_LANGUAGE_REVIEW.OPEN()}
+          </Button>
 
           {isLoading ? (
             <Box

@@ -80,7 +80,7 @@ const SYNC_TTL_MS = SYNC_TTL_SECONDS * 1000;
  */
 interface ClientInfo {
   /** 'unknown' covers clients from before this handshake existed. */
-  role: 'operator' | 'musician' | 'remote' | 'viewer' | 'unknown';
+  role: 'operator' | 'musician' | 'remote' | 'viewer' | 'monitor' | 'unknown';
   /** Musicians only: their current sync mode ('midi' | 'operator' | 'off'). */
   mode?: string;
   /** Optional display name (musician name), shown in the operator tooltip. */
@@ -94,7 +94,7 @@ interface AuthedClient {
   info: ClientInfo;
 }
 
-const KNOWN_ROLES = new Set(['operator', 'musician', 'remote', 'viewer']);
+const KNOWN_ROLES = new Set(['operator', 'musician', 'remote', 'viewer', 'monitor']);
 
 /**
  * Normalize a client-supplied descriptor. Everything here comes off the wire, so an
@@ -112,6 +112,239 @@ function parseClientInfo(raw: unknown): ClientInfo {
 }
 
 const clients = new Set<AuthedClient>();
+
+/** Relay-assigned socket id, so every trace row can be grouped back to its connection. */
+let socketSeq = 0;
+
+/**
+ * ── Live message tracing ───────────────────────────────────────────────────
+ *
+ * The relay is the only place that sees an account's whole conversation, so it is also
+ * the only place a support case can be traced from. Every message in and out is filed
+ * into a bounded per-account ring buffer and streamed live to connected monitors (the
+ * admin panel's WebSocket tab).
+ *
+ * Deliberately in-memory only. Traces carry full payloads — lyrics, block text, musician
+ * names — so nothing here is written to disk or handed to the backend: the data lives
+ * exactly as long as the relay process does, and a restart drops all of it.
+ */
+interface TraceEntry {
+  seq: number;
+  /** Epoch ms. */
+  ts: number;
+  /** -1 for events from a socket that was never attributed to an account. */
+  account: number;
+  /** 'in' = client → relay, 'out' = relay → clients, 'sys' = connection lifecycle. */
+  dir: 'in' | 'out' | 'sys';
+  clientId: string;
+  role: ClientInfo['role'];
+  name?: string;
+  /** The message's `action`/`type`, or the lifecycle event name. */
+  event: string;
+  /** How many peers a relayed message actually reached. */
+  peers?: number;
+  bytes: number;
+  /** The verbatim JSON payload — never truncated, see the note above. */
+  payload?: string;
+}
+
+const DEFAULT_TRACE_BUFFER_SIZE = 500;
+const MIN_TRACE_BUFFER_SIZE = 50;
+const MAX_TRACE_BUFFER_SIZE = 5000;
+
+/** Clamp a client-supplied buffer size into the allowed range; null when not a number. */
+function clampBufferSize(value: unknown): number | null {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.min(MAX_TRACE_BUFFER_SIZE, Math.max(MIN_TRACE_BUFFER_SIZE, Math.round(n)));
+}
+
+let traceBufferSize = clampBufferSize(process.env.TRACE_BUFFER_SIZE) ?? DEFAULT_TRACE_BUFFER_SIZE;
+
+/** account → ring buffer, oldest first. */
+const traceBuffers = new Map<number, TraceEntry[]>();
+let traceSeq = 0;
+
+/**
+ * A connected admin monitor.
+ *
+ * Kept in its own set rather than in `clients`, so no relay path can treat it as a message
+ * target: the only things that write to a monitor socket are recordTrace and the monitor
+ * command handlers. That separation is also what stops the tracer feeding on its own output.
+ */
+interface Monitor {
+  ws: WebSocket;
+  /** Subscribed account, or null for every account (server admin). */
+  account: number | null;
+  /** null when the token is unrestricted; otherwise the only account this may ever watch. */
+  boundAccount: number | null;
+  id: string;
+  info: ClientInfo;
+}
+
+const monitors = new Set<Monitor>();
+
+function trimBuffer(buffer: TraceEntry[]): TraceEntry[] {
+  if (buffer.length > traceBufferSize) buffer.splice(0, buffer.length - traceBufferSize);
+  return buffer;
+}
+
+/** True when this monitor wants to see events of `account`. */
+function monitorWants(monitor: Monitor, account: number): boolean {
+  return monitor.account === null || monitor.account === account;
+}
+
+function sendJson(ws: WebSocket, message: Record<string, unknown>) {
+  if (ws.readyState !== WebSocket.OPEN) return;
+  try {
+    ws.send(JSON.stringify(message));
+  } catch {
+    /* ignore — the close handler cleans this socket up */
+  }
+}
+
+/** File one event into its account's buffer and push it to every interested monitor. */
+function recordTrace(entry: Omit<TraceEntry, 'seq' | 'ts'>) {
+  const full: TraceEntry = { ...entry, seq: ++traceSeq, ts: Date.now() };
+  const buffer = traceBuffers.get(full.account) ?? [];
+  buffer.push(full);
+  traceBuffers.set(full.account, trimBuffer(buffer));
+  for (const monitor of monitors) {
+    if (monitorWants(monitor, full.account)) sendJson(monitor.ws, { type: 'trace', entry: full });
+  }
+}
+
+/** Who is connected right now, per account — the monitor's live client list. */
+function peerSnapshot() {
+  const rows = new Map<number, { account: number; clients: ClientInfo[]; monitors: number }>();
+  const row = (account: number) => {
+    const existing = rows.get(account) ?? { account, clients: [], monitors: 0 };
+    rows.set(account, existing);
+    return existing;
+  };
+  for (const client of clients) row(client.account).clients.push(client.info);
+  for (const monitor of monitors) {
+    if (monitor.account !== null) row(monitor.account).monitors++;
+  }
+  return [...rows.values()].sort((a, b) => a.account - b.account);
+}
+
+function broadcastMonitorPeers() {
+  if (monitors.size === 0) return;
+  const accounts = peerSnapshot();
+  for (const monitor of monitors) {
+    sendJson(monitor.ws, { type: 'monitor_peers', accounts, bufferSize: traceBufferSize });
+  }
+}
+
+/** Send a freshly subscribed monitor everything already buffered for its scope. */
+function sendMonitorBacklog(monitor: Monitor) {
+  const entries: TraceEntry[] = [];
+  for (const [account, buffer] of traceBuffers) {
+    if (monitorWants(monitor, account)) entries.push(...buffer);
+  }
+  // Buffers are per account; the monitor wants one chronological stream across them.
+  entries.sort((a, b) => a.seq - b.seq);
+  sendJson(monitor.ws, {
+    type: 'monitor_ok',
+    account: monitor.account,
+    boundAccount: monitor.boundAccount,
+    bufferSize: traceBufferSize,
+    limits: { min: MIN_TRACE_BUFFER_SIZE, max: MAX_TRACE_BUFFER_SIZE },
+    version: VERSION,
+    syncTtlSeconds: SYNC_TTL_SECONDS,
+    accounts: peerSnapshot(),
+    entries,
+  });
+}
+
+/**
+ * Scope a monitor token resolves to. `account: null` means the server admin, who may watch
+ * any account and switch between them at will.
+ */
+interface MonitorScope {
+  account: number | null;
+}
+
+/**
+ * Resolve a monitor token against the PHP backend.
+ *
+ * Deliberately a *different* endpoint from ValidateToken: a viewer token authenticates a
+ * display, and must never be upgradeable into a subscription to an account's full traffic.
+ */
+async function resolveMonitorToken(token: string): Promise<MonitorScope | null> {
+  if (!BACKEND_URL) {
+    console.warn('[WS Relay] BACKEND_URL not set — monitor auth unavailable');
+    return null;
+  }
+  if (!token) return null;
+  const url = `${BACKEND_URL}/rest/ValidateMonitorToken?token=${encodeURIComponent(token)}`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const body = await res.text();
+    if (!res.ok) {
+      console.warn(`[WS Relay] ValidateMonitorToken HTTP ${res.status}: ${body.slice(0, 200)}`);
+      return null;
+    }
+    const json = JSON.parse(body) as Record<string, unknown>;
+    if (json.scope === 'admin') return { account: null };
+    if (json.scope === 'account' && typeof json.account === 'number') return { account: json.account };
+    console.warn('[WS Relay] ValidateMonitorToken unexpected response:', JSON.stringify(json).slice(0, 200));
+    return null;
+  } catch (err) {
+    console.error('[WS Relay] Monitor token validation failed:', (err as Error).message);
+    return null;
+  }
+}
+
+/**
+ * Handle a command from an authenticated monitor. Monitors never participate in relaying,
+ * so this is a closed command set rather than a fall-through to the relay path.
+ */
+function handleMonitorMessage(monitor: Monitor, msg: Record<string, unknown>) {
+  switch (msg.action) {
+    case 'monitor_subscribe': {
+      const requested = typeof msg.account === 'number' ? msg.account : null;
+      // An account-bound token stays on its own account whatever it asks for.
+      if (monitor.boundAccount !== null && requested !== monitor.boundAccount) {
+        sendJson(monitor.ws, { type: 'error', error: 'This monitor token is bound to a single account.' });
+        return;
+      }
+      const previous = monitor.account;
+      monitor.account = requested;
+      sendMonitorBacklog(monitor);
+      // Both the account it left and the one it joined change their visible watcher count.
+      if (previous !== null && previous !== requested) broadcastPeerCount(previous);
+      if (requested !== null) broadcastPeerCount(requested);
+      broadcastMonitorPeers();
+      return;
+    }
+
+    case 'monitor_config': {
+      const size = clampBufferSize(msg.bufferSize);
+      if (size === null) {
+        sendJson(monitor.ws, { type: 'error', error: 'bufferSize must be a number.' });
+        return;
+      }
+      traceBufferSize = size;
+      // Shrinking has to take effect on what is already buffered, not just on new entries.
+      for (const buffer of traceBuffers.values()) trimBuffer(buffer);
+      console.log(`[WS Relay] trace buffer resized to ${traceBufferSize} entries/account`);
+      for (const peer of monitors) sendJson(peer.ws, { type: 'monitor_config', bufferSize: traceBufferSize });
+      return;
+    }
+
+    case 'monitor_clear': {
+      if (monitor.account === null) traceBuffers.clear();
+      else traceBuffers.delete(monitor.account);
+      for (const peer of monitors) sendJson(peer.ws, { type: 'monitor_cleared', account: monitor.account });
+      return;
+    }
+
+    default:
+      sendJson(monitor.ws, { type: 'error', error: `Unknown monitor action: ${String(msg.action)}` });
+  }
+}
 
 /**
  * Close code sent to peers the operator kicked. In the application range (4000-4999) so
@@ -195,6 +428,15 @@ function taggedReplay(cached: CachedSync): string | null {
 function sendToAccount(account: number, message: Record<string, unknown>) {
   if (account === -1) return;
   const payload = JSON.stringify(message);
+  recordTrace({
+    account,
+    dir: 'out',
+    clientId: 'relay',
+    role: 'unknown',
+    event: String(message.type ?? 'message'),
+    bytes: payload.length,
+    payload,
+  });
   for (const peer of clients) {
     if (peer.account !== account) continue;
     if (peer.ws.readyState !== WebSocket.OPEN) continue;
@@ -250,18 +492,33 @@ function cacheSync(account: number, payload: string, replacePayload = true) {
 function broadcastPeerCount(account: number) {
   if (account === -1) return;
   const peers = [...clients].filter((c) => c.account === account);
+  // Monitors are listed to the account's own clients on purpose: an operator should be
+  // able to see that support is watching their traffic rather than being observed silently.
+  const watching = [...monitors].filter((m) => monitorWants(m, account)).map((m) => m.info);
+  const total = peers.length + watching.length;
   for (const peer of peers) {
     if (peer.ws.readyState === 1 /* OPEN */) {
       peer.ws.send(
         JSON.stringify({
           type: 'peer_count',
-          count: peers.length,
-          others: Math.max(0, peers.length - 1),
-          peers: peers.filter((p) => p !== peer).map((p) => p.info),
+          count: total,
+          others: Math.max(0, total - 1),
+          peers: [...peers.filter((p) => p !== peer).map((p) => p.info), ...watching],
         }),
       );
     }
   }
+  recordTrace({
+    account,
+    dir: 'out',
+    clientId: 'relay',
+    role: 'unknown',
+    event: 'peer_count',
+    peers: peers.length,
+    bytes: 0,
+    payload: JSON.stringify({ count: total, peers: [...peers.map((p) => p.info), ...watching] }),
+  });
+  broadcastMonitorPeers();
 }
 
 const wss = new WebSocketServer({ port: PORT });
@@ -281,11 +538,22 @@ wss.on('listening', () => {
     SYNC_TTL_SECONDS > 0 ? `[WS Relay] Selection TTL: ${SYNC_TTL_SECONDS}s` : '[WS Relay] Selection TTL: disabled (SYNC_TTL_SECONDS=0)',
   );
   console.log(BACKEND_URL ? `[WS Relay] Backend: ${BACKEND_URL}` : '[WS Relay] Backend: not configured — viewer token auth unavailable');
+  console.log(`[WS Relay] Trace buffer: ${traceBufferSize} entries/account (in memory only)`);
 });
 
 wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   const ip = req.socket.remoteAddress ?? 'unknown';
-  console.log(`[WS Relay] New connection from ${ip}`);
+  const clientId = `c${++socketSeq}`;
+  console.log(`[WS Relay] New connection from ${ip} (${clientId})`);
+
+  /**
+   * Set once this socket authenticates as a monitor. A monitor is never added to
+   * `clients`, so this reference is the only handle the message and close paths have on it.
+   */
+  let monitor: Monitor | null = null;
+
+  // Filed under -1: the socket has no account yet, so only an all-accounts monitor sees it.
+  recordTrace({ account: -1, dir: 'sys', clientId, role: 'unknown', event: 'connect', bytes: 0, payload: JSON.stringify({ ip }) });
 
   const client: AuthedClient = {
     ws,
@@ -311,6 +579,12 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       return;
     }
 
+    // A monitor has its own closed command set and never reaches the relay path below.
+    if (monitor) {
+      handleMonitorMessage(monitor, msg);
+      return;
+    }
+
     // ── Auth handshake ──────────────────────────────────────────────────────
     if (client.account === -1) {
       if (msg.action !== 'auth') {
@@ -321,6 +595,45 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
 
       client.info = parseClientInfo(msg.client);
 
+      // ── Monitor auth (admin message tracing) ──────────────────────────────
+      // Checked before the viewer-token branch below: a monitor also authenticates with a
+      // token, and the two must not be confused — see resolveMonitorToken.
+      if (msg.role === 'monitor') {
+        const token = typeof msg.token === 'string' ? msg.token : '';
+        const requested = typeof msg.account === 'number' ? msg.account : null;
+        void resolveMonitorToken(token).then((scope) => {
+          if (!scope) {
+            sendJson(ws, { type: 'auth_error', error: 'Invalid or expired monitor token.' });
+            ws.close(4004, 'Invalid monitor token');
+            return;
+          }
+          if (scope.account !== null && requested !== null && requested !== scope.account) {
+            sendJson(ws, { type: 'auth_error', error: 'Token is not valid for this account.' });
+            ws.close(4004, 'Account not permitted');
+            return;
+          }
+          if (client.authTimer) {
+            clearTimeout(client.authTimer);
+            client.authTimer = null;
+          }
+          monitor = {
+            ws,
+            account: scope.account !== null ? scope.account : requested,
+            boundAccount: scope.account,
+            id: clientId,
+            info: { role: 'monitor', ...(client.info.name ? { name: client.info.name } : {}) },
+          };
+          monitors.add(monitor);
+          console.log(`[WS Relay] Monitor attached (account=${monitor.account ?? 'all'}, ip=${ip})`);
+          sendMonitorBacklog(monitor);
+          // Make the watcher visible to the account it is watching.
+          if (monitor.account !== null) broadcastPeerCount(monitor.account);
+          else for (const account of new Set([...clients].map((c) => c.account))) broadcastPeerCount(account);
+          broadcastMonitorPeers();
+        });
+        return;
+      }
+
       const finishAuth = (account: number) => {
         if (client.authTimer) {
           clearTimeout(client.authTimer);
@@ -329,14 +642,26 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         client.account = account;
         clients.add(client);
 
+        recordTrace({
+          account,
+          dir: 'sys',
+          clientId,
+          role: client.info.role,
+          ...(client.info.name ? { name: client.info.name } : {}),
+          event: 'auth',
+          bytes: 0,
+          payload: JSON.stringify({ ip, client: client.info, via: typeof msg.token === 'string' ? 'token' : 'account' }),
+        });
+
         const accountPeers = [...clients].filter((c) => c.account === client.account);
+        const watchers = [...monitors].filter((m) => monitorWants(m, client.account)).map((m) => m.info);
         ws.send(
           JSON.stringify({
             type: 'auth_ok',
             account: client.account,
-            count: accountPeers.length,
-            others: Math.max(0, accountPeers.length - 1),
-            peers: accountPeers.filter((p) => p !== client).map((p) => p.info),
+            count: accountPeers.length + watchers.length,
+            others: Math.max(0, accountPeers.length + watchers.length - 1),
+            peers: [...accountPeers.filter((p) => p !== client).map((p) => p.info), ...watchers],
             // Lets a client run the same expiry countdown locally, so it still clears its
             // display if this relay restarts (or never sends sync_expired) while it watches.
             syncTtlSeconds: SYNC_TTL_SECONDS,
@@ -355,6 +680,15 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
             if (replay) {
               try {
                 ws.send(replay);
+                recordTrace({
+                  account: client.account,
+                  dir: 'out',
+                  clientId,
+                  role: client.info.role,
+                  event: 'musician_sync (replay)',
+                  bytes: replay.length,
+                  payload: replay,
+                });
               } catch {
                 /* ignore */
               }
@@ -396,6 +730,16 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
     // Cheaper and less disruptive than reconnecting just to change the descriptor.
     if (msg.action === 'client_info') {
       client.info = parseClientInfo(msg.client);
+      recordTrace({
+        account: client.account,
+        dir: 'in',
+        clientId,
+        role: client.info.role,
+        ...(client.info.name ? { name: client.info.name } : {}),
+        event: 'client_info',
+        bytes: data.toString().length,
+        payload: data.toString(),
+      });
       broadcastPeerCount(client.account);
       return;
     }
@@ -414,6 +758,17 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         closed++;
       }
       console.log(`[WS Relay] account=${client.account} disconnected ${closed} peer(s) on operator request`);
+      recordTrace({
+        account: client.account,
+        dir: 'in',
+        clientId,
+        role: client.info.role,
+        ...(client.info.name ? { name: client.info.name } : {}),
+        event: 'disconnect_peers',
+        peers: closed,
+        bytes: 0,
+        payload: JSON.stringify({ closed }),
+      });
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'peers_disconnected', count: closed }));
       }
@@ -452,14 +807,51 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
       relayed++;
     }
 
+    // Recorded after the fan-out so the trace carries how many peers actually got it —
+    // "the operator sent it but nobody was listening" is the most common support case.
+    recordTrace({
+      account: client.account,
+      dir: 'in',
+      clientId,
+      role: client.info.role,
+      ...(client.info.name ? { name: client.info.name } : {}),
+      event: typeof msg.action === 'string' ? msg.action : typeof msg.type === 'string' ? msg.type : 'message',
+      peers: relayed,
+      bytes: payload.length,
+      payload,
+    });
+
     // Optional: acknowledge relay
     // ws.send(JSON.stringify({ type: 'relayed', count: relayed }));
   });
 
-  ws.on('close', () => {
+  ws.on('close', (code: number) => {
     if (client.authTimer) clearTimeout(client.authTimer);
+
+    if (monitor) {
+      const watched = monitor.account;
+      monitors.delete(monitor);
+      monitor = null;
+      console.log(`[WS Relay] Monitor detached (account=${watched ?? 'all'}, remaining=${monitors.size})`);
+      // The watched account's clients must stop showing a watcher that has gone.
+      if (watched !== null) broadcastPeerCount(watched);
+      else for (const account of new Set([...clients].map((c) => c.account))) broadcastPeerCount(account);
+      broadcastMonitorPeers();
+      return;
+    }
+
     clients.delete(client);
     console.log(`[WS Relay] Disconnected: account=${client.account} role=${client.info.role} ip=${ip} (total=${clients.size})`);
+    recordTrace({
+      account: client.account,
+      dir: 'sys',
+      clientId,
+      role: client.info.role,
+      ...(client.info.name ? { name: client.info.name } : {}),
+      event: 'close',
+      bytes: 0,
+      payload: JSON.stringify({ ip, code }),
+    });
     // Notify remaining peers in the same account of the new count
     broadcastPeerCount(client.account);
   });
@@ -467,6 +859,21 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
   ws.on('error', (err) => {
     console.error(`[WS Relay] Socket error (account=${client.account} ip=${ip}):`, err.message);
     if (client.authTimer) clearTimeout(client.authTimer);
+    recordTrace({
+      account: client.account,
+      dir: 'sys',
+      clientId,
+      role: client.info.role,
+      event: 'error',
+      bytes: 0,
+      payload: JSON.stringify({ ip, error: err.message }),
+    });
+    if (monitor) {
+      monitors.delete(monitor);
+      monitor = null;
+      broadcastMonitorPeers();
+      return;
+    }
     clients.delete(client);
   });
 });

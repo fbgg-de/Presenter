@@ -1,4 +1,4 @@
-import { Button, MenuItem, Select, Stack, Switch, Typography } from '@mui/material';
+import { Button, Chip, MenuItem, Select, Stack, Switch, Typography } from '@mui/material';
 import { Cable as CableIcon, Download as DownloadIcon, FileDownload as ExportIcon, FileUpload as ImportIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSettings } from '@/store/settingsSlice';
@@ -9,6 +9,9 @@ import { SettingFrame, CommittedInput } from '@/components/settings/SettingRow';
 import { useTrackedUpdateSetting } from '@/hooks/useTrackedUpdateSetting';
 import { TEMPLATE_VARS } from '@/components/settings/settingsCatalog';
 import { REMOTE_COMMAND_IDS, type RemoteCommandId } from '@/utils/remoteCommands';
+import { useAccountLanguages } from '@/hooks/useAccountLanguages';
+import { languageLabel } from '@/song/languageNames';
+import { LanguagePicker } from '@/components/common/LanguagePicker';
 
 /**
  * The blocks of the settings panel that are more than a stored value and a control:
@@ -183,5 +186,106 @@ export const DesktopDownloadBlock = ({ onOpen }: { onOpen: () => void }) => {
         {LL.DESKTOP_APP.SETTINGS_DOWNLOAD()}
       </Button>
     </Stack>
+  );
+};
+
+/**
+ * The account's song languages: the pool every song's language list is picked from, and the
+ * order they are offered in. The first entry is the default a new song starts in.
+ *
+ * Account-wide rather than per device, because a song saved with a language on one machine has
+ * to be editable with that same language on the next. Codes found in songs but never configured
+ * are offered as one-click additions rather than silently adopted.
+ */
+export const SongLanguagesBlock = () => {
+  const { LL } = useI18nContext();
+  const settings = useGetSettings();
+  const { pool, unconfigured, isLoading } = useAccountLanguages();
+  const [updateAccountSettings, { isLoading: isSaving }] = useUpdateAccountSettingsMutation();
+
+  const save = (languages: string[]) => {
+    // The server rejects an empty pool: with no languages there is nothing to write a song in.
+    if (languages.length === 0 || settings.offlineMode) return;
+    updateAccountSettings({ languages });
+  };
+
+  const move = (index: number, delta: number) => {
+    const target = index + delta;
+    if (target < 0 || target >= pool.length) return;
+
+    const next = [...pool];
+    [next[index], next[target]] = [next[target], next[index]];
+    save(next);
+  };
+
+  return (
+    <SettingFrame
+      label={LL.SETTINGS.OPTIONS.SONG_LANGUAGES.TITLE()}
+      description={LL.SETTINGS.OPTIONS.SONG_LANGUAGES.DESCRIPTION()}
+      info={
+        // What this list is actually for. Its original job — letting a design name a language —
+        // is gone, so without saying what it still does it reads as vestigial; and the detection
+        // point is the one that rewards keeping the list short.
+        <Stack component="ul" sx={{ m: 0, pl: 2, gap: 0.5 }}>
+          <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
+            {LL.SETTINGS.OPTIONS.SONG_LANGUAGES.EFFECT_PICKER()}
+          </Typography>
+          <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
+            {LL.SETTINGS.OPTIONS.SONG_LANGUAGES.EFFECT_DETECTION()}
+          </Typography>
+          <Typography component="li" variant="caption" sx={{ display: 'list-item' }}>
+            {LL.SETTINGS.OPTIONS.SONG_LANGUAGES.EFFECT_NOT_DESIGNS()}
+          </Typography>
+        </Stack>
+      }
+      control={
+        <Stack sx={{ gap: 1, width: '100%' }}>
+          <Stack direction="row" sx={{ gap: 0.5, flexWrap: 'wrap' }}>
+            {pool.map((code, index) => (
+              <Chip
+                key={code}
+                size="small"
+                color={index === 0 ? 'primary' : 'default'}
+                label={`${code}${index === 0 ? ` · ${LL.SONG_EDITOR.DEFAULT_LANGUAGE()}` : ''}`}
+                title={languageLabel(code, settings.uiLanguage)}
+                onClick={() => move(index, -1)}
+                onDelete={pool.length > 1 ? () => save(pool.filter((entry) => entry !== code)) : undefined}
+                disabled={isLoading || isSaving}
+                sx={{ fontFamily: 'monospace' }}
+              />
+            ))}
+          </Stack>
+
+          <LanguagePicker
+            selected={pool}
+            onAdd={(code) => save([...pool, code])}
+            disabled={isLoading || isSaving || settings.offlineMode}
+          />
+
+          {unconfigured.length > 0 && (
+            <Stack direction="row" sx={{ gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Typography variant="caption" color="text.secondary">
+                {LL.SETTINGS.OPTIONS.SONG_LANGUAGES.FOUND_IN_SONGS()}
+              </Typography>
+              {unconfigured.map((code) => (
+                <Chip
+                  key={code}
+                  size="small"
+                  variant="outlined"
+                  label={code}
+                  onClick={() => save([...pool, code])}
+                  disabled={isSaving || settings.offlineMode}
+                  sx={{ fontFamily: 'monospace' }}
+                />
+              ))}
+            </Stack>
+          )}
+
+          <Typography variant="caption" color="text.secondary">
+            {LL.SETTINGS.OPTIONS.SONG_LANGUAGES.REORDER_HINT()}
+          </Typography>
+        </Stack>
+      }
+    />
   );
 };

@@ -35,6 +35,16 @@ import { Document, Page, pdfjs } from 'react-pdf';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { BLOCK_COLORS } from '@/theme';
 
+/**
+ * Registers the pdf.js worker for every react-pdf consumer (this module is pulled into the
+ * musician bundle, which renders PDFs but doesn't set this itself).
+ *
+ * The worker resolves from the top-level pdfjs-dist, while the pdf.js API comes from the copy
+ * react-pdf depends on. react-pdf pins pdfjs-dist to an *exact* version, so package.json's
+ * pdfjs-dist must stay pinned to that same exact version — otherwise the two resolve to
+ * different copies and every document fails with "API version does not match Worker version".
+ * Check `npm view react-pdf@<version> dependencies.pdfjs-dist` before bumping either one.
+ */
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
 
 export interface PdfAreaMapping {

@@ -733,6 +733,97 @@ class AdminMigrations extends RestController
                     echo "pdf_area_mappings is now keyed by (account, songnumber, filename)\n";
                 },
             ],
+
+            21 => [
+                'description' => 'Language lists per song and account, and slot-based language styles',
+                'up' => function (mysqli $db) use ($columnExists, $tableExists) {
+                    // Per song: the ordered list of languages, first entry being the default.
+                    // A style's language slots are positions in this list, so the order is what
+                    // decides which language a design's "second language" actually styles.
+                    if (!$columnExists('songs', 'languages')) {
+                        $db->query('ALTER TABLE `songs` ADD COLUMN `languages` JSON DEFAULT NULL');
+                        echo "Added column: songs.languages\n";
+                    }
+                    // Per account: the pool every song picks from.
+                    if (!$columnExists('account', 'languages')) {
+                        $db->query('ALTER TABLE `account` ADD COLUMN `languages` JSON DEFAULT NULL');
+                        echo "Added column: account.languages\n";
+                    }
+
+                    if (!$tableExists('styles')) {
+                        return;
+                    }
+
+                    // Styles used to name languages outright ("lines tagged DE look like this"),
+                    // which only works while every song uses the same languages in the same
+                    // roles. They now describe positions instead, so one design fits a
+                    // German-with-English song and an English-with-German one alike.
+                    //
+                    // The old list was already stored in display order with the default entry
+                    // first, so position *is* the conversion: default -> slot 1, then 2, 3, …
+                    $result = $db->query('SELECT `id`, `data` FROM `styles`');
+                    $converted = 0;
+
+                    while ($row = $result->fetch_assoc()) {
+                        $data = json_decode($row['data'], true);
+
+                        if (!is_array($data)) {
+                            continue;
+                        }
+
+                        $changed = false;
+
+                        // Fields of the named-language model that nothing ever read.
+                        foreach (['showLanguages', 'primaryLanguage', 'translationColor'] as $dead) {
+                            if (array_key_exists($dead, $data)) {
+                                unset($data[$dead]);
+                                $changed = true;
+                            }
+                        }
+
+                        $entries = $data['languageStyles']['value'] ?? null;
+
+                        if (is_array($entries)) {
+                            $next = 2;
+                            $rewritten = [];
+
+                            foreach ($entries as $entry) {
+                                if (!is_array($entry)) {
+                                    continue;
+                                }
+                                // Already converted (a re-run, or a style saved by a new client).
+                                if (array_key_exists('slot', $entry)) {
+                                    $rewritten[] = $entry;
+                                    continue;
+                                }
+
+                                $language = $entry['language'] ?? '';
+                                unset($entry['language']);
+                                $entry['slot'] = $language === '' ? 1 : $next++;
+                                $rewritten[] = $entry;
+                                $changed = true;
+                            }
+
+                            if ($changed) {
+                                $data['languageStyles']['value'] = $rewritten;
+                            }
+                        }
+
+                        if (!$changed) {
+                            continue;
+                        }
+
+                        $encoded = json_encode($data);
+                        $stmt = $db->prepare('UPDATE `styles` SET `data` = ? WHERE `id` = ?');
+                        $stmt->bind_param('si', $encoded, $row['id']);
+                        $stmt->execute();
+                        $stmt->close();
+                        $converted++;
+                    }
+
+                    echo "Converted {$converted} style(s) to language slots\n";
+                },
+            ],
         ];
     }
 }

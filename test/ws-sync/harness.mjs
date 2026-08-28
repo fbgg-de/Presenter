@@ -32,13 +32,29 @@ export function freePort() {
 
 /**
  * Start the relay and resolve once it reports it is listening.
+ *
  * `ttlSeconds` maps to SYNC_TTL_SECONDS (0 disables selection expiry).
+ * `backendUrl` maps to BACKEND_URL — only the token-auth and monitor paths need it.
+ * `traceBufferSize` maps to TRACE_BUFFER_SIZE (messages kept per account for monitors).
  */
-export async function startRelay({ ttlSeconds = 3600, verbose = false } = {}) {
+export async function startRelay({ ttlSeconds = 3600, verbose = false, backendUrl = '', traceBufferSize } = {}) {
   const port = await freePort();
-  const child = spawn(process.execPath, ['-r', 'ts-node/register', path.join('src', 'server.ts')], {
+
+  // By default the suites run the TypeScript source, so they always test what is checked in.
+  // Point WS_RELAY_ENTRY at a built entry point — deploy/dist/server.js after `npm run
+  // deploy` — to run the very same scenarios against the bundle that actually ships.
+  const entry = process.env.WS_RELAY_ENTRY;
+  const args = entry ? [entry] : ['-r', 'ts-node/register', path.join('src', 'server.ts')];
+
+  const child = spawn(process.execPath, args, {
     cwd: WS_SERVER_DIR,
-    env: { ...process.env, PORT: String(port), SYNC_TTL_SECONDS: String(ttlSeconds) },
+    env: {
+      ...process.env,
+      PORT: String(port),
+      SYNC_TTL_SECONDS: String(ttlSeconds),
+      ...(backendUrl ? { BACKEND_URL: backendUrl } : {}),
+      ...(traceBufferSize ? { TRACE_BUFFER_SIZE: String(traceBufferSize) } : {}),
+    },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
 

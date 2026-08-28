@@ -11,7 +11,6 @@ import { useAppSelector } from '@/store';
 import { useGetPresentationSettings } from '@/store/presentationSlice';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { useGetShow } from '@/store/showSlice';
-import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
 
 /** Shared mutable trigger set by useWsCompanionCommands before each dispatch. */
 export const wsActionTrigger = {
@@ -19,8 +18,6 @@ export const wsActionTrigger = {
 };
 
 const ACTIVE_ACTION_RESET_MS = 400;
-
-const countPrimaryLines = (lines: string[]): number => lines.filter((l) => !SONG_TRANSLATION_LINE_REGEX.test(l)).length;
 
 export const useBroadcastCompanionState = () => {
   const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack } = useGetPresentationSettings();

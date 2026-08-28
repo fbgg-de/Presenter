@@ -1,11 +1,12 @@
 import { CSSProperties } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Presentation, type PresentationProps } from '@/presentation/Presentation';
-import type { PresentationContent, PresentationLine } from '@/presentation/types';
+import type { PresentationContent } from '@/presentation/types';
 import { EMPTY_CONTENT } from '@/presentation/types';
 import { getSetting } from '@/store/settingsSlice';
 import { playWithFade, pauseWithFade, stopWithFade } from '@/presentation/videoUtils';
 import { LanguageStyleEntry } from '@/api/styles.api';
+import { MAIN_LANGUAGE_SLOT, entryForSlot, slotForLanguage } from '@/utils/languageSlots';
 
 export * from '@/presentation/BibleVerseContent';
 export * from '@/presentation/CopyrightOverlay';
@@ -61,15 +62,26 @@ export const langEntryToCss = (entry: LanguageStyleEntry): CSSProperties => {
 };
 
 /**
- * Resolve per-language CSS for a given line's language tag.
- * Returns default entry overrides plus language-specific overrides.
+ * CSS for one line, from the slot its language occupies in the song.
+ *
+ * The main slot is the baseline every line inherits — a translation is still the same song in
+ * the same design — and the line's own slot layers on top of it. A language the song does not
+ * list has no slot and gets the baseline alone.
  */
-export const resolveLineLangCss = (language: string | undefined, langStyles: LanguageStyleEntry[] | undefined): CSSProperties => {
+export const resolveLineLangCss = (
+  language: string | undefined,
+  langStyles: LanguageStyleEntry[] | undefined,
+  songLanguages: string[] | undefined,
+): CSSProperties => {
   if (!langStyles?.length) return {};
-  const defaultEntry = langStyles.find((e) => e.language === '');
-  const langEntry = language ? langStyles.find((e) => e.language === language.toLowerCase()) : undefined;
-  const css: CSSProperties = defaultEntry ? langEntryToCss(defaultEntry) : {};
-  if (langEntry) Object.assign(css, langEntryToCss(langEntry));
+
+  const mainEntry = entryForSlot(langStyles, MAIN_LANGUAGE_SLOT);
+  const slot = slotForLanguage(language, songLanguages);
+  const slotEntry = slot === MAIN_LANGUAGE_SLOT ? undefined : entryForSlot(langStyles, slot);
+
+  const css: CSSProperties = mainEntry ? langEntryToCss(mainEntry) : {};
+  if (slotEntry) Object.assign(css, langEntryToCss(slotEntry));
+
   return css;
 };
 
@@ -87,71 +99,7 @@ export const resolveLineLangCss = (language: string | undefined, langStyles: Lan
 export const contentIdentityKey = (c: PresentationContent): string =>
   `${c.contentType}|${c.mediaPath ?? ''}|${c.bibleRef ?? ''}|${c.mediaColor ?? ''}|${c.style?.backgroundImage ?? ''}|${c.style?.backgroundVideo ?? ''}|${c.style?.backgroundColor ?? ''}`;
 
-/**
- * Filter lines by allowed languages and optionally reorder within each semantic group.
- *
- * A "semantic group" is one primary line (no language tag) plus all translation lines
- * immediately following it. When `languages` is provided:
- *   - Lines whose language is not in the list are removed.
- *   - Within each group the line order follows the `languages` array order.
- *   - If the first entry of `languages` is a recognized language tag (not ''), the
- *     translation for that language comes first, then the others.
- *
- * When no filter is provided all lines pass through unchanged.
- */
-export const filterLinesByLanguage = (lines: PresentationLine[], languages?: string[]): PresentationLine[] => {
-  if (!languages || languages.length === 0) return lines;
-
-  // Split into semantic groups: [{primary?, translations[]}]
-  type Group = { primary?: PresentationLine; translations: PresentationLine[] };
-  const groups: Group[] = [];
-  let current: Group | null = null;
-
-  for (const line of lines) {
-    if (!line.language) {
-      // New primary line starts a new group
-      if (current) groups.push(current);
-      current = { primary: line, translations: [] };
-    } else {
-      // Translation — attach to current group or start an orphan group
-      if (!current) current = { translations: [] };
-      const langUp = line.language.toUpperCase();
-      if (languages.includes(langUp)) {
-        current.translations.push(line);
-      }
-      // else: language not in filter list — skip
-    }
-  }
-  if (current) groups.push(current);
-
-  // Re-emit each group with lines in `languages` order within the group
-  const result: PresentationLine[] = [];
-  for (const group of groups) {
-    // Build a map: lang -> line for quick lookup
-    const byLang = new Map<string, PresentationLine>();
-    if (group.primary) byLang.set('', group.primary);
-    for (const t of group.translations) {
-      if (t.language) byLang.set(t.language.toUpperCase(), t);
-    }
-
-    // Emit in the order specified by `languages`.
-    // '' (empty string / no-language tag) represents the primary/default line.
-    // If `languages` doesn't include '' we still emit the primary line first (it's the anchor).
-    const emitted = new Set<string>();
-    for (const lang of languages) {
-      const key = lang.toUpperCase();
-      const line = key === '' ? group.primary : byLang.get(key);
-      if (line) {
-        result.push(line);
-        emitted.add(key);
-      }
-    }
-    // Emit primary line if it wasn't covered by the languages list
-    if (group.primary && !emitted.has('')) result.push(group.primary);
-  }
-
-  return result;
-};
+export { filterLinesByLanguage } from './lineFilter';
 
 // Parse URL query params for window configuration
 const params = new URLSearchParams(window.location.search);

@@ -5,7 +5,7 @@ import { useAppSelector, useAppDispatch } from '@/store';
 import { setActiveBlockIndex, setActiveLineIndex, useGetPresentationSettings } from '@/store/presentationSlice';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { useGetShow } from '@/store/showSlice';
-import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
+import { isPrimaryLine, parseTaggedLine, resolvePrimaryLanguage } from '@/song';
 import { useGetSettings } from '@/store/settingsSlice';
 
 // Stable sx objects (module scope so identity never changes between renders)
@@ -22,20 +22,13 @@ const containerSx = {
 const blockNameSx = { padding: '6px', textAlign: 'center', cursor: 'pointer' } as const;
 const cardContentSx = { paddingX: 0 } as const;
 
-/**
- * Parse a raw line into primary text and optional language tag.
- */
-function parseLine(raw: string): { text: string; language?: string } {
-  const match = raw.match(SONG_TRANSLATION_LINE_REGEX);
-  if (match) return { text: match[2], language: match[1].toUpperCase() };
-  return { text: raw };
-}
-
 interface BlockCardProps {
   blockIndex: number;
   name: string;
   lines: string[];
   copyright?: boolean;
+  /** The song's anchor language; undefined for songs whose primary lines carry no tag. */
+  primaryLanguage?: string;
   selected: boolean;
   activeLineIndex: number;
   color: string;
@@ -63,6 +56,7 @@ const BlockCard = memo(function BlockCard({
   name,
   lines,
   copyright,
+  primaryLanguage,
   selected,
   activeLineIndex,
   color,
@@ -83,9 +77,13 @@ const BlockCard = memo(function BlockCard({
   type Row = { primaryIdx: number; text: string; translations: string[] };
   const rows: Row[] = [];
   let primaryIdx = 0;
+  // Which language anchors a row is resolved from the block itself, so a block whose tags do
+  // not match the song's declared list still shows one row per lyric line rather than one row
+  // holding everything.
+  const anchor = resolvePrimaryLanguage(lines, primaryLanguage);
   for (let i = 0; i < lines.length; i++) {
-    const parsed = parseLine(lines[i]);
-    if (!parsed.language) {
+    const parsed = parseTaggedLine(lines[i]);
+    if (isPrimaryLine(lines[i], anchor)) {
       rows.push({ primaryIdx: primaryIdx++, text: parsed.text, translations: [] });
     } else if (rows.length > 0) {
       rows[rows.length - 1].translations.push(parsed.text);
@@ -253,6 +251,7 @@ const ControlSong = () => {
             name={name}
             lines={lines}
             copyright={copyright}
+            primaryLanguage={currentSong.languages?.[0]}
             selected={selected}
             // Pass activeLineIndex only when this block is selected so non-selected
             // blocks do not re-render when the active line moves within the active block.

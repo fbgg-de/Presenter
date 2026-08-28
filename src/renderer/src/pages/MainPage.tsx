@@ -1,6 +1,6 @@
 ﻿import { useEffect, useRef, useState } from 'react';
 import { Stack, Box, BottomNavigation, BottomNavigationAction, Paper, Snackbar, Alert, Button } from '@mui/material';
-import { ViewList as ShowListIcon, TouchApp as ControlIcon } from '@mui/icons-material';
+import { ViewList as ShowListIcon, TouchApp as ControlIcon, Monitor as OutputIcon } from '@mui/icons-material';
 import Footer from '@/components/layout/Footer';
 import Sidebar, { type SidebarHandle } from '@/components/layout/Sidebar';
 import Control from '@/components/show/Control';
@@ -29,7 +29,7 @@ export const MainPage = () => {
   const dispatch = useAppDispatch();
   const { LL, locale } = useI18nContext();
   const isMobile = useIsMobile();
-  const [mobileTab, setMobileTab] = useState(0); // 0 = show list / sidebar, 1 = control
+  const [mobileTab, setMobileTab] = useState(0); // 0 = show list / sidebar, 1 = control, 2 = footer
 
   const { currentShow, isShowSelectorOpen } = useGetShow();
   const [saveShowMutation] = useSaveShowMutation();
@@ -191,12 +191,21 @@ export const MainPage = () => {
                     }}
                   />
                 </Box>
+                {/* The footer's controls — windows, black, connections — as their own tab.
+                    They have no bar to live in here, and they are not optional: black-out and
+                    the window list are what an operator reaches for mid-service. Kept mounted
+                    like the other tabs so its window polling and warnings do not restart on
+                    every visit. */}
+                <Box sx={{ display: mobileTab === 2 ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                  <Footer variant="panel" />
+                </Box>
               </Stack>
               {/* Bottom navigation replacing the footer on mobile */}
               <Paper elevation={3} sx={{ borderTop: 1, borderColor: 'divider' }}>
                 <BottomNavigation value={mobileTab} onChange={(_, v) => setMobileTab(v)} showLabels>
                   <BottomNavigationAction label={LL.SHOWS.TITLE()} icon={<ShowListIcon />} />
                   <BottomNavigationAction label={LL.CONTROL.TITLE()} icon={<ControlIcon />} />
+                  <BottomNavigationAction label={LL.FOOTER.TITLE()} icon={<OutputIcon />} />
                 </BottomNavigation>
               </Paper>
             </>

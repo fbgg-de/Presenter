@@ -116,7 +116,25 @@ const FooterActions = ({ onOpenStyleEditor, onOpenWindowManager }: { onOpenStyle
   );
 };
 
-const Footer = () => {
+/** A titled group of controls in the phone panel. */
+const PanelSection = ({ title, children }: { title: string; children: ReactNode }) => (
+  <Stack sx={{ gap: 1 }}>
+    <Typography variant="overline" sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
+      {title}
+    </Typography>
+    {children}
+  </Stack>
+);
+
+export type FooterProps = {
+  /**
+   * `bar` is the desktop strip along the bottom of the window. `panel` is the same controls as a
+   * full-height page, which is how the phone layout reaches them — it has no room for the strip.
+   */
+  variant?: 'bar' | 'panel';
+};
+
+const Footer = ({ variant = 'bar' }: FooterProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
 
@@ -740,6 +758,350 @@ const Footer = () => {
 
   if (!windowFooterVisible) return null;
 
+  /**
+   * One chip per presentation window, and the controls that go with them.
+   *
+   * Pulled out of the toolbar because the phone shows the same things stacked rather than in a
+   * row: same handlers, same menus, one definition.
+   */
+  const windowChips = windowEntries.map((entry, idx) => {
+    const cfg = entry.config as SavedWindowConfig;
+    const name = cfg.name || 'Window';
+    const isFrozen = frozenWindows.includes(name);
+    const isStream = cfg.displayMode === 'stream';
+    const presetName = cfg.styleId ? styles.find((s) => s.id === cfg.styleId)?.name : undefined;
+    const label = presetName ? `${name} (${presetName})` : name;
+
+    // Build a composite icon showing active states
+    const statusIcons: ReactNode[] = [];
+    if (isFrozen) statusIcons.push(<FreezeIcon key="f" sx={{ fontSize: 14 }} />);
+    if (cfg.fullscreen) statusIcons.push(<FullscreenIcon key="fs" sx={{ fontSize: 14 }} />);
+    if (cfg.alwaysOnTop) statusIcons.push(<OnTopIcon key="ot" sx={{ fontSize: 14 }} />);
+    if (cfg.styleId) statusIcons.push(<StyleIcon key="st" sx={{ fontSize: 14 }} />);
+    const mainIcon = isStream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />;
+    const chipIcon =
+      statusIcons.length > 0 ? (
+        <Stack
+          direction="row"
+          spacing={0.25}
+          sx={{
+            alignItems: 'center',
+            pl: 0.5,
+          }}
+        >
+          {mainIcon}
+          {statusIcons}
+        </Stack>
+      ) : (
+        mainIcon
+      );
+
+    if (entry.isOpen && entry.runtimeId) {
+      const isHidden = hiddenWindows.has(entry.runtimeId);
+      const isDraggable = entry.savedIdx >= 0;
+      return (
+        <Box
+          key={entry.runtimeId}
+          draggable={isDraggable}
+          onDragStart={isDraggable ? () => handleChipDragStart(entry.savedIdx) : undefined}
+          onDragOver={isDraggable ? (e: DragEvent) => handleChipDragOver(e, entry.savedIdx) : undefined}
+          onDragLeave={isDraggable ? handleChipDragLeave : undefined}
+          onDrop={isDraggable ? (e: DragEvent) => handleChipDrop(e, entry.savedIdx) : undefined}
+          onDragEnd={() => setDragOverIndex(null)}
+          sx={{
+            display: 'inline-flex',
+            cursor: isDraggable ? 'grab' : undefined,
+            outline: dragOverIndex === entry.savedIdx ? '2px solid' : 'none',
+            outlineColor: 'primary.main',
+            borderRadius: 4,
+            opacity: dragIndexRef.current === entry.savedIdx ? 0.5 : 1,
+          }}
+        >
+          <Chip
+            icon={chipIcon}
+            label={label}
+            size="small"
+            variant={isFrozen ? 'filled' : 'outlined'}
+            color={isFrozen ? 'info' : isBlack || isHidden ? 'default' : 'primary'}
+            sx={{ fontSize: '0.75rem' }}
+            onClick={(e) => handleChipContextMenu(e as unknown as MouseEvent<HTMLElement>, entry.runtimeId!)}
+            deleteIcon={
+              <Tooltip title={isHidden ? LL.FOOTER.SHOW_WINDOW() : LL.FOOTER.HIDE_WINDOW()}>
+                {isHidden ? <ShowIcon fontSize="small" /> : <HideWindowIcon fontSize="small" />}
+              </Tooltip>
+            }
+            onDelete={async () => {
+              const api = (window as unknown as { api?: Record<string, unknown> }).api;
+              if (isHidden) {
+                if (api?.showPresentationWindow) await (api.showPresentationWindow as (id: string) => Promise<void>)(entry.runtimeId!);
+              } else {
+                if (api?.hidePresentationWindow) await (api.hidePresentationWindow as (id: string) => Promise<void>)(entry.runtimeId!);
+              }
+              await refreshHiddenWindows();
+            }}
+          />
+        </Box>
+      );
+    } else {
+      // Closed window — show dimmed chip that can be clicked to reopen
+      const isDraggable = entry.savedIdx >= 0;
+      return (
+        <Box
+          key={`closed-${idx}`}
+          draggable={isDraggable}
+          onDragStart={isDraggable ? () => handleChipDragStart(entry.savedIdx) : undefined}
+          onDragOver={isDraggable ? (e: DragEvent) => handleChipDragOver(e, entry.savedIdx) : undefined}
+          onDragLeave={isDraggable ? handleChipDragLeave : undefined}
+          onDrop={isDraggable ? (e: DragEvent) => handleChipDrop(e, entry.savedIdx) : undefined}
+          onDragEnd={() => setDragOverIndex(null)}
+          sx={{
+            display: 'inline-flex',
+            cursor: isDraggable ? 'grab' : undefined,
+            outline: dragOverIndex === entry.savedIdx ? '2px solid' : 'none',
+            outlineColor: 'primary.main',
+            borderRadius: 4,
+            opacity: dragIndexRef.current === entry.savedIdx ? 0.5 : 1,
+          }}
+        >
+          <Tooltip title={LL.WINDOW.OPEN()}>
+            <Chip
+              icon={isStream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />}
+              label={label}
+              size="small"
+              variant="outlined"
+              color="default"
+              sx={{ fontSize: '0.75rem', opacity: 0.5 }}
+              onClick={() => handleReopenWindow(idx)}
+            />
+          </Tooltip>
+        </Box>
+      );
+    }
+  });
+
+  const windowMenus = (
+    <>
+      {/* Per-window context menu */}
+      <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleMenuClose}>
+        {/* Close window */}
+        <MenuItem
+          onClick={() => {
+            if (menuWindowId) handleCloseWindow(menuWindowId);
+            handleMenuClose();
+          }}
+        >
+          <ListItemIcon>
+            <CloseIcon fontSize="small" color="error" />
+          </ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>{LL.WINDOW.CLOSE()}</ListItemText>
+        </MenuItem>
+
+        <Divider />
+
+        {/* Rename */}
+        <MenuItem
+          onClick={() => {
+            setRenameValue(menuEntry?.config.name || '');
+            setRenameDialogOpen(true);
+          }}
+        >
+          <ListItemIcon>
+            <EditIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{LL.WINDOW.RENAME()}</ListItemText>
+        </MenuItem>
+
+        {/* Window style (preset) */}
+        {styles.length > 0 && (
+          <MenuItem onClick={(e) => setWindowStyleAnchor(e.currentTarget)}>
+            <ListItemIcon>
+              <StyleIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{LL.FOOTER.WINDOW_STYLE()}</ListItemText>
+          </MenuItem>
+        )}
+
+        <Divider />
+
+        {/* Hide / Show mouse */}
+        <MenuItem onClick={() => handleToggleWindowProp('hideMouse')}>
+          <ListItemIcon>
+            <MouseIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{menuEntryConfig?.hideMouse ? LL.FOOTER.SHOW_MOUSE() : LL.FOOTER.HIDE_MOUSE()}</ListItemText>
+        </MenuItem>
+
+        {/* Frameless */}
+        <MenuItem onClick={() => handleToggleWindowProp('frameless')}>
+          <ListItemIcon>{menuEntryConfig?.frameless ? <FramedIcon fontSize="small" /> : <FramelessIcon fontSize="small" />}</ListItemIcon>
+          <ListItemText>{menuEntryConfig?.frameless ? LL.FOOTER.FRAMED() : LL.FOOTER.FRAMELESS()}</ListItemText>
+        </MenuItem>
+
+        {/* Fullscreen */}
+        <MenuItem onClick={() => handleToggleWindowProp('fullscreen')}>
+          <ListItemIcon>
+            {menuEntryConfig?.fullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
+          </ListItemIcon>
+          <ListItemText>{menuEntryConfig?.fullscreen ? LL.FOOTER.EXIT_FULLSCREEN() : LL.FOOTER.FULLSCREEN()}</ListItemText>
+        </MenuItem>
+
+        {/* Always on top */}
+        <MenuItem onClick={() => handleToggleWindowProp('alwaysOnTop')}>
+          <ListItemIcon>
+            <OnTopIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{menuEntryConfig?.alwaysOnTop ? LL.FOOTER.NOT_ON_TOP() : LL.FOOTER.ALWAYS_ON_TOP()}</ListItemText>
+        </MenuItem>
+
+        {/* Move to screen */}
+        {screens.length > 1 && (
+          <MenuItem onClick={(e) => setScreenAnchor(e.currentTarget)}>
+            <ListItemIcon>
+              <ScreenIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{LL.WINDOW.MOVE_TO_SCREEN()}</ListItemText>
+          </MenuItem>
+        )}
+
+        {/* Freeze / Unfreeze */}
+        {menuEntry &&
+          (() => {
+            const name = menuEntry.config.name || 'Presentation';
+            const isFrozen = frozenWindows.includes(name);
+            return (
+              <MenuItem onClick={handleToggleFreeze}>
+                <ListItemIcon>{isFrozen ? <UnfreezeIcon fontSize="small" /> : <FreezeIcon fontSize="small" />}</ListItemIcon>
+                <ListItemText>{isFrozen ? LL.FOOTER.UNFREEZE() : LL.FOOTER.FREEZE()}</ListItemText>
+              </MenuItem>
+            );
+          })()}
+
+        {/* Bring to front */}
+        {menuEntry && (
+          <MenuItem
+            onClick={() => {
+              handleBringToFront(menuEntry.id);
+              handleMenuClose();
+            }}
+          >
+            <ListItemIcon>
+              <BringToFrontIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{LL.FOOTER.BRING_TO_FRONT()}</ListItemText>
+          </MenuItem>
+        )}
+
+        {/* Hide / Show window */}
+        {menuEntry && (
+          <MenuItem
+            onClick={() => {
+              handleToggleHideWindow();
+            }}
+          >
+            <ListItemIcon>
+              <HideWindowIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{hiddenWindows.has(menuEntry.id) ? LL.FOOTER.SHOW_WINDOW() : LL.FOOTER.HIDE_WINDOW()}</ListItemText>
+          </MenuItem>
+        )}
+      </Menu>
+
+      {/* Window style sub-menu */}
+      <Menu
+        anchorEl={windowStyleAnchor}
+        open={Boolean(windowStyleAnchor)}
+        onClose={() => setWindowStyleAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        <MenuItem
+          onClick={() => handleSetWindowStyle(null)}
+          selected={!(menuEntry?.config as SavedWindowConfig | undefined)?.styleId}
+          sx={{ fontSize: '0.85rem' }}
+        >
+          <em>{LL.STYLE.NONE()}</em>
+        </MenuItem>
+        {styles.map((s) => (
+          <MenuItem
+            key={s.id}
+            onClick={() => handleSetWindowStyle(s.id)}
+            selected={s.id === (menuEntry?.config as SavedWindowConfig | undefined)?.styleId}
+            sx={{ fontSize: '0.85rem' }}
+          >
+            {s.name}
+          </MenuItem>
+        ))}
+      </Menu>
+
+      {/* Screen assignment sub-menu */}
+      <Menu
+        anchorEl={screenAnchor}
+        open={Boolean(screenAnchor)}
+        onClose={() => setScreenAnchor(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        {screens.map((screen) => (
+          <MenuItem key={screen.id} onClick={() => handleMoveToScreen(screen.bounds)} sx={{ fontSize: '0.85rem' }}>
+            <ListItemIcon>
+              <ScreenIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>
+              {screen.label}
+              {screen.isPrimary ? ` (${LL.WINDOW.PRIMARY_SCREEN()})` : ''}{' '}
+              <Typography
+                component="span"
+                variant="caption"
+                sx={{
+                  color: 'text.secondary',
+                }}
+              >
+                {screen.bounds.width}×{screen.bounds.height}
+              </Typography>
+            </ListItemText>
+          </MenuItem>
+        ))}
+      </Menu>
+    </>
+  );
+
+  const addWindowButton = (
+    <Tooltip title={LL.WINDOW.ADD()}>
+      <IconButton
+        size="small"
+        onClick={() => {
+          setWindowManagerOpen(true);
+          setWindowManagerOpenWithNew(true);
+        }}
+      >
+        <AddIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
+
+  const connectionChips = (
+    <>
+      <ConnectedWebsocketClients
+        connected={wsOperatorConnected}
+        wsClientCount={wsClientCount}
+        connectedLabel={wsClientsTooltip}
+        disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
+        onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
+      />
+      <Tooltip title={midiChipProps.tooltip}>
+        <Chip
+          icon={<MidiActiveIcon sx={{ pl: '0.25rem' }} />}
+          label="MIDI"
+          size="small"
+          color={midiChipProps.color}
+          variant={midiChipProps.variant}
+          onClick={midiChipProps.onClick}
+          sx={midiChipProps.sx}
+        />
+      </Tooltip>
+    </>
+  );
+
   return (
     <>
       <StyleEditor open={styleEditorOpen} onClose={() => setStyleEditorOpen(false)} />
@@ -809,436 +1171,129 @@ const Footer = () => {
           {storageWarning?.text ?? ''}
         </Alert>
       </Snackbar>
-      <AppBar
-        position="static"
-        color="default"
-        elevation={2}
-        sx={{
-          top: 'auto',
-          bottom: 0,
-          borderTop: 1,
-          borderColor: 'divider',
-          bgcolor: 'background.paper',
-        }}
-      >
-        <Toolbar variant="dense" sx={{ minHeight: 40, gap: 1 }}>
-          {windowEntries.length > 0 ? (
-            <>
-              {windowEntries.map((entry, idx) => {
-                const cfg = entry.config as SavedWindowConfig;
-                const name = cfg.name || 'Window';
-                const isFrozen = frozenWindows.includes(name);
-                const isStream = cfg.displayMode === 'stream';
-                const presetName = cfg.styleId ? styles.find((s) => s.id === cfg.styleId)?.name : undefined;
-                const label = presetName ? `${name} (${presetName})` : name;
-
-                // Build a composite icon showing active states
-                const statusIcons: ReactNode[] = [];
-                if (isFrozen) statusIcons.push(<FreezeIcon key="f" sx={{ fontSize: 14 }} />);
-                if (cfg.fullscreen) statusIcons.push(<FullscreenIcon key="fs" sx={{ fontSize: 14 }} />);
-                if (cfg.alwaysOnTop) statusIcons.push(<OnTopIcon key="ot" sx={{ fontSize: 14 }} />);
-                if (cfg.styleId) statusIcons.push(<StyleIcon key="st" sx={{ fontSize: 14 }} />);
-                const mainIcon = isStream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />;
-                const chipIcon =
-                  statusIcons.length > 0 ? (
-                    <Stack
-                      direction="row"
-                      spacing={0.25}
-                      sx={{
-                        alignItems: 'center',
-                        pl: 0.5,
-                      }}
-                    >
-                      {mainIcon}
-                      {statusIcons}
-                    </Stack>
-                  ) : (
-                    mainIcon
-                  );
-
-                if (entry.isOpen && entry.runtimeId) {
-                  const isHidden = hiddenWindows.has(entry.runtimeId);
-                  const isDraggable = entry.savedIdx >= 0;
-                  return (
-                    <Box
-                      key={entry.runtimeId}
-                      draggable={isDraggable}
-                      onDragStart={isDraggable ? () => handleChipDragStart(entry.savedIdx) : undefined}
-                      onDragOver={isDraggable ? (e: DragEvent) => handleChipDragOver(e, entry.savedIdx) : undefined}
-                      onDragLeave={isDraggable ? handleChipDragLeave : undefined}
-                      onDrop={isDraggable ? (e: DragEvent) => handleChipDrop(e, entry.savedIdx) : undefined}
-                      onDragEnd={() => setDragOverIndex(null)}
-                      sx={{
-                        display: 'inline-flex',
-                        cursor: isDraggable ? 'grab' : undefined,
-                        outline: dragOverIndex === entry.savedIdx ? '2px solid' : 'none',
-                        outlineColor: 'primary.main',
-                        borderRadius: 4,
-                        opacity: dragIndexRef.current === entry.savedIdx ? 0.5 : 1,
-                      }}
-                    >
-                      <Chip
-                        icon={chipIcon}
-                        label={label}
-                        size="small"
-                        variant={isFrozen ? 'filled' : 'outlined'}
-                        color={isFrozen ? 'info' : isBlack || isHidden ? 'default' : 'primary'}
-                        sx={{ fontSize: '0.75rem' }}
-                        onClick={(e) => handleChipContextMenu(e as unknown as MouseEvent<HTMLElement>, entry.runtimeId!)}
-                        deleteIcon={
-                          <Tooltip title={isHidden ? LL.FOOTER.SHOW_WINDOW() : LL.FOOTER.HIDE_WINDOW()}>
-                            {isHidden ? <ShowIcon fontSize="small" /> : <HideWindowIcon fontSize="small" />}
-                          </Tooltip>
-                        }
-                        onDelete={async () => {
-                          const api = (window as unknown as { api?: Record<string, unknown> }).api;
-                          if (isHidden) {
-                            if (api?.showPresentationWindow)
-                              await (api.showPresentationWindow as (id: string) => Promise<void>)(entry.runtimeId!);
-                          } else {
-                            if (api?.hidePresentationWindow)
-                              await (api.hidePresentationWindow as (id: string) => Promise<void>)(entry.runtimeId!);
-                          }
-                          await refreshHiddenWindows();
-                        }}
-                      />
-                    </Box>
-                  );
-                } else {
-                  // Closed window — show dimmed chip that can be clicked to reopen
-                  const isDraggable = entry.savedIdx >= 0;
-                  return (
-                    <Box
-                      key={`closed-${idx}`}
-                      draggable={isDraggable}
-                      onDragStart={isDraggable ? () => handleChipDragStart(entry.savedIdx) : undefined}
-                      onDragOver={isDraggable ? (e: DragEvent) => handleChipDragOver(e, entry.savedIdx) : undefined}
-                      onDragLeave={isDraggable ? handleChipDragLeave : undefined}
-                      onDrop={isDraggable ? (e: DragEvent) => handleChipDrop(e, entry.savedIdx) : undefined}
-                      onDragEnd={() => setDragOverIndex(null)}
-                      sx={{
-                        display: 'inline-flex',
-                        cursor: isDraggable ? 'grab' : undefined,
-                        outline: dragOverIndex === entry.savedIdx ? '2px solid' : 'none',
-                        outlineColor: 'primary.main',
-                        borderRadius: 4,
-                        opacity: dragIndexRef.current === entry.savedIdx ? 0.5 : 1,
-                      }}
-                    >
-                      <Tooltip title={LL.WINDOW.OPEN()}>
-                        <Chip
-                          icon={isStream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />}
-                          label={label}
-                          size="small"
-                          variant="outlined"
-                          color="default"
-                          sx={{ fontSize: '0.75rem', opacity: 0.5 }}
-                          onClick={() => handleReopenWindow(idx)}
-                        />
-                      </Tooltip>
-                    </Box>
-                  );
-                }
-              })}
-
-              {/* Per-window context menu */}
-              <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={handleMenuClose}>
-                {/* Close window */}
-                <MenuItem
-                  onClick={() => {
-                    if (menuWindowId) handleCloseWindow(menuWindowId);
-                    handleMenuClose();
-                  }}
-                >
-                  <ListItemIcon>
-                    <CloseIcon fontSize="small" color="error" />
-                  </ListItemIcon>
-                  <ListItemText sx={{ color: 'error.main' }}>{LL.WINDOW.CLOSE()}</ListItemText>
-                </MenuItem>
-
-                <Divider />
-
-                {/* Rename */}
-                <MenuItem
-                  onClick={() => {
-                    setRenameValue(menuEntry?.config.name || '');
-                    setRenameDialogOpen(true);
-                  }}
-                >
-                  <ListItemIcon>
-                    <EditIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>{LL.WINDOW.RENAME()}</ListItemText>
-                </MenuItem>
-
-                {/* Window style (preset) */}
-                {styles.length > 0 && (
-                  <MenuItem onClick={(e) => setWindowStyleAnchor(e.currentTarget)}>
-                    <ListItemIcon>
-                      <StyleIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>{LL.FOOTER.WINDOW_STYLE()}</ListItemText>
-                  </MenuItem>
-                )}
-
-                <Divider />
-
-                {/* Hide / Show mouse */}
-                <MenuItem onClick={() => handleToggleWindowProp('hideMouse')}>
-                  <ListItemIcon>
-                    <MouseIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>{menuEntryConfig?.hideMouse ? LL.FOOTER.SHOW_MOUSE() : LL.FOOTER.HIDE_MOUSE()}</ListItemText>
-                </MenuItem>
-
-                {/* Frameless */}
-                <MenuItem onClick={() => handleToggleWindowProp('frameless')}>
-                  <ListItemIcon>
-                    {menuEntryConfig?.frameless ? <FramedIcon fontSize="small" /> : <FramelessIcon fontSize="small" />}
-                  </ListItemIcon>
-                  <ListItemText>{menuEntryConfig?.frameless ? LL.FOOTER.FRAMED() : LL.FOOTER.FRAMELESS()}</ListItemText>
-                </MenuItem>
-
-                {/* Fullscreen */}
-                <MenuItem onClick={() => handleToggleWindowProp('fullscreen')}>
-                  <ListItemIcon>
-                    {menuEntryConfig?.fullscreen ? <FullscreenExitIcon fontSize="small" /> : <FullscreenIcon fontSize="small" />}
-                  </ListItemIcon>
-                  <ListItemText>{menuEntryConfig?.fullscreen ? LL.FOOTER.EXIT_FULLSCREEN() : LL.FOOTER.FULLSCREEN()}</ListItemText>
-                </MenuItem>
-
-                {/* Always on top */}
-                <MenuItem onClick={() => handleToggleWindowProp('alwaysOnTop')}>
-                  <ListItemIcon>
-                    <OnTopIcon fontSize="small" />
-                  </ListItemIcon>
-                  <ListItemText>{menuEntryConfig?.alwaysOnTop ? LL.FOOTER.NOT_ON_TOP() : LL.FOOTER.ALWAYS_ON_TOP()}</ListItemText>
-                </MenuItem>
-
-                {/* Move to screen */}
-                {screens.length > 1 && (
-                  <MenuItem onClick={(e) => setScreenAnchor(e.currentTarget)}>
-                    <ListItemIcon>
-                      <ScreenIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>{LL.WINDOW.MOVE_TO_SCREEN()}</ListItemText>
-                  </MenuItem>
-                )}
-
-                {/* Freeze / Unfreeze */}
-                {menuEntry &&
-                  (() => {
-                    const name = menuEntry.config.name || 'Presentation';
-                    const isFrozen = frozenWindows.includes(name);
-                    return (
-                      <MenuItem onClick={handleToggleFreeze}>
-                        <ListItemIcon>{isFrozen ? <UnfreezeIcon fontSize="small" /> : <FreezeIcon fontSize="small" />}</ListItemIcon>
-                        <ListItemText>{isFrozen ? LL.FOOTER.UNFREEZE() : LL.FOOTER.FREEZE()}</ListItemText>
-                      </MenuItem>
-                    );
-                  })()}
-
-                {/* Bring to front */}
-                {menuEntry && (
-                  <MenuItem
-                    onClick={() => {
-                      handleBringToFront(menuEntry.id);
-                      handleMenuClose();
-                    }}
-                  >
-                    <ListItemIcon>
-                      <BringToFrontIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>{LL.FOOTER.BRING_TO_FRONT()}</ListItemText>
-                  </MenuItem>
-                )}
-
-                {/* Hide / Show window */}
-                {menuEntry && (
-                  <MenuItem
-                    onClick={() => {
-                      handleToggleHideWindow();
-                    }}
-                  >
-                    <ListItemIcon>
-                      <HideWindowIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>{hiddenWindows.has(menuEntry.id) ? LL.FOOTER.SHOW_WINDOW() : LL.FOOTER.HIDE_WINDOW()}</ListItemText>
-                  </MenuItem>
-                )}
-              </Menu>
-
-              {/* Window style sub-menu */}
-              <Menu
-                anchorEl={windowStyleAnchor}
-                open={Boolean(windowStyleAnchor)}
-                onClose={() => setWindowStyleAnchor(null)}
-                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              >
-                <MenuItem
-                  onClick={() => handleSetWindowStyle(null)}
-                  selected={!(menuEntry?.config as SavedWindowConfig | undefined)?.styleId}
-                  sx={{ fontSize: '0.85rem' }}
-                >
-                  <em>{LL.STYLE.NONE()}</em>
-                </MenuItem>
-                {styles.map((s) => (
-                  <MenuItem
-                    key={s.id}
-                    onClick={() => handleSetWindowStyle(s.id)}
-                    selected={s.id === (menuEntry?.config as SavedWindowConfig | undefined)?.styleId}
-                    sx={{ fontSize: '0.85rem' }}
-                  >
-                    {s.name}
-                  </MenuItem>
-                ))}
-              </Menu>
-
-              {/* Screen assignment sub-menu */}
-              <Menu
-                anchorEl={screenAnchor}
-                open={Boolean(screenAnchor)}
-                onClose={() => setScreenAnchor(null)}
-                anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-              >
-                {screens.map((screen) => (
-                  <MenuItem key={screen.id} onClick={() => handleMoveToScreen(screen.bounds)} sx={{ fontSize: '0.85rem' }}>
-                    <ListItemIcon>
-                      <ScreenIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText>
-                      {screen.label}
-                      {screen.isPrimary ? ` (${LL.WINDOW.PRIMARY_SCREEN()})` : ''}{' '}
-                      <Typography
-                        component="span"
-                        variant="caption"
-                        sx={{
-                          color: 'text.secondary',
-                        }}
-                      >
-                        {screen.bounds.width}×{screen.bounds.height}
-                      </Typography>
-                    </ListItemText>
-                  </MenuItem>
-                ))}
-              </Menu>
-              <Tooltip title={LL.WINDOW.ADD()}>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    setWindowManagerOpen(true);
-                    setWindowManagerOpenWithNew(true);
-                  }}
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-
-              <Stack
-                direction="row"
-                sx={{
-                  gap: 0.5,
-                  ml: 'auto',
-                }}
-              >
-                <Stack direction="row" sx={{ gap: 0.5, mr: 1 }}>
-                  <ConnectedWebsocketClients
-                    connected={wsOperatorConnected}
-                    wsClientCount={wsClientCount}
-                    connectedLabel={wsClientsTooltip}
-                    disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
-                    onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
-                  />
-                  <Tooltip title={midiChipProps.tooltip}>
-                    <Chip
-                      icon={<MidiActiveIcon sx={{ pl: '0.25rem' }} />}
-                      label="MIDI"
-                      size="small"
-                      color={midiChipProps.color}
-                      variant={midiChipProps.variant}
-                      onClick={midiChipProps.onClick}
-                      sx={midiChipProps.sx}
-                    />
-                  </Tooltip>
-                </Stack>
-
-                <Tooltip title={isTextHidden ? LL.FOOTER.SHOW_TEXT() : LL.FOOTER.HIDE_TEXT()}>
-                  <IconButton size="small" onClick={() => dispatch(toggleTextHidden())} color={isTextHidden ? 'warning' : 'default'}>
-                    <HideTextIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-
-                <Tooltip title={isBlack ? LL.FOOTER.SHOW() : LL.FOOTER.BLACK()}>
-                  <IconButton size="small" onClick={() => dispatch(toggleBlack())} color={isBlack ? 'error' : 'default'}>
-                    {isBlack ? <ShowIcon fontSize="small" /> : <BlackIcon fontSize="small" />}
-                  </IconButton>
-                </Tooltip>
-                <FooterActions onOpenStyleEditor={() => setStyleEditorOpen(true)} onOpenWindowManager={() => setWindowManagerOpen(true)} />
+      {windowMenus}
+      {/* Phone layout: the bar's contents as a page. Everything the toolbar packs into 40px of
+          height gets a section, a label and a tap target here — on a phone there is no hover to
+          reveal what an icon means, and the vertical room to say it outright is free. */}
+      {variant === 'panel' ? (
+        <Stack sx={{ height: '100%', overflowY: 'auto', p: 2, gap: 3 }}>
+          <PanelSection title={LL.FOOTER.PANEL_WINDOWS()}>
+            {windowEntries.length > 0 ? (
+              <Stack direction="row" sx={{ gap: 0.5, flexWrap: 'wrap', alignItems: 'center' }}>
+                {windowChips}
               </Stack>
-            </>
-          ) : (
-            <Stack
-              direction="row"
-              sx={{
-                alignItems: 'center',
-                gap: 0.5,
-                width: '100%',
-              }}
-            >
-              <Tooltip title={LL.WINDOW.OPEN()}>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    setWindowManagerOpen(true);
-                    setWindowManagerOpenWithNew(true);
-                  }}
-                >
-                  <AddIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
-              <Typography
-                variant="body2"
-                sx={{
-                  color: 'text.secondary',
-                  flexGrow: 1,
-                  textAlign: 'center',
-                }}
-              >
+            ) : (
+              <Typography variant="body2" color="text.secondary">
                 {LL.FOOTER.NO_WINDOWS()}
               </Typography>
-              <Stack
-                direction="row"
-                sx={{
-                  gap: 0.5,
-                }}
-              >
-                <ConnectedWebsocketClients
-                  connected={wsOperatorConnected}
-                  wsClientCount={wsClientCount}
-                  connectedLabel={wsClientsTooltip}
-                  disconnectedLabel={LL.FOOTER.WS_NOT_CONNECTED()}
-                  onDisconnectAll={wsOperatorConnected && wsClientCount > 0 ? () => setDisconnectConfirmOpen(true) : undefined}
-                />
-                <Tooltip title={midiChipProps.tooltip}>
-                  <Chip
-                    icon={<MidiActiveIcon sx={{ pl: '0.25rem' }} />}
-                    label="MIDI"
-                    size="small"
-                    color={midiChipProps.color}
-                    variant={midiChipProps.variant}
-                    onClick={midiChipProps.onClick}
-                    sx={midiChipProps.sx}
-                  />
-                </Tooltip>
+            )}
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => {
+                setWindowManagerOpen(true);
+                setWindowManagerOpenWithNew(true);
+              }}
+              sx={{ alignSelf: 'flex-start' }}
+            >
+              {LL.WINDOW.ADD()}
+            </Button>
+          </PanelSection>
 
-                <FooterActions onOpenStyleEditor={() => setStyleEditorOpen(true)} onOpenWindowManager={() => setWindowManagerOpen(true)} />
-              </Stack>
+          <PanelSection title={LL.FOOTER.PANEL_OUTPUT()}>
+            <Button
+              variant={isBlack ? 'contained' : 'outlined'}
+              color={isBlack ? 'error' : 'inherit'}
+              startIcon={isBlack ? <ShowIcon /> : <BlackIcon />}
+              onClick={() => dispatch(toggleBlack())}
+            >
+              {isBlack ? LL.FOOTER.SHOW() : LL.FOOTER.BLACK()}
+            </Button>
+            <Button
+              variant={isTextHidden ? 'contained' : 'outlined'}
+              color={isTextHidden ? 'warning' : 'inherit'}
+              startIcon={<HideTextIcon />}
+              onClick={() => dispatch(toggleTextHidden())}
+            >
+              {isTextHidden ? LL.FOOTER.SHOW_TEXT() : LL.FOOTER.HIDE_TEXT()}
+            </Button>
+          </PanelSection>
+
+          <PanelSection title={LL.FOOTER.PANEL_CONNECTIONS()}>
+            <Stack direction="row" sx={{ gap: 0.5, flexWrap: 'wrap' }}>
+              {connectionChips}
             </Stack>
-          )}
-        </Toolbar>
-      </AppBar>
+          </PanelSection>
+
+          <PanelSection title={LL.FOOTER.PANEL_TOOLS()}>
+            <Button variant="outlined" color="inherit" startIcon={<StyleIcon />} onClick={() => setStyleEditorOpen(true)}>
+              {LL.STYLE.EDITOR()}
+            </Button>
+            <Button variant="outlined" color="inherit" startIcon={<WindowManagerIcon />} onClick={() => setWindowManagerOpen(true)}>
+              {LL.HEADER.WINDOW_MANAGER()}
+            </Button>
+          </PanelSection>
+        </Stack>
+      ) : (
+        <AppBar
+          position="static"
+          color="default"
+          elevation={2}
+          sx={{
+            top: 'auto',
+            bottom: 0,
+            borderTop: 1,
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
+          }}
+        >
+          <Toolbar variant="dense" sx={{ minHeight: 40, gap: 1 }}>
+            {windowEntries.length > 0 ? (
+              <>
+                {windowChips}
+                {addWindowButton}
+
+                <Stack direction="row" sx={{ gap: 0.5, ml: 'auto' }}>
+                  <Stack direction="row" sx={{ gap: 0.5, mr: 1 }}>
+                    {connectionChips}
+                  </Stack>
+
+                  <Tooltip title={isTextHidden ? LL.FOOTER.SHOW_TEXT() : LL.FOOTER.HIDE_TEXT()}>
+                    <IconButton size="small" onClick={() => dispatch(toggleTextHidden())} color={isTextHidden ? 'warning' : 'default'}>
+                      <HideTextIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+
+                  <Tooltip title={isBlack ? LL.FOOTER.SHOW() : LL.FOOTER.BLACK()}>
+                    <IconButton size="small" onClick={() => dispatch(toggleBlack())} color={isBlack ? 'error' : 'default'}>
+                      {isBlack ? <ShowIcon fontSize="small" /> : <BlackIcon fontSize="small" />}
+                    </IconButton>
+                  </Tooltip>
+                  <FooterActions
+                    onOpenStyleEditor={() => setStyleEditorOpen(true)}
+                    onOpenWindowManager={() => setWindowManagerOpen(true)}
+                  />
+                </Stack>
+              </>
+            ) : (
+              <Stack direction="row" sx={{ alignItems: 'center', gap: 0.5, width: '100%' }}>
+                {addWindowButton}
+                <Typography variant="body2" sx={{ color: 'text.secondary', flexGrow: 1, textAlign: 'center' }}>
+                  {LL.FOOTER.NO_WINDOWS()}
+                </Typography>
+                <Stack direction="row" sx={{ gap: 0.5 }}>
+                  {connectionChips}
+                  <FooterActions
+                    onOpenStyleEditor={() => setStyleEditorOpen(true)}
+                    onOpenWindowManager={() => setWindowManagerOpen(true)}
+                  />
+                </Stack>
+              </Stack>
+            )}
+          </Toolbar>
+        </AppBar>
+      )}
     </>
   );
 };

@@ -59,6 +59,11 @@ linux:
 appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
+# Builds the standalone WS relay and packages the live viewer, attaching both to the same
+# GitHub release as the app so a release is self-contained. Only does the work when
+# publishing, and skips it when `npm run publish` has already uploaded them once for this
+# release — see scripts/afterAllArtifactBuild.cjs.
+afterAllArtifactBuild: scripts/afterAllArtifactBuild.cjs
 publish:
   provider: github
   private: false

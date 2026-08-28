@@ -13,10 +13,8 @@ import {
 import { useGetSettings } from '@/store/settingsSlice';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { useGetShow } from '@/store/showSlice';
-import { SONG_TRANSLATION_LINE_REGEX } from '@/song';
+import { countPrimaryLines } from '@/song';
 import { wsActionTrigger } from './useBroadcastCompanionState';
-
-const countPrimaryLines = (lines: string[]): number => lines.filter((l) => !SONG_TRANSLATION_LINE_REGEX.test(l)).length;
 
 const asNumber = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -126,7 +124,7 @@ export const useWsCompanionCommands = () => {
             dispatch(setActiveLineIndex(s.activeLineIndex - 1));
           } else if (s.activeBlockIndex > 0) {
             const prevBlockLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex - 1);
-            const primaryCount = countPrimaryLines(prevBlockLines);
+            const primaryCount = countPrimaryLines(prevBlockLines, s.currentSong.languages?.[0]);
             trigger(data.action);
             dispatch(setActiveBlockIndex(s.activeBlockIndex - 1));
             dispatch(setActiveLineIndex(Math.max(0, primaryCount - 1)));
@@ -136,7 +134,7 @@ export const useWsCompanionCommands = () => {
         case 'next_line': {
           if (!s.currentSong) break;
           const currentLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex);
-          const primaryCount = countPrimaryLines(currentLines);
+          const primaryCount = countPrimaryLines(currentLines, s.currentSong.languages?.[0]);
           if (s.activeLineIndex < primaryCount - 1) {
             trigger(data.action);
             dispatch(setActiveLineIndex(s.activeLineIndex + 1));
@@ -173,7 +171,7 @@ export const useWsCompanionCommands = () => {
           const index = asNumber(data.payload?.index);
           if (index != null && s.currentSong) {
             const currentLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex);
-            const max = Math.max(0, countPrimaryLines(currentLines) - 1);
+            const max = Math.max(0, countPrimaryLines(currentLines, s.currentSong.languages?.[0]) - 1);
             const clamped = Math.max(0, Math.min(Math.floor(index), max));
             trigger(data.action);
             dispatch(setActiveLineIndex(clamped));

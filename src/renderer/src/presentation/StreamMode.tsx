@@ -2,6 +2,7 @@ import { useRef, useEffect, CSSProperties } from 'react';
 import { PresentationLine } from '@/presentation/types';
 import { LanguageStyleEntry } from '@/api/styles.api';
 import { filterLinesByLanguage, resolveLineLangCss } from '@/presentation/index';
+import { slotForLanguage } from '@/utils/languageSlots';
 
 /**
  * Renders content in stream mode — renders all lines in a flat scrollable list.
@@ -14,6 +15,7 @@ export const StreamMode = ({
   activeLineIndex,
   textStyle,
   languages,
+  songLanguages,
   streamLines = 2,
   langStyles,
   paragraphPadding,
@@ -23,13 +25,14 @@ export const StreamMode = ({
   activeLineIndex: number;
   textStyle: CSSProperties;
   languages?: string[];
+  songLanguages?: string[];
   streamLines?: number;
   langStyles?: LanguageStyleEntry[];
   /** CSS padding shorthand around each paragraph (spacing between blocks in the stream) */
   paragraphPadding?: string;
 }) => {
   // Build per-block filtered lists plus the full flat list (filter + reorder per language preference)
-  const filteredBlocks = blocks.map((block) => filterLinesByLanguage(block, languages));
+  const filteredBlocks = blocks.map((block) => filterLinesByLanguage(block, languages, songLanguages?.[0]));
   const allLines: PresentationLine[] = filteredBlocks.flat();
 
   // Compute flat index: convert primary-line activeLineIndex to flat position
@@ -106,9 +109,10 @@ export const StreamMode = ({
                 ref={isActive && absIdx === flatIndex ? activeLineRef : undefined}
                 className={`presentation-line ${isActive ? 'presentation-line-active' : 'presentation-line-preview'}`}
                 data-lang={line.language || undefined}
+                data-slot={slotForLanguage(line.language, songLanguages)}
                 style={{
                   ...textStyle,
-                  ...resolveLineLangCss(line.language, langStyles),
+                  ...resolveLineLangCss(line.language, langStyles, songLanguages),
                   ...(!isActive ? { opacity: 0.5 } : {}),
                   ...(line.bold ? { fontWeight: 'bold' } : {}),
                 }}

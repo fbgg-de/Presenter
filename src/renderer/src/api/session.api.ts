@@ -40,6 +40,11 @@ export type AccountListItem = {
 export type AccountSettingsData = {
   defaultStyleId: number | null;
   showTitleTemplate: string | null;
+  /**
+   * The pool of language codes songs may be written in, shared by everyone on the account.
+   * Ordered: the first entry is the default offered to a new song. Always at least one entry.
+   */
+  languages: string[];
 };
 
 const sessionApi = presenterApi.injectEndpoints({

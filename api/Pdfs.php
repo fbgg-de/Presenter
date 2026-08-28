@@ -135,7 +135,11 @@ class Pdfs extends RestController
         if ($filename) {
             $filePath = $songPath . '/' . $filename;
             if (!file_exists($filePath)) {
-                $res->error(404, 'PDF not found: ' . $filename);
+                // Not logged: a client asking for a chart that is not there is an ordinary 404,
+                // the same class of outcome as the unauthenticated requests rest.php passes over.
+                // The rename and delete paths below DO log theirs — those act on a file the caller
+                // has just been shown, so a miss there means something really is inconsistent.
+                $res->error(404, 'PDF not found: ' . $filename, false);
             }
 
             $realBase = realpath($songPath);

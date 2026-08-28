@@ -124,6 +124,14 @@ type RootTranslation = {
 		 */
 		LANGUAGE: string
 		/**
+		 * M​o​v​e​ ​u​p
+		 */
+		MOVE_UP: string
+		/**
+		 * M​o​v​e​ ​d​o​w​n
+		 */
+		MOVE_DOWN: string
+		/**
 		 * P​a​g​e​ ​B​r​e​a​k
 		 */
 		PAGE_BREAK: string
@@ -801,6 +809,147 @@ type RootTranslation = {
 		 */
 		SHOWING: RequiredParams<'shown' | 'total'>
 	}
+	ADMIN_WS: {
+		/**
+		 * W​e​b​S​o​c​k​e​t
+		 */
+		NAV_TITLE: string
+		/**
+		 * L​i​v​e​ ​M​e​s​s​a​g​e​ ​T​r​a​c​e
+		 */
+		TITLE: string
+		/**
+		 * E​v​e​r​y​ ​m​e​s​s​a​g​e​ ​t​h​e​ ​r​e​l​a​y​ ​s​e​e​s​,​ ​l​i​v​e​ ​a​n​d​ ​s​e​p​a​r​a​t​e​d​ ​b​y​ ​a​c​c​o​u​n​t​.​ ​H​e​l​d​ ​i​n​ ​m​e​m​o​r​y​ ​o​n​l​y​ ​—​ ​n​o​t​h​i​n​g​ ​i​s​ ​s​t​o​r​e​d​,​ ​a​n​d​ ​a​ ​r​e​l​a​y​ ​r​e​s​t​a​r​t​ ​o​r​ ​a​ ​p​a​g​e​ ​r​e​l​o​a​d​ ​d​i​s​c​a​r​d​s​ ​i​t​.​ ​T​h​e​ ​a​c​c​o​u​n​t​ ​b​e​i​n​g​ ​w​a​t​c​h​e​d​ ​c​a​n​ ​s​e​e​ ​t​h​a​t​ ​a​ ​m​o​n​i​t​o​r​ ​i​s​ ​a​t​t​a​c​h​e​d​.
+		 */
+		DESCRIPTION: string
+		/**
+		 * A​c​c​o​u​n​t
+		 */
+		ACCOUNT: string
+		/**
+		 * A​l​l​ ​a​c​c​o​u​n​t​s
+		 */
+		ALL_ACCOUNTS: string
+		/**
+		 * I​d​l​e
+		 */
+		STATUS_IDLE: string
+		/**
+		 * C​o​n​n​e​c​t​i​n​g​…
+		 */
+		STATUS_CONNECTING: string
+		/**
+		 * C​o​n​n​e​c​t​e​d
+		 */
+		STATUS_CONNECTED: string
+		/**
+		 * E​r​r​o​r
+		 */
+		STATUS_ERROR: string
+		/**
+		 * R​e​l​a​y​ ​v​{​v​e​r​s​i​o​n​}
+		 * @param {unknown} version
+		 */
+		RELAY_VERSION: RequiredParams<'version'>
+		/**
+		 * S​e​a​r​c​h​ ​e​v​e​n​t​,​ ​r​o​l​e​,​ ​c​l​i​e​n​t​ ​o​r​ ​p​a​y​l​o​a​d​…
+		 */
+		SEARCH: string
+		/**
+		 * I​n
+		 */
+		DIR_IN: string
+		/**
+		 * O​u​t
+		 */
+		DIR_OUT: string
+		/**
+		 * S​y​s​t​e​m
+		 */
+		DIR_SYS: string
+		/**
+		 * P​a​u​s​e
+		 */
+		PAUSE: string
+		/**
+		 * R​e​s​u​m​e​ ​(​{​p​e​n​d​i​n​g​}​ ​n​e​w​)
+		 * @param {unknown} pending
+		 */
+		RESUME: RequiredParams<'pending'>
+		/**
+		 * C​o​p​y
+		 */
+		COPY: string
+		/**
+		 * C​o​p​i​e​d
+		 */
+		COPIED: string
+		/**
+		 * C​l​e​a​r​ ​b​u​f​f​e​r
+		 */
+		CLEAR: string
+		/**
+		 * B​u​f​f​e​r
+		 */
+		BUFFER_SIZE: string
+		/**
+		 * M​e​s​s​a​g​e​s​ ​k​e​p​t​ ​p​e​r​ ​a​c​c​o​u​n​t​ ​(​{​m​i​n​}​–​{​m​a​x​}​)​.​ ​A​p​p​l​i​e​s​ ​t​o​ ​t​h​e​ ​r​e​l​a​y​ ​i​m​m​e​d​i​a​t​e​l​y​.
+		 * @param {unknown} max
+		 * @param {unknown} min
+		 */
+		BUFFER_HINT: RequiredParams<'max' | 'min'>
+		/**
+		 * {​s​h​o​w​n​}​ ​o​f​ ​{​t​o​t​a​l​}​ ​m​e​s​s​a​g​e​s
+		 * @param {unknown} shown
+		 * @param {unknown} total
+		 */
+		SHOWING: RequiredParams<'shown' | 'total'>
+		/**
+		 * C​o​n​n​e​c​t​e​d​ ​c​l​i​e​n​t​s
+		 */
+		CONNECTED_CLIENTS: string
+		/**
+		 * N​o​ ​c​l​i​e​n​t​s​ ​c​o​n​n​e​c​t​e​d​.
+		 */
+		NO_CLIENTS: string
+		/**
+		 * {​c​o​u​n​t​}​ ​w​a​t​c​h​i​n​g
+		 * @param {unknown} count
+		 */
+		WATCHERS: RequiredParams<'count'>
+		/**
+		 * N​o​ ​m​e​s​s​a​g​e​s​ ​y​e​t​.​ ​T​r​a​f​f​i​c​ ​a​p​p​e​a​r​s​ ​h​e​r​e​ ​a​s​ ​s​o​o​n​ ​a​s​ ​a​ ​c​l​i​e​n​t​ ​s​e​n​d​s​ ​s​o​m​e​t​h​i​n​g​.
+		 */
+		NO_MESSAGES: string
+		/**
+		 * T​i​m​e
+		 */
+		TIME: string
+		/**
+		 * D​i​r
+		 */
+		DIRECTION: string
+		/**
+		 * C​l​i​e​n​t
+		 */
+		CLIENT: string
+		/**
+		 * E​v​e​n​t
+		 */
+		EVENT: string
+		/**
+		 * P​e​e​r​s
+		 */
+		PEERS: string
+		/**
+		 * B​y​t​e​s
+		 */
+		SIZE: string
+		/**
+		 * P​a​y​l​o​a​d
+		 */
+		PAYLOAD: string
+	}
 	ADMIN_SONGS: {
 		/**
 		 * S​o​n​g​s
@@ -1114,6 +1263,124 @@ type RootTranslation = {
 		 */
 		TITLE: string
 		/**
+		 * U​n​s​a​v​e​d
+		 */
+		UNSAVED: string
+		/**
+		 * D​e​l​e​t​e​ ​b​l​o​c​k
+		 */
+		DELETE_BLOCK: string
+		/**
+		 * L​a​n​g​u​a​g​e​s
+		 */
+		LANGUAGES: string
+		/**
+		 * T​h​i​s​ ​s​o​n​g​ ​h​a​s​ ​n​o​ ​l​a​n​g​u​a​g​e​s​ ​y​e​t​.​ ​A​d​d​ ​o​n​e​ ​t​o​ ​s​t​a​r​t​ ​w​r​i​t​i​n​g​ ​t​r​a​n​s​l​a​t​i​o​n​s​ ​a​l​o​n​g​s​i​d​e​ ​e​a​c​h​ ​l​i​n​e​.
+		 */
+		NO_LANGUAGES: string
+		/**
+		 * A​d​d​ ​l​a​n​g​u​a​g​e
+		 */
+		ADD_LANGUAGE: string
+		/**
+		 * O​t​h​e​r​ ​l​a​n​g​u​a​g​e
+		 */
+		ADD_OTHER_LANGUAGE: string
+		/**
+		 * A​d​d​ ​{​n​a​m​e​}
+		 * @param {unknown} name
+		 */
+		ADD_LANGUAGE_HINT: RequiredParams<'name'>
+		/**
+		 * A​d​d​ ​“​{​c​o​d​e​}​”
+		 * @param {unknown} code
+		 */
+		ADD_CUSTOM_LANGUAGE: RequiredParams<'code'>
+		/**
+		 * S​e​a​r​c​h​ ​l​a​n​g​u​a​g​e​s​…
+		 */
+		SEARCH_LANGUAGE: string
+		/**
+		 * N​o​ ​l​a​n​g​u​a​g​e​ ​m​a​t​c​h​e​s​.​ ​T​y​p​e​ ​a​ ​t​w​o​ ​t​o​ ​f​i​v​e​ ​l​e​t​t​e​r​ ​c​o​d​e​ ​t​o​ ​a​d​d​ ​i​t​ ​a​n​y​w​a​y​.
+		 */
+		NO_LANGUAGE_MATCH: string
+		/**
+		 * D​e​f​a​u​l​t
+		 */
+		DEFAULT_LANGUAGE: string
+		/**
+		 * T​h​e​ ​f​i​r​s​t​ ​l​a​n​g​u​a​g​e​ ​i​s​ ​t​h​e​ ​d​e​f​a​u​l​t​:​ ​i​t​s​ ​l​i​n​e​s​ ​a​r​e​ ​s​t​o​r​e​d​ ​w​i​t​h​o​u​t​ ​a​ ​l​a​n​g​u​a​g​e​ ​t​a​g​.​ ​M​o​v​i​n​g​ ​a​n​o​t​h​e​r​ ​l​a​n​g​u​a​g​e​ ​t​o​ ​t​h​e​ ​t​o​p​ ​r​e​w​r​i​t​e​s​ ​t​h​e​ ​l​y​r​i​c​s​ ​a​c​c​o​r​d​i​n​g​l​y​.
+		 */
+		DEFAULT_LANGUAGE_HINT: string
+		/**
+		 * D​r​a​g​ ​t​o​ ​r​e​o​r​d​e​r​ ​—​ ​t​h​e​ ​f​i​r​s​t​ ​i​s​ ​t​h​e​ ​d​e​f​a​u​l​t
+		 */
+		LANGUAGE_ORDER_HINT: string
+		/**
+		 * {​c​o​u​n​t​}​ ​l​i​n​e​{​{​s​}​}
+		 * @param {number} count
+		 */
+		LANGUAGE_LINE_COUNT: RequiredParams<'count'>
+		/**
+		 * R​e​m​o​v​e​ ​{​c​o​d​e​}​?
+		 * @param {unknown} code
+		 */
+		REMOVE_LANGUAGE_TITLE: RequiredParams<'code'>
+		/**
+		 * R​e​m​o​v​i​n​g​ ​{​n​a​m​e​}​ ​d​e​l​e​t​e​s​ ​i​t​s​ ​t​e​x​t​ ​f​r​o​m​ ​{​c​o​u​n​t​}​ ​l​i​n​e​{​{​s​}​}​ ​o​f​ ​t​h​i​s​ ​s​o​n​g​.​ ​T​h​i​s​ ​c​a​n​n​o​t​ ​b​e​ ​u​n​d​o​n​e​ ​o​n​c​e​ ​y​o​u​ ​s​a​v​e​.
+		 * @param {number} count
+		 * @param {unknown} name
+		 */
+		REMOVE_LANGUAGE_MESSAGE: RequiredParams<'count' | 'name'>
+		/**
+		 * S​h​o​w​:
+		 */
+		SHOW_LANGUAGES: string
+		/**
+		 * L​i​n​e​ ​e​d​i​t​o​r
+		 */
+		BLOCK_MODE: string
+		/**
+		 * T​a​g​ ​t​h​i​s​ ​l​i​n​e​ ​a​s​ ​{​c​o​d​e​}
+		 * @param {unknown} code
+		 */
+		RAW_TAG_HINT: RequiredParams<'code'>
+		/**
+		 * S​t​a​r​t​ ​a​ ​n​e​w​ ​p​a​g​e​ ​a​f​t​e​r​ ​t​h​i​s​ ​l​i​n​e
+		 */
+		RAW_SEPARATOR_HINT: string
+		/**
+		 * P​l​a​i​n​ ​t​e​x​t
+		 */
+		RAW_MODE: string
+		/**
+		 * A​d​d​ ​l​i​n​e
+		 */
+		ADD_LINE: string
+		/**
+		 * D​e​l​e​t​e​ ​l​i​n​e
+		 */
+		DELETE_LINE: string
+		/**
+		 * L​y​r​i​c​ ​l​i​n​e
+		 */
+		LINE_PLACEHOLDER: string
+		/**
+		 * {​l​a​n​g​u​a​g​e​}​ ​t​r​a​n​s​l​a​t​i​o​n
+		 * @param {unknown} language
+		 */
+		TRANSLATION_PLACEHOLDER: RequiredParams<'language'>
+		/**
+		 * P​a​g​e​ ​{​n​u​m​b​e​r​}​ ​o​f​ ​{​t​o​t​a​l​}
+		 * @param {number} number
+		 * @param {number} total
+		 */
+		PAGE_OF: RequiredParams<'number' | 'total'>
+		/**
+		 * R​e​m​o​v​e​ ​p​a​g​e​ ​b​r​e​a​k
+		 */
+		REMOVE_PAGE_BREAK: string
+		/**
 		 * S​o​n​g​ ​o​r​d​e​r
 		 */
 		ORDER: string
@@ -1147,6 +1414,112 @@ type RootTranslation = {
 		 * @param {unknown} name
 		 */
 		DELETE_ORDER_MESSAGE: RequiredParams<'name'>
+	}
+	SONG_LANGUAGE_REVIEW: {
+		/**
+		 * S​o​n​g​ ​l​a​n​g​u​a​g​e​s
+		 */
+		TITLE: string
+		/**
+		 * R​e​v​i​e​w​ ​s​o​n​g​ ​l​a​n​g​u​a​g​e​s
+		 */
+		OPEN: string
+		/**
+		 * O​l​d​e​r​ ​s​o​n​g​s​ ​s​t​o​r​e​ ​t​h​e​i​r​ ​m​a​i​n​ ​l​y​r​i​c​s​ ​w​i​t​h​o​u​t​ ​s​a​y​i​n​g​ ​w​h​a​t​ ​l​a​n​g​u​a​g​e​ ​t​h​e​y​ ​a​r​e​ ​i​n​.​ ​T​h​i​s​ ​r​e​a​d​s​ ​e​a​c​h​ ​s​o​n​g​,​ ​w​o​r​k​s​ ​o​u​t​ ​t​h​e​ ​l​a​n​g​u​a​g​e​ ​a​n​d​ ​w​r​i​t​e​s​ ​i​t​ ​o​n​t​o​ ​e​v​e​r​y​ ​l​i​n​e​ ​—​ ​s​o​ ​t​r​a​n​s​l​a​t​i​o​n​s​ ​c​a​n​ ​b​e​ ​s​h​o​w​n​,​ ​h​i​d​d​e​n​ ​a​n​d​ ​s​t​y​l​e​d​ ​b​y​ ​n​a​m​e​.
+		 */
+		INTRO: string
+		/**
+		 * R​e​a​d​s​ ​a​l​l​ ​{​c​o​u​n​t​}​ ​s​o​n​g​s​ ​i​n​ ​y​o​u​r​ ​l​i​b​r​a​r​y​.​ ​N​o​t​h​i​n​g​ ​i​s​ ​c​h​a​n​g​e​d​ ​u​n​t​i​l​ ​y​o​u​ ​c​o​n​f​i​r​m​.
+		 * @param {number} count
+		 */
+		SCAN_HINT: RequiredParams<'count'>
+		/**
+		 * S​c​a​n​ ​l​i​b​r​a​r​y
+		 */
+		SCAN: string
+		/**
+		 * R​e​a​d​i​n​g​ ​s​o​n​g​s​…
+		 */
+		SCANNING: string
+		/**
+		 * S​a​v​i​n​g​ ​s​o​n​g​s​…
+		 */
+		APPLYING: string
+		/**
+		 * {​c​o​u​n​t​}​ ​s​o​n​g​{​{​s​}​}​ ​u​p​d​a​t​e​d​.
+		 * @param {number} count
+		 */
+		DONE: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​s​o​n​g​{​{​s​}​}​ ​t​o​ ​t​a​g
+		 * @param {number} count
+		 */
+		FOUND: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​u​n​c​e​r​t​a​i​n
+		 * @param {number} count
+		 */
+		UNSURE: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​a​l​r​e​a​d​y​ ​t​a​g​g​e​d
+		 * @param {number} count
+		 */
+		SKIPPED: RequiredParams<'count'>
+		/**
+		 * E​v​e​r​y​ ​s​o​n​g​ ​a​l​r​e​a​d​y​ ​n​a​m​e​s​ ​t​h​e​ ​l​a​n​g​u​a​g​e​ ​o​f​ ​e​a​c​h​ ​l​i​n​e​.​ ​N​o​t​h​i​n​g​ ​t​o​ ​d​o​.
+		 */
+		NOTHING_TO_DO: string
+		/**
+		 * U​n​t​a​g​g​e​d​ ​l​i​n​e​s
+		 */
+		UNTAGGED_TEXT: string
+		/**
+		 * E​x​i​s​t​i​n​g​ ​t​a​g​s
+		 */
+		ALREADY_TAGGED: string
+		/**
+		 * D​e​t​e​c​t​e​d
+		 */
+		DETECTED: string
+		/**
+		 * A​s​s​i​g​n
+		 */
+		ASSIGN: string
+		/**
+		 * N​o​ ​i​d​e​a
+		 */
+		NO_GUESS: string
+		/**
+		 * {​p​e​r​c​e​n​t​}​%​ ​c​o​n​f​i​d​e​n​t
+		 * @param {number} percent
+		 */
+		CONFIDENCE: RequiredParams<'percent'>
+		/**
+		 * T​a​g​ ​{​c​o​u​n​t​}​ ​s​o​n​g​{​{​s​}​}
+		 * @param {number} count
+		 */
+		APPLY: RequiredParams<'count'>
+	}
+	IMPORT_LANGUAGE: {
+		/**
+		 * W​h​i​c​h​ ​l​a​n​g​u​a​g​e​ ​i​s​ ​t​h​i​s​ ​s​o​n​g​ ​i​n​?
+		 */
+		TITLE: string
+		/**
+		 * T​h​e​ ​l​y​r​i​c​s​ ​o​f​ ​"​{​t​i​t​l​e​}​"​ ​d​o​ ​n​o​t​ ​s​a​y​ ​w​h​a​t​ ​l​a​n​g​u​a​g​e​ ​t​h​e​y​ ​a​r​e​ ​i​n​,​ ​a​n​d​ ​t​h​e​ ​t​e​x​t​ ​w​a​s​ ​n​o​t​ ​c​l​e​a​r​ ​e​n​o​u​g​h​ ​t​o​ ​b​e​ ​s​u​r​e​.
+		 * @param {unknown} title
+		 */
+		MESSAGE: RequiredParams<'title'>
+		/**
+		 * B​e​s​t​ ​g​u​e​s​s​:​ ​{​l​a​n​g​u​a​g​e​}​ ​(​{​p​e​r​c​e​n​t​}​%​ ​c​o​n​f​i​d​e​n​t​)
+		 * @param {unknown} language
+		 * @param {number} percent
+		 */
+		BEST_GUESS: RequiredParams<'language' | 'percent'>
+		/**
+		 * T​h​e​r​e​ ​w​a​s​ ​n​o​t​ ​e​n​o​u​g​h​ ​t​e​x​t​ ​t​o​ ​m​a​k​e​ ​a​ ​g​u​e​s​s​.
+		 */
+		NO_GUESS: string
 	}
 	SHOWS: {
 		/**
@@ -1838,6 +2211,62 @@ type RootTranslation = {
 		 */
 		PREVIEW_HIDE_IMAGE: string
 		/**
+		 * W​i​d​e​n​ ​t​h​e​ ​p​r​e​v​i​e​w
+		 */
+		PREVIEW_EXPAND: string
+		/**
+		 * N​a​r​r​o​w​ ​t​h​e​ ​p​r​e​v​i​e​w
+		 */
+		PREVIEW_COLLAPSE: string
+		/**
+		 * P​r​e​v​i​e​w​ ​c​a​n​v​a​s​e​s
+		 */
+		PREVIEW_PANES: string
+		/**
+		 * T​i​c​k​ ​w​h​a​t​ ​t​o​ ​s​h​o​w​ ​—​ ​s​e​v​e​r​a​l​ ​s​t​a​c​k​ ​b​e​l​o​w​ ​e​a​c​h​ ​o​t​h​e​r​.​ ​D​r​a​g​ ​t​o​ ​r​e​o​r​d​e​r​.
+		 */
+		PREVIEW_PANES_HINT: string
+		/**
+		 * N​o​ ​p​r​e​v​i​e​w​ ​c​a​n​v​a​s​ ​s​e​l​e​c​t​e​d​.
+		 */
+		PREVIEW_PANES_EMPTY: string
+		/**
+		 * L​a​n​g​u​a​g​e​ ​n​a​m​e​s
+		 */
+		PREVIEW_PANE_LABELS: string
+		/**
+		 * S​a​m​p​l​e​ ​l​y​r​i​c​s
+		 */
+		PREVIEW_PANE_SAMPLE: string
+		/**
+		 * C​o​p​y​r​i​g​h​t
+		 */
+		PREVIEW_PANE_COPYRIGHT: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​c​a​n​v​a​s
+		 */
+		PREVIEW_PANE_PREV: string
+		/**
+		 * N​e​x​t​ ​c​a​n​v​a​s
+		 */
+		PREVIEW_PANE_NEXT: string
+		/**
+		 * O​n​e​ ​l​i​n​e​ ​p​e​r​ ​r​o​w
+		 */
+		PREVIEW_LINES_PLACEHOLDER: string
+		/**
+		 * S​a​m​p​l​e​ ​l​y​r​i​c​s
+		 */
+		PREVIEW_LINES: string
+		/**
+		 * L​a​n​g​u​a​g​e​ ​c​o​d​e
+		 */
+		PREVIEW_LANG_CODE: string
+		/**
+		 * R​e​s​e​t​ ​p​r​e​v​i​e​w​ ​t​e​x​t
+		 */
+		PREVIEW_RESET: string
+		/**
 		 * S​h​o​w​ ​i​m​a​g​e​ ​l​a​y​e​r
 		 */
 		PREVIEW_SHOW_IMAGE: string
@@ -1889,6 +2318,10 @@ type RootTranslation = {
 		 * P​a​d​d​i​n​g
 		 */
 		PADDING: string
+		/**
+		 * L​y​r​i​c​s
+		 */
+		BOX_CONTENT: string
 		/**
 		 * P​a​r​a​g​r​a​p​h​ ​P​a​d​d​i​n​g
 		 */
@@ -1970,7 +2403,7 @@ type RootTranslation = {
 		 */
 		NEXT_LINE_OPACITY: string
 		/**
-		 * S​h​o​w​ ​o​t​h​e​r​ ​l​a​n​g​u​a​g​e​s
+		 * S​h​o​w​ ​l​a​n​g​u​a​g​e​s​ ​b​e​y​o​n​d​ ​t​h​o​s​e​ ​c​o​n​f​i​g​u​r​e​d
 		 */
 		SHOW_OTHER_LANGUAGES: string
 		/**
@@ -2034,6 +2467,14 @@ type RootTranslation = {
 		 */
 		BACKGROUND_IMAGE_NONE: string
 		/**
+		 * O​v​e​r​r​i​d​e​s​ ​i​n​h​e​r​i​t​e​d​ ​i​m​a​g​e
+		 */
+		BACKGROUND_IMAGE_NONE_HINT: string
+		/**
+		 * O​v​e​r​r​i​d​e​s​ ​i​n​h​e​r​i​t​e​d​ ​v​i​d​e​o
+		 */
+		BACKGROUND_VIDEO_NONE_HINT: string
+		/**
 		 * N​o​ ​V​i​d​e​o​ ​(​s​u​p​p​r​e​s​s​ ​i​n​h​e​r​i​t​e​d​)
 		 */
 		BACKGROUND_VIDEO_NONE: string
@@ -2066,10 +2507,6 @@ type RootTranslation = {
 		 */
 		TRANSLATION_COLOR: string
 		/**
-		 * D​e​f​a​u​l​t
-		 */
-		LANG_DEFAULT: string
-		/**
 		 * A​d​d​ ​L​a​n​g​u​a​g​e
 		 */
 		LANG_ADD: string
@@ -2094,7 +2531,7 @@ type RootTranslation = {
 		 */
 		SHOW_ALL_LANGUAGES: string
 		/**
-		 * S​h​o​w​ ​o​t​h​e​r​ ​l​a​n​g​u​a​g​e​s​ ​(​n​o​t​ ​l​i​s​t​e​d​ ​a​b​o​v​e​)
+		 * A​l​s​o​ ​s​h​o​w​ ​a​ ​s​o​n​g​’​s​ ​f​u​r​t​h​e​r​ ​l​a​n​g​u​a​g​e​s​,​ ​e​v​e​n​ ​w​i​t​h​o​u​t​ ​a​ ​s​e​t​t​i​n​g​ ​f​o​r​ ​t​h​e​m​ ​h​e​r​e
 		 */
 		SHOW_OTHER_LANGUAGES_HINT: string
 		/**
@@ -2109,14 +2546,6 @@ type RootTranslation = {
 		 * B​a​c​k​g​r​o​u​n​d
 		 */
 		SECTION_BACKGROUND: string
-		/**
-		 * P​a​r​a​g​r​a​p​h
-		 */
-		SECTION_PARAGRAPH: string
-		/**
-		 * T​y​p​o​g​r​a​p​h​y
-		 */
-		SECTION_TYPOGRAPHY: string
 		/**
 		 * L​a​y​o​u​t​ ​&​ ​S​p​a​c​i​n​g
 		 */
@@ -2141,6 +2570,102 @@ type RootTranslation = {
 		 * L​i​v​e​ ​P​r​e​v​i​e​w
 		 */
 		SECTION_PREVIEW: string
+		/**
+		 * T​e​x​t
+		 */
+		SECTION_TEXT: string
+		/**
+		 * L​a​n​g​u​a​g​e​s
+		 */
+		SECTION_LANGUAGES: string
+		/**
+		 * F​o​n​t
+		 */
+		SECTION_FONT: string
+		/**
+		 * S​i​z​e​,​ ​c​o​l​o​u​r​ ​a​n​d​ ​e​f​f​e​c​t​s
+		 */
+		SECTION_APPEARANCE: string
+		CATEGORY_DESC: {
+			/**
+			 * T​h​e​ ​c​o​l​o​u​r​,​ ​i​m​a​g​e​ ​o​r​ ​v​i​d​e​o​ ​t​h​e​ ​t​e​x​t​ ​i​s​ ​d​r​a​w​n​ ​o​n​ ​t​o​p​ ​o​f​.
+			 */
+			BACKGROUND: string
+			/**
+			 * T​y​p​o​g​r​a​p​h​y​ ​e​v​e​r​y​ ​l​i​n​e​ ​i​n​h​e​r​i​t​s​,​ ​u​n​l​e​s​s​ ​a​ ​l​a​n​g​u​a​g​e​ ​o​v​e​r​r​i​d​e​s​ ​i​t​.
+			 */
+			TEXT: string
+			/**
+			 * W​h​e​r​e​ ​t​h​e​ ​t​e​x​t​ ​b​l​o​c​k​ ​s​i​t​s​ ​o​n​ ​s​c​r​e​e​n​ ​a​n​d​ ​h​o​w​ ​m​u​c​h​ ​r​o​o​m​ ​i​t​ ​g​e​t​s​.
+			 */
+			LAYOUT: string
+			/**
+			 * W​h​i​c​h​ ​o​f​ ​a​ ​s​o​n​g​’​s​ ​l​a​n​g​u​a​g​e​s​ ​a​r​e​ ​s​h​o​w​n​,​ ​a​n​d​ ​h​o​w​ ​e​a​c​h​ ​o​n​e​ ​l​o​o​k​s​.
+			 */
+			LANGUAGES: string
+			/**
+			 * T​h​e​ ​c​r​e​d​i​t​ ​b​l​o​c​k​ ​s​h​o​w​n​ ​a​f​t​e​r​ ​t​h​e​ ​l​a​s​t​ ​v​e​r​s​e​.
+			 */
+			COPYRIGHT: string
+			/**
+			 * T​h​e​ ​s​a​m​p​l​e​ ​c​o​n​t​e​n​t​ ​t​h​e​ ​p​r​e​v​i​e​w​ ​d​r​a​w​s​,​ ​s​o​ ​y​o​u​ ​j​u​d​g​e​ ​a​ ​d​e​s​i​g​n​ ​o​n​ ​t​e​x​t​ ​y​o​u​ ​r​e​c​o​g​n​i​s​e​.
+			 */
+			PREVIEW: string
+			/**
+			 * R​a​w​ ​C​S​S​ ​f​o​r​ ​a​n​y​t​h​i​n​g​ ​t​h​e​ ​c​o​n​t​r​o​l​s​ ​a​b​o​v​e​ ​d​o​ ​n​o​t​ ​c​o​v​e​r​.
+			 */
+			CSS: string
+		}
+		/**
+		 * N​o​ ​t​r​a​n​s​l​a​t​i​o​n​ ​l​a​n​g​u​a​g​e​s​ ​c​o​n​f​i​g​u​r​e​d​.​ ​A​d​d​ ​o​n​e​ ​t​o​ ​s​h​o​w​ ​a​n​d​ ​s​t​y​l​e​ ​a​ ​s​o​n​g​'​s​ ​s​e​c​o​n​d​ ​l​a​n​g​u​a​g​e​.
+		 */
+		LANG_EMPTY: string
+		/**
+		 * M​a​i​n​ ​l​a​n​g​u​a​g​e
+		 */
+		SLOT_MAIN: string
+		/**
+		 * T​h​e​ ​s​o​n​g​’​s​ ​o​w​n​ ​l​a​n​g​u​a​g​e​.​ ​E​v​e​r​y​ ​o​t​h​e​r​ ​l​i​n​e​ ​i​s​ ​a​ ​t​r​a​n​s​l​a​t​i​o​n​ ​o​f​ ​i​t​,​ ​a​n​d​ ​i​n​h​e​r​i​t​s​ ​t​h​i​s​ ​t​y​p​o​g​r​a​p​h​y​.
+		 */
+		SLOT_MAIN_HINT: string
+		/**
+		 * L​a​n​g​u​a​g​e​ ​{​n​}
+		 * @param {number} n
+		 */
+		SLOT_LABEL: RequiredParams<'n'>
+		/**
+		 * T​h​e​s​e​ ​d​e​s​c​r​i​b​e​ ​p​o​s​i​t​i​o​n​s​,​ ​n​o​t​ ​f​i​x​e​d​ ​l​a​n​g​u​a​g​e​s​.​ ​"​L​a​n​g​u​a​g​e​ ​2​"​ ​i​s​ ​w​h​a​t​e​v​e​r​ ​a​ ​s​o​n​g​ ​l​i​s​t​s​ ​s​e​c​o​n​d​,​ ​s​o​ ​o​n​e​ ​d​e​s​i​g​n​ ​f​i​t​s​ ​a​n​ ​E​n​g​l​i​s​h​ ​s​o​n​g​ ​w​i​t​h​ ​a​ ​G​e​r​m​a​n​ ​t​r​a​n​s​l​a​t​i​o​n​ ​a​n​d​ ​a​ ​G​e​r​m​a​n​ ​s​o​n​g​ ​w​i​t​h​ ​a​n​ ​E​n​g​l​i​s​h​ ​o​n​e​ ​a​l​i​k​e​.​ ​E​a​c​h​ ​s​o​n​g​ ​s​e​t​s​ ​i​t​s​ ​o​w​n​ ​o​r​d​e​r​.
+		 */
+		SLOT_EXPLAINER: string
+		/**
+		 * A​d​d​ ​l​a​n​g​u​a​g​e
+		 */
+		SLOT_ADD: string
+		/**
+		 * S​h​o​w​ ​t​h​i​s​ ​l​a​n​g​u​a​g​e
+		 */
+		SLOT_SHOW: string
+		/**
+		 * H​i​d​e​ ​t​h​i​s​ ​l​a​n​g​u​a​g​e
+		 */
+		SLOT_HIDE: string
+		/**
+		 * T​h​i​s​ ​l​a​n​g​u​a​g​e​ ​i​s​ ​h​i​d​d​e​n​ ​o​n​ ​s​c​r​e​e​n​.​ ​I​t​s​ ​s​t​y​l​i​n​g​ ​i​s​ ​k​e​p​t​ ​f​o​r​ ​w​h​e​n​ ​y​o​u​ ​s​h​o​w​ ​i​t​ ​a​g​a​i​n​.
+		 */
+		SLOT_HIDDEN_HINT: string
+		/**
+		 * S​e​a​r​c​h​ ​p​r​o​p​e​r​t​i​e​s​.​.​.
+		 */
+		SEARCH: string
+		/**
+		 * N​o​ ​p​r​o​p​e​r​t​y​ ​m​a​t​c​h​e​s​ ​"​{​q​u​e​r​y​}​"​.
+		 * @param {string} query
+		 */
+		SEARCH_NO_RESULTS: RequiredParams<'query'>
+		/**
+		 * D​r​a​g​ ​t​o​ ​r​e​s​i​z​e​ ​t​h​e​ ​s​i​d​e​b​a​r
+		 */
+		PREVIEW_RESIZE: string
 		/**
 		 * B​r​o​w​s​e​…
 		 */
@@ -2266,6 +2791,31 @@ type RootTranslation = {
 		 * I​n​h​e​r​i​t​e​d
 		 */
 		INHERITED: string
+		/**
+		 * S​h​o​w​ ​w​h​a​t​ ​a​p​p​l​i​e​s​ ​h​e​r​e
+		 */
+		INHERITED_SHOW: string
+		/**
+		 * A​p​p​ ​d​e​f​a​u​l​t
+		 */
+		INHERITED_FROM_DEFAULT: string
+		/**
+		 * G​l​o​b​a​l​ ​s​t​y​l​e​ ​“​{​n​a​m​e​}​”
+		 * @param {unknown} name
+		 */
+		INHERITED_FROM_GLOBAL: RequiredParams<'name'>
+		/**
+		 * N​o​t​h​i​n​g​ ​s​e​t​s​ ​t​h​i​s​,​ ​s​o​ ​t​h​e​ ​b​r​o​w​s​e​r​ ​d​e​f​a​u​l​t​ ​a​p​p​l​i​e​s​.
+		 */
+		INHERITED_NOWHERE: string
+		/**
+		 * A​ ​s​h​o​w​ ​o​r​ ​i​t​e​m​ ​s​t​y​l​e​ ​c​a​n​ ​s​t​i​l​l​ ​o​v​e​r​r​i​d​e​ ​t​h​i​s​ ​w​h​e​n​ ​p​r​e​s​e​n​t​i​n​g​.
+		 */
+		INHERITED_CAVEAT: string
+		/**
+		 * S​e​t​ ​h​e​r​e​ ​i​n​s​t​e​a​d
+		 */
+		INHERITED_OVERRIDE: string
 		/**
 		 * R​e​s​e​t​ ​—​ ​i​n​h​e​r​i​t​ ​t​h​i​s​ ​v​a​l​u​e​ ​a​g​a​i​n
 		 */
@@ -2570,6 +3120,26 @@ type RootTranslation = {
 		 * I​d​e​n​t​i​f​y​ ​W​i​n​d​o​w​s
 		 */
 		IDENTIFY: string
+		/**
+		 * O​u​t​p​u​t
+		 */
+		TITLE: string
+		/**
+		 * P​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s
+		 */
+		PANEL_WINDOWS: string
+		/**
+		 * O​u​t​p​u​t
+		 */
+		PANEL_OUTPUT: string
+		/**
+		 * C​o​n​n​e​c​t​i​o​n​s
+		 */
+		PANEL_CONNECTIONS: string
+		/**
+		 * T​o​o​l​s
+		 */
+		PANEL_TOOLS: string
 		/**
 		 * F​r​e​e​z​e
 		 */
@@ -3209,6 +3779,10 @@ type RootTranslation = {
 			 */
 			EDITING: string
 			/**
+			 * S​o​n​g​ ​l​a​n​g​u​a​g​e​s
+			 */
+			LANGUAGES: string
+			/**
 			 * I​m​p​o​r​t​i​n​g​ ​a​n​d​ ​d​e​l​e​t​i​n​g
 			 */
 			IMPORTING: string
@@ -3402,6 +3976,36 @@ type RootTranslation = {
 				 * T​h​e​ ​d​e​f​a​u​l​t​ ​n​a​m​e​ ​f​o​r​ ​t​h​e​ ​f​i​r​s​t​ ​b​l​o​c​k​ ​o​f​ ​a​ ​n​e​w​ ​s​o​n​g
 				 */
 				DESCRIPTION: string
+			}
+			SONG_LANGUAGES: {
+				/**
+				 * A​v​a​i​l​a​b​l​e​ ​l​a​n​g​u​a​g​e​s
+				 */
+				TITLE: string
+				/**
+				 * T​h​e​ ​l​a​n​g​u​a​g​e​s​ ​y​o​u​r​ ​l​i​b​r​a​r​y​ ​i​s​ ​w​r​i​t​t​e​n​ ​i​n​,​ ​s​h​a​r​e​d​ ​a​c​r​o​s​s​ ​t​h​e​ ​a​c​c​o​u​n​t​.​ ​T​h​e​ ​f​i​r​s​t​ ​o​n​e​ ​i​s​ ​w​h​a​t​ ​a​ ​n​e​w​ ​s​o​n​g​ ​s​t​a​r​t​s​ ​i​n​.
+				 */
+				DESCRIPTION: string
+				/**
+				 * O​f​f​e​r​e​d​ ​f​i​r​s​t​ ​w​h​e​n​ ​y​o​u​ ​a​d​d​ ​a​ ​l​a​n​g​u​a​g​e​ ​t​o​ ​a​ ​s​o​n​g​,​ ​a​h​e​a​d​ ​o​f​ ​t​h​e​ ​f​u​l​l​ ​l​i​s​t​.
+				 */
+				EFFECT_PICKER: string
+				/**
+				 * U​s​e​d​ ​t​o​ ​w​o​r​k​ ​o​u​t​ ​w​h​a​t​ ​l​a​n​g​u​a​g​e​ ​a​n​ ​i​m​p​o​r​t​e​d​ ​s​o​n​g​ ​i​s​ ​i​n​.​ ​A​ ​s​h​o​r​t​ ​l​i​s​t​ ​i​s​ ​g​u​e​s​s​e​d​ ​f​a​r​ ​m​o​r​e​ ​r​e​l​i​a​b​l​y​ ​t​h​a​n​ ​a​ ​l​o​n​g​ ​o​n​e​,​ ​s​o​ ​l​i​s​t​ ​o​n​l​y​ ​t​h​e​ ​l​a​n​g​u​a​g​e​s​ ​y​o​u​ ​a​c​t​u​a​l​l​y​ ​u​s​e​.
+				 */
+				EFFECT_DETECTION: string
+				/**
+				 * D​e​s​i​g​n​s​ ​a​r​e​ ​n​o​t​ ​a​f​f​e​c​t​e​d​.​ ​T​h​e​y​ ​s​t​y​l​e​ ​a​ ​s​o​n​g​’​s​ ​f​i​r​s​t​,​ ​s​e​c​o​n​d​ ​a​n​d​ ​t​h​i​r​d​ ​l​a​n​g​u​a​g​e​ ​b​y​ ​p​o​s​i​t​i​o​n​,​ ​w​h​i​c​h​e​v​e​r​ ​l​a​n​g​u​a​g​e​s​ ​t​h​o​s​e​ ​t​u​r​n​ ​o​u​t​ ​t​o​ ​b​e​.
+				 */
+				EFFECT_NOT_DESIGNS: string
+				/**
+				 * U​s​e​d​ ​i​n​ ​y​o​u​r​ ​s​o​n​g​s​ ​b​u​t​ ​n​o​t​ ​c​o​n​f​i​g​u​r​e​d​:
+				 */
+				FOUND_IN_SONGS: string
+				/**
+				 * C​l​i​c​k​ ​a​ ​l​a​n​g​u​a​g​e​ ​t​o​ ​m​o​v​e​ ​i​t​ ​u​p​.​ ​T​h​e​ ​f​i​r​s​t​ ​i​s​ ​t​h​e​ ​d​e​f​a​u​l​t​.
+				 */
+				REORDER_HINT: string
 			}
 			OVERRIDE_SONG_BY_IMPORT: {
 				/**
@@ -5879,6 +6483,14 @@ export type TranslationFunctions = {
 		 */
 		LANGUAGE: () => LocalizedString
 		/**
+		 * Move up
+		 */
+		MOVE_UP: () => LocalizedString
+		/**
+		 * Move down
+		 */
+		MOVE_DOWN: () => LocalizedString
+		/**
 		 * Page Break
 		 */
 		PAGE_BREAK: () => LocalizedString
@@ -6543,6 +7155,140 @@ export type TranslationFunctions = {
 		 */
 		SHOWING: (arg: { shown: unknown, total: unknown }) => LocalizedString
 	}
+	ADMIN_WS: {
+		/**
+		 * WebSocket
+		 */
+		NAV_TITLE: () => LocalizedString
+		/**
+		 * Live Message Trace
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Every message the relay sees, live and separated by account. Held in memory only — nothing is stored, and a relay restart or a page reload discards it. The account being watched can see that a monitor is attached.
+		 */
+		DESCRIPTION: () => LocalizedString
+		/**
+		 * Account
+		 */
+		ACCOUNT: () => LocalizedString
+		/**
+		 * All accounts
+		 */
+		ALL_ACCOUNTS: () => LocalizedString
+		/**
+		 * Idle
+		 */
+		STATUS_IDLE: () => LocalizedString
+		/**
+		 * Connecting…
+		 */
+		STATUS_CONNECTING: () => LocalizedString
+		/**
+		 * Connected
+		 */
+		STATUS_CONNECTED: () => LocalizedString
+		/**
+		 * Error
+		 */
+		STATUS_ERROR: () => LocalizedString
+		/**
+		 * Relay v{version}
+		 */
+		RELAY_VERSION: (arg: { version: unknown }) => LocalizedString
+		/**
+		 * Search event, role, client or payload…
+		 */
+		SEARCH: () => LocalizedString
+		/**
+		 * In
+		 */
+		DIR_IN: () => LocalizedString
+		/**
+		 * Out
+		 */
+		DIR_OUT: () => LocalizedString
+		/**
+		 * System
+		 */
+		DIR_SYS: () => LocalizedString
+		/**
+		 * Pause
+		 */
+		PAUSE: () => LocalizedString
+		/**
+		 * Resume ({pending} new)
+		 */
+		RESUME: (arg: { pending: unknown }) => LocalizedString
+		/**
+		 * Copy
+		 */
+		COPY: () => LocalizedString
+		/**
+		 * Copied
+		 */
+		COPIED: () => LocalizedString
+		/**
+		 * Clear buffer
+		 */
+		CLEAR: () => LocalizedString
+		/**
+		 * Buffer
+		 */
+		BUFFER_SIZE: () => LocalizedString
+		/**
+		 * Messages kept per account ({min}–{max}). Applies to the relay immediately.
+		 */
+		BUFFER_HINT: (arg: { max: unknown, min: unknown }) => LocalizedString
+		/**
+		 * {shown} of {total} messages
+		 */
+		SHOWING: (arg: { shown: unknown, total: unknown }) => LocalizedString
+		/**
+		 * Connected clients
+		 */
+		CONNECTED_CLIENTS: () => LocalizedString
+		/**
+		 * No clients connected.
+		 */
+		NO_CLIENTS: () => LocalizedString
+		/**
+		 * {count} watching
+		 */
+		WATCHERS: (arg: { count: unknown }) => LocalizedString
+		/**
+		 * No messages yet. Traffic appears here as soon as a client sends something.
+		 */
+		NO_MESSAGES: () => LocalizedString
+		/**
+		 * Time
+		 */
+		TIME: () => LocalizedString
+		/**
+		 * Dir
+		 */
+		DIRECTION: () => LocalizedString
+		/**
+		 * Client
+		 */
+		CLIENT: () => LocalizedString
+		/**
+		 * Event
+		 */
+		EVENT: () => LocalizedString
+		/**
+		 * Peers
+		 */
+		PEERS: () => LocalizedString
+		/**
+		 * Bytes
+		 */
+		SIZE: () => LocalizedString
+		/**
+		 * Payload
+		 */
+		PAYLOAD: () => LocalizedString
+	}
 	ADMIN_SONGS: {
 		/**
 		 * Songs
@@ -6829,6 +7575,114 @@ export type TranslationFunctions = {
 		 */
 		TITLE: () => LocalizedString
 		/**
+		 * Unsaved
+		 */
+		UNSAVED: () => LocalizedString
+		/**
+		 * Delete block
+		 */
+		DELETE_BLOCK: () => LocalizedString
+		/**
+		 * Languages
+		 */
+		LANGUAGES: () => LocalizedString
+		/**
+		 * This song has no languages yet. Add one to start writing translations alongside each line.
+		 */
+		NO_LANGUAGES: () => LocalizedString
+		/**
+		 * Add language
+		 */
+		ADD_LANGUAGE: () => LocalizedString
+		/**
+		 * Other language
+		 */
+		ADD_OTHER_LANGUAGE: () => LocalizedString
+		/**
+		 * Add {name}
+		 */
+		ADD_LANGUAGE_HINT: (arg: { name: unknown }) => LocalizedString
+		/**
+		 * Add “{code}”
+		 */
+		ADD_CUSTOM_LANGUAGE: (arg: { code: unknown }) => LocalizedString
+		/**
+		 * Search languages…
+		 */
+		SEARCH_LANGUAGE: () => LocalizedString
+		/**
+		 * No language matches. Type a two to five letter code to add it anyway.
+		 */
+		NO_LANGUAGE_MATCH: () => LocalizedString
+		/**
+		 * Default
+		 */
+		DEFAULT_LANGUAGE: () => LocalizedString
+		/**
+		 * The first language is the default: its lines are stored without a language tag. Moving another language to the top rewrites the lyrics accordingly.
+		 */
+		DEFAULT_LANGUAGE_HINT: () => LocalizedString
+		/**
+		 * Drag to reorder — the first is the default
+		 */
+		LANGUAGE_ORDER_HINT: () => LocalizedString
+		/**
+		 * {count} line{{s}}
+		 */
+		LANGUAGE_LINE_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Remove {code}?
+		 */
+		REMOVE_LANGUAGE_TITLE: (arg: { code: unknown }) => LocalizedString
+		/**
+		 * Removing {name} deletes its text from {count} line{{s}} of this song. This cannot be undone once you save.
+		 */
+		REMOVE_LANGUAGE_MESSAGE: (arg: { count: number, name: unknown }) => LocalizedString
+		/**
+		 * Show:
+		 */
+		SHOW_LANGUAGES: () => LocalizedString
+		/**
+		 * Line editor
+		 */
+		BLOCK_MODE: () => LocalizedString
+		/**
+		 * Tag this line as {code}
+		 */
+		RAW_TAG_HINT: (arg: { code: unknown }) => LocalizedString
+		/**
+		 * Start a new page after this line
+		 */
+		RAW_SEPARATOR_HINT: () => LocalizedString
+		/**
+		 * Plain text
+		 */
+		RAW_MODE: () => LocalizedString
+		/**
+		 * Add line
+		 */
+		ADD_LINE: () => LocalizedString
+		/**
+		 * Delete line
+		 */
+		DELETE_LINE: () => LocalizedString
+		/**
+		 * Lyric line
+		 */
+		LINE_PLACEHOLDER: () => LocalizedString
+		/**
+		 * {language} translation
+		 */
+		TRANSLATION_PLACEHOLDER: (arg: { language: unknown }) => LocalizedString
+		/**
+		 * Page {number} of {total}
+		 */
+		PAGE_OF: (arg: { number: number, total: number }) => LocalizedString
+		/**
+		 * Remove page break
+		 */
+		REMOVE_PAGE_BREAK: () => LocalizedString
+		/**
 		 * Song order
 		 */
 		ORDER: () => LocalizedString
@@ -6860,6 +7714,102 @@ export type TranslationFunctions = {
 		 * Are you sure you want to delete the order "{name}"? This action cannot be undone.
 		 */
 		DELETE_ORDER_MESSAGE: (arg: { name: unknown }) => LocalizedString
+	}
+	SONG_LANGUAGE_REVIEW: {
+		/**
+		 * Song languages
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Review song languages
+		 */
+		OPEN: () => LocalizedString
+		/**
+		 * Older songs store their main lyrics without saying what language they are in. This reads each song, works out the language and writes it onto every line — so translations can be shown, hidden and styled by name.
+		 */
+		INTRO: () => LocalizedString
+		/**
+		 * Reads all {count} songs in your library. Nothing is changed until you confirm.
+		 */
+		SCAN_HINT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Scan library
+		 */
+		SCAN: () => LocalizedString
+		/**
+		 * Reading songs…
+		 */
+		SCANNING: () => LocalizedString
+		/**
+		 * Saving songs…
+		 */
+		APPLYING: () => LocalizedString
+		/**
+		 * {count} song{{s}} updated.
+		 */
+		DONE: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} song{{s}} to tag
+		 */
+		FOUND: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} uncertain
+		 */
+		UNSURE: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} already tagged
+		 */
+		SKIPPED: (arg: { count: number }) => LocalizedString
+		/**
+		 * Every song already names the language of each line. Nothing to do.
+		 */
+		NOTHING_TO_DO: () => LocalizedString
+		/**
+		 * Untagged lines
+		 */
+		UNTAGGED_TEXT: () => LocalizedString
+		/**
+		 * Existing tags
+		 */
+		ALREADY_TAGGED: () => LocalizedString
+		/**
+		 * Detected
+		 */
+		DETECTED: () => LocalizedString
+		/**
+		 * Assign
+		 */
+		ASSIGN: () => LocalizedString
+		/**
+		 * No idea
+		 */
+		NO_GUESS: () => LocalizedString
+		/**
+		 * {percent}% confident
+		 */
+		CONFIDENCE: (arg: { percent: number }) => LocalizedString
+		/**
+		 * Tag {count} song{{s}}
+		 */
+		APPLY: (arg: { count: number }) => LocalizedString
+	}
+	IMPORT_LANGUAGE: {
+		/**
+		 * Which language is this song in?
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * The lyrics of "{title}" do not say what language they are in, and the text was not clear enough to be sure.
+		 */
+		MESSAGE: (arg: { title: unknown }) => LocalizedString
+		/**
+		 * Best guess: {language} ({percent}% confident)
+		 */
+		BEST_GUESS: (arg: { language: unknown, percent: number }) => LocalizedString
+		/**
+		 * There was not enough text to make a guess.
+		 */
+		NO_GUESS: () => LocalizedString
 	}
 	SHOWS: {
 		/**
@@ -7549,6 +8499,62 @@ export type TranslationFunctions = {
 		 */
 		PREVIEW_HIDE_IMAGE: () => LocalizedString
 		/**
+		 * Widen the preview
+		 */
+		PREVIEW_EXPAND: () => LocalizedString
+		/**
+		 * Narrow the preview
+		 */
+		PREVIEW_COLLAPSE: () => LocalizedString
+		/**
+		 * Preview canvases
+		 */
+		PREVIEW_PANES: () => LocalizedString
+		/**
+		 * Tick what to show — several stack below each other. Drag to reorder.
+		 */
+		PREVIEW_PANES_HINT: () => LocalizedString
+		/**
+		 * No preview canvas selected.
+		 */
+		PREVIEW_PANES_EMPTY: () => LocalizedString
+		/**
+		 * Language names
+		 */
+		PREVIEW_PANE_LABELS: () => LocalizedString
+		/**
+		 * Sample lyrics
+		 */
+		PREVIEW_PANE_SAMPLE: () => LocalizedString
+		/**
+		 * Copyright
+		 */
+		PREVIEW_PANE_COPYRIGHT: () => LocalizedString
+		/**
+		 * Previous canvas
+		 */
+		PREVIEW_PANE_PREV: () => LocalizedString
+		/**
+		 * Next canvas
+		 */
+		PREVIEW_PANE_NEXT: () => LocalizedString
+		/**
+		 * One line per row
+		 */
+		PREVIEW_LINES_PLACEHOLDER: () => LocalizedString
+		/**
+		 * Sample lyrics
+		 */
+		PREVIEW_LINES: () => LocalizedString
+		/**
+		 * Language code
+		 */
+		PREVIEW_LANG_CODE: () => LocalizedString
+		/**
+		 * Reset preview text
+		 */
+		PREVIEW_RESET: () => LocalizedString
+		/**
 		 * Show image layer
 		 */
 		PREVIEW_SHOW_IMAGE: () => LocalizedString
@@ -7600,6 +8606,10 @@ export type TranslationFunctions = {
 		 * Padding
 		 */
 		PADDING: () => LocalizedString
+		/**
+		 * Lyrics
+		 */
+		BOX_CONTENT: () => LocalizedString
 		/**
 		 * Paragraph Padding
 		 */
@@ -7681,7 +8691,7 @@ export type TranslationFunctions = {
 		 */
 		NEXT_LINE_OPACITY: () => LocalizedString
 		/**
-		 * Show other languages
+		 * Show languages beyond those configured
 		 */
 		SHOW_OTHER_LANGUAGES: () => LocalizedString
 		/**
@@ -7745,6 +8755,14 @@ export type TranslationFunctions = {
 		 */
 		BACKGROUND_IMAGE_NONE: () => LocalizedString
 		/**
+		 * Overrides inherited image
+		 */
+		BACKGROUND_IMAGE_NONE_HINT: () => LocalizedString
+		/**
+		 * Overrides inherited video
+		 */
+		BACKGROUND_VIDEO_NONE_HINT: () => LocalizedString
+		/**
 		 * No Video (suppress inherited)
 		 */
 		BACKGROUND_VIDEO_NONE: () => LocalizedString
@@ -7777,10 +8795,6 @@ export type TranslationFunctions = {
 		 */
 		TRANSLATION_COLOR: () => LocalizedString
 		/**
-		 * Default
-		 */
-		LANG_DEFAULT: () => LocalizedString
-		/**
 		 * Add Language
 		 */
 		LANG_ADD: () => LocalizedString
@@ -7805,7 +8819,7 @@ export type TranslationFunctions = {
 		 */
 		SHOW_ALL_LANGUAGES: () => LocalizedString
 		/**
-		 * Show other languages (not listed above)
+		 * Also show a song’s further languages, even without a setting for them here
 		 */
 		SHOW_OTHER_LANGUAGES_HINT: () => LocalizedString
 		/**
@@ -7820,14 +8834,6 @@ export type TranslationFunctions = {
 		 * Background
 		 */
 		SECTION_BACKGROUND: () => LocalizedString
-		/**
-		 * Paragraph
-		 */
-		SECTION_PARAGRAPH: () => LocalizedString
-		/**
-		 * Typography
-		 */
-		SECTION_TYPOGRAPHY: () => LocalizedString
 		/**
 		 * Layout & Spacing
 		 */
@@ -7852,6 +8858,100 @@ export type TranslationFunctions = {
 		 * Live Preview
 		 */
 		SECTION_PREVIEW: () => LocalizedString
+		/**
+		 * Text
+		 */
+		SECTION_TEXT: () => LocalizedString
+		/**
+		 * Languages
+		 */
+		SECTION_LANGUAGES: () => LocalizedString
+		/**
+		 * Font
+		 */
+		SECTION_FONT: () => LocalizedString
+		/**
+		 * Size, colour and effects
+		 */
+		SECTION_APPEARANCE: () => LocalizedString
+		CATEGORY_DESC: {
+			/**
+			 * The colour, image or video the text is drawn on top of.
+			 */
+			BACKGROUND: () => LocalizedString
+			/**
+			 * Typography every line inherits, unless a language overrides it.
+			 */
+			TEXT: () => LocalizedString
+			/**
+			 * Where the text block sits on screen and how much room it gets.
+			 */
+			LAYOUT: () => LocalizedString
+			/**
+			 * Which of a song’s languages are shown, and how each one looks.
+			 */
+			LANGUAGES: () => LocalizedString
+			/**
+			 * The credit block shown after the last verse.
+			 */
+			COPYRIGHT: () => LocalizedString
+			/**
+			 * The sample content the preview draws, so you judge a design on text you recognise.
+			 */
+			PREVIEW: () => LocalizedString
+			/**
+			 * Raw CSS for anything the controls above do not cover.
+			 */
+			CSS: () => LocalizedString
+		}
+		/**
+		 * No translation languages configured. Add one to show and style a song's second language.
+		 */
+		LANG_EMPTY: () => LocalizedString
+		/**
+		 * Main language
+		 */
+		SLOT_MAIN: () => LocalizedString
+		/**
+		 * The song’s own language. Every other line is a translation of it, and inherits this typography.
+		 */
+		SLOT_MAIN_HINT: () => LocalizedString
+		/**
+		 * Language {n}
+		 */
+		SLOT_LABEL: (arg: { n: number }) => LocalizedString
+		/**
+		 * These describe positions, not fixed languages. "Language 2" is whatever a song lists second, so one design fits an English song with a German translation and a German song with an English one alike. Each song sets its own order.
+		 */
+		SLOT_EXPLAINER: () => LocalizedString
+		/**
+		 * Add language
+		 */
+		SLOT_ADD: () => LocalizedString
+		/**
+		 * Show this language
+		 */
+		SLOT_SHOW: () => LocalizedString
+		/**
+		 * Hide this language
+		 */
+		SLOT_HIDE: () => LocalizedString
+		/**
+		 * This language is hidden on screen. Its styling is kept for when you show it again.
+		 */
+		SLOT_HIDDEN_HINT: () => LocalizedString
+		/**
+		 * Search properties...
+		 */
+		SEARCH: () => LocalizedString
+		/**
+		 * No property matches "{query}".
+		 */
+		SEARCH_NO_RESULTS: (arg: { query: string }) => LocalizedString
+		/**
+		 * Drag to resize the sidebar
+		 */
+		PREVIEW_RESIZE: () => LocalizedString
 		/**
 		 * Browse…
 		 */
@@ -7976,6 +9076,30 @@ export type TranslationFunctions = {
 		 * Inherited
 		 */
 		INHERITED: () => LocalizedString
+		/**
+		 * Show what applies here
+		 */
+		INHERITED_SHOW: () => LocalizedString
+		/**
+		 * App default
+		 */
+		INHERITED_FROM_DEFAULT: () => LocalizedString
+		/**
+		 * Global style “{name}”
+		 */
+		INHERITED_FROM_GLOBAL: (arg: { name: unknown }) => LocalizedString
+		/**
+		 * Nothing sets this, so the browser default applies.
+		 */
+		INHERITED_NOWHERE: () => LocalizedString
+		/**
+		 * A show or item style can still override this when presenting.
+		 */
+		INHERITED_CAVEAT: () => LocalizedString
+		/**
+		 * Set here instead
+		 */
+		INHERITED_OVERRIDE: () => LocalizedString
 		/**
 		 * Reset — inherit this value again
 		 */
@@ -8278,6 +9402,26 @@ export type TranslationFunctions = {
 		 * Identify Windows
 		 */
 		IDENTIFY: () => LocalizedString
+		/**
+		 * Output
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Presentation windows
+		 */
+		PANEL_WINDOWS: () => LocalizedString
+		/**
+		 * Output
+		 */
+		PANEL_OUTPUT: () => LocalizedString
+		/**
+		 * Connections
+		 */
+		PANEL_CONNECTIONS: () => LocalizedString
+		/**
+		 * Tools
+		 */
+		PANEL_TOOLS: () => LocalizedString
 		/**
 		 * Freeze
 		 */
@@ -8894,6 +10038,10 @@ export type TranslationFunctions = {
 			 */
 			EDITING: () => LocalizedString
 			/**
+			 * Song languages
+			 */
+			LANGUAGES: () => LocalizedString
+			/**
 			 * Importing and deleting
 			 */
 			IMPORTING: () => LocalizedString
@@ -9082,6 +10230,36 @@ export type TranslationFunctions = {
 				 * The default name for the first block of a new song
 				 */
 				DESCRIPTION: () => LocalizedString
+			}
+			SONG_LANGUAGES: {
+				/**
+				 * Available languages
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * The languages your library is written in, shared across the account. The first one is what a new song starts in.
+				 */
+				DESCRIPTION: () => LocalizedString
+				/**
+				 * Offered first when you add a language to a song, ahead of the full list.
+				 */
+				EFFECT_PICKER: () => LocalizedString
+				/**
+				 * Used to work out what language an imported song is in. A short list is guessed far more reliably than a long one, so list only the languages you actually use.
+				 */
+				EFFECT_DETECTION: () => LocalizedString
+				/**
+				 * Designs are not affected. They style a song’s first, second and third language by position, whichever languages those turn out to be.
+				 */
+				EFFECT_NOT_DESIGNS: () => LocalizedString
+				/**
+				 * Used in your songs but not configured:
+				 */
+				FOUND_IN_SONGS: () => LocalizedString
+				/**
+				 * Click a language to move it up. The first is the default.
+				 */
+				REORDER_HINT: () => LocalizedString
 			}
 			OVERRIDE_SONG_BY_IMPORT: {
 				/**

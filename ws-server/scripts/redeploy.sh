@@ -2,24 +2,65 @@
 #
 # redeploy.sh — replace a deployed Presenter WS relay with a freshly built zip.
 #
-# Put this next to ws-server-deploy.zip in the folder that holds the running
-# deployment (the one containing docker-compose.yml), then:
+# Put this next to the relay zip in the folder that holds the running deployment (the
+# one containing docker-compose.yml), then:
 #
 #   sudo ./redeploy.sh
 #   sudo ./redeploy.sh -y
 #
 # docker-compose.yml is deliberately never touched.
+#
+# The zip also contains a copy of this script, so an upgrade brings its own deploy logic
+# with it — see the re-exec below for why that is safe.
 
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
-ZIP="ws-server-deploy.zip"
+# ── Run from a throwaway copy of ourselves ────────────────────────────────────
+# The zip ships redeploy.sh, so unpacking it rewrites this very file. bash reads a script
+# lazily as it executes, so overwriting the running file mid-run makes it jump into
+# whatever bytes landed at the current offset. Copying to a temp file first and re-execing
+# from there means the file being replaced is no longer the one being read.
+if [ -z "${REDEPLOY_REEXEC:-}" ]; then
+  self_copy="$(mktemp)"
+  cp "$0" "$self_copy"
+  trap 'rm -f "$self_copy"' EXIT
+  REDEPLOY_REEXEC=1 REDEPLOY_DIR="$(pwd)" exec bash "$self_copy" "$@"
+fi
+
+# The re-exec loses $0's directory, so the parent passes it explicitly.
+cd "${REDEPLOY_DIR:-.}"
+
 COMPOSE_FILE="docker-compose.yml"
 
-# Exactly what the zip provides, and therefore what is cleared out first.
-# Anything else in this folder is left alone.
+# Exactly what the zip provides, and therefore what is cleared out first. Anything else in
+# this folder is left alone. node_modules is still listed although the relay is now a
+# single bundled file: an older deployment has one, and it must not be left behind.
+#
+# redeploy.sh is deliberately NOT listed — it is replaced by the unzip, not deleted first,
+# so a failed run still leaves a working script behind.
 STALE="dist node_modules Dockerfile package.json"
+
+# Locally built zips are ws-server-deploy.zip; the one attached to a GitHub release carries
+# the relay version (ws-server-1.2.0.zip) so releases can be told apart. Accept either, and
+# refuse to guess when several are lying around rather than deploying an arbitrary one.
+find_zip() {
+  if [ -f "ws-server-deploy.zip" ]; then
+    printf '%s' "ws-server-deploy.zip"
+    return 0
+  fi
+
+  # Function-local positional parameters — the caller's "$@" is untouched.
+  set -- ws-server-*.zip
+
+  if [ "$#" -eq 1 ] && [ -f "$1" ]; then
+    printf '%s' "$1"
+    return 0
+  fi
+
+  return 1
+}
 
 # Run privileged commands through sudo unless already root.
 if [ "$(id -u)" -eq 0 ]; then
@@ -42,8 +83,9 @@ else
 fi
 
 # Verify everything before destroying the current deployment.
-if [ ! -f "$ZIP" ]; then
-  echo "ERROR: $ZIP not found in $(pwd)." >&2
+if ! ZIP="$(find_zip)"; then
+  echo "ERROR: no relay zip found in $(pwd)." >&2
+  echo "       Expected ws-server-deploy.zip, or exactly one ws-server-*.zip." >&2
   exit 1
 fi
 

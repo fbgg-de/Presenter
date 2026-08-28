@@ -10,6 +10,8 @@
  * because the fetch to /rest/Log will fail and be silently swallowed.
  */
 
+import { isThirdPartyNoise } from './utils/errorNoise';
+
 const MAX_QUEUE = 20;
 let queue: string[] = [];
 
@@ -79,6 +81,17 @@ function flush(): void {
 // Preserve any handler already registered (e.g. by a bundler dev overlay).
 const _prevOnerror = window.onerror;
 window.onerror = function (msg, source, lineno, colno, error) {
+  const text = typeof msg === 'string' ? msg : 'unknown error';
+
+  // Extension scripts fail on every page load of a mobile browser; reporting them would drown
+  // the very errors this early capture exists to catch. See utils/errorNoise.
+  if (isThirdPartyNoise(text, source ? String(source) : null)) {
+    if (typeof _prevOnerror === 'function') {
+      return _prevOnerror.call(window, msg, source, lineno, colno, error);
+    }
+    return false;
+  }
+
   let stack = '';
   try {
     if (error?.stack) {
@@ -88,17 +101,7 @@ window.onerror = function (msg, source, lineno, colno, error) {
     /* ignore */
   }
   enqueue(
-    '[EARLY_ERROR] [' +
-      (source ?? 'unknown') +
-      ':' +
-      (lineno ?? 0) +
-      ':' +
-      (colno ?? 0) +
-      '] ' +
-      (typeof msg === 'string' ? msg : 'unknown error') +
-      stack +
-      ' | UA: ' +
-      formatUA(),
+    '[EARLY_ERROR] [' + (source ?? 'unknown') + ':' + (lineno ?? 0) + ':' + (colno ?? 0) + '] ' + text + stack + ' | UA: ' + formatUA(),
   );
   if (typeof _prevOnerror === 'function') {
     return _prevOnerror.call(window, msg, source, lineno, colno, error);

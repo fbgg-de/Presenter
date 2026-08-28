@@ -14,8 +14,9 @@ import { Metrics } from '@/admin/Metrics';
 import { Logs } from '@/admin/Logs';
 import { Database } from '@/admin/Database';
 import { Config } from '@/admin/Config';
+import { WsMonitor } from '@/admin/WsMonitor';
 
-const TAB_SLUGS = ['accounts', 'providers', 'songs', 'metrics', 'logs', 'database', 'config'] as const;
+const TAB_SLUGS = ['accounts', 'providers', 'songs', 'metrics', 'logs', 'websocket', 'database', 'config'] as const;
 type TabSlug = (typeof TAB_SLUGS)[number];
 
 export const AdminPage = () => {
@@ -99,6 +100,7 @@ export const AdminPage = () => {
                   <Tab label={LL.ADMIN_SONGS.NAV_TITLE()} />
                   <Tab label={LL.METRICS.METRICS()} />
                   <Tab label={LL.ADMIN_LOGS.NAV_TITLE()} />
+                  <Tab label={LL.ADMIN_WS.NAV_TITLE()} />
                   <Tab
                     label={LL.ADMIN.DATABASE()}
                     icon={
@@ -118,8 +120,9 @@ export const AdminPage = () => {
               {activeTab === 2 && <Songs />}
               {activeTab === 3 && <Metrics />}
               {activeTab === 4 && <Logs />}
-              {activeTab === 5 && <Database />}
-              {activeTab === 6 && <Config />}
+              {activeTab === 5 && <WsMonitor />}
+              {activeTab === 6 && <Database />}
+              {activeTab === 7 && <Config />}
             </Stack>
           </CardContent>
         </Card>
