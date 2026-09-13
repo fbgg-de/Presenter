@@ -42,6 +42,22 @@ export type SetListTagInput = {
   blockOrderName?: string | null;
 };
 
+/**
+ * One Spotify recording linked to a Set List Entry; an entry can have several. Name, artists and
+ * cover are display copies stored with the id, so a row renders without asking Spotify.
+ */
+export type SetListSpotifyTrack = {
+  /** Id of the link itself — what unlinking addresses. */
+  id: number;
+  entryId: number;
+  trackId: string;
+  name: string | null;
+  artists: string | null;
+  imageUrl: string | null;
+};
+
+export type SetListSpotifyTrackInput = Pick<SetListSpotifyTrack, 'trackId' | 'name' | 'artists' | 'imageUrl'>;
+
 const setListsApi = presenterApi.injectEndpoints({
   endpoints: (build) => ({
     /** All set lists of the account with entries + tag assignments nested (one round trip). */
@@ -94,6 +110,27 @@ const setListsApi = presenterApi.injectEndpoints({
       }),
       invalidatesTags: [{ type: 'SetLists', id: 'LIST' }],
     }),
+
+    /**
+     * Spotify links of one set list. Separate from getSetLists, which loads every list at once —
+     * these are only fetched for the list open in the dialog.
+     */
+    getSetListSpotifyTracks: build.query<ApiSuccess<SetListSpotifyTrack[]>, number>({
+      query: (setListId) => `rest/SetListSpotifyTracks/${setListId}`,
+      providesTags: (_result, _error, setListId) => [{ type: 'SetListSpotifyTracks', id: setListId }],
+    }),
+    /** Link one more recording to an entry. `setListId` only scopes the cache refresh. */
+    addSetListSpotifyTrack: build.mutation<
+      ApiSuccess<SetListSpotifyTrack>,
+      { setListId: number; entryId: number; track: SetListSpotifyTrackInput }
+    >({
+      query: ({ entryId, track }) => ({ url: 'rest/SetListSpotifyTracks', method: 'POST', body: { entryId, track } }),
+      invalidatesTags: (_result, _error, { setListId }) => [{ type: 'SetListSpotifyTracks', id: setListId }],
+    }),
+    removeSetListSpotifyTrack: build.mutation<ApiSuccess<{ id: number }>, { setListId: number; linkId: number }>({
+      query: ({ linkId }) => ({ url: `rest/SetListSpotifyTracks/${linkId}`, method: 'DELETE' }),
+      invalidatesTags: (_result, _error, { setListId }) => [{ type: 'SetListSpotifyTracks', id: setListId }],
+    }),
   }),
   overrideExisting: false,
 });
@@ -108,6 +145,9 @@ export const {
   useSetSetListEntryTagsMutation,
   useDeleteSetListEntryMutation,
   useDeleteSetListEntryTagMutation,
+  useGetSetListSpotifyTracksQuery,
+  useAddSetListSpotifyTrackMutation,
+  useRemoveSetListSpotifyTrackMutation,
 } = setListsApi;
 
 export { setListsApi };

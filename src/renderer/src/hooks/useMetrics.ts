@@ -18,6 +18,8 @@ export type MetricEventType =
   | 'set_list_song_added'
   | 'set_list_added_to_agenda'
   | 'set_list_copied'
+  | 'set_list_spotify_linked'
+  | 'set_list_spotify_unlinked'
   | 'song_imported'
   | 'ccli_lyrics_imported'
   | 'ccli_chords_imported'

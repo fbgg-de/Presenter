@@ -102,6 +102,7 @@ export const presenterApi = createApi({
     'Pdfs',
     'Session',
     'SetLists',
+    'SetListSpotifyTracks',
     'ShowItemTypes',
     'Shows',
     'Song',

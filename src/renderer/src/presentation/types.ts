@@ -1,4 +1,5 @@
 import type { ResolvedStyle } from '@/utils/styleUtils';
+import type { CuePacket } from '@/media/types';
 
 /**
  * Display mode for a presentation window.
@@ -33,6 +34,7 @@ export interface PresentationBlock {
  * Content payload sent from the control window to presentation windows.
  */
 export interface PresentationContent {
+  mediaCue?: CuePacket;
   /** What type of content is active */
   contentType: ContentType;
 

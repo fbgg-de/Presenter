@@ -102,8 +102,8 @@ const App = () => {
     <ThemeProvider theme={muiTheme}>
       <CssBaseline />
       <TypesafeI18n key={locale} locale={locale}>
+        <GlobalErrorHandler boundaryError={boundaryError} />
         <ErrorBoundary onError={(err: Error, _info: ErrorInfo) => setBoundaryError(err)}>
-          <GlobalErrorHandler boundaryError={boundaryError} />
           <ConnectivityChecker>
             {!offlineMode && <SessionExpired />}
 

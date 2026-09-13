@@ -29,6 +29,8 @@ interface PresentationWindowEntry {
 
 /** Registry of open presentation windows */
 const openWindows: Map<string, PresentationWindowEntry> = new Map();
+export const isPresentationWindowSource = (source: MessageEventSource | null) =>
+  [...openWindows.values()].some((entry) => !entry.closed && entry.window === source);
 let windowCounter = 0;
 
 /** Last broadcast content — sent to newly opened windows for initial display */
@@ -82,6 +84,10 @@ export function adoptElectronWindow(id: string, config: WindowConfig): void {
  */
 type WindowStyleResolver = (id: string, config: WindowConfig) => unknown | undefined;
 let windowStyleResolver: WindowStyleResolver | undefined;
+let windowCueResolver: ((id: string, content: PresentationContent) => PresentationContent['mediaCue']) | undefined;
+export function setWindowCueResolver(resolver: typeof windowCueResolver) {
+  windowCueResolver = resolver;
+}
 
 export function setWindowStyleResolver(fn: WindowStyleResolver | undefined): void {
   windowStyleResolver = fn;
@@ -655,6 +661,7 @@ function applyWindowOverrides(content: PresentationContent, config: WindowConfig
     }
   }
 
+  merged.mediaCue = id ? windowCueResolver?.(id, content) : undefined;
   // Which languages this window shows is the style's decision, but the style only names slots
   // — "the second language" — so it can only be turned into actual codes here, where the song's
   // own language order is also in hand. A window-level override still wins over both.

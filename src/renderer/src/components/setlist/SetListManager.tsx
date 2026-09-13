@@ -59,6 +59,7 @@ import {
   Star as FavoriteIcon,
   StarBorder as NotFavoriteIcon,
   Undo as UndoIcon,
+  Album as SpotifyIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
@@ -77,10 +78,14 @@ import {
   useReorderSetListsMutation,
   useUpdateSetListMutation,
   useSetSetListEntryTagsMutation,
+  useGetSetListSpotifyTracksQuery,
   type SetList,
   type SetListEntry,
+  type SetListSpotifyTrack,
   type SetListTagAssignment,
 } from '@/api/setLists.api';
+import { useGetSessionQuery } from '@/api/session.api';
+import { SetListSpotifyPlayer } from './SetListSpotifyPlayer';
 import { Song } from '@/song';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -89,6 +94,7 @@ import { BandChips, BandPicker } from '@/components/common/BandPicker';
 import { useBands } from '@/hooks/useBands';
 import { copyTextToClipboard } from '@/utils/clipboard';
 import { SetListTagEditor } from './SetListTagEditor';
+import { SetListSpotifyPicker } from './SetListSpotifyPicker';
 
 /** Section key for entries that have no Tag Assignments at all. */
 const UNTAGGED = '__untagged__';
@@ -195,6 +201,9 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
   const [deleteEntry] = useDeleteSetListEntryMutation();
   const [deleteEntryTag] = useDeleteSetListEntryTagMutation();
   const [fetchSong] = useLazyGetSongQuery();
+  const { data: session } = useGetSessionQuery();
+  /** The account has Spotify credentials — only then is there anything to link against. */
+  const spotifyEnabled = session?.settings?.spotifyEnabled ?? false;
 
   const [activeId, setActiveId] = useState<number | null>(setListSettings.lastOpenedSetListId);
   const [mode, setMode] = useState<SearchMode>('filter');
@@ -202,6 +211,10 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
   const [nameDialog, setNameDialog] = useState<{ mode: 'create' | 'rename'; value: string; bandIds: number[] } | null>(null);
   const [deleteListConfirm, setDeleteListConfirm] = useState(false);
   const [tagEditorEntry, setTagEditorEntry] = useState<SetListEntry | null>(null);
+  /** Entry whose Spotify track is being picked. */
+  const [spotifyEntry, setSpotifyEntry] = useState<SetListEntry | null>(null);
+  /** Track in the docked player. Null keeps the player — and Spotify's script — unloaded. */
+  const [playingTrack, setPlayingTrack] = useState<SetListSpotifyTrack | null>(null);
   /** Anchor + context for the remove-song / remove-tag choice popover. */
   const [removeCtx, setRemoveCtx] = useState<{ anchor: HTMLElement; entry: SetListEntry; tagName: string | null } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -245,9 +258,11 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
     if (!stillExists) setActiveId(lists[0].id);
   }, [open, lists, activeId]);
 
-  // An undo target from a previous opening of the dialog would be confusing — drop it.
+  // An undo target or a playing track from a previous opening of the dialog would be confusing — drop them.
   useEffect(() => {
-    if (!open) setLastAdded(null);
+    if (open) return;
+    setLastAdded(null);
+    setPlayingTrack(null);
   }, [open]);
 
   // Persist the selection so the manager reopens where the user left off.
@@ -257,6 +272,19 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
   }, [activeId, setListSettings, updateSetting]);
 
   const activeList = useMemo(() => lists.find((l) => l.id === activeId) ?? null, [lists, activeId]);
+
+  // ── Spotify links ─────────────────────────────────────────────────────────
+  // Loaded on their own and only for the list on screen: the set lists arrive in one request, and
+  // every list's tracks must not ride along with it.
+  const { data: spotifyLinks } = useGetSetListSpotifyTracksQuery(activeId ?? 0, {
+    skip: !open || !spotifyEnabled || activeId == null,
+  });
+  /** entryId → linked tracks. Entry ids are unique across lists, so a lagging previous list matches nothing. */
+  const spotifyByEntry = useMemo(() => {
+    const byEntry = new Map<number, SetListSpotifyTrack[]>();
+    for (const link of spotifyLinks ?? []) byEntry.set(link.entryId, [...(byEntry.get(link.entryId) ?? []), link]);
+    return byEntry;
+  }, [spotifyLinks]);
   /** Position of the active list in the tab strip — drives the move-left/right buttons. */
   const activeIndex = useMemo(() => lists.findIndex((l) => l.id === activeId), [lists, activeId]);
 
@@ -628,6 +656,87 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
     const rowTagName = sectionName === UNTAGGED ? null : sectionName;
     const isFavorite = favorites.has(entry.songNumber);
 
+    // Linked Spotify recordings as small covers, then a square to link another or manage them.
+    // They lead the chip group, so the row ends in one cluster rather than two. That puts them
+    // inside the row button, which adds the song to the agenda and is disabled while no show is
+    // open — so the strip keeps its clicks (and hovers) to itself and re-enables pointer events.
+    const linkedTracks = spotifyByEntry.get(entry.id) ?? [];
+    const squareSx = {
+      width: 20,
+      height: 20,
+      boxSizing: 'border-box',
+      borderRadius: 0.5,
+      overflow: 'hidden',
+      flexShrink: 0,
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: 'text.secondary',
+    };
+    const spotifyStrip = spotifyEnabled ? (
+      <Stack
+        direction="row"
+        spacing={0.5}
+        sx={{ alignItems: 'center', flexShrink: 0, pointerEvents: 'auto' }}
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onMouseOver={(e) => e.stopPropagation()}
+      >
+        <Tooltip title={linkedTracks.length > 0 ? LL.SET_LISTS.SPOTIFY_MANAGE() : LL.SET_LISTS.SPOTIFY_LINK()}>
+          <Box
+            component="button"
+            type="button"
+            onClick={() => setSpotifyEntry(entry)}
+            aria-label={linkedTracks.length > 0 ? LL.SET_LISTS.SPOTIFY_MANAGE() : LL.SET_LISTS.SPOTIFY_LINK()}
+            sx={{
+              ...squareSx,
+              p: 0,
+              border: '1px dashed',
+              borderColor: 'text.disabled',
+              bgcolor: 'transparent',
+              cursor: 'pointer',
+              '&:hover, &:focus-visible': { borderColor: 'primary.main', color: 'primary.main' },
+            }}
+          >
+            <AddIcon sx={{ fontSize: 14 }} />
+          </Box>
+        </Tooltip>
+        {linkedTracks.map((track) => {
+          const isPlaying = playingTrack?.id === track.id;
+          return (
+            <Tooltip key={track.id} title={[track.name, track.artists].filter(Boolean).join(' – ') || LL.SET_LISTS.SPOTIFY_PLAY()}>
+              <Box
+                component="button"
+                type="button"
+                onClick={() => setPlayingTrack(track)}
+                aria-label={`${LL.SET_LISTS.SPOTIFY_PLAY()}: ${track.name ?? track.trackId}`}
+                aria-pressed={isPlaying}
+                sx={{
+                  ...squareSx,
+                  p: 0,
+                  border: 0,
+                  cursor: 'pointer',
+                  bgcolor: 'action.hover',
+                  // The ring is drawn inside the cover: the row clips anything that pokes out.
+                  outline: isPlaying ? '2px solid' : 'none',
+                  outlineColor: 'primary.main',
+                  outlineOffset: '-2px',
+                  '&:hover, &:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: '-2px' },
+                }}
+              >
+                {track.imageUrl ? (
+                  <Box component="img" src={track.imageUrl} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <SpotifyIcon sx={{ fontSize: 14 }} />
+                )}
+              </Box>
+            </Tooltip>
+          );
+        })}
+      </Stack>
+    ) : null;
+
     // Same two chips either way; only their sequence differs by breakpoint (see below).
     // The order name is capped so a long one ellipsizes inside its chip instead of
     // crowding the title out of the row.
@@ -647,7 +756,7 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
           bgcolor: inAgenda ? alpha(theme.palette.success.main, theme.palette.mode === 'dark' ? 0.18 : 0.12) : 'transparent',
           border: '1px solid',
           borderColor: inAgenda ? alpha(theme.palette.success.main, 0.5) : 'transparent',
-          // Clear the absolutely-positioned actions: 126px for the desktop trio (3 × 30px + 2 × 4px
+          // Clear the absolutely-positioned actions: 126px for the desktop trio (3 × 34px + 2 × 4px
           // gap + MUI's 16px secondaryAction inset), 48px for the single overflow button on mobile.
           // ListItem itself sets 48px on the child button through this very selector, which
           // outranks an `sx` on the button — so the override has to live here to win the cascade.
@@ -724,6 +833,7 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
             >
               <SongLine title={entryTitle(entry)} songNumber={entry.songNumber} authors={entryAuthors(entry)} stacked={isMobile} />
               <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexShrink: 0, maxWidth: '100%' }}>
+                {spotifyStrip}
                 {/* Desktop leads with the order: the wide outlined chip anchors the group and the
                     short filled key reads as its qualifier. Mobile leads with the key instead —
                     the chips sit on their own line under the title there, where the short chip
@@ -1106,6 +1216,9 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
               ))
             )}
           </Box>
+
+          {/* Only mounted once a cover is clicked — no Spotify script or iframe before that. */}
+          {spotifyEnabled && playingTrack && <SetListSpotifyPlayer track={playingTrack} onClose={() => setPlayingTrack(null)} />}
         </DialogContent>
 
         <DialogActions>
@@ -1241,6 +1354,18 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
           });
         }}
       />
+
+      {/* Spotify tracks of one entry: link more, open or unlink them */}
+      {spotifyEnabled && (
+        <SetListSpotifyPicker
+          open={!!spotifyEntry}
+          onClose={() => setSpotifyEntry(null)}
+          setListId={activeId}
+          entry={spotifyEntry}
+          title={spotifyEntry ? entryTitle(spotifyEntry) : ''}
+          authors={spotifyEntry ? entryAuthors(spotifyEntry) : ''}
+        />
+      )}
     </>
   );
 };

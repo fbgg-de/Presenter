@@ -3,6 +3,8 @@ import { useAppSelector } from './hooks';
 import type { WsPeerInfo } from '@/hooks/useWsOperator';
 
 export interface PresentationState {
+  blockChangeOrigin: 'operator' | 'media';
+  blockChangeRevision: number;
   activeItemIndex: number;
   activeBlockIndex: number;
   activeLineIndex: number;
@@ -25,6 +27,8 @@ export interface PresentationState {
 }
 
 const initialState: PresentationState = {
+  blockChangeOrigin: 'operator',
+  blockChangeRevision: 0,
   activeItemIndex: 0,
   activeBlockIndex: 0,
   activeLineIndex: 0,
@@ -44,12 +48,21 @@ export const presentationSlice = createSlice({
   name: 'presentation',
   initialState,
   reducers: {
+    setActiveBlockFromMedia: (state, action: PayloadAction<number>) => {
+      state.blockChangeOrigin = 'media';
+      state.activeBlockIndex = action.payload;
+      state.activeLineIndex = 0;
+    },
     setActiveItemIndex: (state, action: PayloadAction<number>) => {
       state.activeItemIndex = action.payload;
+      state.blockChangeOrigin = 'operator';
+      state.blockChangeRevision += 1;
       state.activeBlockIndex = 0;
       state.activeLineIndex = 0;
     },
     setActiveBlockIndex: (state, action: PayloadAction<number>) => {
+      state.blockChangeOrigin = 'operator';
+      state.blockChangeRevision += 1;
       state.activeBlockIndex = action.payload;
       state.activeLineIndex = 0;
     },
@@ -59,6 +72,8 @@ export const presentationSlice = createSlice({
     nextItem: (state, action: PayloadAction<{ maxIndex: number }>) => {
       if (state.activeItemIndex < action.payload.maxIndex) {
         state.activeItemIndex += 1;
+        state.blockChangeOrigin = 'operator';
+        state.blockChangeRevision += 1;
         state.activeBlockIndex = 0;
         state.activeLineIndex = 0;
       }
@@ -66,18 +81,24 @@ export const presentationSlice = createSlice({
     prevItem: (state) => {
       if (state.activeItemIndex > 0) {
         state.activeItemIndex -= 1;
+        state.blockChangeOrigin = 'operator';
+        state.blockChangeRevision += 1;
         state.activeBlockIndex = 0;
         state.activeLineIndex = 0;
       }
     },
     nextBlock: (state, action: PayloadAction<{ maxIndex: number }>) => {
       if (state.activeBlockIndex < action.payload.maxIndex) {
+        state.blockChangeOrigin = 'operator';
+        state.blockChangeRevision += 1;
         state.activeBlockIndex += 1;
         state.activeLineIndex = 0;
       }
     },
     prevBlock: (state) => {
       if (state.activeBlockIndex > 0) {
+        state.blockChangeOrigin = 'operator';
+        state.blockChangeRevision += 1;
         state.activeBlockIndex -= 1;
         state.activeLineIndex = 0;
       }
@@ -87,6 +108,8 @@ export const presentationSlice = createSlice({
         state.activeLineIndex += 1;
       } else if (state.activeBlockIndex < action.payload.maxBlockIndex) {
         // Auto-advance to next block
+        state.blockChangeOrigin = 'operator';
+        state.blockChangeRevision += 1;
         state.activeBlockIndex += 1;
         state.activeLineIndex = 0;
       }
@@ -95,6 +118,8 @@ export const presentationSlice = createSlice({
       if (state.activeLineIndex > 0) {
         state.activeLineIndex -= 1;
       } else if (state.activeBlockIndex > 0) {
+        state.blockChangeOrigin = 'operator';
+        state.blockChangeRevision += 1;
         state.activeBlockIndex -= 1;
         state.activeLineIndex = action.payload.prevBlockLastLineIndex;
       }
@@ -156,6 +181,8 @@ export const presentationSlice = createSlice({
     },
     setActiveItemAndBlock: (state, action: PayloadAction<{ itemIndex: number; blockIndex: number }>) => {
       state.activeItemIndex = action.payload.itemIndex;
+      state.blockChangeOrigin = 'operator';
+      state.blockChangeRevision += 1;
       state.activeBlockIndex = action.payload.blockIndex;
       state.activeLineIndex = 0;
     },
@@ -163,6 +190,7 @@ export const presentationSlice = createSlice({
 });
 
 export const {
+  setActiveBlockFromMedia,
   setActiveItemIndex,
   setActiveBlockIndex,
   setActiveLineIndex,

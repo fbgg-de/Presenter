@@ -12,8 +12,7 @@ require_once(__DIR__ . '/RestController.php');
  *
  * POST   /rest/SetListEntries              → { setListId, songNumber, tags?: [...] }
  *                                            upserts the entry, merges the given tag assignments
- * PUT    /rest/SetListEntries/{entryId}    → { tags: [...] } replaces the entry's assignments
- * DELETE /rest/SetListEntries/{entryId}            → remove the whole entry
+ * PUT    /rest/SetListEntries/{entryId}    → { tags: [...] } replaces the entry's assignments * DELETE /rest/SetListEntries/{entryId}            → remove the whole entry
  * DELETE /rest/SetListEntries/{entryId}/{tagName}  → remove a single tag assignment
  *
  * A tag payload is { tagName, customKey?, blockOrderName? }. `customKey` / `blockOrderName` are

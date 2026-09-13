@@ -62,10 +62,12 @@ export const nextParamToPath = (next: string): string => {
  */
 export const electronFileUrl = (filename: string): string => {
   const rendererDir: string | undefined = (window as { api?: { rendererDir?: string } }).api?.rendererDir;
-  if (rendererDir) {
+  // Only a file:// page may open file:// URLs. Under `electron-vite dev` the page comes from the
+  // dev server and rendererDir points at the stale build — Chromium blocks that navigation outright.
+  if (rendererDir && window.location.protocol === 'file:') {
     return `${rendererDir}${filename}`;
   }
-  // Fallback for dev (window.location.href is correct in dev mode)
+  // Dev server: sibling pages live next to the current one
   const currentHref = window.location.href.split('?')[0];
   const dir = currentHref.substring(0, currentHref.lastIndexOf('/') + 1);
   return `${dir}${filename}`;
@@ -170,7 +172,8 @@ export const formatDateTime = (ts: number): string => {
 export const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 };
 
 export const normalizeHex = (s: string): string => {

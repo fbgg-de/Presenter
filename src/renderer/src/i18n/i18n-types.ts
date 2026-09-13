@@ -258,6 +258,26 @@ type RootTranslation = {
 			 * L​o​g​ ​o​u​t​ ​a​n​d​ ​r​e​s​e​t
 			 */
 			CONFIRM: string
+			/**
+			 * T​r​o​u​b​l​e​ ​s​i​g​n​i​n​g​ ​i​n​?
+			 */
+			LOGIN_LINK: string
+			/**
+			 * R​e​s​e​t​ ​s​i​g​n​-​i​n​ ​o​n​ ​t​h​i​s​ ​d​e​v​i​c​e
+			 */
+			LOGIN_TITLE: string
+			/**
+			 * I​f​ ​s​i​g​n​i​n​g​ ​i​n​ ​k​e​e​p​s​ ​l​o​o​p​i​n​g​ ​o​r​ ​f​a​i​l​s​,​ ​r​e​m​o​v​i​n​g​ ​w​h​a​t​ ​t​h​i​s​ ​d​e​v​i​c​e​ ​h​a​s​ ​s​t​o​r​e​d​ ​f​o​r​ ​t​h​e​ ​l​o​g​i​n​ ​u​s​u​a​l​l​y​ ​f​i​x​e​s​ ​i​t​.​ ​A​f​t​e​r​w​a​r​d​s​ ​y​o​u​ ​c​h​o​o​s​e​ ​y​o​u​r​ ​a​c​c​o​u​n​t​ ​a​n​d​ ​s​i​g​n​ ​i​n​ ​a​g​a​i​n​.
+			 */
+			LOGIN_INTRO: string
+			/**
+			 * R​e​s​e​t
+			 */
+			LOGIN_CONFIRM: string
+			/**
+			 * R​e​m​o​v​e​s​ ​e​v​e​r​y​ ​c​o​o​k​i​e​ ​o​f​ ​t​h​e​ ​d​e​s​k​t​o​p​ ​a​p​p​ ​—​ ​i​n​c​l​u​d​i​n​g​ ​t​h​e​ ​s​i​g​n​-​i​n​ ​a​t​ ​y​o​u​r​ ​i​d​e​n​t​i​t​y​ ​p​r​o​v​i​d​e​r​,​ ​s​o​ ​y​o​u​ ​w​i​l​l​ ​b​e​ ​a​s​k​e​d​ ​f​o​r​ ​y​o​u​r​ ​p​a​s​s​w​o​r​d​ ​a​g​a​i​n​.
+			 */
+			COOKIES_HINT_DESKTOP: string
 		}
 		/**
 		 * L​o​g​g​e​d​ ​i​n​ ​a​s
@@ -900,6 +920,38 @@ type RootTranslation = {
 		 * C​l​e​a​r​i​n​g​ ​t​h​e​ ​U​R​L​ ​w​i​l​l​ ​d​i​s​a​b​l​e​ ​t​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​i​n​t​e​g​r​a​t​i​o​n​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
 		 */
 		CHURCH_TOOLS_CLEAR_WARNING: string
+		/**
+		 * S​p​o​t​i​f​y
+		 */
+		SPOTIFY: string
+		/**
+		 * C​o​n​f​i​g​u​r​e​ ​S​p​o​t​i​f​y
+		 */
+		CONFIGURE_SPOTIFY: string
+		/**
+		 * L​e​t​s​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​l​i​n​k​ ​s​e​t​ ​l​i​s​t​ ​s​o​n​g​s​ ​t​o​ ​S​p​o​t​i​f​y​ ​t​r​a​c​k​s​.​ ​C​r​e​a​t​e​ ​a​n​ ​a​p​p​ ​i​n​ ​t​h​e​ ​S​p​o​t​i​f​y​ ​d​e​v​e​l​o​p​e​r​ ​d​a​s​h​b​o​a​r​d​ ​a​n​d​ ​c​o​p​y​ ​i​t​s​ ​C​l​i​e​n​t​ ​I​D​ ​a​n​d​ ​C​l​i​e​n​t​ ​S​e​c​r​e​t​:
+		 */
+		SPOTIFY_HELP: string
+		/**
+		 * C​l​i​e​n​t​ ​I​D
+		 */
+		SPOTIFY_CLIENT_ID: string
+		/**
+		 * C​l​i​e​n​t​ ​S​e​c​r​e​t
+		 */
+		SPOTIFY_CLIENT_SECRET: string
+		/**
+		 * L​e​a​v​e​ ​b​l​a​n​k​ ​t​o​ ​k​e​e​p​ ​t​h​e​ ​e​x​i​s​t​i​n​g​ ​s​e​c​r​e​t​.​ ​E​n​t​e​r​ ​a​ ​n​e​w​ ​v​a​l​u​e​ ​t​o​ ​u​p​d​a​t​e​ ​i​t​.
+		 */
+		SPOTIFY_SECRET_HELP: string
+		/**
+		 * (​s​e​c​r​e​t​ ​a​l​r​e​a​d​y​ ​s​e​t​)
+		 */
+		SPOTIFY_SECRET_PLACEHOLDER_SET: string
+		/**
+		 * C​l​e​a​r​i​n​g​ ​t​h​e​ ​C​l​i​e​n​t​ ​I​D​ ​r​e​m​o​v​e​s​ ​t​h​e​ ​S​p​o​t​i​f​y​ ​c​r​e​d​e​n​t​i​a​l​s​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		SPOTIFY_CLEAR_WARNING: string
 	}
 	ADMIN_LOGS: {
 		/**
@@ -2099,6 +2151,104 @@ type RootTranslation = {
 		 * N​a​m​e​ ​(​o​p​t​i​o​n​a​l​)
 		 */
 		NAME_OPTIONAL: string
+		/**
+		 * I​m​a​g​e​s
+		 */
+		IMAGES: string
+		/**
+		 * V​i​d​e​o​s
+		 */
+		VIDEOS: string
+		/**
+		 * G​r​i​d​ ​v​i​e​w
+		 */
+		VIEW_GRID: string
+		/**
+		 * L​i​s​t​ ​v​i​e​w
+		 */
+		VIEW_LIST: string
+		/**
+		 * S​o​r​t​ ​b​y
+		 */
+		SORT_BY: string
+		/**
+		 * N​a​m​e
+		 */
+		SORT_NAME: string
+		/**
+		 * D​a​t​e​ ​m​o​d​i​f​i​e​d
+		 */
+		SORT_DATE: string
+		/**
+		 * F​i​l​e​ ​s​i​z​e
+		 */
+		SORT_SIZE: string
+		/**
+		 * D​u​r​a​t​i​o​n
+		 */
+		SORT_DURATION: string
+		/**
+		 * A​s​c​e​n​d​i​n​g
+		 */
+		SORT_ASC: string
+		/**
+		 * D​e​s​c​e​n​d​i​n​g
+		 */
+		SORT_DESC: string
+		/**
+		 * R​e​s​o​l​u​t​i​o​n
+		 */
+		RESOLUTION: string
+		/**
+		 * {​c​o​u​n​t​}​ ​{​{​f​i​l​e​|​f​i​l​e​s​}​}
+		 * @param {number} count
+		 */
+		FILE_COUNT: RequiredParams<'count'>
+		/**
+		 * N​o​ ​f​i​l​e​s​ ​m​a​t​c​h​ ​"​{​q​u​e​r​y​}​"
+		 * @param {string} query
+		 */
+		NO_RESULTS: RequiredParams<'query'>
+		/**
+		 * R​e​t​r​y
+		 */
+		RETRY: string
+		/**
+		 * C​l​e​a​r​ ​s​e​a​r​c​h
+		 */
+		CLEAR_SEARCH: string
+		/**
+		 * U​p​l​o​a​d
+		 */
+		UPLOAD: string
+		/**
+		 * C​o​p​y​ ​i​m​a​g​e​s​ ​o​r​ ​v​i​d​e​o​s​ ​f​r​o​m​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​ ​i​n​t​o​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​f​o​l​d​e​r
+		 */
+		UPLOAD_HINT: string
+		/**
+		 * D​r​o​p​ ​t​o​ ​c​o​p​y​ ​i​n​t​o​ ​"​{​f​o​l​d​e​r​}​"
+		 * @param {string} folder
+		 */
+		DROP_HERE: RequiredParams<'folder'>
+		/**
+		 * D​r​a​g​ ​i​m​a​g​e​s​ ​o​r​ ​v​i​d​e​o​s​ ​h​e​r​e​ ​t​o​ ​c​o​p​y​ ​t​h​e​m​ ​i​n​t​o​ ​t​h​i​s​ ​f​o​l​d​e​r​.
+		 */
+		DROP_HINT: string
+		/**
+		 * {​c​o​u​n​t​}​ ​{​{​f​i​l​e​|​f​i​l​e​s​}​}​ ​c​o​p​i​e​d
+		 * @param {number} count
+		 */
+		UPLOAD_DONE: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​s​k​i​p​p​e​d​ ​(​o​n​l​y​ ​i​m​a​g​e​s​ ​a​n​d​ ​v​i​d​e​o​s​,​ ​n​o​ ​f​o​l​d​e​r​s​)
+		 * @param {number} count
+		 */
+		UPLOAD_SKIPPED: RequiredParams<'count'>
+		/**
+		 * C​o​p​y​i​n​g​ ​f​a​i​l​e​d​:​ ​{​e​r​r​o​r​}
+		 * @param {string} error
+		 */
+		UPLOAD_FAILED: RequiredParams<'error'>
 	}
 	CONTROL: {
 		/**
@@ -4347,6 +4497,27 @@ type RootTranslation = {
 		 * S​e​t​t​i​n​g​s
 		 */
 		SETTINGS: string
+		/**
+		 * V​e​r​s​i​o​n
+		 */
+		VERSION: string
+		/**
+		 * D​e​s​k​t​o​p​ ​a​p​p
+		 */
+		VERSION_DESKTOP: string
+		/**
+		 * W​e​b​ ​a​p​p
+		 */
+		VERSION_WEB: string
+		/**
+		 * b​u​i​l​t​ ​{​d​a​t​e​}
+		 * @param {string} date
+		 */
+		VERSION_BUILT: RequiredParams<'date'>
+		/**
+		 * d​e​v​e​l​o​p​m​e​n​t​ ​b​u​i​l​d
+		 */
+		VERSION_DEV: string
 		/**
 		 * S​e​a​r​c​h​ ​s​e​t​t​i​n​g​s​.​.​.
 		 */
@@ -7091,6 +7262,78 @@ type RootTranslation = {
 		 * T​h​i​s​ ​s​o​n​g​ ​h​a​s​ ​n​o​ ​n​a​m​e​d​ ​b​l​o​c​k​ ​o​r​d​e​r​s​.
 		 */
 		NO_ORDERS: string
+		/**
+		 * L​i​n​k​ ​a​ ​S​p​o​t​i​f​y​ ​t​r​a​c​k
+		 */
+		SPOTIFY_LINK: string
+		/**
+		 * L​i​n​k​ ​o​r​ ​m​a​n​a​g​e​ ​S​p​o​t​i​f​y​ ​t​r​a​c​k​s
+		 */
+		SPOTIFY_MANAGE: string
+		/**
+		 * S​p​o​t​i​f​y​ ​t​r​a​c​k​s
+		 */
+		SPOTIFY_TITLE: string
+		/**
+		 * S​e​a​r​c​h​ ​S​p​o​t​i​f​y​ ​b​y​ ​t​i​t​l​e​ ​o​r​ ​a​r​t​i​s​t
+		 */
+		SPOTIFY_SEARCH_PLACEHOLDER: string
+		/**
+		 * S​u​g​g​e​s​t​i​o​n​s​ ​f​o​r​ ​t​h​i​s​ ​s​o​n​g
+		 */
+		SPOTIFY_SUGGESTIONS: string
+		/**
+		 * S​e​a​r​c​h​ ​r​e​s​u​l​t​s
+		 */
+		SPOTIFY_RESULTS: string
+		/**
+		 * L​i​n​k​e​d​ ​t​r​a​c​k​s
+		 */
+		SPOTIFY_LINKED: string
+		/**
+		 * N​o​ ​t​r​a​c​k​s​ ​l​i​n​k​e​d​ ​y​e​t​.​ ​A​d​d​ ​o​n​e​ ​o​r​ ​m​o​r​e​ ​f​r​o​m​ ​t​h​e​ ​l​i​s​t​ ​b​e​l​o​w​.
+		 */
+		SPOTIFY_NONE_LINKED: string
+		/**
+		 * L​i​n​k​ ​t​h​i​s​ ​t​r​a​c​k
+		 */
+		SPOTIFY_ADD: string
+		/**
+		 * A​l​r​e​a​d​y​ ​l​i​n​k​e​d
+		 */
+		SPOTIFY_ALREADY_LINKED: string
+		/**
+		 * T​h​e​ ​c​h​a​n​g​e​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.
+		 */
+		SPOTIFY_SAVE_ERROR: string
+		/**
+		 * R​e​m​o​v​e​ ​l​i​n​k
+		 */
+		SPOTIFY_UNLINK: string
+		/**
+		 * P​l​a​y​ ​i​n​ ​t​h​e​ ​p​l​a​y​e​r
+		 */
+		SPOTIFY_PLAY: string
+		/**
+		 * C​l​o​s​e​ ​p​l​a​y​e​r
+		 */
+		SPOTIFY_PLAYER_CLOSE: string
+		/**
+		 * T​h​e​ ​S​p​o​t​i​f​y​ ​p​l​a​y​e​r​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​l​o​a​d​e​d​.​ ​C​h​e​c​k​ ​t​h​e​ ​i​n​t​e​r​n​e​t​ ​c​o​n​n​e​c​t​i​o​n​.
+		 */
+		SPOTIFY_PLAYER_ERROR: string
+		/**
+		 * O​p​e​n​ ​i​n​ ​S​p​o​t​i​f​y
+		 */
+		SPOTIFY_OPEN: string
+		/**
+		 * N​o​ ​t​r​a​c​k​s​ ​f​o​u​n​d​ ​o​n​ ​S​p​o​t​i​f​y​.
+		 */
+		SPOTIFY_NO_RESULTS: string
+		/**
+		 * S​p​o​t​i​f​y​ ​s​e​a​r​c​h​ ​i​s​ ​n​o​t​ ​a​v​a​i​l​a​b​l​e​ ​r​i​g​h​t​ ​n​o​w​.
+		 */
+		SPOTIFY_ERROR: string
 	}
 	REMOTE: {
 		/**
@@ -7779,6 +8022,26 @@ export type TranslationFunctions = {
 			 * Log out and reset
 			 */
 			CONFIRM: () => LocalizedString
+			/**
+			 * Trouble signing in?
+			 */
+			LOGIN_LINK: () => LocalizedString
+			/**
+			 * Reset sign-in on this device
+			 */
+			LOGIN_TITLE: () => LocalizedString
+			/**
+			 * If signing in keeps looping or fails, removing what this device has stored for the login usually fixes it. Afterwards you choose your account and sign in again.
+			 */
+			LOGIN_INTRO: () => LocalizedString
+			/**
+			 * Reset
+			 */
+			LOGIN_CONFIRM: () => LocalizedString
+			/**
+			 * Removes every cookie of the desktop app — including the sign-in at your identity provider, so you will be asked for your password again.
+			 */
+			COOKIES_HINT_DESKTOP: () => LocalizedString
 		}
 		/**
 		 * Logged in as
@@ -8392,6 +8655,38 @@ export type TranslationFunctions = {
 		 * Clearing the URL will disable the ChurchTools integration for this account.
 		 */
 		CHURCH_TOOLS_CLEAR_WARNING: () => LocalizedString
+		/**
+		 * Spotify
+		 */
+		SPOTIFY: () => LocalizedString
+		/**
+		 * Configure Spotify
+		 */
+		CONFIGURE_SPOTIFY: () => LocalizedString
+		/**
+		 * Lets this account link set list songs to Spotify tracks. Create an app in the Spotify developer dashboard and copy its Client ID and Client Secret:
+		 */
+		SPOTIFY_HELP: () => LocalizedString
+		/**
+		 * Client ID
+		 */
+		SPOTIFY_CLIENT_ID: () => LocalizedString
+		/**
+		 * Client Secret
+		 */
+		SPOTIFY_CLIENT_SECRET: () => LocalizedString
+		/**
+		 * Leave blank to keep the existing secret. Enter a new value to update it.
+		 */
+		SPOTIFY_SECRET_HELP: () => LocalizedString
+		/**
+		 * (secret already set)
+		 */
+		SPOTIFY_SECRET_PLACEHOLDER_SET: () => LocalizedString
+		/**
+		 * Clearing the Client ID removes the Spotify credentials for this account.
+		 */
+		SPOTIFY_CLEAR_WARNING: () => LocalizedString
 	}
 	ADMIN_LOGS: {
 		/**
@@ -9532,6 +9827,98 @@ export type TranslationFunctions = {
 		 * Name (optional)
 		 */
 		NAME_OPTIONAL: () => LocalizedString
+		/**
+		 * Images
+		 */
+		IMAGES: () => LocalizedString
+		/**
+		 * Videos
+		 */
+		VIDEOS: () => LocalizedString
+		/**
+		 * Grid view
+		 */
+		VIEW_GRID: () => LocalizedString
+		/**
+		 * List view
+		 */
+		VIEW_LIST: () => LocalizedString
+		/**
+		 * Sort by
+		 */
+		SORT_BY: () => LocalizedString
+		/**
+		 * Name
+		 */
+		SORT_NAME: () => LocalizedString
+		/**
+		 * Date modified
+		 */
+		SORT_DATE: () => LocalizedString
+		/**
+		 * File size
+		 */
+		SORT_SIZE: () => LocalizedString
+		/**
+		 * Duration
+		 */
+		SORT_DURATION: () => LocalizedString
+		/**
+		 * Ascending
+		 */
+		SORT_ASC: () => LocalizedString
+		/**
+		 * Descending
+		 */
+		SORT_DESC: () => LocalizedString
+		/**
+		 * Resolution
+		 */
+		RESOLUTION: () => LocalizedString
+		/**
+		 * {count} {{file|files}}
+		 */
+		FILE_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * No files match "{query}"
+		 */
+		NO_RESULTS: (arg: { query: string }) => LocalizedString
+		/**
+		 * Retry
+		 */
+		RETRY: () => LocalizedString
+		/**
+		 * Clear search
+		 */
+		CLEAR_SEARCH: () => LocalizedString
+		/**
+		 * Upload
+		 */
+		UPLOAD: () => LocalizedString
+		/**
+		 * Copy images or videos from this computer into the current folder
+		 */
+		UPLOAD_HINT: () => LocalizedString
+		/**
+		 * Drop to copy into "{folder}"
+		 */
+		DROP_HERE: (arg: { folder: string }) => LocalizedString
+		/**
+		 * Drag images or videos here to copy them into this folder.
+		 */
+		DROP_HINT: () => LocalizedString
+		/**
+		 * {count} {{file|files}} copied
+		 */
+		UPLOAD_DONE: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} skipped (only images and videos, no folders)
+		 */
+		UPLOAD_SKIPPED: (arg: { count: number }) => LocalizedString
+		/**
+		 * Copying failed: {error}
+		 */
+		UPLOAD_FAILED: (arg: { error: string }) => LocalizedString
 	}
 	CONTROL: {
 		/**
@@ -11754,6 +12141,26 @@ export type TranslationFunctions = {
 		 * Settings
 		 */
 		SETTINGS: () => LocalizedString
+		/**
+		 * Version
+		 */
+		VERSION: () => LocalizedString
+		/**
+		 * Desktop app
+		 */
+		VERSION_DESKTOP: () => LocalizedString
+		/**
+		 * Web app
+		 */
+		VERSION_WEB: () => LocalizedString
+		/**
+		 * built {date}
+		 */
+		VERSION_BUILT: (arg: { date: string }) => LocalizedString
+		/**
+		 * development build
+		 */
+		VERSION_DEV: () => LocalizedString
 		/**
 		 * Search settings...
 		 */
@@ -14444,6 +14851,78 @@ export type TranslationFunctions = {
 		 * This song has no named block orders.
 		 */
 		NO_ORDERS: () => LocalizedString
+		/**
+		 * Link a Spotify track
+		 */
+		SPOTIFY_LINK: () => LocalizedString
+		/**
+		 * Link or manage Spotify tracks
+		 */
+		SPOTIFY_MANAGE: () => LocalizedString
+		/**
+		 * Spotify tracks
+		 */
+		SPOTIFY_TITLE: () => LocalizedString
+		/**
+		 * Search Spotify by title or artist
+		 */
+		SPOTIFY_SEARCH_PLACEHOLDER: () => LocalizedString
+		/**
+		 * Suggestions for this song
+		 */
+		SPOTIFY_SUGGESTIONS: () => LocalizedString
+		/**
+		 * Search results
+		 */
+		SPOTIFY_RESULTS: () => LocalizedString
+		/**
+		 * Linked tracks
+		 */
+		SPOTIFY_LINKED: () => LocalizedString
+		/**
+		 * No tracks linked yet. Add one or more from the list below.
+		 */
+		SPOTIFY_NONE_LINKED: () => LocalizedString
+		/**
+		 * Link this track
+		 */
+		SPOTIFY_ADD: () => LocalizedString
+		/**
+		 * Already linked
+		 */
+		SPOTIFY_ALREADY_LINKED: () => LocalizedString
+		/**
+		 * The change could not be saved.
+		 */
+		SPOTIFY_SAVE_ERROR: () => LocalizedString
+		/**
+		 * Remove link
+		 */
+		SPOTIFY_UNLINK: () => LocalizedString
+		/**
+		 * Play in the player
+		 */
+		SPOTIFY_PLAY: () => LocalizedString
+		/**
+		 * Close player
+		 */
+		SPOTIFY_PLAYER_CLOSE: () => LocalizedString
+		/**
+		 * The Spotify player could not be loaded. Check the internet connection.
+		 */
+		SPOTIFY_PLAYER_ERROR: () => LocalizedString
+		/**
+		 * Open in Spotify
+		 */
+		SPOTIFY_OPEN: () => LocalizedString
+		/**
+		 * No tracks found on Spotify.
+		 */
+		SPOTIFY_NO_RESULTS: () => LocalizedString
+		/**
+		 * Spotify search is not available right now.
+		 */
+		SPOTIFY_ERROR: () => LocalizedString
 	}
 	REMOTE: {
 		/**

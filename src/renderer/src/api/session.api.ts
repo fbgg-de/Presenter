@@ -19,6 +19,8 @@ export type SessionInfo = {
     /** `DEVELOPMENT` in the backend's config.php. Drives the dev banner — see devBanner.ts. */
     development?: boolean;
     bibleEnabled: boolean;
+    /** `SPOTIFY_API` is enabled and has credentials — set list entries can link a Spotify track. */
+    spotifyEnabled?: boolean;
     churchToolsEnabled?: boolean;
     wsHost?: WsHost;
     /**

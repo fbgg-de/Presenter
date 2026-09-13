@@ -6,6 +6,8 @@ import { persistState } from './persist';
 export const WINDOWS_KEY = 'presenter_windows';
 
 export interface WindowConfig {
+  /** Portable cue output role, explicitly bound to this local saved configuration. */
+  mediaRole?: string;
   name?: string;
   top?: number;
   left?: number;

@@ -5,7 +5,7 @@ import { networkInterfaces } from 'os';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { PresentationWindowManager } from './windows';
 import { registerIpcHandlers } from './ipc';
-import { LocalMediaServer } from './mediaServer';
+import { IMPORTABLE_EXTS, LocalMediaServer } from './mediaServer';
 import { PresenterWebSocketServer } from './wsServer';
 import { getCredentials } from './credentials';
 import { ShutdownCoordinator, startControlServer, setShutdownLogFile, CONTROL_PORT } from './shutdown';
@@ -14,7 +14,7 @@ import iconPng from '../../favicon.svg?asset';
 import iconSvg from '../../favicon.svg?asset';
 
 // ── Simple file-based window bounds persistence (replaces Config.ts) ──
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'fs';
 
 const boundsFile = join(app.getPath('userData'), 'window-bounds.json');
 const cookiesFile = join(app.getPath('userData'), 'session-cookies.json');
@@ -166,15 +166,33 @@ const saveSessionCookies = async (): Promise<void> => {
 const restoreSessionCookies = async (): Promise<void> => {
   try {
     if (!existsSync(cookiesFile)) return;
-    const cookies = JSON.parse(readFileSync(cookiesFile, 'utf-8')) as Electron.Cookie[];
+    const saved = JSON.parse(readFileSync(cookiesFile, 'utf-8')) as Electron.Cookie[];
     const thirtyDaysFromNow = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+
+    // One cookie per host + name + path. Restoring used to pass `domain` for every cookie, which
+    // makes Chromium store even a host-only cookie as a DOMAIN cookie (".host"). The next login then
+    // set a fresh host-only PHPSESSID next to it; the browser sends both, the older restored one
+    // first, and PHP reads the first — so the backend kept seeing the dead session and the login page
+    // looped. Each restart saved and restored both again. The backend only ever sets host-only
+    // cookies (Cors::sessionCookieParams), so a host-only entry wins over a domain duplicate.
+    const byKey = new Map<string, Electron.Cookie>();
+    for (const cookie of saved) {
+      const key = `${cookie.domain?.replace(/^\./, '')}|${cookie.name}|${cookie.path ?? '/'}`;
+      const existing = byKey.get(key);
+      const isHostOnly = (c: Electron.Cookie) => c.hostOnly !== false && !c.domain?.startsWith('.');
+      if (!existing || (isHostOnly(cookie) && !isHostOnly(existing))) byKey.set(key, cookie);
+    }
+    const cookies = [...byKey.values()];
+
     for (const cookie of cookies) {
+      const hostOnly = cookie.hostOnly !== false && !cookie.domain?.startsWith('.');
       try {
         await session.defaultSession.cookies.set({
           url: `${cookie.secure ? 'https' : 'http'}://${cookie.domain?.replace(/^\./, '')}`,
           name: cookie.name,
           value: cookie.value,
-          domain: cookie.domain,
+          // Omitted for host-only cookies: any explicit domain turns them into domain cookies.
+          ...(hostOnly ? {} : { domain: cookie.domain }),
           path: cookie.path,
           secure: cookie.secure,
           httpOnly: cookie.httpOnly,
@@ -388,14 +406,30 @@ const createWindow = () => {
     return { action: 'deny' };
   });
 
-  const HTML_PATHS: Record<'/' | '/notes' | '/admin' | '/login', string> = {
-    '/': join(__dirname, '../renderer/index.html'),
-    '/notes': join(__dirname, '../renderer/musician.html'),
-    '/admin': join(__dirname, '../renderer/admin.html'),
-    '/login': join(__dirname, '../renderer/login.html'),
+  const PAGE_FILES = {
+    '/': 'index.html',
+    '/notes': 'musician.html',
+    '/admin': 'admin.html',
+    '/login': 'login.html',
+  } as const;
+  type AppPage = keyof typeof PAGE_FILES;
+
+  /**
+   * Open one of the app's own pages. During `electron-vite dev` that is the dev server, so
+   * renderer edits show up (loadFile would serve the stale `out/renderer` build); otherwise the
+   * bundled files, which also work offline. Never the website's copy.
+   */
+  const loadPage = (page: AppPage, query?: Record<string, string>) => {
+    const devUrl = is.dev ? process.env['ELECTRON_RENDERER_URL'] : undefined;
+    if (devUrl) {
+      const target = new URL(PAGE_FILES[page], devUrl.replace(/\/?$/, '/'));
+      for (const [key, value] of Object.entries(query ?? {})) target.searchParams.set(key, value);
+      return mainWindow!.loadURL(target.toString());
+    }
+    return mainWindow!.loadFile(join(__dirname, '../renderer', PAGE_FILES[page]), { query });
   };
 
-  mainWindow.webContents.on('will-navigate', (event, url) => {
+  const interceptBackendNavigation = (event: { preventDefault: () => void }, url: string) => {
     if (url.startsWith('file://')) return;
 
     let parsed: URL;
@@ -425,7 +459,7 @@ const createWindow = () => {
       event.preventDefault();
       const query: Record<string, string> = { switch: '1' };
       if (logoutState === 'logged_out_reset') query.state = logoutState;
-      mainWindow!.loadFile(HTML_PATHS['/login'], { query });
+      loadPage('/login', query);
       return;
     }
 
@@ -433,7 +467,7 @@ const createWindow = () => {
       // Block the navigation — perform the code exchange in a hidden window
       event.preventDefault();
 
-      const htmlFile = HTML_PATHS[parsed.pathname as keyof typeof HTML_PATHS] ?? HTML_PATHS['/'];
+      const page: AppPage = Object.hasOwn(PAGE_FILES, parsed.pathname) ? (parsed.pathname as AppPage) : '/';
 
       const exchangeWin = new BrowserWindow({ show: false, webPreferences: { contextIsolation: true } });
 
@@ -454,16 +488,16 @@ const createWindow = () => {
         }
         if (error) {
           console.error('[OIDC] Login rejected by the backend:', error);
-          mainWindow!.loadFile(HTML_PATHS['/login'], { query: { error } });
+          loadPage('/login', { error });
         } else {
-          mainWindow!.loadFile(htmlFile);
+          loadPage(page);
         }
         exchangeWin.destroy();
       });
 
       exchangeWin.webContents.on('did-fail-load', (_e, errCode, errDesc) => {
         console.error('[OIDC] Exchange failed:', errCode, errDesc);
-        mainWindow!.loadFile(HTML_PATHS['/login'], { query: { error: 'oidc.authentication_failed' } });
+        loadPage('/login', { error: 'oidc.authentication_failed' });
         exchangeWin.destroy();
       });
 
@@ -487,6 +521,15 @@ const createWindow = () => {
     // blocks new-window opens; will-navigate only fires for same-window navigations,
     // which are always programmatic (window.location.assign) in our app.
     // So: allow all same-window external navigations (they are all OIDC flows).
+  };
+
+  mainWindow.webContents.on('will-navigate', (event, url) => interceptBackendNavigation(event, url));
+  // When the provider still holds an SSO session it answers the authorization request with an
+  // immediate HTTP redirect to the callback. Server redirects never raise will-navigate, so
+  // without this the backend exchanged the code itself and the window stayed on the website —
+  // where the desktop preload makes the web app redirect to a file:// login it may not load.
+  mainWindow.webContents.on('will-redirect', (event) => {
+    if (event.isMainFrame) interceptBackendNavigation(event, event.url);
   });
 
   // Set the main window reference for window bounds notifications
@@ -663,6 +706,32 @@ const createWindow = () => {
   // did-navigate fires when the renderer navigates to a new URL (including IdP redirects).
   // Combined with did-finish-load this ensures we attempt auto-fill on every navigation.
   mainWindow.webContents.on('did-navigate', (_event, url) => {
+    // Safety net: the desktop app must never run the website's copy of its pages. If the window
+    // still ends up on one (login finished on the server, a stray link), open the local page
+    // instead — the session cookie is shared, so the local app sees the same login.
+    try {
+      const parsed = new URL(url);
+      const devOrigin = process.env['ELECTRON_RENDERER_URL'] ? new URL(process.env['ELECTRON_RENDERER_URL']).origin : null;
+      const path = parsed.pathname.replace(/\/+$/, '') || '/';
+      if (
+        backendOrigin &&
+        parsed.origin === new URL(backendOrigin).origin &&
+        parsed.origin !== devOrigin &&
+        !parsed.searchParams.has('code')
+      ) {
+        if (path === '/unauthorized') {
+          loadPage('/login', { error: parsed.searchParams.get('error') || 'oidc.authentication_failed' });
+          return;
+        }
+        if (Object.hasOwn(PAGE_FILES, path)) {
+          console.warn(`[OIDC] Window landed on the website (${path}); loading the local page instead`);
+          loadPage(path as AppPage, Object.fromEntries(parsed.searchParams));
+          return;
+        }
+      }
+    } catch {
+      /* unparseable URL — nothing to redirect */
+    }
     scheduleAutoFill(url).catch((err) => console.error('[Credentials] Auto-fill error:', err));
   });
 
@@ -670,7 +739,7 @@ const createWindow = () => {
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL']);
   } else {
-    mainWindow.loadFile(HTML_PATHS['/']);
+    loadPage('/');
   }
 };
 
@@ -720,6 +789,20 @@ ipcMain.on('set-backend-origin', (_event, origin: string) => {
       /* ignore */
     }
   }
+});
+
+// "Trouble signing in?" on the login page. A website can only expire its own cookies; the desktop
+// app owns its whole cookie store, so it also drops the identity provider's cookies — a stale
+// provider session is exactly what can keep a sign-in looping. The cookies saved for the next
+// start go too, or the stale session would simply be restored on relaunch.
+ipcMain.handle('clear-all-cookies', async () => {
+  await session.defaultSession.clearStorageData({ storages: ['cookies'] });
+  try {
+    rmSync(cookiesFile, { force: true });
+  } catch {
+    /* nothing saved */
+  }
+  console.log('[Cookies] Cleared all cookies on request from the login page');
 });
 
 // Auto-start media server when main window finishes loading and a media path is configured
@@ -923,6 +1006,28 @@ app.whenReady().then(async () => {
     } finally {
       mediaServerStarting = false;
     }
+  });
+
+  // ── Media browser upload ──
+  ipcMain.handle('pick-media-files', async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
+    const result = await dialog.showOpenDialog(win as BrowserWindow, {
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Images & videos', extensions: [...IMPORTABLE_EXTS].map((ext) => ext.slice(1)) }],
+    });
+    return result.canceled ? [] : result.filePaths;
+  });
+
+  ipcMain.handle('import-media-files', async (_event, mediaPath: string, subPath: string, sources: string[]) => {
+    if (!mediaPath || !Array.isArray(sources)) throw new Error('No media folder configured');
+    const { resolve: resolvePath } = await import('path');
+    // Through the instance that serves this folder, so its cached listing is refreshed; a
+    // detached one only for a folder that is not being served right now.
+    const target = mediaServer && mediaServer.getMediaPath() === resolvePath(mediaPath) ? mediaServer : new LocalMediaServer(mediaPath);
+    return target.importFiles(
+      sources.filter((source) => typeof source === 'string'),
+      typeof subPath === 'string' ? subPath : '',
+    );
   });
 
   // Handle second-instance (single instance lock)

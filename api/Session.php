@@ -45,6 +45,7 @@ class Session extends RestController
             default:
                 $account = $_SESSION['account'] ?? 0;
                 $ctEnabled = false;
+                $spotifyEnabled = false;
                 // The name the user picked on the login page — shown instead of the mail
                 // address wherever the app names the current account.
                 $name = $_SESSION['name'] ?? $_SESSION['admin_name'] ?? '';
@@ -52,6 +53,15 @@ class Session extends RestController
                     $ctStmt = self::prepare('SELECT `name`, `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
                     $ctStmt->bind_param('i', $account)->execute()->fetchOne($ctRow)->close();
                     $ctEnabled = !empty($ctRow['church_tools_url']) && !empty($ctRow['church_tools_token']);
+                    // Separate and guarded: the columns arrive with migration 25, and a missing
+                    // column must not cost the whole session response.
+                    try {
+                        $spStmt = self::prepare('SELECT `spotify_client_id`, `spotify_client_secret` FROM `account` WHERE `license` = ?');
+                        $spStmt->bind_param('i', $account)->execute()->fetchOne($spRow)->close();
+                        $spotifyEnabled = !empty($spRow['spotify_client_id']) && !empty($spRow['spotify_client_secret']);
+                    } catch (\Throwable $e) {
+                        $spotifyEnabled = false;
+                    }
                     // Sessions established before the name was stored have none — read it
                     // from the account row instead of forcing a re-login.
                     if ($name === '' && !empty($ctRow['name'])) {
@@ -71,6 +81,7 @@ class Session extends RestController
                         // nothing an operator could not already see from its address.
                         'development' => defined('DEVELOPMENT') && (bool) DEVELOPMENT,
                         'bibleEnabled' => defined('BIBLE_API') && is_array(BIBLE_API) && !empty(BIBLE_API['enabled']) && BIBLE_API['enabled'],
+                        'spotifyEnabled' => $spotifyEnabled,
                         'churchToolsEnabled' => $ctEnabled,
                         'wsHost' => defined('WS_HOST') && is_array(WS_HOST) && !empty(WS_HOST['host'])
                             ? [

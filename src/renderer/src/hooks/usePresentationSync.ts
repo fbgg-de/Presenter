@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
+import { useMediaCueHost } from '@/media/useMediaCueHost';
+import { sendCueCommand } from '@/media/runtime';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { broadcastContent, getOpenWindowsSync, invalidateSentContentCache, setWindowStyleResolver } from '@/utils/presentationBridge';
 import { SONG_TRANSLATION_LINE_REGEX, inferSongLanguages, resolvePrimaryLanguage } from '@/song';
@@ -329,6 +331,7 @@ export const usePresentationSync = (): void => {
           }
           break;
         case 'toggle_video_playback':
+          if (sendCueCommand({ type: 'toggle' })) break;
           if (window.api?.videoCommand) {
             window.api.videoCommand({ action: 'toggle', fadeDuration: ctx.videoFadeDuration });
           }
@@ -438,8 +441,8 @@ export const usePresentationSync = (): void => {
   // window we must re-broadcast even though the global state is unchanged.
   const windowStylesSig = useMemo(
     () =>
-      (windowConfigs as Array<{ name?: string; styleId?: number }> | undefined)
-        ?.map((c) => `${c.name ?? ''}:${c.styleId ?? ''}`)
+      windowConfigs
+        ?.map((c) => `${c.id}:${c._runtimeId}:${c.name ?? ''}:${c.styleId ?? ''}:${c.mediaRole ?? ''}:${c.hideBackground}`)
         .join('|') ?? '',
     [windowConfigs],
   );
@@ -590,10 +593,12 @@ export const usePresentationSync = (): void => {
     return { contentType, blocks, style, title, copyright, authors, licenseNumber, songLanguages };
   }, [currentSong, activeItem, orderName, allStyles, globalStyleId, currentShow?.styleId]);
 
+  const mediaCue = useMediaCueHost(currentShow, activeItem, blocks);
   // Keep frequently-changing object refs accessible inside the broadcast effect
   // WITHOUT making them part of its dependency array (would otherwise cause the
   // heavy effect — and IPC broadcast — to fire on every parent re-render).
   const broadcastRef = useRef({
+    mediaCue,
     contentType,
     blocks,
     style,
@@ -612,6 +617,7 @@ export const usePresentationSync = (): void => {
     agenda,
   });
   broadcastRef.current = {
+    mediaCue,
     contentType,
     blocks,
     style,
@@ -684,6 +690,7 @@ export const usePresentationSync = (): void => {
       }
 
       const content: PresentationContent = {
+        mediaCue: cb.mediaCue,
         contentType: cb.contentType,
         displayMode: 'normal',
         activeBlockIndex: nav.activeBlockIndex,
@@ -787,8 +794,9 @@ export const usePresentationSync = (): void => {
     // edits actually re-broadcast and apply immediately).
     const ai = b.activeItem;
     const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${b.blocks.length}|${b.nextLinePreview}|${ai?.mediaPath}|${ai?.mediaColor}|${ai?.mediaObjectFit}|${ai?.mediaObjectPosition}|${ai?.mediaZoom}|${ai?.mediaBlur}|${ai?.mediaAutoplay}|${ai?.mediaLoop}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${b.agenda.map((a) => a.label).join('~')}`;
-    if (contentKey === lastKeyRef.current) return;
-    lastKeyRef.current = contentKey;
+    const cueKey = contentKey + JSON.stringify(b.mediaCue ?? null);
+    if (cueKey === lastKeyRef.current) return;
+    lastKeyRef.current = cueKey;
 
     const elapsed = Date.now() - lastBroadcastAtRef.current;
     if (elapsed >= MIN_INTERVAL_MS && broadcastTimerRef.current === null) {
@@ -800,6 +808,7 @@ export const usePresentationSync = (): void => {
       broadcastTimerRef.current = setTimeout(flush, Math.max(0, MIN_INTERVAL_MS - elapsed));
     }
   }, [
+    mediaCue,
     activeItemIndex,
     activeBlockIndex,
     activeLineIndex,

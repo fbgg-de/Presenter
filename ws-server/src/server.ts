@@ -473,9 +473,30 @@ function expireSync(account: number) {
   const entry = lastSyncPerAccount.get(account);
   if (!entry) return;
   if (entry.timer) clearTimeout(entry.timer);
+  const idleMs = Date.now() - entry.at;
+  // Only expire what is actually old. On 2026-09-13 a relay reporting 1.3.0 sent
+  // sync_expired six minutes after the operator's last update, and kept replaying that
+  // update afterwards — neither is possible with a single timer per fresh entry. Whatever
+  // fired, an entry updated recently is left alone and its countdown re-armed for the rest.
+  if (SYNC_TTL_MS > 0 && idleMs < SYNC_TTL_MS - 1000) {
+    console.warn(`[WS Relay] account=${account} expiry fired after ${Math.round(idleMs / 1000)}s idle — kept, re-armed`);
+    recordTrace({
+      account,
+      dir: 'sys',
+      clientId: 'relay',
+      role: 'unknown',
+      event: 'sync_expiry_deferred',
+      bytes: 0,
+      payload: JSON.stringify({ idleMs, ttlSeconds: SYNC_TTL_SECONDS }),
+    });
+    entry.timer = setTimeout(() => expireSync(account), SYNC_TTL_MS - idleMs);
+    entry.timer.unref?.();
+    return;
+  }
   lastSyncPerAccount.delete(account);
   console.log(`[WS Relay] account=${account} selection expired after ${SYNC_TTL_SECONDS}s of no updates`);
-  sendToAccount(account, { type: 'sync_expired', ttlSeconds: SYNC_TTL_SECONDS });
+  // `idleMs` and `lastUpdateAt` are diagnostics for the trace; clients only read `type`.
+  sendToAccount(account, { type: 'sync_expired', ttlSeconds: SYNC_TTL_SECONDS, idleMs, lastUpdateAt: entry.at });
 }
 
 /**
@@ -538,6 +559,42 @@ function broadcastPeerCount(account: number) {
   broadcastMonitorPeers();
 }
 
+/** Loopback and private-range addresses — where a reverse proxy in front of the relay lives. */
+const isPrivateAddress = (address: string): boolean => {
+  const ip = address.replace(/^::ffff:/, '');
+  if (ip === '::1' || /^127\./.test(ip)) return true;
+  if (/^10\./.test(ip) || /^192\.168\./.test(ip) || /^169\.254\./.test(ip)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  return /^f[cd][0-9a-f]{2}:/i.test(ip) || /^fe80:/i.test(ip);
+};
+
+/**
+ * The client's address as far as it can be trusted.
+ *
+ * Behind Docker and a reverse proxy every socket comes from the bridge gateway (172.27.0.1
+ * in the live log), so every device looked the same. A forwarding header is only believed
+ * when the socket itself comes from a private address — i.e. from our own proxy; a client
+ * reaching the relay directly cannot pose as someone else. Walking the chain from the
+ * right skips further private hops (a second proxy) and stops at the first public address,
+ * which is the one our outermost proxy saw; entries further left are client-supplied.
+ */
+const clientAddress = (req: IncomingMessage): string => {
+  const socketAddress = req.socket.remoteAddress ?? 'unknown';
+  if (!isPrivateAddress(socketAddress)) return socketAddress;
+  const header = req.headers['x-forwarded-for'];
+  const chain = (Array.isArray(header) ? header.join(',') : (header ?? ''))
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  for (let i = chain.length - 1; i >= 0; i--) {
+    if (!isPrivateAddress(chain[i])) return chain[i];
+  }
+  const realIp = req.headers['x-real-ip'];
+  if (typeof realIp === 'string' && realIp.trim()) return realIp.trim();
+  // Everything private: a device on the venue LAN, reported by the proxy as such.
+  return chain[0] ?? socketAddress;
+};
+
 const wss = new WebSocketServer({ port: PORT });
 
 // Periodic ping — broadcast peer counts every 30 s so the operator footer stays current
@@ -559,7 +616,7 @@ wss.on('listening', () => {
 });
 
 wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-  const ip = req.socket.remoteAddress ?? 'unknown';
+  const ip = clientAddress(req);
   const clientId = `c${++socketSeq}`;
   console.log(`[WS Relay] New connection from ${ip} (${clientId})`);
 

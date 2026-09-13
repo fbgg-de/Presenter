@@ -56,6 +56,7 @@ const presentationApi = {
    * Report video playback status back to the main window.
    */
   reportVideoStatus: (status: {
+    cue?: { session: string; revision: number; role: string; sources: Record<string, string> };
     hasVideo: boolean;
     paused?: boolean;
     muted?: boolean;

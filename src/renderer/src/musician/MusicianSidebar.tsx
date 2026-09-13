@@ -1,4 +1,4 @@
-﻿import { useState, useCallback, useMemo, MouseEvent } from 'react';
+import { useState, useCallback, useMemo, MouseEvent } from 'react';
 import {
   Badge,
   Box,
@@ -349,6 +349,7 @@ export const MusicianSidebar = ({
         title: currentShow.title,
         order: currentShow.order,
         groups: currentShow.groups,
+        mediaCues: currentShow.mediaCues,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
@@ -365,6 +366,7 @@ export const MusicianSidebar = ({
         title: currentShow.title,
         order: orderOverride ?? currentShow.order,
         groups: currentShow.groups,
+        mediaCues: currentShow.mediaCues,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));

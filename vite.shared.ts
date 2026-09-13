@@ -2,7 +2,34 @@
  * Shared Vite configuration used by both `electron.vite.config.ts` and `vite.config.ts`.
  */
 import { resolve } from 'path';
+import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
 import type { UserConfig } from 'vite';
+
+const git = (args: string) =>
+  execSync(`git ${args}`, { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] })
+    .toString()
+    .trim();
+
+/**
+ * Build identity shown in Settings, so it is obvious which build a device or deployment runs.
+ * The package version alone does not change between deployments, hence the commit — marked
+ * `-dirty` when built from uncommitted changes. Without git (e.g. a source tarball) it is empty.
+ */
+export const appBuildDefines = (() => {
+  const { version } = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')) as { version: string };
+  let commit = '';
+  try {
+    commit = git('rev-parse --short HEAD') + (git('status --porcelain --untracked-files=no') ? '-dirty' : '');
+  } catch {
+    /* not a git checkout */
+  }
+  return {
+    __APP_VERSION__: JSON.stringify(version),
+    __APP_COMMIT__: JSON.stringify(commit),
+    __APP_BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  };
+})();
 
 /** Renderer resolves aliases (shared between Electron and standalone builds). */
 export const rendererAliases: Record<string, string> = {
@@ -18,6 +45,7 @@ export const rendererInputs: Record<string, string> = {
   main: resolve(__dirname, 'src/renderer/index.html'),
   musician: resolve(__dirname, 'src/renderer/musician.html'),
   presentation: resolve(__dirname, 'src/renderer/presentation.html'),
+  spotifyPlayer: resolve(__dirname, 'src/renderer/spotify-player.html'),
 };
 
 /**
@@ -28,6 +56,8 @@ export const electronRendererInputs: Record<string, string> = {
   login: resolve(__dirname, 'src/renderer/login.html'),
   main: resolve(__dirname, 'src/renderer/index.html'),
   presentation: resolve(__dirname, 'src/renderer/presentation.html'),
+  // Framed by the Set List dialog: the only page whose CSP lets Spotify's embed run.
+  spotifyPlayer: resolve(__dirname, 'src/renderer/spotify-player.html'),
 };
 
 /**

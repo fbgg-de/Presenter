@@ -1,0 +1,34 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      The only page that may run Spotify's embed: its iFrame API needs 'unsafe-eval' and scripts
+      from embed-cdn.spotifycdn.com. It is shown inside an iframe of the Set List dialog and holds
+      nothing but the player, so the looser policy stays out of the app's own pages — do not copy
+      it to them. ws:/'self' connections are for the dev server's HMR client.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' 'unsafe-eval' https://open.spotify.com https://embed-cdn.spotifycdn.com; frame-src https://open.spotify.com; connect-src 'self' ws: wss: https:; style-src 'self' 'unsafe-inline'; img-src https: data:"
+    />
+    <title>Spotify</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: transparent;
+        overflow: hidden;
+      }
+      #player iframe {
+        display: block;
+        border: 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="player"></div>
+    <script type="module" src="/src/spotify-player.ts"></script>
+  </body>
+</html>

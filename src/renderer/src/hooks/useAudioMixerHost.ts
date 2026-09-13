@@ -26,6 +26,7 @@ import {
   AUDIO_SCHEMA,
   AUDIO_SUBSCRIBER_TTL_MS,
   bridgeDocument,
+  diffAudioState,
   filterAudioState,
   mergeAudioState,
   refuseCommand,
@@ -360,11 +361,23 @@ export const useAudioMixerHost = ({ send }: UseAudioMixerHostOptions) => {
         }
         case 'patch': {
           const incoming = bridgeDocument(msg);
+          const allowed = allowedMixIds();
+          const before = filterAudioState(stateRef.current, allowed);
           stateRef.current = mergeAudioState(stateRef.current, incoming);
           publishStatus();
           const ids = subscriberIds();
           if (!ids.length) return;
-          sendToClient(AUDIO_ACTIONS.patch, { state: filterAudioState(incoming, allowedMixIds()) } as Record<string, unknown>, ids);
+          // Pages that apply per-item patches get only what changed; anything older (a phone
+          // that has not reloaded since the update) still gets the whole lists it expects.
+          const itemIds = ids.filter((id) => subscribersRef.current.get(id)?.itemPatches);
+          const listIds = ids.filter((id) => !subscribersRef.current.get(id)?.itemPatches);
+          if (listIds.length)
+            sendToClient(AUDIO_ACTIONS.patch, { state: filterAudioState(incoming, allowed) } as Record<string, unknown>, listIds);
+          if (itemIds.length) {
+            const { state, items } = diffAudioState(before, filterAudioState(stateRef.current, allowed), incoming);
+            const empty = !state.mixes && !state.strips && !state.muteGroups && !items.mixes && !items.strips;
+            if (!empty) sendToClient(AUDIO_ACTIONS.patch, { state, items } as Record<string, unknown>, itemIds);
+          }
           return;
         }
         case 'meters': {
@@ -473,6 +486,7 @@ export const useAudioMixerHost = ({ send }: UseAudioMixerHostOptions) => {
             mixId: typeof data.mixId === 'string' ? data.mixId : undefined,
             stripIds: Array.isArray(data.stripIds) ? (data.stripIds as string[]) : undefined,
             meters: !!data.meters && configRef.current.allowMeters,
+            itemPatches: data.itemPatches === true,
             seenAt: Date.now(),
           });
           syncMeterFeed();

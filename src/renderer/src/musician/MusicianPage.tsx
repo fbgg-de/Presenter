@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Box, Stack, Typography, Button, CircularProgress, IconButton, Tooltip, Snackbar, Alert } from '@mui/material';
 import {
   KeyboardArrowUp as PrevSongIcon,
@@ -49,6 +49,11 @@ import { useMetrics } from '@/hooks/useMetrics';
 import { useGetSessionQuery } from '@/api/session.api';
 import { useUpdateSongMutation } from '@/api/songs.api';
 import { useSaveShowMutation, useGetShowQuery } from '@/api/shows.api';
+import { clearSnooze, isSnoozed, snooze } from '@/utils/snooze';
+
+/** Dismissed version/show warnings stay away for an hour, so they do not keep interrupting musicians. */
+const SYNC_MISMATCH_SNOOZE_KEY = 'presenter_musician_sync_mismatch_snooze';
+const SHOW_MISMATCH_SNOOZE_KEY = 'presenter_musician_show_mismatch_snooze';
 import { SongOrderEditor } from '@/components/song/SongOrderEditor';
 import { useLazySearchChurchToolsSongsQuery } from '@/api/churchtools.api';
 import { presenterApi } from '@/api/base.api';
@@ -292,7 +297,8 @@ export const MusicianPage = () => {
         if (match.kind === 'stale') {
           if (autoRefreshRef.current) {
             void reloadShowRef.current?.();
-          } else {
+          } else if (!isSnoozed(SYNC_MISMATCH_SNOOZE_KEY)) {
+            // Raised on every refused update, so a dismissal has to outlast the next one.
             setSyncMismatch({ songTitle: state.songTitle, at: Date.now() });
           }
           return;
@@ -878,6 +884,7 @@ export const MusicianPage = () => {
         title: currentShow.title,
         order: nextShowOrder,
         groups: currentShow.groups,
+        mediaCues: currentShow.mediaCues,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
@@ -979,7 +986,17 @@ export const MusicianPage = () => {
     !!operatorWsShowTitle &&
     !!currentShow?.title &&
     operatorWsShowTitle !== currentShow.title &&
-    dismissedMismatchShowTitle !== operatorWsShowTitle;
+    dismissedMismatchShowTitle !== operatorWsShowTitle &&
+    !isSnoozed(SHOW_MISMATCH_SNOOZE_KEY, operatorWsShowTitle);
+
+  const dismissShowMismatch = () => {
+    snooze(SHOW_MISMATCH_SNOOZE_KEY, operatorWsShowTitle ?? '');
+    setDismissedMismatchShowTitle(operatorWsShowTitle ?? null);
+  };
+  const dismissSyncMismatch = () => {
+    snooze(SYNC_MISMATCH_SNOOZE_KEY);
+    setSyncMismatch(null);
+  };
 
   const applyOperatorShow = useCallback(async () => {
     if (!operatorWsShowTitle) return;
@@ -1035,7 +1052,7 @@ export const MusicianPage = () => {
           severity="warning"
           action={
             <Stack direction="row" spacing={1}>
-              <Button color="inherit" size="small" onClick={() => setDismissedMismatchShowTitle(operatorWsShowTitle ?? null)}>
+              <Button color="inherit" size="small" onClick={dismissShowMismatch}>
                 {LL.CONNECTIVITY.SNACK_DISMISS()}
               </Button>
               <Button color="inherit" size="small" onClick={() => void applyOperatorShow()}>
@@ -1043,7 +1060,7 @@ export const MusicianPage = () => {
               </Button>
             </Stack>
           }
-          onClose={() => setDismissedMismatchShowTitle(operatorWsShowTitle ?? null)}
+          onClose={dismissShowMismatch}
         >
           {LL.MUSICIAN.SHOW_MISMATCH_WARNING({ operatorShow: operatorWsShowTitle ?? '', currentShow: currentShow?.title ?? '' })}
         </Alert>
@@ -1056,7 +1073,7 @@ export const MusicianPage = () => {
           severity="warning"
           action={
             <Stack direction="row" spacing={1}>
-              <Button color="inherit" size="small" onClick={() => setSyncMismatch(null)}>
+              <Button color="inherit" size="small" onClick={dismissSyncMismatch}>
                 {LL.CONNECTIVITY.SNACK_DISMISS()}
               </Button>
               <Button
@@ -1064,6 +1081,8 @@ export const MusicianPage = () => {
                 size="small"
                 onClick={() => {
                   setSyncMismatch(null);
+                  // Reloading resolves this mismatch, so a later one should be reported again.
+                  clearSnooze(SYNC_MISMATCH_SNOOZE_KEY);
                   void handleRefreshContent();
                 }}
               >
@@ -1071,7 +1090,7 @@ export const MusicianPage = () => {
               </Button>
             </Stack>
           }
-          onClose={() => setSyncMismatch(null)}
+          onClose={dismissSyncMismatch}
         >
           {LL.REMOTE.SYNC_STALE_MUSICIAN()}
         </Alert>

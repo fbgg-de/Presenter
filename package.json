@@ -24,6 +24,11 @@
     "test:ws:bundle": "node scripts/test-ws-bundle.mjs",
     "test:screens": "node test/viewport/run.mjs",
     "test:lyrics": "node test/lyrics/run.mjs",
+    "test:media": "node test/media-cue/run.mjs",
+    "test:media:browser": "node test/media-cue/browser.mjs",
+    "test:media:server": "node test/media-cue/server.mjs",
+    "test:media:library": "node test/media-cue/library.mjs",
+    "test:media:outputs": "node test/media-cue/output.mjs",
     "test:timeformat": "node test/timeformat/run.mjs",
     "test:stage": "node test/stage/run.mjs",
     "test:mixer": "node test/mixer/run.mjs",
@@ -99,5 +104,8 @@
     "vite-plugin-static-copy": "^4.1.1",
     "vite-plugin-svgr": "^5.2.0",
     "ws": "^8.21.3"
+  },
+  "dependencies": {
+    "mediabunny": "^1.56.1"
   }
 }

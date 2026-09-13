@@ -1,5 +1,7 @@
-﻿import { useCallback, useRef, useState, memo, CSSProperties, ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, memo, CSSProperties, ReactNode } from 'react';
 import {
+  Alert,
+  Button,
   Box,
   Card,
   CardContent,
@@ -38,8 +40,9 @@ import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { useAppDispatch } from '@/store';
 import { updateShowItem } from '@/store/showSlice';
 import CompactPositionPicker from '@/components/common/CompactPositionPicker';
-import { useGetPresentationSettings } from '@/store/presentationSlice';
+import { setVideoVisible as setVideoVisibleRedux, useGetPresentationSettings } from '@/store/presentationSlice';
 import { useGetSettings, type MediaPreviewAspect } from '@/store/settingsSlice';
+import { useMediaLabels } from '@/media/labels';
 import { formatTime } from '@/utils';
 
 // ── Shared utility ───────────────────────────────────────────────────────────
@@ -152,9 +155,9 @@ interface VideoControlsProps {
 }
 
 /**
- * Local-only video controls for the item preview.
- * These controls affect ONLY the preview <video> element — they do NOT broadcast
- * to presentation windows. Presentation windows play independently (autoplay/loop)
+ * Media-item transport controls; monitoring audio remains local.
+ * Play, pause, stop and seek also broadcast
+ * to presentation windows. Appearance/autoplay/loop follow
  * based on the item's saved settings.
  */
 const VideoControls = ({
@@ -219,12 +222,12 @@ const VideoControls = ({
           max={duration || 1}
           step={0.5}
           value={displayTime}
-          onMouseDown={() => {
+          onPointerDown={() => {
             seekDragging.current = true;
             setSeekDisplay(currentTime);
           }}
           onChange={(_, v) => {
-            if (seekDragging.current) setSeekDisplay(v as number);
+            setSeekDisplay(v as number);
           }}
           onChangeCommitted={(_, v) => {
             seekDragging.current = false;
@@ -284,12 +287,12 @@ const VideoControls = ({
           max={1}
           step={0.05}
           value={displayVolume}
-          onMouseDown={() => {
+          onPointerDown={() => {
             volumeDragging.current = true;
             setVolumeDisplay(muted ? 0 : volume);
           }}
           onChange={(_, v) => {
-            if (volumeDragging.current) setVolumeDisplay(v as number);
+            setVolumeDisplay(v as number);
           }}
           onChangeCommitted={(_, v) => {
             volumeDragging.current = false;
@@ -463,6 +466,14 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
   const { hideTransitionMode, hideTransitionDuration, mediaPreviewAspect } = useGetSettings();
   const { activeItemIndex } = useGetPresentationSettings();
 
+  const ml = useMediaLabels();
+  const [mediaStatus, setMediaStatus] = useState<'ready' | 'error' | 'playback'>('ready'),
+    [retry, setRetry] = useState(0);
+  useEffect(() => {
+    setMediaStatus('ready');
+    setPlaying(false);
+    setDuration(0);
+  }, [item.mediaPath]);
   const resolvedPath = resolveMediaUrl(item.mediaPath);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
@@ -471,7 +482,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   // Track whether the media-item video is visible on all presentation windows.
-  const [videoVisible, setVideoVisible] = useState(true);
+  const { videoVisible } = useGetPresentationSettings();
 
   const patch = useCallback(
     (fields: Partial<ShowItem>) => dispatch(updateShowItem({ index: activeItemIndex, item: fields })),
@@ -484,7 +495,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
     const v = videoRef.current;
     if (!v) return;
     if (v.paused) {
-      void v.play();
+      void v.play().catch(() => setMediaStatus('playback'));
       sendMediaItemCommand('play');
     } else {
       v.pause();
@@ -506,11 +517,14 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
     if (!v) return;
     if (!v.muted) {
       v.muted = true;
-      v.volume = 0;
+
       setMuted(true);
-      setVolume(0);
     } else {
       v.muted = false;
+      if (v.volume === 0) {
+        v.volume = 1;
+        setVolume(1);
+      }
       setMuted(false);
     }
   }, []);
@@ -519,6 +533,7 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
     const v = videoRef.current;
     if (!v) return;
     v.currentTime = value;
+    sendMediaItemCommand('seek', value);
   }, []);
 
   const handleVolume = useCallback((value: number) => {
@@ -545,9 +560,9 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
   // Hide/Show all presentation windows for this video.
   const handleToggleVisible = useCallback(() => {
     const next = !videoVisible;
-    setVideoVisible(next);
+    dispatch(setVideoVisibleRedux(next));
     sendSetVideoVisible(next, hideTransitionMode, hideTransitionDuration);
-  }, [videoVisible, hideTransitionMode, hideTransitionDuration]);
+  }, [dispatch, videoVisible, hideTransitionMode, hideTransitionDuration]);
 
   const objectFit = item.mediaObjectFit ?? 'cover';
   const objectPosition = item.mediaObjectPosition ?? 'center';
@@ -597,6 +612,9 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
             <PreviewFrame ratio={ratio}>
               <Box
                 component="video"
+                key={`${resolvedPath}/${retry}`}
+                onError={() => setMediaStatus('error')}
+                onCanPlay={() => setMediaStatus('ready')}
                 ref={videoRef}
                 src={resolvedPath}
                 playsInline
@@ -648,12 +666,12 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
           <PreviewFrame ratio={ratio}>
             <CardMedia
               component="img"
+              key={`${resolvedPath}/${retry}`}
+              onLoad={() => setMediaStatus('ready')}
               image={resolvedPath}
               alt={item.label || 'Media'}
               style={mediaStyle}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
+              onError={() => setMediaStatus('error')}
             />
           </PreviewFrame>
         ) : (
@@ -668,6 +686,23 @@ const ControlMedia = ({ item }: ControlMediaProps) => {
     <Stack sx={{ flexGrow: 1, padding: '0 25px 20px', overflowY: 'auto', userSelect: 'none' }}>
       <Card sx={{ border: '1px solid #f9a825', overflow: 'hidden' }}>
         {renderPreview()}
+        {mediaStatus !== 'ready' && (
+          <Alert
+            severity="warning"
+            action={
+              <Button
+                onClick={() => {
+                  setRetry((v) => v + 1);
+                  setMediaStatus('ready');
+                }}
+              >
+                {ml('retry')}
+              </Button>
+            }
+          >
+            {ml(mediaStatus)}
+          </Alert>
+        )}
         {isMedia && <DisplayOptions item={item} patch={patch} />}
       </Card>
     </Stack>

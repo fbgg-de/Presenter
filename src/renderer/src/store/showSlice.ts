@@ -3,6 +3,7 @@ import type { Show, ShowGroup, ShowItem } from '@/api/shows.api';
 import { DEFAULT_GROUP_ID, normalizeShowGroups } from '@/utils/showGroups';
 import { useAppSelector } from './hooks';
 import { persistState } from './persist';
+import type { MediaCue, MediaCueBinding } from '@/media/types';
 
 const SHOW_STORAGE_KEY = 'presenter_show';
 
@@ -43,6 +44,18 @@ export const showSlice = createSlice({
   name: 'show',
   initialState,
   reducers: {
+    saveMediaCue: (state, action: PayloadAction<{ cue: MediaCue; itemIndex: number; binding: MediaCueBinding }>) => {
+      const show = state.currentShow;
+      if (!show?.order[action.payload.itemIndex]) return;
+      const { cue, itemIndex, binding } = action.payload;
+      show.mediaCues ??= [];
+      const index = show.mediaCues.findIndex((c) => c.id === cue.id);
+      if (index < 0) show.mediaCues.push(cue);
+      else show.mediaCues[index] = cue;
+      show.order[itemIndex].mediaCue = binding;
+      state.isDirty = true;
+      persistState(SHOW_STORAGE_KEY, state);
+    },
     setCurrentShow: (state, action: PayloadAction<Show | null>) => {
       let show = action.payload;
       if (show) {
@@ -166,6 +179,7 @@ export const useGetShow = () => useAppSelector((state) => state.show);
 export default showSlice.reducer;
 
 export const {
+  saveMediaCue,
   setCurrentShow,
   setShowGroups,
   setOrderAndGroups,

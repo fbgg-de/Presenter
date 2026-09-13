@@ -5,6 +5,7 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import ControlSong from '@/components/show/ControlSong';
 import ControlBibleVerse from '@/components/show/ControlBibleVerse';
 import ControlMedia from '@/components/show/ControlMedia';
+import MediaCuePanel from '@/media/MediaCuePanel';
 import { useGetSessionQuery } from '@/api/session.api';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { resolveStyleCascade, mergeStyles, DEFAULT_STYLE } from '@/utils/styleUtils';
@@ -171,13 +172,16 @@ const Control = ({
 
   return (
     <Stack sx={{ flexGrow: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-      {renderControl}
-      <VideoControlPanel
-        videoSources={videoSources}
-        windowNames={perWindowRows.map((w) => w.config.name!).filter(Boolean)}
-        mediaItemMaster={!!mediaVideoUrl}
-        showIfNoLocalSources={!localHasVideos}
-      />
+      {!(activeItem.type === 'media' && activeItem.mediaCue) && renderControl}
+      <MediaCuePanel key={`${currentShow.title}/${activeItemIndex}`} />
+      {!activeItem.mediaCue && (
+        <VideoControlPanel
+          videoSources={videoSources}
+          windowNames={perWindowRows.map((w) => w.config.name!).filter(Boolean)}
+          mediaItemMaster={!!mediaVideoUrl}
+          showIfNoLocalSources={!localHasVideos}
+        />
+      )}
     </Stack>
   );
 };

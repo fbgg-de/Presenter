@@ -1972,6 +1972,29 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/dom-mediacapture-transform@npm:^0.1.11":
+  version: 0.1.12
+  resolution: "@types/dom-mediacapture-transform@npm:0.1.12"
+  dependencies:
+    "@types/dom-webcodecs": "npm:*"
+  checksum: 10c0/340d31b37dd12c4c145d9cb1e10057376bcbefeb32833bb829a9cea430e04ddc6f5a942479f92ad9f33adb8ee0fe208675cb1f3f1ad501c8e8c50f0a14cd496c
+  languageName: node
+  linkType: hard
+
+"@types/dom-webcodecs@npm:*":
+  version: 0.1.19
+  resolution: "@types/dom-webcodecs@npm:0.1.19"
+  checksum: 10c0/bb6e04daf5c22eda547db38ddc000d978b5af6203a519962859439a14c3455ce89edeea33d9464f698872a3540971c20c7cda354a5535b1a3bc18cbdddcdf843
+  languageName: node
+  linkType: hard
+
+"@types/dom-webcodecs@npm:0.1.13":
+  version: 0.1.13
+  resolution: "@types/dom-webcodecs@npm:0.1.13"
+  checksum: 10c0/16683fd0330fdfbb867affec1c18fd493d88433a4ec66257579adc5d07b07e9492268b4401e9017b7388b13750722365b0392b375e39c84e74f564d5b4f634a4
+  languageName: node
+  linkType: hard
+
 "@types/esrecurse@npm:^4.3.1":
   version: 4.3.1
   resolution: "@types/esrecurse@npm:4.3.1"
@@ -5785,6 +5808,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"mediabunny@npm:^1.56.1":
+  version: 1.56.1
+  resolution: "mediabunny@npm:1.56.1"
+  dependencies:
+    "@types/dom-mediacapture-transform": "npm:^0.1.11"
+    "@types/dom-webcodecs": "npm:0.1.13"
+  checksum: 10c0/0e34a578629535aa67753e61bd5c1359bf6734a777c8798c9b8b1e57626ba898bddfc5adef65b7fa5ad70dd47d5cd051369f179b529abbda72a8ef1e6334153a
+  languageName: node
+  linkType: hard
+
 "merge-refs@npm:^2.0.0":
   version: 2.0.0
   resolution: "merge-refs@npm:2.0.0"
@@ -6410,6 +6443,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.1.1"
     eslint-plugin-react-refresh: "npm:^0.5.5"
     font-list: "npm:^2.1.0"
+    mediabunny: "npm:^1.56.1"
     pdf-lib: "npm:^1.17.1"
     pdfjs-dist: "npm:5.4.296"
     prettier: "npm:^3.9.6"

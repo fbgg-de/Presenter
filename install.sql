@@ -16,6 +16,8 @@ CREATE TABLE `account` (
   `languages` JSON DEFAULT NULL,
   `church_tools_url` VARCHAR(500) DEFAULT NULL,
   `church_tools_token` VARCHAR(500) DEFAULT NULL,
+  `spotify_client_id` VARCHAR(100) DEFAULT NULL,
+  `spotify_client_secret` VARCHAR(200) DEFAULT NULL,
   `viewer_token` VARCHAR(64) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `lastactivity` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -124,6 +126,7 @@ CREATE TABLE `shows` (
   `date` timestamp NOT NULL DEFAULT current_timestamp(),
   `order` JSON NOT NULL,
   `groups` JSON DEFAULT NULL,
+  `media_cues` JSON DEFAULT NULL,
   `style_id` INT DEFAULT NULL,
   `event_id` INT DEFAULT NULL,
   `event_name` VARCHAR(255) DEFAULT NULL,
@@ -267,6 +270,22 @@ CREATE TABLE `set_list_entry_tags` (
     REFERENCES `set_list_entries` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- Spotify recordings linked to a Set List Entry — several per entry. Name, artists and cover
+-- are display copies of the track, so the list renders without asking Spotify.
+CREATE TABLE `set_list_entry_spotify_tracks` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `set_list_entry_id` INT NOT NULL,
+  `track_id` VARCHAR(32) NOT NULL,
+  `name` VARCHAR(300) DEFAULT NULL,
+  `artists` VARCHAR(500) DEFAULT NULL,
+  `image_url` VARCHAR(500) DEFAULT NULL,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_slest_entry_track` (`set_list_entry_id`, `track_id`),
+  CONSTRAINT `fk_slest_entry` FOREIGN KEY (`set_list_entry_id`)
+    REFERENCES `set_list_entries` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 -- --------------------------------------------------------
 -- Stage Monitor Layers
 --
@@ -346,7 +365,7 @@ CREATE TABLE IF NOT EXISTS `schema_version` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO `schema_version` (`version`, `description`) VALUES (23, 'Fresh install — all migrations included');
+INSERT INTO `schema_version` (`version`, `description`) VALUES (25, 'Fresh install — all migrations included');
 
 COMMIT;
 

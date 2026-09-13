@@ -215,6 +215,72 @@ check('but the mix being watched is still metered', trimmedNone.mixes, { bus1: 0
 const trimmedBad = protocol.trimMeters(meters, { mixId: 'bus9', stripIds: ['3'], meters: true }, allowed);
 check('a mix this client may not see is never metered to it', trimmedBad.mixes, {});
 
+// ── 3b. Patches carry only what changed ─────────────────────────────────────
+//
+// The bridge replaces the whole strip list for one fader move — 16 KB several times a
+// second on a 48-strip desk (live log, 2026-09-13). Clients that opt in get just the items.
+console.log('\nItem patches');
+
+const strip = (id, level) => ({
+  id,
+  name: 'Ch ' + id,
+  kind: 'channel',
+  icon: 1,
+  color: '#fff',
+  muted: false,
+  muteGroups: [],
+  sends: { bus1: { level } },
+});
+const deskBefore = { mixes: state.mixes, strips: { list: Array.from({ length: 48 }, (_, i) => strip(String(i + 1), 0.5)) } };
+const deskAfter = { ...deskBefore, strips: { list: deskBefore.strips.list.map((s) => (s.id === '7' ? strip('7', 0.8) : s)) } };
+const fBefore = protocol.filterAudioState(deskBefore, allowed);
+const fAfter = protocol.filterAudioState(deskAfter, allowed);
+const oneFader = protocol.diffAudioState(fBefore, fAfter, { strips: deskAfter.strips });
+check(
+  'one fader move sends one strip',
+  oneFader.items.strips?.map((s) => s.id),
+  ['7'],
+);
+check('and no whole list', oneFader.state, {});
+check(
+  'applied, it gives the same document as the full list',
+  protocol.applyItemPatch(protocol.mergeAudioState(fBefore, oneFader.state), oneFader.items),
+  protocol.mergeAudioState(fBefore, fAfter),
+);
+check(
+  'it is a fraction of the size',
+  JSON.stringify(oneFader).length < JSON.stringify({ state: protocol.filterAudioState({ strips: deskAfter.strips }, allowed) }).length / 20,
+  true,
+);
+check('an echo of the same values sends nothing', protocol.diffAudioState(fBefore, fBefore, { strips: deskBefore.strips }), {
+  state: {},
+  items: {},
+});
+const reordered = { strips: { list: [...fAfter.strips.list].reverse() } };
+check(
+  'a reordered list falls back to the whole list',
+  protocol.diffAudioState(fBefore, reordered, reordered).state.strips?.list.length,
+  48,
+);
+check(
+  'nothing to compare with falls back to the whole list',
+  protocol.diffAudioState({}, fAfter, { strips: deskAfter.strips }).state.strips?.list.length,
+  48,
+);
+check(
+  'a send to a withheld mix is not a change',
+  protocol.diffAudioState(
+    protocol.filterAudioState(state, allowed),
+    protocol.filterAudioState(
+      { ...state, strips: { list: [{ ...state.strips.list[0], sends: { ...state.strips.list[0].sends, bus9: { level: 0.1 } } }] } },
+      allowed,
+    ),
+    { strips: state.strips },
+  ),
+  { state: {}, items: {} },
+);
+check('unknown ids are ignored when applied', protocol.applyItemPatch(fBefore, { strips: [strip('99', 1)] }).strips.list.length, 48);
+
 // ── 4. Which announcement wins ──────────────────────────────────────────────
 //
 // More than one Presenter can be signed in to an account, and the relay hands

@@ -1,4 +1,4 @@
-﻿import { forwardRef, useEffect, useImperativeHandle, useRef, useState, MouseEvent, ChangeEvent } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, MouseEvent, ChangeEvent } from 'react';
 import {
   Alert,
   Box,
@@ -266,6 +266,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         title: currentShow.title,
         order: currentShow.order,
         groups: currentShow.groups,
+        mediaCues: currentShow.mediaCues,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));
@@ -396,6 +397,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
             title: show.title,
             order: orderToSave,
             groups: override ? currentShow?.groups : show.groups,
+            mediaCues: override ? currentShow?.mediaCues : show.mediaCues,
             styleId: override ? (currentShow?.styleId ?? null) : (show.styleId ?? null),
             eventId: (override ? currentShow?.eventId : show.eventId) ?? null,
             eventName: (override ? currentShow?.eventName : show.eventName) ?? null,
@@ -785,6 +787,7 @@ const Sidebar = forwardRef<SidebarHandle>((_, ref) => {
         title: currentShow.title,
         order: orderOverride ?? currentShow.order,
         groups: currentShow.groups,
+        mediaCues: currentShow.mediaCues,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));

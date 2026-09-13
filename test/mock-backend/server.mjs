@@ -54,6 +54,8 @@ const session = () => ({
     // MOCK_DEVELOPMENT=0 to see the pages without it.
     development: process.env.MOCK_DEVELOPMENT !== '0',
     bibleEnabled: true,
+    // The account has Spotify credentials; /rest/SpotifyTracks answers with made-up tracks.
+    spotifyEnabled: true,
     churchToolsEnabled: true,
     // Null unless MOCK_WS_HOST is set, which points the app at a locally running relay
     // (`node ws-server/dist/server.js`). Needed to try anything that talks between the
@@ -131,6 +133,44 @@ const handlers = {
   },
 
   '/rest/SetListEntries': (req) => (req.method === 'DELETE' ? { message: 'deleted (mock)' } : { message: 'saved (mock)' }),
+  /** Spotify links per entry, kept in state so linking and unlinking round-trip like the real thing. */
+  '/rest/SetListSpotifyTracks': (req) => {
+    state.spotifyLinks ??= [];
+    const idFromPath = Number(req.path.split('/')[3]);
+    if (req.method === 'POST') {
+      const { entryId, track } = req.body ?? {};
+      const existing = state.spotifyLinks.find((l) => l.entryId === entryId && l.trackId === track?.trackId);
+      if (existing) return existing;
+      const link = { id: Math.max(0, ...state.spotifyLinks.map((l) => l.id)) + 1, entryId, ...track };
+      state.spotifyLinks.push(link);
+      return link;
+    }
+    if (req.method === 'DELETE') {
+      state.spotifyLinks = state.spotifyLinks.filter((l) => l.id !== idFromPath);
+      return { id: idFromPath, message: 'unlinked (mock)' };
+    }
+    // GET /rest/SetListSpotifyTracks/{setListId}
+    const list = state.setLists.find((l) => l.id === idFromPath);
+    const entryIds = new Set((list?.entries ?? []).map((e) => e.id));
+    return state.spotifyLinks.filter((l) => entryIds.has(l.entryId));
+  },
+  /** Spotify search — a few made-up recordings built from the query, no network involved. */
+  '/rest/SpotifyTracks': (req) => {
+    const label = String(req.query.q || req.query.title || '').trim();
+    if (!label) return { tracks: [] };
+    const artists = [req.query.artist || 'Mock Worship', 'Another Band', 'Live Collective'];
+    return {
+      tracks: artists.map((artist, i) => ({
+        id: `mock${i}${label.replace(/[^A-Za-z0-9]/g, '')}`.padEnd(22, 'x').slice(0, 22),
+        name: i === 2 ? `${label} (Live)` : label,
+        artists: artist,
+        album: `${label} — Album`,
+        imageUrl: null,
+        durationMs: 240000 + i * 17000,
+        url: null,
+      })),
+    };
+  },
   '/rest/SetLists': (req) => {
     if (req.method === 'GET') return state.setLists;
     if (req.method === 'DELETE') {

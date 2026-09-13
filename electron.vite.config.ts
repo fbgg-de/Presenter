@@ -1,7 +1,7 @@
 ﻿import { resolve } from 'path';
 import { defineConfig } from 'electron-vite';
 import react from '@vitejs/plugin-react';
-import { rendererAliases, electronRendererInputs, sharedServerConfig } from './vite.shared';
+import { appBuildDefines, rendererAliases, electronRendererInputs, sharedServerConfig } from './vite.shared';
 import { errorFallbackPlugin } from './vite.plugin.error-fallback';
 export default defineConfig({
   main: {
@@ -45,6 +45,7 @@ export default defineConfig({
     },
   },
   renderer: {
+    define: appBuildDefines,
     resolve: {
       alias: rendererAliases,
     },

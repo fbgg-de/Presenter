@@ -10,7 +10,7 @@ import { extname, basename } from 'path';
 import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import react from '@vitejs/plugin-react';
-import { rendererAliases, rendererInputs, sharedServerConfig } from './vite.shared';
+import { appBuildDefines, rendererAliases, rendererInputs, sharedServerConfig } from './vite.shared';
 import { errorFallbackPlugin } from './vite.plugin.error-fallback';
 const root = resolve(__dirname, 'src/renderer');
 /**
@@ -26,6 +26,7 @@ const { version } = JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 
 const src = (path: string) => `../../${path}`;
 export default defineConfig({
   root,
+  define: appBuildDefines,
   resolve: {
     alias: rendererAliases,
   },

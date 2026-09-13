@@ -13,11 +13,17 @@ import {
 } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useLogout } from '@/hooks/useLogout';
-import { oidcLogoutUrl } from '@/utils';
+import { isElectronApp, oidcLogoutUrl } from '@/utils';
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  /**
+   * `menu` (default): the profile menu of a signed-in user. `login`: "Trouble signing in?" on the
+   * login page — no session to end, cookies preselected, and the desktop app clears its whole
+   * cookie store.
+   */
+  context?: 'menu' | 'login';
 };
 
 /** A checkbox with a title and an explanation underneath. */
@@ -51,23 +57,45 @@ const ResetOption = ({
  * one that signs straight back in but sees no data. Cookies and local data are separate
  * choices — losing this device's settings is a price not every case needs to pay.
  */
-export const LogoutResetDialog = ({ open, onClose }: Props) => {
+export const LogoutResetDialog = ({ open, onClose, context = 'menu' }: Props) => {
   const { LL } = useI18nContext();
   const logout = useLogout();
-  const [cookies, setCookies] = useState(false);
+  const fromLogin = context === 'login';
+  const [cookies, setCookies] = useState(fromLogin);
   const [storage, setStorage] = useState(false);
+  const [busy, setBusy] = useState(false);
   const R = LL.AUTH.LOGOUT_RESET;
   const anySelected = cookies || storage;
+  const desktopClearsAll = fromLogin && isElectronApp();
+
+  const confirm = async () => {
+    setBusy(true);
+    // Only from the login page: in the profile menu the session cookie still holds the id_token
+    // the backend needs to end the provider session, so it must reach the backend first.
+    if (cookies && desktopClearsAll) {
+      try {
+        await window.api?.clearAllCookies?.();
+      } catch {
+        // The backend still expires its own cookies on the way through the reset URL.
+      }
+    }
+    logout({ cookies, storage });
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{R.TITLE()}</DialogTitle>
+      <DialogTitle>{fromLogin ? R.LOGIN_TITLE() : R.TITLE()}</DialogTitle>
       <DialogContent>
         <Stack sx={{ gap: 2 }}>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            {R.INTRO()}
+            {fromLogin ? R.LOGIN_INTRO() : R.INTRO()}
           </Typography>
-          <ResetOption checked={cookies} onChange={setCookies} title={R.COOKIES()} hint={R.COOKIES_HINT()} />
+          <ResetOption
+            checked={cookies}
+            onChange={setCookies}
+            title={R.COOKIES()}
+            hint={desktopClearsAll ? R.COOKIES_HINT_DESKTOP() : R.COOKIES_HINT()}
+          />
           <ResetOption checked={storage} onChange={setStorage} title={R.STORAGE()} hint={R.STORAGE_HINT()} />
           {storage && <Alert severity="warning">{R.STORAGE_WARNING()}</Alert>}
           {anySelected && (
@@ -88,8 +116,8 @@ export const LogoutResetDialog = ({ open, onClose }: Props) => {
         <Button onClick={onClose} color="inherit">
           {LL.COMMON.CANCEL()}
         </Button>
-        <Button variant="contained" color="error" disabled={!anySelected} onClick={() => logout({ cookies, storage })}>
-          {R.CONFIRM()}
+        <Button variant="contained" color="error" disabled={!anySelected || busy} onClick={() => void confirm()}>
+          {fromLogin ? R.LOGIN_CONFIRM() : R.CONFIRM()}
         </Button>
       </DialogActions>
     </Dialog>

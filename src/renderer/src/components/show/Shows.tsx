@@ -264,6 +264,7 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
         title: renameTitle.trim(),
         order: showToRename.order,
         groups: showToRename.groups,
+        mediaCues: showToRename.mediaCues,
         styleId: showToRename.styleId ?? null,
         eventId: renameEvent?.id ?? null,
         eventName: renameEvent?.name ?? null,

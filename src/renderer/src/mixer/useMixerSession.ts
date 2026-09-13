@@ -23,9 +23,11 @@ import type { MixerBridge } from '@/hooks/useMixerBridge';
 import {
   AUDIO_ACTIONS,
   AUDIO_KEEPALIVE_MS,
+  applyItemPatch,
   bridgeDocument,
   mergeAudioState,
   type AudioCommand,
+  type AudioItemPatch,
   type AudioMeters,
   type AudioState,
   type IMix,
@@ -109,7 +111,9 @@ export const useMixerSession = ({ bridge, mixId, stripIds, meters }: UseMixerSes
           }
           case AUDIO_ACTIONS.patch: {
             const patch = bridgeDocument(data);
-            setState((current) => mergeAudioState(current, patch));
+            // Sent because this client subscribes with `itemPatches`: just the changed items.
+            const items = (data.items ?? {}) as AudioItemPatch;
+            setState((current) => applyItemPatch(mergeAudioState(current, patch), items));
             // The desk has spoken — but only for the feeds this patch carries. Dropping
             // every local guess on any patch meant someone moving a bus master snapped
             // back a channel fader that had just been moved and not yet echoed, so the
@@ -117,8 +121,8 @@ export const useMixerSession = ({ bridge, mixId, stripIds, meters }: UseMixerSes
             // wholesale (contract §4.4), so a feed being present speaks for all of it.
             if (optimisticRef.current.size) {
               const prefixes: string[] = [];
-              if (patch.strips) prefixes.push('send:', 'sendmute:', 'stripmute:');
-              if (patch.mixes) prefixes.push('mix:', 'mixmute:');
+              if (patch.strips || items.strips?.length) prefixes.push('send:', 'sendmute:', 'stripmute:');
+              if (patch.mixes || items.mixes?.length) prefixes.push('mix:', 'mixmute:');
               let cleared = false;
               for (const key of [...optimisticRef.current.keys()]) {
                 if (!prefixes.some((prefix) => key.startsWith(prefix))) continue;
@@ -165,7 +169,8 @@ export const useMixerSession = ({ bridge, mixId, stripIds, meters }: UseMixerSes
   // What this phone is watching, read by the keepalive below so that changing it never
   // has to restart the timer.
   const payloadRef = useRef<Record<string, unknown>>({});
-  payloadRef.current = { mixId, stripIds, meters };
+  // `itemPatches`: this page applies per-item patches, so the operator may skip whole lists.
+  payloadRef.current = { mixId, stripIds, meters, itemPatches: true };
 
   /**
    * Tell the operator what changed — as an update, never as a teardown.

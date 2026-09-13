@@ -21,6 +21,7 @@ import {
 } from '@/presentation';
 import { StageOverlay } from '@/presentation/StageOverlay';
 import { rampToVolume } from '@/presentation/videoUtils';
+import { CueMedia } from '@/media/CueMedia';
 
 /**
  * Legacy props interface — kept for backward compatibility.
@@ -306,8 +307,9 @@ export const Presentation = (props: PresentationProps) => {
   }
 
   // Background video from style
-  const hasBackgroundVideo = resolvedStyle.backgroundVideo && !resolvedStyle.hideBackground;
-  const hasBackgroundImage = resolvedStyle.backgroundImage && !resolvedStyle.hideBackground;
+  const hasBackgroundVideo = !content.mediaCue && resolvedStyle.backgroundVideo && !resolvedStyle.hideBackground;
+  const hasBackgroundImage = !content.mediaCue && resolvedStyle.backgroundImage && !resolvedStyle.hideBackground;
+  if (content.mediaCue) delete containerCssWithoutPadding.backgroundImage;
 
   // Map backgroundSize to objectFit for image/video elements
   const videoObjectFit = (size?: string): CSSProperties['objectFit'] => {
@@ -350,7 +352,7 @@ export const Presentation = (props: PresentationProps) => {
   const renderContent = () => {
     switch (content.contentType) {
       case 'media':
-        return <MediaContent content={content} />;
+        return content.mediaCue ? null : <MediaContent content={content} />;
 
       case 'bible_verse':
         return <BibleVerseContent content={content} textStyle={textCss} />;
@@ -406,11 +408,12 @@ export const Presentation = (props: PresentationProps) => {
       }}
     >
       {/* Cross-fade: previous content fading out */}
-      {fadePhase === 'fading' && prevContent && (
+      {fadePhase === 'fading' && prevContent && !content.mediaCue && !prevContent.mediaCue && (
         <FadeOutLayer key={fadeKey} prevContent={prevContent} transitionDuration={transitionDuration} videoObjectFit={videoObjectFit} />
       )}
 
       {/* Background image layer */}
+      {content.mediaCue && <CueMedia packet={content.mediaCue} />}
       {hasBackgroundImage && (
         <img
           src={resolvedStyle.backgroundImage}

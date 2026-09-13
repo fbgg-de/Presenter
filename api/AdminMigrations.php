@@ -916,6 +916,49 @@ class AdminMigrations extends RestController
                     }
                 },
             ],
+            24 => [
+                'description' => 'Add shared media cues to shows',
+                'up' => function (mysqli $db) use ($columnExists) {
+                    if (!$columnExists('shows', 'media_cues')) {
+                        $db->query("ALTER TABLE `shows` ADD COLUMN `media_cues` JSON DEFAULT NULL");
+                    }
+                },
+            ],
+            25 => [
+                'description' => 'Per-account Spotify credentials and Spotify tracks linked to set list entries',
+                'up' => function (mysqli $db) use ($columnExists, $tableExists) {
+                    // Client Credentials flow: the account's own Spotify app, like its ChurchTools token.
+                    if (!$columnExists('account', 'spotify_client_id')) {
+                        $db->query("ALTER TABLE `account` ADD COLUMN `spotify_client_id` VARCHAR(100) DEFAULT NULL");
+                        echo "Added column: account.spotify_client_id\n";
+                    }
+                    if (!$columnExists('account', 'spotify_client_secret')) {
+                        $db->query("ALTER TABLE `account` ADD COLUMN `spotify_client_secret` VARCHAR(200) DEFAULT NULL");
+                        echo "Added column: account.spotify_client_secret\n";
+                    }
+
+                    // Several recordings per entry, so the links get a table of their own. Name,
+                    // artists and cover are display copies stored with the track id.
+                    if ($tableExists('set_list_entries') && !$tableExists('set_list_entry_spotify_tracks')) {
+                        $db->query("
+                            CREATE TABLE `set_list_entry_spotify_tracks` (
+                                `id` INT AUTO_INCREMENT PRIMARY KEY,
+                                `set_list_entry_id` INT NOT NULL,
+                                `track_id` VARCHAR(32) NOT NULL,
+                                `name` VARCHAR(300) DEFAULT NULL,
+                                `artists` VARCHAR(500) DEFAULT NULL,
+                                `image_url` VARCHAR(500) DEFAULT NULL,
+                                `sort_order` INT NOT NULL DEFAULT 0,
+                                `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                UNIQUE KEY `uk_slest_entry_track` (`set_list_entry_id`, `track_id`),
+                                CONSTRAINT `fk_slest_entry` FOREIGN KEY (`set_list_entry_id`)
+                                    REFERENCES `set_list_entries` (`id`) ON DELETE CASCADE
+                            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+                        ");
+                        echo "Created table: set_list_entry_spotify_tracks\n";
+                    }
+                },
+            ],
         ];
     }
 }

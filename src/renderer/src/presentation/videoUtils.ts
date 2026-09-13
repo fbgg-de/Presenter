@@ -256,7 +256,7 @@ const bumpActionToken = (v: HTMLVideoElement, action: ActionRecord['action'] = '
 };
 
 const ensureAutoSaveListener = (v: HTMLVideoElement) => {
-  if (!v) return;
+  if (!v || v.dataset.role === 'media-cue') return;
   if (volumeListeners.get(v)) return;
   const fn = () => {
     try {

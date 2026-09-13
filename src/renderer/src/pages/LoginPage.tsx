@@ -17,6 +17,7 @@ import {
 } from '@/utils';
 import { oidcErrorTitle } from '@/utils/oidcErrors';
 import { useBackendConfig } from '@/components/settings/ConnectivityChecker';
+import { LogoutResetDialog } from '@/components/layout/LogoutResetDialog';
 
 const useQueryParam = (name: string): string | null => {
   const { search } = useLocation();
@@ -68,6 +69,13 @@ export const LoginPage = () => {
   const loginError = useQueryParam('error');
   /** Set when the automatic sign-in was skipped because the previous one did not end in a session. */
   const [autoLoginStopped, setAutoLoginStopped] = useState(false);
+  /** "Trouble signing in?" — resets cookies and/or local data when a sign-in keeps failing or looping. */
+  const [resetOpen, setResetOpen] = useState(false);
+  const resetAction = (
+    <Button color="inherit" size="small" onClick={() => setResetOpen(true)}>
+      {LL.AUTH.LOGOUT_RESET.LOGIN_CONFIRM()}
+    </Button>
+  );
 
   // In offline mode, redirect immediately to the intended destination — but not at the end of
   // a logout. Forwarding there into an app that fetches nothing is how a device ended up
@@ -231,14 +239,18 @@ export const LoginPage = () => {
             <Typography variant="h5">{LL.AUTH.LOGIN()}</Typography>
 
             {loginError && (
-              <Alert severity="error">
+              <Alert severity="error" action={resetAction}>
                 <Typography variant="subtitle2">{oidcErrorTitle(LL, loginError)}</Typography>
                 <Typography variant="body2">
                   {LL.AUTH.LOGIN_REJECTED()} ({loginError})
                 </Typography>
               </Alert>
             )}
-            {autoLoginStopped && !loginError && <Alert severity="info">{LL.AUTH.AUTO_LOGIN_STOPPED()}</Alert>}
+            {autoLoginStopped && !loginError && (
+              <Alert severity="info" action={resetAction}>
+                {LL.AUTH.AUTO_LOGIN_STOPPED()}
+              </Alert>
+            )}
             {errorText && <Alert severity="error">{errorText}</Alert>}
 
             {accountsError && !offlineMode && (
@@ -363,10 +375,15 @@ export const LoginPage = () => {
                   {offlineMode ? LL.HEADER.OFFLINE_MODE_LABEL_OFF() : LL.HEADER.OFFLINE_MODE_LABEL_ON()}
                 </Button>
               </Tooltip>
+              <Button size="small" color="inherit" onClick={() => setResetOpen(true)} sx={{ alignSelf: 'center', color: 'text.secondary' }}>
+                {LL.AUTH.LOGOUT_RESET.LOGIN_LINK()}
+              </Button>
             </Stack>
           </Stack>
         </CardContent>
       </Card>
+      {/* Mounted only while open, so the preselection starts fresh each time. */}
+      {resetOpen && <LogoutResetDialog open context="login" onClose={() => setResetOpen(false)} />}
     </Box>
   );
 };

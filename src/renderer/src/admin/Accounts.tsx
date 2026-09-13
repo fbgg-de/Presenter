@@ -4,6 +4,7 @@ import {
   Button,
   Chip,
   IconButton,
+  Link,
   Paper,
   Stack,
   Table,
@@ -29,6 +30,7 @@ import {
   Link as LinkIcon,
   CheckCircle as CheckCircleIcon,
   Church as ChurchIcon,
+  Album as SpotifyIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import {
@@ -59,6 +61,7 @@ export const Accounts = () => {
   const [assignDialog, setAssignDialog] = useState<{ open: boolean; license?: number }>({ open: false });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id?: number; name?: string }>({ open: false });
   const [ctDialog, setCtDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
+  const [spotifyDialog, setSpotifyDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
 
   const handleSaveAccount = async (data: CreateAccountRequest | UpdateAccountRequest) => {
     try {
@@ -83,6 +86,20 @@ export const Accounts = () => {
       setCtDialog({ open: false });
     } catch (e) {
       console.error('Failed to save ChurchTools config:', e);
+    }
+  };
+
+  const handleSaveSpotifyConfig = async (license: number, clientId: string, clientSecret: string) => {
+    try {
+      await updateAccount({
+        license,
+        // Always sent: an empty id clears the integration. The secret only goes when typed.
+        spotifyClientId: clientId.trim(),
+        ...(clientSecret.trim() ? { spotifyClientSecret: clientSecret.trim() } : {}),
+      }).unwrap();
+      setSpotifyDialog({ open: false });
+    } catch (e) {
+      console.error('Failed to save Spotify config:', e);
     }
   };
 
@@ -140,6 +157,7 @@ export const Accounts = () => {
                 <TableCell>{LL.COMMON.STATUS()}</TableCell>
                 <TableCell>{LL.ADMIN.OIDC_PROVIDERS()}</TableCell>
                 <TableCell>{LL.ADMIN.CHURCH_TOOLS()}</TableCell>
+                <TableCell>{LL.ADMIN.SPOTIFY()}</TableCell>
                 <TableCell>{LL.COMMON.ACTIONS()}</TableCell>
               </TableRow>
             </TableHead>
@@ -189,6 +207,20 @@ export const Accounts = () => {
                     </Stack>
                   </TableCell>
                   <TableCell>
+                    <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        label={account.spotify_enabled ? LL.COMMON.ENABLED() : LL.COMMON.DISABLED()}
+                        color={account.spotify_enabled ? 'success' : 'default'}
+                        size="small"
+                      />
+                      <Tooltip title={LL.ADMIN.CONFIGURE_SPOTIFY()}>
+                        <IconButton size="small" onClick={() => setSpotifyDialog({ open: true, account })}>
+                          <SpotifyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Stack>
+                  </TableCell>
+                  <TableCell>
                     <Stack direction="row" spacing={1}>
                       <IconButton size="small" onClick={() => setAccountDialog({ open: true, account })}>
                         <EditIcon fontSize="small" />
@@ -228,6 +260,12 @@ export const Accounts = () => {
         account={ctDialog.account}
         onClose={() => setCtDialog({ open: false })}
         onSave={handleSaveCtConfig}
+      />
+      <SpotifyDialog
+        open={spotifyDialog.open}
+        account={spotifyDialog.account}
+        onClose={() => setSpotifyDialog({ open: false })}
+        onSave={handleSaveSpotifyConfig}
       />
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false })} maxWidth="sm" fullWidth>
         <DialogTitle>{LL.ADMIN.CONFIRM_DELETE()}</DialogTitle>
@@ -437,6 +475,70 @@ const ChurchToolsDialog = ({
       <DialogActions>
         <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
         <Button onClick={() => account && onSave(account.license, url, token)} variant="contained">
+          {LL.COMMON.SAVE()}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+/**
+ * Dialog for an account's Spotify app credentials (Client Credentials flow — used for track search
+ * on set list entries). The secret is write-only like the ChurchTools token: blank keeps the stored
+ * one. Clearing the client id removes both.
+ */
+const SpotifyDialog = ({
+  open,
+  account,
+  onClose,
+  onSave,
+}: {
+  open: boolean;
+  account?: AdminAccount;
+  onClose: () => void;
+  onSave: (license: number, clientId: string, clientSecret: string) => void;
+}) => {
+  const { LL } = useI18nContext();
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+
+  useEffect(() => {
+    if (open) {
+      setClientId(account?.spotify_client_id ?? '');
+      setClientSecret(''); // write-only; never pre-filled
+    }
+  }, [open, account]);
+
+  // A first-time setup needs both halves; an existing one may keep its stored secret.
+  const missingSecret = !!clientId.trim() && !clientSecret.trim() && !account?.spotify_enabled;
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>{LL.ADMIN.CONFIGURE_SPOTIFY()}</DialogTitle>
+      <DialogContent>
+        <Stack sx={{ gap: 2, mt: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            {LL.ADMIN.SPOTIFY_HELP()}{' '}
+            <Link href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer">
+              developer.spotify.com/dashboard
+            </Link>
+          </Typography>
+          <TextField label={LL.ADMIN.SPOTIFY_CLIENT_ID()} value={clientId} onChange={(e) => setClientId(e.target.value)} fullWidth />
+          <TextField
+            label={LL.ADMIN.SPOTIFY_CLIENT_SECRET()}
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+            placeholder={account?.spotify_enabled ? LL.ADMIN.SPOTIFY_SECRET_PLACEHOLDER_SET() : ''}
+            helperText={LL.ADMIN.SPOTIFY_SECRET_HELP()}
+            type="password"
+            fullWidth
+          />
+          {!clientId.trim() && account?.spotify_enabled && <Alert severity="warning">{LL.ADMIN.SPOTIFY_CLEAR_WARNING()}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
+        <Button onClick={() => account && onSave(account.license, clientId, clientSecret)} variant="contained" disabled={missingSecret}>
           {LL.COMMON.SAVE()}
         </Button>
       </DialogActions>

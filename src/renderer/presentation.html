@@ -48,7 +48,7 @@
          duration mirrors the operator's hide-transition setting so the
          crossover from a song's background video to a media-item video is
          not abrupt. */
-      body.media-item-active video:not([data-role='media-item']) {
+      body.media-item-active video:not([data-role='media-item']):not([data-role='media-cue']) {
         opacity: 0;
         pointer-events: none;
       }

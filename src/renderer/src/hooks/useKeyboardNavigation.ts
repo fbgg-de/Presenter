@@ -15,6 +15,7 @@ import { DEFAULT_KEYBOARD_MAPPING } from '@/components/settings/KeyboardMappingE
 import { countPrimaryLines } from '@/song';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useGetShow } from '@/store/showSlice';
+import { sendCueCommand } from '@/media/runtime';
 
 /** Count only primary (non-translated) lines in a raw block lines array. */
 
@@ -112,7 +113,8 @@ export const useKeyboardNavigation = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const s = stateRef.current;
-      if (s.keyboardDisabled) return;
+      if (s.keyboardDisabled || e.defaultPrevented || (e.target as HTMLElement)?.closest('[role="dialog"], [role="menu"], [role="slider"]'))
+        return;
 
       // Don't intercept keyboard events when focus is inside form elements
       const tag = (e.target as HTMLElement)?.tagName;
@@ -225,15 +227,16 @@ export const useKeyboardNavigation = () => {
           break;
         case 'toggle_video_playback':
           e.preventDefault();
+          if (sendCueCommand({ type: 'toggle' })) break;
           if (window.api?.videoCommand) {
             window.api.videoCommand({ action: 'toggle', fadeDuration: s.videoFadeDuration });
           }
           break;
         case 'toggle_video_visible':
           e.preventDefault();
+          dispatch(toggleVideoVisible());
           if (window.api?.setVideoVisible) {
             const nextVisible = !s.videoVisible;
-            dispatch(toggleVideoVisible());
             window.api.setVideoVisible({
               value: nextVisible,
               mode: s.hideTransitionMode,

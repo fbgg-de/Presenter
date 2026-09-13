@@ -195,8 +195,28 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
             </Box>
           </Stack>
         )}
+        <Divider />
+        <AppVersion />
       </Stack>
     </Drawer>
+  );
+};
+
+/** Which build is running — selectable, so it can be pasted into a bug report. */
+const AppVersion = () => {
+  const { LL, locale } = useI18nContext();
+  const built = new Date(__APP_BUILD_TIME__);
+  const parts = [
+    isElectronApp() ? LL.SETTINGS.VERSION_DESKTOP() : LL.SETTINGS.VERSION_WEB(),
+    __APP_COMMIT__,
+    import.meta.env.DEV
+      ? LL.SETTINGS.VERSION_DEV()
+      : LL.SETTINGS.VERSION_BUILT({ date: new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }).format(built) }),
+  ].filter(Boolean);
+  return (
+    <Typography variant="caption" sx={{ color: 'text.secondary', px: 2, py: 1, userSelect: 'text' }}>
+      {LL.SETTINGS.VERSION()} {__APP_VERSION__} · {parts.join(' · ')}
+    </Typography>
   );
 };
 

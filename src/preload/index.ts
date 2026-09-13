@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { electronAPI } from '@electron-toolkit/preload';
 import { join } from 'path';
 import { pathToFileURL } from 'url';
@@ -68,6 +68,12 @@ const api = {
   checkMediaFiles: (files: string[]) => electronAPI.ipcRenderer.invoke('check-media-files', files),
   getMediaServerUrl: () => electronAPI.ipcRenderer.invoke('get-media-server-url'),
   startMediaServer: (mediaPath: string) => electronAPI.ipcRenderer.invoke('start-media-server', mediaPath),
+  /** Media browser upload: choose files, then copy them into a folder of the media root. */
+  pickMediaFiles: () => electronAPI.ipcRenderer.invoke('pick-media-files'),
+  importMediaFiles: (mediaPath: string, subPath: string, sources: string[]) =>
+    electronAPI.ipcRenderer.invoke('import-media-files', mediaPath, subPath, sources),
+  /** A dropped file's path on disk. `File.path` no longer exists, so this is the only way to get it. */
+  getPathForFile: (file: File) => webUtils.getPathForFile(file),
 
   // ── Built-in WebSocket server status ──
   getWsServerInfo: () => electronAPI.ipcRenderer.invoke('get-ws-server-info'),
@@ -142,6 +148,8 @@ const api = {
 
   // ── Backend origin (for OIDC callback detection in main process) ──
   setBackendOrigin: (origin: string) => ipcRenderer.send('set-backend-origin', origin),
+  /** Clears every cookie of the app (identity provider included) and the ones saved for the next start. */
+  clearAllCookies: (): Promise<void> => ipcRenderer.invoke('clear-all-cookies'),
 
   // ── Auto-login preference mirror (so the IdP auto-fill script can submit) ──
   setAutoLogin: (enabled: boolean) => ipcRenderer.send('set-auto-login', enabled),

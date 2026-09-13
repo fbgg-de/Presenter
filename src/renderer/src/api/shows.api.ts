@@ -1,5 +1,6 @@
 import { presenterApi } from './base.api';
 import type { ApiSuccess } from './base.api';
+import type { MediaCue, MediaCueBinding } from '@/media/types';
 
 export type ShowItemType = 'song' | 'media' | 'bible_verse';
 export type MediaSubType = 'image' | 'video' | 'color';
@@ -34,6 +35,7 @@ export type StageTrigger = {
 };
 
 export type ShowItem = {
+  mediaCue?: MediaCueBinding;
   type: ShowItemType;
   /** Id of the group this item belongs to (see Show.groups). Items without one fall into Default. */
   groupId?: string;
@@ -68,6 +70,7 @@ export type ShowItem = {
 };
 
 export type Show = {
+  mediaCues?: MediaCue[];
   title: string;
   order: ShowItem[];
   /** Ordered list of item groups (metadata + sequence). A Default group is ensured on load. */
@@ -116,6 +119,7 @@ const showsApi = presenterApi.injectEndpoints({
         title: string;
         order: ShowItem[];
         groups?: ShowGroup[];
+        mediaCues?: MediaCue[];
         styleId?: number | null;
         eventId?: number | null;
         eventName?: string | null;

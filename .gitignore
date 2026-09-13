@@ -21,6 +21,7 @@ copy.config.php
 
 # Annotated captures written by `npm run test:screens`
 test/viewport/screenshots
+test/media-cue/*.png
 
 # Local copy for exercising the dev-only endpoint against the repo dev server;
 # the tracked original lives in dev-environment/.

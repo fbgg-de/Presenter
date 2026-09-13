@@ -113,6 +113,8 @@ export const adminAccounts = [
     lastactivity: '2026-08-14 08:00:00',
     church_tools_url: 'https://demo.church.tools/api/',
     church_tools_enabled: true,
+    spotify_client_id: '0123456789abcdef0123456789abcdef',
+    spotify_enabled: true,
     providers: [],
   },
   {
@@ -124,6 +126,8 @@ export const adminAccounts = [
     lastactivity: '2026-07-30 08:00:00',
     church_tools_url: null,
     church_tools_enabled: false,
+    spotify_client_id: null,
+    spotify_enabled: false,
     providers: [],
   },
 ];

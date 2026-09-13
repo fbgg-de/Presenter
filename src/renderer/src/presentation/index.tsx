@@ -169,6 +169,12 @@ const commit = () => {
 };
 
 const scheduleCommit = () => {
+  // Transport commands must also reach an obscured browser output, whose animation
+  // frames may be suspended. Every media element advances the shared clock itself.
+  if (pendingProps?.content?.mediaCue) {
+    commit();
+    return;
+  }
   if (rafScheduled) return;
   rafScheduled = true;
   requestAnimationFrame(commit);
@@ -204,6 +210,7 @@ let lastCommittedHeavyKey = '';
 
 /** Build a key over the assets that need to be preloaded. */
 const heavyAssetKey = (c: PresentationContent) => {
+  if (c.mediaCue) return '';
   const styleBgImg = c.style?.backgroundImage ?? '';
   const styleBgVideo = c.style?.backgroundVideo ?? '';
   const itemPath = c.contentType === 'media' && (c.mediaSubType === 'image' || c.mediaSubType === 'video') ? (c.mediaPath ?? '') : '';
@@ -256,7 +263,9 @@ const preloadHeavyAssets = async (content: PresentationContent): Promise<void> =
   return undefined;
 };
 
+let preloadGeneration = 0;
 export const updatePresentation = (props: PresentationProps) => {
+  const generation = ++preloadGeneration;
   // Apply URL overrides if content is present
   if (props.content && props.content !== EMPTY_CONTENT) {
     props = { ...props, content: applyUrlOverrides(props.content) };
@@ -289,7 +298,7 @@ export const updatePresentation = (props: PresentationProps) => {
 
     let committed = false;
     const finalize = () => {
-      if (committed) return;
+      if (committed || generation !== preloadGeneration) return;
       committed = true;
       preloadTimer = null;
       lastCommittedHeavyKey = incomingHeavyKey;
@@ -413,7 +422,7 @@ if (window.presentationApi) {
       case 'VIDEO_COMMAND': {
         const target = (cmd as { target?: string }).target;
         // 'media-item' targets only the item video, not style background videos.
-        const selector = target === 'media-item' ? 'video[data-role="media-item"]' : 'video';
+        const selector = target === 'media-item' ? 'video[data-role="media-item"]' : 'video:not([data-role="media-cue"])';
         const videos = document.querySelectorAll<HTMLVideoElement>(selector);
         const action = (cmd as { action?: string }).action;
         // Prefer the fadeDuration passed via IPC; fall back to localStorage for backwards compat.

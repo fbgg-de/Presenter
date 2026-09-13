@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Stack, Box, BottomNavigation, BottomNavigationAction, Paper, Snackbar, Alert, Button } from '@mui/material';
 import { ViewList as ShowListIcon, TouchApp as ControlIcon, Monitor as OutputIcon } from '@mui/icons-material';
 import Footer from '@/components/layout/Footer';
@@ -124,6 +124,7 @@ export const MainPage = () => {
             title: show.title,
             order: orderToSave,
             groups: override ? currentShow?.groups : show.groups,
+            mediaCues: override ? currentShow?.mediaCues : show.mediaCues,
             styleId: override ? (currentShow?.styleId ?? null) : (show.styleId ?? null),
             eventId: (override ? currentShow?.eventId : show.eventId) ?? null,
             eventName: (override ? currentShow?.eventName : show.eventName) ?? null,

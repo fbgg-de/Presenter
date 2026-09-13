@@ -11,6 +11,10 @@ export type AdminAccount = {
   church_tools_url?: string | null;
   /** True if both URL and token are configured server-side. Token is never sent to the client. */
   church_tools_enabled: boolean;
+  /** Spotify app client id (not secret). */
+  spotify_client_id?: string | null;
+  /** True if client id and secret are both configured. The secret is never sent to the client. */
+  spotify_enabled?: boolean;
   providers: Array<{
     provider_id: number;
     provider_name: string;
@@ -46,6 +50,10 @@ export type UpdateAccountRequest = {
   churchToolsUrl?: string | null;
   /** ChurchTools API login token. Pass empty string to clear. */
   churchToolsToken?: string | null;
+  /** Spotify app client id. An empty string clears the id and the secret. */
+  spotifyClientId?: string;
+  /** Spotify app client secret. Omit to keep the stored one. */
+  spotifyClientSecret?: string;
 };
 
 export type CreateProviderRequest = {

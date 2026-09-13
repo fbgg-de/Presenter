@@ -38,6 +38,21 @@ class AdminAccounts extends RestController
         $stmt->fetchAll($accounts);
         $stmt->close();
 
+        // Spotify credentials arrive with migration 25 — read separately so the account list
+        // still loads on an older schema.
+        $spotifyByLicense = [];
+        try {
+            $spStmt = self::prepare('SELECT `license`, `spotify_client_id`, `spotify_client_secret` FROM `account`');
+            $spStmt->execute();
+            $spStmt->fetchAll($spotifyRows);
+            $spStmt->close();
+            foreach ($spotifyRows as $row) {
+                $spotifyByLicense[(int)$row['license']] = $row;
+            }
+        } catch (\Throwable $e) {
+            $spotifyByLicense = [];
+        }
+
         // Parse providers for each account
         foreach ($accounts as &$account) {
             $account['license'] = (int)$account['license'];
@@ -46,6 +61,11 @@ class AdminAccounts extends RestController
             // Never expose the token — send only a flag indicating whether it's set
             $account['church_tools_enabled'] = !empty($account['church_tools_url']) && !empty($account['church_tools_token']);
             unset($account['church_tools_token']);
+
+            // The client id is not a secret and is shown for editing; the secret never leaves.
+            $spotify = $spotifyByLicense[$account['license']] ?? [];
+            $account['spotify_client_id'] = $spotify['spotify_client_id'] ?? null;
+            $account['spotify_enabled'] = !empty($spotify['spotify_client_id']) && !empty($spotify['spotify_client_secret']);
 
             $providersList = [];
             if (!empty($account['providers'])) {
@@ -150,6 +170,28 @@ class AdminAccounts extends RestController
                 $types .= 's';
                 $values[] = $ctToken;
             }
+        }
+
+        // Spotify app credentials. An explicitly empty client id clears both halves — a secret
+        // without its id is useless. The secret is write-only: only a typed value replaces it.
+        if ($req->params->provided('spotifyClientId')) {
+            $spotifyClientId = trim((string)$req->params->get('spotifyClientId', '', false));
+            if ($spotifyClientId === '') {
+                $updates[] = '`spotify_client_id` = NULL';
+                $updates[] = '`spotify_client_secret` = NULL';
+            } else {
+                $updates[] = '`spotify_client_id` = ?';
+                $types .= 's';
+                $values[] = mb_substr($spotifyClientId, 0, 100);
+            }
+        }
+
+        $spotifyClientSecret = trim((string)$req->params->get('spotifyClientSecret', '', false));
+        $clearsSpotify = $req->params->provided('spotifyClientId') && trim((string)$req->params->get('spotifyClientId', '', false)) === '';
+        if ($spotifyClientSecret !== '' && !$clearsSpotify) {
+            $updates[] = '`spotify_client_secret` = ?';
+            $types .= 's';
+            $values[] = mb_substr($spotifyClientSecret, 0, 200);
         }
 
         if (empty($updates)) {

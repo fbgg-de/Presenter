@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from 'react';
 import {
   Box,
   Button,
@@ -404,6 +404,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
         title: currentShow.title,
         order: currentShow.order,
         groups: currentShow.groups,
+        mediaCues: currentShow.mediaCues,
         styleId: id,
       }).unwrap();
       dispatch(setDirty(false));

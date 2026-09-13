@@ -113,7 +113,11 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
         if (!polledShow) return;
         const polledSig = normalizeOrderSig(polledShow);
         const snapshotSig = normalizeOrderSig(serverSnapshot ?? currentShow);
-        if (polledSig === snapshotSig) return;
+        if (
+          polledSig === snapshotSig &&
+          JSON.stringify(polledShow.mediaCues ?? []) === JSON.stringify((serverSnapshot ?? currentShow)?.mediaCues ?? [])
+        )
+          return;
         if (autoReloadRef.current) {
           // Auto mode — we already hold the server version, so apply it directly
           // instead of raising the banner and re-fetching on confirmation.

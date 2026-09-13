@@ -66,6 +66,9 @@ export interface FrontendAPI {
   checkMediaFiles: (files: string[]) => Promise<MediaCheckResult>;
   getMediaServerUrl: () => Promise<string>;
   startMediaServer: (mediaPath: string) => Promise<string>;
+  pickMediaFiles: () => Promise<string[]>;
+  importMediaFiles: (mediaPath: string, subPath: string, sources: string[]) => Promise<MediaImportResult>;
+  getPathForFile: (file: File) => string;
 
   // ── Musician view ──
   openMusicianView: (config?: MusicianViewConfig) => Promise<string>;
@@ -103,6 +106,8 @@ export interface FrontendAPI {
 
   // ── Backend origin (for OIDC callback detection) ──
   setBackendOrigin: (origin: string) => void;
+  /** Clears every cookie of the app (identity provider included) and the ones saved for the next start. */
+  clearAllCookies: () => Promise<void>;
 
   // ── Auto-login preference mirror ──
   setAutoLogin: (enabled: boolean) => void;
@@ -128,7 +133,14 @@ export interface FrontendAPI {
   onPresentationWindowReady: (callback: (data: { id: string }) => void) => (() => void) | void;
 }
 
+/** Result of copying files into the media folder — see `LocalMediaServer.importFiles`. */
+export interface MediaImportResult {
+  copied: string[];
+  skipped: { name: string; reason: 'unsupported' | 'not-a-file' | 'exists' | 'error'; message?: string }[];
+}
+
 export interface VideoStatus {
+  cue?: import('../renderer/src/media/types').CueOutputStatus;
   hasVideo: boolean;
   paused?: boolean;
   muted?: boolean;

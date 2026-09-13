@@ -300,6 +300,11 @@ export interface MixerSubscription {
   stripIds?: string[];
   /** Whether this device wants meters at all. */
   meters: boolean;
+  /**
+   * This client understands `items` in a patch (see {@link diffAudioState}). Opt-in, because
+   * a client that does not would treat a patch carrying one strip as the whole list.
+   */
+  itemPatches?: boolean;
 }
 
 /**
@@ -411,6 +416,68 @@ export const mergeAudioState = (base: AudioState, patch: AudioState): AudioState
   strips: patch.strips ?? base.strips,
   muteGroups: patch.muteGroups ?? base.muteGroups,
 });
+
+/** Changed list items, by id, to lay over lists the client already holds. */
+export interface AudioItemPatch {
+  mixes?: IMix[];
+  strips?: IStrip[];
+}
+
+const sameIds = <T extends { id: string }>(a: T[], b: T[]) => a.length === b.length && a.every((item, i) => item.id === b[i].id);
+
+/**
+ * What a bridge patch actually changed, for clients that accept per-item patches.
+ *
+ * The bridge replaces a whole list whenever anything in it moves, so one fader on a
+ * 48-strip desk arrives as the full strip list — about 16 KB, several times a second while
+ * someone is mixing (seen live on 2026-09-13). Only the feeds the bridge touched are looked
+ * at. Where a list kept its ids in the same order, just the items that differ go into
+ * `items`; where it did not (a strip added, removed or reordered, or nothing to compare
+ * with yet) the whole list goes into `state`, exactly as before. Both come back empty when
+ * the patch changed nothing a client can see.
+ *
+ * `before` and `after` must be filtered with the same allow-list.
+ */
+export const diffAudioState = (
+  before: AudioState,
+  after: AudioState,
+  touched: AudioState,
+): { state: AudioState; items: AudioItemPatch } => {
+  const state: AudioState = {};
+  const items: AudioItemPatch = {};
+  const feed = <T extends { id: string }>(
+    prev: { list: T[] } | undefined,
+    next: { list: T[] } | undefined,
+  ): { full?: { list: T[] }; changed?: T[] } => {
+    if (!next) return {};
+    if (!prev || !sameIds(prev.list, next.list)) return { full: next };
+    const changed = next.list.filter((item, i) => JSON.stringify(item) !== JSON.stringify(prev.list[i]));
+    return changed.length ? { changed } : {};
+  };
+  if (touched.mixes) {
+    const { full, changed } = feed(before.mixes, after.mixes);
+    if (full) state.mixes = full;
+    if (changed) items.mixes = changed;
+  }
+  if (touched.strips) {
+    const { full, changed } = feed(before.strips, after.strips);
+    if (full) state.strips = full;
+    if (changed) items.strips = changed;
+  }
+  // Four entries at most — not worth diffing.
+  if (touched.muteGroups && JSON.stringify(before.muteGroups) !== JSON.stringify(after.muteGroups)) state.muteGroups = after.muteGroups;
+  return { state, items };
+};
+
+/** Lay per-item changes over the lists a client holds. Unknown ids are ignored — a snapshot brings those. */
+export const applyItemPatch = (base: AudioState, items: AudioItemPatch): AudioState => {
+  const lay = <T extends { id: string }>(current: { list: T[] } | undefined, changed: T[] | undefined) => {
+    if (!current || !changed?.length) return current;
+    const byId = new Map(changed.map((item) => [item.id, item]));
+    return { list: current.list.map((item) => byId.get(item.id) ?? item) };
+  };
+  return { ...base, mixes: lay(base.mixes, items.mixes), strips: lay(base.strips, items.strips) };
+};
 
 /**
  * Narrow a state document to what one musician may see.
