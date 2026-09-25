@@ -22,6 +22,8 @@ import {
   DeleteOutlined as DeleteIcon,
   Circle as CircleIcon,
   FormatColorReset as NoColorIcon,
+  MoreVert as MoreIcon,
+  LocalLibraryOutlined as LibraryIcon,
 } from '@mui/icons-material';
 import {
   DndContext,
@@ -56,6 +58,7 @@ export const GroupNameDialog = ({
   fieldLabel,
   placeholder,
   helperText,
+  multiline = false,
   onClose,
   onSubmit,
 }: {
@@ -65,6 +68,8 @@ export const GroupNameDialog = ({
   fieldLabel?: string;
   placeholder?: string;
   helperText?: string;
+  /** A text area for longer text (verse text); Enter then adds a line instead of saving. */
+  multiline?: boolean;
   onClose: () => void;
   onSubmit: (name: string) => void;
 }) => {
@@ -84,12 +89,14 @@ export const GroupNameDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth={multiline ? 'sm' : 'xs'} fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <TextField
           autoFocus
           fullWidth
+          multiline={multiline}
+          minRows={multiline ? 8 : undefined}
           margin="dense"
           label={fieldLabel ?? LL.SHOW_GROUPS.NAME()}
           placeholder={placeholder}
@@ -97,7 +104,7 @@ export const GroupNameDialog = ({
           value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') submit();
+            if (e.key === 'Enter' && (!multiline || e.ctrlKey || e.metaKey)) submit();
           }}
         />
       </DialogContent>
@@ -135,12 +142,15 @@ const SortableRow = ({ id, disabled, children }: { id: string; disabled?: boolea
  */
 const SortableGroupCard = ({
   id,
+  groupId,
   disabled,
   color,
   header,
   children,
 }: {
   id: string;
+  /** The show group's own id, exposed for file drops onto the agenda (`data-agenda-group`). */
+  groupId: string;
   disabled?: boolean;
   color?: string;
   /** Renders the header row; spread `dragHandleProps` onto it to make it the drag handle. */
@@ -151,6 +161,7 @@ const SortableGroupCard = ({
   return (
     <Box
       ref={setNodeRef}
+      data-agenda-group={groupId}
       // Translate only — group cards have different heights, and the strategy's scaleY
       // would visibly stretch/squash the dragged card while hovering other groups.
       style={{ transform: CSS.Translate.toString(transform), transition }}
@@ -184,11 +195,20 @@ interface ShowGroupListProps {
   /** When true, group management (add/rename/recolor/reorder/delete, cross-group drag) is enabled. */
   editable?: boolean;
   onRenameGroup?: (groupId: string, name: string) => void;
+  /** A colour dot with its own menu, for pages without the group settings dialog (the musician page). */
   onRecolorGroup?: (groupId: string, color: string | undefined) => void;
   /** Drag & drop: move `sourceId`'s group block to `targetId`'s position. */
   onReorderGroup?: (sourceId: string, targetId: string) => void;
   onDeleteGroup?: (groupId: string) => void;
   onAddGroup?: (name: string) => void;
+  /** Open a group's settings (name, colour, theme, media playback, library); `itemCount` is its entries. */
+  onOpenGroupSettings?: (group: ShowGroup, itemCount: number) => void;
+  /** Offered at the end of every group while editable: add an item into that group. */
+  onAddItem?: (groupId: string, anchor: HTMLElement) => void;
+  /** Shown inside a group that has no entries yet: import songs, or drop files in. */
+  emptyGroupDropArea?: ReactNode;
+  /** Offered next to "Add group": pick groups and media entries from the library. */
+  onOpenLibrary?: () => void;
   /** Static content rendered after the last group (e.g. the import skeleton). */
   footer?: ReactNode;
 }
@@ -236,6 +256,10 @@ export const ShowGroupList = ({
   onReorderGroup,
   onDeleteGroup,
   onAddGroup,
+  onOpenGroupSettings,
+  onOpenLibrary,
+  onAddItem,
+  emptyGroupDropArea,
   footer,
 }: ShowGroupListProps) => {
   const { LL } = useI18nContext();
@@ -256,7 +280,7 @@ export const ShowGroupList = ({
   const entries: Entry[] = preview ?? order.map((item, origIndex) => ({ item, origIndex }));
   const view = displayGroups.map((group) => ({ group, items: entries.filter((e) => entryGid(e) === group.id) }));
 
-  // Color menu (opened from the group's color circle) + inline rename + add dialog.
+  // Colour menu (musician page) + inline rename + add dialog.
   const [colorMenu, setColorMenu] = useState<{ anchor: HTMLElement; groupId: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -401,6 +425,7 @@ export const ShowGroupList = ({
               <SortableGroupCard
                 key={group.id}
                 id={`${GROUP_ID_PREFIX}${group.id}`}
+                groupId={group.id}
                 disabled={!editable || !!editing}
                 color={group.color}
                 header={(dragHandleProps) => (
@@ -480,8 +505,26 @@ export const ShowGroupList = ({
                       </Tooltip>
                     )}
 
-                    {/* Color circle → color menu */}
-                    {editable && (
+                    {/* Group settings: name, colour, theme, media playback, keep in the library */}
+                    {editable && onOpenGroupSettings && (
+                      <Tooltip title={LL.SHOW_GROUPS.SETTINGS()}>
+                        <IconButton
+                          size="small"
+                          aria-label={LL.SHOW_GROUPS.SETTINGS()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e: MouseEvent<HTMLElement>) => {
+                            e.stopPropagation();
+                            onOpenGroupSettings(group, items.length);
+                          }}
+                          // Tinted when the group has its own theme or playback settings.
+                          sx={{ p: 0.25, color: group.styleId || group.media || group.backgrounds ? 'primary.main' : 'text.secondary' }}
+                        >
+                          <MoreIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {/* Colour dot → colour menu, where there is no group settings dialog */}
+                    {editable && onRecolorGroup && !onOpenGroupSettings && (
                       <IconButton
                         size="small"
                         sx={{ p: 0.25 }}
@@ -510,6 +553,19 @@ export const ShowGroupList = ({
                       ))}
                     </List>
                   </SortableContext>
+                  {/* An empty group says how to fill it, right where the entries would go. */}
+                  {editable && items.length === 0 && emptyGroupDropArea && <Box sx={{ px: 1, pt: 0.5 }}>{emptyGroupDropArea}</Box>}
+                  {editable && onAddItem && (
+                    <Button
+                      fullWidth
+                      size="small"
+                      startIcon={<AddIcon />}
+                      onClick={(e) => onAddItem(group.id, e.currentTarget)}
+                      sx={{ my: 0.25, px: 1.75, justifyContent: 'flex-start', color: 'text.secondary', textTransform: 'none' }}
+                    >
+                      {LL.SHOW_GROUPS.ADD_ITEM()}
+                    </Button>
+                  )}
                 </Collapse>
               </SortableGroupCard>
             );
@@ -552,18 +608,29 @@ export const ShowGroupList = ({
       {footer}
 
       {editable && (
-        <Button
-          fullWidth
-          size="small"
-          startIcon={<AddIcon />}
-          sx={{ justifyContent: 'flex-start', px: 1.75, color: 'text.secondary', textTransform: 'none' }}
-          onClick={() => setAddOpen(true)}
-        >
-          {LL.SHOW_GROUPS.ADD()}
-        </Button>
+        <Stack direction="row" sx={{ alignItems: 'center' }}>
+          <Button
+            size="small"
+            startIcon={<AddIcon />}
+            sx={{ flex: 1, justifyContent: 'flex-start', px: 1.75, color: 'text.secondary', textTransform: 'none' }}
+            onClick={() => setAddOpen(true)}
+          >
+            {LL.SHOW_GROUPS.ADD()}
+          </Button>
+          {onOpenLibrary && (
+            <Button
+              size="small"
+              startIcon={<LibraryIcon />}
+              sx={{ flex: 1, justifyContent: 'flex-start', px: 1.75, color: 'text.secondary', textTransform: 'none' }}
+              onClick={onOpenLibrary}
+            >
+              {LL.LIBRARY.FROM_LIBRARY()}
+            </Button>
+          )}
+        </Stack>
       )}
 
-      {/* Color menu (per group) — "no color" bubble first, then the presets */}
+      {/* Colour menu (per group) — "no colour" bubble first, then the presets */}
       <Menu anchorEl={colorMenu?.anchor ?? null} open={!!colorMenu} onClose={() => setColorMenu(null)}>
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0.5, px: 1, py: 0.5 }}>
           <Tooltip title={LL.SHOW_GROUPS.NO_COLOR()}>

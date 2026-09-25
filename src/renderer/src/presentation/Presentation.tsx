@@ -20,8 +20,9 @@ import {
   StreamMode,
 } from '@/presentation';
 import { StageOverlay } from '@/presentation/StageOverlay';
-import { rampToVolume } from '@/presentation/videoUtils';
-import { CueMedia } from '@/media/CueMedia';
+import { StageScreen } from '@/presentation/StageScreen';
+import { stageFrameFromContent } from '@/presentation/stageFrame';
+import { MediaStack } from '@/media/CueMedia';
 
 /**
  * Legacy props interface — kept for backward compatibility.
@@ -37,41 +38,34 @@ export interface PresentationProps {
   stage?: StageOverlayPayload;
 }
 
-/**
- * Cross-fade layer: renders previous content and fades it out.
- * Uses a two-phase approach: mounts with opacity 1, then transitions to 0.
- */
-const FadeOutLayer = ({
-  prevContent,
-  transitionDuration,
-  videoObjectFit,
-}: {
-  prevContent: PresentationContent;
-  transitionDuration: number;
-  videoObjectFit: (size?: string) => CSSProperties['objectFit'];
-}) => {
+/** Mount at opacity 1, then fade to 0 on the next frame. */
+const useFadeOut = () => {
   const [opacity, setOpacity] = useState(1);
   useEffect(() => {
-    // Start fade after mount (next frame)
-    const raf = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setOpacity(0));
+    let inner = 0;
+    const outer = requestAnimationFrame(() => {
+      inner = requestAnimationFrame(() => setOpacity(0));
     });
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(outer);
+      cancelAnimationFrame(inner);
+    };
   }, []);
+  return opacity;
+};
+
+/**
+ * Cross-fade layer for the previous *content* (text or a colour entry). Media entries are not part
+ * of it: they fade in their own layers.
+ */
+const FadeOutLayer = ({ prevContent, transitionDuration }: { prevContent: PresentationContent; transitionDuration: number }) => {
+  const opacity = useFadeOut();
 
   const prevResolved: ResolvedStyle = mergeStyles(DEFAULT_STYLE, prevContent.style || {});
   const prevContainerCss = styleToContainerCss(prevResolved);
   const prevTextCss = styleToTextCss(prevResolved);
   const { padding: prevPadding } = prevContainerCss as CSSProperties & { padding?: string };
-  const prevHasBgVideo = prevResolved.backgroundVideo && !prevResolved.hideBackground;
-  const prevHasBgImage = prevResolved.backgroundImage && !prevResolved.hideBackground;
   const prevIsTextHidden = prevResolved.hideText || prevContent.hideText;
-  const prevBgZoom =
-    prevResolved.backgroundZoom && prevResolved.backgroundZoom !== 100 ? `scale(${prevResolved.backgroundZoom / 100})` : undefined;
-  const prevVideoSize = prevResolved.backgroundVideoSize ?? prevResolved.backgroundSize;
-  const prevVideoPosition = prevResolved.backgroundVideoPosition ?? prevResolved.backgroundPosition;
-  const prevVideoZoom = prevResolved.backgroundVideoZoom ?? prevResolved.backgroundZoom;
-  const prevVideoZoomTransform = prevVideoZoom && prevVideoZoom !== 100 ? `scale(${prevVideoZoom / 100})` : undefined;
 
   return (
     <div
@@ -81,7 +75,6 @@ const FadeOutLayer = ({
         zIndex: 10,
         opacity,
         transition: `opacity ${transitionDuration}ms ease-in-out`,
-        backgroundColor: prevContainerCss.backgroundColor || 'transparent',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -89,41 +82,6 @@ const FadeOutLayer = ({
         pointerEvents: 'none',
       }}
     >
-      {prevHasBgImage && (
-        <img
-          src={prevResolved.backgroundImage}
-          alt=""
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: videoObjectFit(prevResolved.backgroundSize),
-            objectPosition: prevResolved.backgroundPosition || 'center',
-            zIndex: 0,
-            ...(prevBgZoom ? { transform: prevBgZoom, transformOrigin: prevResolved.backgroundPosition || 'center' } : {}),
-          }}
-        />
-      )}
-      {prevHasBgVideo && (
-        <video
-          src={prevResolved.backgroundVideo}
-          autoPlay
-          loop={prevResolved.backgroundVideoLoop !== false}
-          playsInline
-          ref={(el) => rampToVolume(el, prevResolved.backgroundVideoVolume ?? 1, prevResolved.backgroundVideoEaseIn)}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: videoObjectFit(prevVideoSize),
-            objectPosition: prevVideoPosition || 'center',
-            zIndex: 0,
-            ...(prevVideoZoomTransform ? { transform: prevVideoZoomTransform, transformOrigin: prevVideoPosition || 'center' } : {}),
-          }}
-        />
-      )}
       {!prevIsTextHidden && (
         <div
           style={{
@@ -241,19 +199,17 @@ export const Presentation = (props: PresentationProps) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [content && contentIdentityKey(content), transitionMode, transitionDuration]);
 
-  // Preload the incoming background image so it's in the browser cache before
-  // it becomes visible, eliminating the flash-of-black when switching slides.
-  const prevBgImageRef = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    const bgImg = content?.style?.backgroundImage;
-    const mediaImg = content?.contentType === 'media' && content.mediaSubType === 'image' ? content.mediaPath : undefined;
-    const urlToPreload = bgImg || mediaImg;
-    if (urlToPreload && urlToPreload !== prevBgImageRef.current) {
-      prevBgImageRef.current = urlToPreload;
-      const img = new globalThis.Image();
-      img.src = urlToPreload;
-    }
-  }, [content?.style?.backgroundImage, content?.contentType, content?.mediaSubType, content?.mediaPath]);
+  // A Stage group's window draws the stage screen — the audience theme does not apply there.
+  if (content?.stageLayout && !content.showIdentify) {
+    return (
+      <div
+        className="presentation"
+        style={{ width: '100vw', height: '100vh', position: 'relative', overflow: 'hidden', background: '#050607' }}
+      >
+        <StageScreen frame={stageFrameFromContent(content)} settings={content.stageLayout} overlays={stage} isBlack={content.isBlack} />
+      </div>
+    );
+  }
 
   if (!content || (content.contentType === 'empty' && !content.showIdentify)) {
     return (
@@ -306,27 +262,6 @@ export const Presentation = (props: PresentationProps) => {
     delete containerCssWithoutPadding.backgroundImage;
   }
 
-  // Background video from style
-  const hasBackgroundVideo = !content.mediaCue && resolvedStyle.backgroundVideo && !resolvedStyle.hideBackground;
-  const hasBackgroundImage = !content.mediaCue && resolvedStyle.backgroundImage && !resolvedStyle.hideBackground;
-  if (content.mediaCue) delete containerCssWithoutPadding.backgroundImage;
-
-  // Map backgroundSize to objectFit for image/video elements
-  const videoObjectFit = (size?: string): CSSProperties['objectFit'] => {
-    if (size === 'contain' || size === '100% auto' || size === 'auto 100%' || size === 'auto') return 'contain';
-    return 'cover';
-  };
-
-  // Build zoom transform (100 = 1x, 150 = 1.5x)
-  const bgZoomTransform =
-    resolvedStyle.backgroundZoom && resolvedStyle.backgroundZoom !== 100 ? `scale(${resolvedStyle.backgroundZoom / 100})` : undefined;
-
-  // Video uses its own size/position/zoom if set, falling back to the image ones.
-  const videoSize = resolvedStyle.backgroundVideoSize ?? resolvedStyle.backgroundSize;
-  const videoPosition = resolvedStyle.backgroundVideoPosition ?? resolvedStyle.backgroundPosition;
-  const videoZoom = resolvedStyle.backgroundVideoZoom ?? resolvedStyle.backgroundZoom;
-  const bgVideoZoomTransform = videoZoom && videoZoom !== 100 ? `scale(${videoZoom / 100})` : undefined;
-
   const transitionCss = transitionMode === 'fade' ? `${transitionDuration}ms ease-in-out` : '0.3s ease-in-out';
 
   const containerStyle: CSSProperties = {
@@ -352,7 +287,7 @@ export const Presentation = (props: PresentationProps) => {
   const renderContent = () => {
     switch (content.contentType) {
       case 'media':
-        return content.mediaCue ? null : <MediaContent content={content} />;
+        return <MediaContent content={content} />;
 
       case 'bible_verse':
         return <BibleVerseContent content={content} textStyle={textCss} />;
@@ -408,52 +343,14 @@ export const Presentation = (props: PresentationProps) => {
       }}
     >
       {/* Cross-fade: previous content fading out */}
-      {fadePhase === 'fading' && prevContent && !content.mediaCue && !prevContent.mediaCue && (
-        <FadeOutLayer key={fadeKey} prevContent={prevContent} transitionDuration={transitionDuration} videoObjectFit={videoObjectFit} />
+      {fadePhase === 'fading' && prevContent && (
+        <FadeOutLayer key={fadeKey} prevContent={prevContent} transitionDuration={transitionDuration} />
       )}
 
-      {/* Background image layer */}
-      {content.mediaCue && <CueMedia packet={content.mediaCue} />}
-      {hasBackgroundImage && (
-        <img
-          src={resolvedStyle.backgroundImage}
-          alt=""
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: videoObjectFit(resolvedStyle.backgroundSize),
-            objectPosition: resolvedStyle.backgroundPosition || 'center',
-            zIndex: 0,
-            ...(bgZoomTransform ? { transform: bgZoomTransform, transformOrigin: resolvedStyle.backgroundPosition || 'center' } : {}),
-            ...(resolvedStyle.backgroundBlur ? { filter: `blur(${resolvedStyle.backgroundBlur}px)` } : {}),
-          }}
-        />
-      )}
-
-      {/* Background video layer */}
-      {hasBackgroundVideo && (
-        <video
-          key={contentIdentityKey(content)}
-          src={resolvedStyle.backgroundVideo}
-          autoPlay={resolvedStyle.backgroundVideoAutoplay !== false}
-          loop={resolvedStyle.backgroundVideoLoop !== false}
-          playsInline
-          ref={(el) => rampToVolume(el, resolvedStyle.backgroundVideoVolume ?? 1, resolvedStyle.backgroundVideoEaseIn)}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            width: '100%',
-            height: '100%',
-            objectFit: videoObjectFit(videoSize),
-            objectPosition: videoPosition || 'center',
-            zIndex: 0,
-            ...(bgVideoZoomTransform ? { transform: bgVideoZoomTransform, transformOrigin: videoPosition || 'center' } : {}),
-            ...(resolvedStyle.backgroundVideoBlur ? { filter: `blur(${resolvedStyle.backgroundVideoBlur}px)` } : {}),
-          }}
-        />
-      )}
+      {/* Media: a background behind the text, content above the background. Stacked by order, so
+          the text layer (zIndex 1) stays on top. A hidden background arrives invisible and fades in its layer. */}
+      <MediaStack packets={content.media?.background ? [content.media.background] : []} zIndex={0} />
+      <MediaStack packets={content.media?.contents ?? []} zIndex={0} />
 
       {/* Content layer */}
       <div
@@ -469,7 +366,6 @@ export const Presentation = (props: PresentationProps) => {
           height: '100%',
           padding: contentPadding || 0,
           boxSizing: 'border-box',
-          // test
           opacity: isTextHidden ? 0 : 1,
           transition: 'opacity 0.4s ease-in-out',
           pointerEvents: 'none',

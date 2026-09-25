@@ -29,16 +29,48 @@ export const initialTransport = (session: string): CueTransport => ({
   bypass: [],
   enabled: {},
 });
+/** The speeds offered in the transport. Anything between the limits is accepted. */
+export const PLAYBACK_RATES = [0.5, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 2];
+export const MIN_RATE = 0.25;
+export const MAX_RATE = 4;
+/** A transport's speed, always finite and inside the limits. */
+export const rateOf = (t: Pick<CueTransport, 'rate'>): number =>
+  typeof t.rate === 'number' && Number.isFinite(t.rate) ? clamp(t.rate, MIN_RATE, MAX_RATE) : 1;
+
 export const lyricAt = (cue: MediaCue, time: number, mapping?: Record<string, string>) =>
   cue.regions
     .filter((s) => s.kind !== 'pause' && (mapping ? !!mapping[s.id] : s.kind === 'section') && contains(s, time))
     .sort((a, b) => b.start - a.start || b.id.localeCompare(a.id))[0];
 
+/**
+ * How a playing media element follows the clock — the same rule in every window, so several
+ * crops of one video on different screens stay together.
+ *
+ * Small drift is pulled in by playing a few percent faster or slower (proportional to the drift,
+ * at most ±10 %), which is invisible; a seek is a visible stutter, so it is kept for real jumps —
+ * a seek on the operator side, a loop wrapping, a window that fell far behind.
+ *
+ * A seek takes the decoder a while (commonly 0.1–0.4 s) during which the clock moves on, so it
+ * aims `leadSeconds` of wall time ahead — the element's measured seek time — and lands on time
+ * instead of behind, where the gentle nudge would need seconds to catch up.
+ */
+export const SYNC_HARD_SEEK = 0.5;
+export const SYNC_DEADBAND = 0.02;
+const SYNC_GAIN = 0.5;
+const SYNC_MAX_NUDGE = 0.1;
+export function followClock(target: number, current: number, rate: number, leadSeconds = 0): { seek?: number; playbackRate: number } {
+  const drift = target - current;
+  if (Math.abs(drift) > SYNC_HARD_SEEK) return { seek: target + leadSeconds * rate, playbackRate: rate };
+  if (Math.abs(drift) <= SYNC_DEADBAND) return { playbackRate: rate };
+  return { playbackRate: rate * (1 + clamp(drift * SYNC_GAIN, -SYNC_MAX_NUDGE, SYNC_MAX_NUDGE)) };
+}
+
 /** Immutable deterministic clock used by the operator and every output. */
 export function advanceCue(cue: MediaCue, previous: CueTransport, seconds: number): CueTransport {
   const t = { ...previous, bypass: [...previous.bypass], enabled: { ...previous.enabled } };
   if (!t.playing || !Number.isFinite(seconds) || seconds <= 0 || cue.duration <= 0) return t;
-  let remaining = seconds;
+  // Wall-clock seconds in, media seconds consumed: everything below works in media time.
+  let remaining = seconds * rateOf(t);
   const pauses = cue.regions.filter((s) => s.kind === 'pause' && isEnabled(s, t)).sort(ordered);
   const hold = (s: MediaRegion) => {
     t.time = s.start;
@@ -80,7 +112,12 @@ export function advanceCue(cue: MediaCue, previous: CueTransport, seconds: numbe
         if (t.playing && !pauses.some((s) => s.start >= loop.start && s.start <= loop.end)) remaining %= loop.end - loop.start;
       }
     } else if (entry) t.activeLoop = entry.id;
-    else {
+    else if (cue.loop) {
+      release(t);
+      t.bypass = [];
+      land(0);
+      if (t.playing && !pauses.length) remaining %= cue.duration;
+    } else {
       t.playing = false;
       t.time = cue.duration;
       break;
@@ -116,8 +153,19 @@ export function commandCue(cue: MediaCue, previous: CueTransport, command: CueCo
         delete t.pausedAt;
       } else resume();
       break;
-    case 'stop':
-      return { ...initialTransport(t.session), revision: t.revision, enabled: t.enabled };
+    case 'stop': {
+      // The chosen speed is the operator's intent for this entry: it survives Stop.
+      const stopped: CueTransport = { ...initialTransport(t.session), revision: t.revision, enabled: t.enabled };
+      if (t.rate !== undefined) stopped.rate = t.rate;
+      return stopped;
+    }
+    case 'rate': {
+      if (!Number.isFinite(command.rate)) return previous;
+      const rate = Math.round(clamp(command.rate, MIN_RATE, MAX_RATE) * 100) / 100;
+      if (rate === 1) delete t.rate;
+      else t.rate = rate;
+      break;
+    }
     case 'seek': {
       if (!Number.isFinite(command.time)) return previous;
       const restart = command.navigate && !!t.pausedAt;
@@ -130,7 +178,8 @@ export function commandCue(cue: MediaCue, previous: CueTransport, command: CueCo
       break;
     }
     case 'enable': {
-      const s = cue.regions.find((s) => s.id === command.id && (s.kind === 'pause' || isLoop(s)));
+      // Any region: a pause holds, a loop repeats, a section's lyric mapping counts — only while armed.
+      const s = cue.regions.find((s) => s.id === command.id);
       if (!s) return previous;
       t.enabled[s.id] = command.enabled;
       t.bypass = t.bypass.filter((id) => id !== s.id);

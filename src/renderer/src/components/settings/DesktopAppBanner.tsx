@@ -168,7 +168,7 @@ export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopApp
  */
 export const DesktopAppBanner = () => {
   const { LL } = useI18nContext();
-  const { desktopAppDismissed } = useGetSettings();
+  const { desktopAppDismissed } = useGetSettings('desktopAppDismissed');
   const updateSetting = useUpdateSetting();
 
   const [modalOpen, setModalOpen] = useState(false);

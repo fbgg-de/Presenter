@@ -4,9 +4,7 @@ import { Presentation, type PresentationProps } from '@/presentation/Presentatio
 import type { PresentationContent } from '@/presentation/types';
 import { EMPTY_CONTENT } from '@/presentation/types';
 import { EMPTY_STAGE_PAYLOAD, type StageOverlayPayload } from '@/stage/types';
-import { getSetting } from '@/store/settingsSlice';
 import { showDevBanner } from '@/devBanner';
-import { playWithFade, pauseWithFade, stopWithFade } from '@/presentation/videoUtils';
 import { LanguageStyleEntry } from '@/api/styles.api';
 import { MAIN_LANGUAGE_SLOT, entryForSlot, slotForLanguage } from '@/utils/languageSlots';
 
@@ -18,28 +16,6 @@ export * from '@/presentation/NextBlockPreview';
 export * from '@/presentation/NormalMode';
 export * from '@/presentation/StageOverlay';
 export * from '@/presentation/StreamMode';
-
-/**
- * Read the video fade duration from localStorage (set by the main renderer's settings).
- * Returns 0 if not set (instant cut).
- */
-const getVideoFadeDuration = (): number => {
-  const v = getSetting('videoFadeDuration');
-  const n = v !== undefined && v !== null ? parseInt(String(v), 10) : 0;
-  return isNaN(n) || n < 0 ? 0 : n;
-};
-
-/**
- * Read the hide-transition duration from localStorage (set by the main renderer's
- * settings). Used to make the auto-hide of style background videos (when a
- * media-item video becomes active) fade smoothly instead of cutting abruptly.
- * Defaults to 400ms which is gentler than an instant cut.
- */
-const getHideTransitionDuration = (): number => {
-  const v = getSetting('hideTransitionDuration');
-  const n = v !== undefined && v !== null ? parseInt(String(v), 10) : NaN;
-  return isNaN(n) || n < 0 ? 400 : n;
-};
 
 /**
  * Build a CSS override object from a LanguageStyleEntry (only enabled properties).
@@ -92,27 +68,44 @@ export const resolveLineLangCss = (
  * Generate a content identity key for detecting **meaningful** content changes
  * (item-level only, not block switches, and NOT cosmetic display-only edits).
  *
- * Display-only props such as `mediaObjectFit`, `mediaObjectPosition`,
- * `mediaZoom`, `mediaBlur`, `mediaAutoplay` and `mediaLoop` are deliberately
- * EXCLUDED — they are pure CSS / DOM-attribute updates and should be applied
- * in place. Including them would force the cross-fade machinery to capture a
- * "previous" snapshot and remount the `<video>` element on every slider tick,
- * causing the video to restart and a visible background flicker.
+ * Media entries are not part of it: they arrive as their own layers (`content.media`), each
+ * keyed by its playback session.
  */
-export const contentIdentityKey = (c: PresentationContent): string =>
-  `${c.contentType}|${c.mediaPath ?? ''}|${c.bibleRef ?? ''}|${c.mediaColor ?? ''}|${c.style?.backgroundImage ?? ''}|${c.style?.backgroundVideo ?? ''}|${c.style?.backgroundColor ?? ''}`;
+export const contentIdentityKey = (c: PresentationContent): string => `${c.contentType}|${c.bibleRef ?? ''}|${c.mediaColor ?? ''}`;
 
 export { filterLinesByLanguage } from './lineFilter';
 
-// Parse URL query params for window configuration
+// The query string: a snapshot of this window's screen group taken when it was opened, so the
+// first paint is right. What the window shows from then on is decided per window by the operator
+// (see `applyUrlDefaults`). `languages` is deliberately not read back — an empty list means
+// "every language", which is a decision, not a gap to fill from a stale snapshot.
 const params = new URLSearchParams(window.location.search);
 const urlMode = params.get('mode') as 'normal' | 'stream' | null;
 const urlName = params.get('name');
 const urlLines = params.get('lines');
-const urlLanguages = params.get('languages');
 const urlTransparent = params.get('transparent');
 /** Bridge registry id, set when this page was opened by the operator as a popup. */
 const urlWindowId = params.get('wid');
+/**
+ * An operator preview (an iframe in the operator view, or its pop-out window) rather than an
+ * output: silent, without the dev banner, and never announced as a presentation window.
+ */
+const isPreview = params.get('preview') === '1';
+
+if (isPreview) {
+  // A preview must never be heard: every video it draws, now or later, stays muted.
+  const mute = (node: Node) => {
+    if (node instanceof HTMLMediaElement) node.muted = true;
+    if (node instanceof Element) node.querySelectorAll('video, audio').forEach((media) => ((media as HTMLMediaElement).muted = true));
+  };
+  new MutationObserver((records) => records.forEach((record) => record.addedNodes.forEach(mute))).observe(document.body, {
+    childList: true,
+    subtree: true,
+  });
+  // Something that unmutes a video later (a volume ramp) is undone on the spot.
+  document.addEventListener('volumechange', (event) => mute(event.target as Node), true);
+  document.body.style.cursor = 'default';
+}
 
 // Apply transparent background for OBS Browser Source
 const el = document.getElementById('presentation-root')!;
@@ -128,7 +121,7 @@ const root = createRoot(el);
 // dev banner itself. Compact: the page is the projection, and a labelled pill over the
 // lyrics would be read as part of them. Never in transparent mode — there the window is a
 // video source being composited into a stream, and a stripe would be baked into it.
-if (urlTransparent !== '1') {
+if (urlTransparent !== '1' && !isPreview) {
   void showDevBanner({ compact: true });
 }
 
@@ -136,14 +129,22 @@ if (urlTransparent !== '1') {
 let lastProps: PresentationProps = { content: EMPTY_CONTENT };
 
 /**
- * Apply URL-based overrides to content.
+ * Fill in what the query string said, for anything the arriving content does not decide.
+ *
+ * The query string is a snapshot of the window's screen group taken when it was opened — it is
+ * there so the first paint is right. Everything after that is resolved per window by the bridge
+ * (`applyScreenGroup`), which knows the *current* group. Letting the query string win instead,
+ * as this used to, froze a window's display mode and language list at open time: changing the
+ * group afterwards did nothing, and a language list that no longer matched the song left the
+ * window blank while every other output still showed the text.
  */
-const applyUrlOverrides = (content: PresentationContent): PresentationContent => {
+const applyUrlDefaults = (content: PresentationContent): PresentationContent => {
   const result = { ...content };
-  if (urlMode) result.displayMode = urlMode;
-  if (urlName) result.windowName = urlName;
-  if (urlLines) result.streamLines = parseInt(urlLines, 10);
-  if (urlLanguages) result.languages = urlLanguages.split(',');
+  if (!result.displayMode && urlMode) result.displayMode = urlMode;
+  if (!result.windowName && urlName) result.windowName = urlName;
+  if (result.streamLines === undefined && urlLines) result.streamLines = parseInt(urlLines, 10);
+  // `languages` is deliberately not filled in: undefined means "every language", which is a
+  // decision the group makes, not a gap to patch with a stale list.
   return result;
 };
 
@@ -171,7 +172,7 @@ const commit = () => {
 const scheduleCommit = () => {
   // Transport commands must also reach an obscured browser output, whose animation
   // frames may be suspended. Every media element advances the shared clock itself.
-  if (pendingProps?.content?.mediaCue) {
+  if (pendingProps?.content?.media?.background || pendingProps?.content?.media?.contents.length) {
     commit();
     return;
   }
@@ -191,136 +192,9 @@ export const updateStage = (payload: StageOverlayPayload) => {
   scheduleCommit();
 };
 
-// ── Heavy-asset preloading ────────────────────────────────────────────────────
-//
-// When the operator switches to a new item that has a different background
-// image / background video / media-item video, browsers will momentarily show a
-// flash of black before the new asset is decoded and painted. To prevent this,
-// we **stage** the new content: when an incoming update has different heavy
-// assets than the current view, we preload them in the background and only
-// commit the new content once they are ready (or after a max grace period).
-// This means the operator continues to see the OLD slide cleanly while the new
-// slide's resources warm up, and the swap is then effectively instant.
-//
-// The grace period bounds the wait so we never appear stuck if a network
-// resource is slow or unavailable.
-const PRELOAD_MAX_WAIT_MS = 1000;
-let preloadTimer: ReturnType<typeof setTimeout> | null = null;
-let lastCommittedHeavyKey = '';
-
-/** Build a key over the assets that need to be preloaded. */
-const heavyAssetKey = (c: PresentationContent) => {
-  if (c.mediaCue) return '';
-  const styleBgImg = c.style?.backgroundImage ?? '';
-  const styleBgVideo = c.style?.backgroundVideo ?? '';
-  const itemPath = c.contentType === 'media' && (c.mediaSubType === 'image' || c.mediaSubType === 'video') ? (c.mediaPath ?? '') : '';
-  return `${styleBgImg}|${styleBgVideo}|${itemPath}`;
-};
-
-/** Promise-based preload of an image. Resolves whether or not it succeeds. */
-const preloadImage: (url: string) => Promise<void> = (url) => {
-  return new Promise((resolve) => {
-    const img = new globalThis.Image();
-    img.onload = () => resolve();
-    img.onerror = () => resolve();
-    img.src = url;
-  });
-};
-
-/** Promise-based preload of a video — resolves once enough is buffered to play. */
-const preloadVideo: (url: string) => Promise<void> = (url) => {
-  return new Promise((resolve) => {
-    const v = document.createElement('video');
-    v.preload = 'auto';
-    v.muted = true;
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      // Detach from DOM if it was attached; we never appended it so this is a no-op.
-      resolve();
-    };
-    v.oncanplay = finish;
-    v.onerror = finish;
-    v.src = url;
-  });
-};
-
-/** Preload all heavy assets referenced by `content`. Resolves when all done. */
-const preloadHeavyAssets = async (content: PresentationContent): Promise<void> => {
-  const tasks: Promise<void>[] = [];
-  const styleBgImg = content.style?.backgroundImage;
-  const styleBgVideo = content.style?.backgroundVideo;
-  if (styleBgImg) tasks.push(preloadImage(styleBgImg));
-  if (styleBgVideo) tasks.push(preloadVideo(styleBgVideo));
-  if (content.contentType === 'media' && content.mediaPath) {
-    if (content.mediaSubType === 'image') tasks.push(preloadImage(content.mediaPath));
-    else if (content.mediaSubType === 'video') tasks.push(preloadVideo(content.mediaPath));
-  }
-  if (tasks.length === 0) return Promise.resolve();
-
-  await Promise.all(tasks);
-  return undefined;
-};
-
-let preloadGeneration = 0;
 export const updatePresentation = (props: PresentationProps) => {
-  const generation = ++preloadGeneration;
-  // Apply URL overrides if content is present
   if (props.content && props.content !== EMPTY_CONTENT) {
-    props = { ...props, content: applyUrlOverrides(props.content) };
-  }
-
-  // Cosmetic / non-asset changes (block navigation, line nav, position/zoom/blur,
-  // etc.) commit immediately. Only when a NEW heavy asset (different background
-  // image/video, different media-item path) appears do we wait for it to preload
-  // before swapping. The grace period bounds how long we hold the old slide.
-  const incomingHeavyKey = props.content && props.content !== EMPTY_CONTENT ? heavyAssetKey(props.content) : '';
-  const heavyAssetsChanged = incomingHeavyKey !== '' && incomingHeavyKey !== lastCommittedHeavyKey;
-
-  if (heavyAssetsChanged) {
-    // Cancel any in-flight preload — the latest update wins.
-    if (preloadTimer) {
-      clearTimeout(preloadTimer);
-      preloadTimer = null;
-    }
-
-    // Pre-warm the body class for media-item active state so style background
-    // videos can already start fading out while the new asset preloads.
-    if (props.content) {
-      const isMediaVideo = props.content.contentType === 'media' && props.content.mediaSubType === 'video';
-      if (isMediaVideo) {
-        const dur = getHideTransitionDuration();
-        document.body.style.setProperty('--hide-bg-video-duration', `${dur}ms`);
-      }
-      document.body.classList.toggle('media-item-active', props.content.contentType === 'media' && props.content.mediaSubType === 'video');
-    }
-
-    let committed = false;
-    const finalize = () => {
-      if (committed || generation !== preloadGeneration) return;
-      committed = true;
-      preloadTimer = null;
-      lastCommittedHeavyKey = incomingHeavyKey;
-      pendingProps = props;
-      scheduleCommit();
-    };
-
-    // Hard cap: never wait longer than the grace period.
-    preloadTimer = setTimeout(finalize, PRELOAD_MAX_WAIT_MS);
-    // Resolve as soon as preload finishes, whichever comes first.
-    if (props.content) void preloadHeavyAssets(props.content).then(finalize);
-    return;
-  }
-
-  // Same heavy assets → commit immediately (no flicker possible).
-  if (props.content && props.content !== EMPTY_CONTENT) {
-    const isMediaVideo = props.content.contentType === 'media' && props.content.mediaSubType === 'video';
-    if (isMediaVideo) {
-      const dur = getHideTransitionDuration();
-      document.body.style.setProperty('--hide-bg-video-duration', `${dur}ms`);
-    }
-    document.body.classList.toggle('media-item-active', isMediaVideo);
+    props = { ...props, content: applyUrlDefaults(props.content) };
   }
   pendingProps = props;
   scheduleCommit();
@@ -357,7 +231,8 @@ window.addEventListener('message', (event) => {
 // A page loaded directly (an OBS browser source) has no opener and simply skips this.
 if (!window.presentationApi && window.opener) {
   try {
-    (window.opener as Window).postMessage({ type: 'PRESENTATION_READY', id: urlWindowId }, '*');
+    // A popped-out preview tells the operator view it can take content; it is not an output.
+    (window.opener as Window).postMessage(isPreview ? { type: 'PREVIEW_READY' } : { type: 'PRESENTATION_READY', id: urlWindowId }, '*');
   } catch {
     // opener already gone, or not same-origin — nothing to announce to
   }
@@ -419,85 +294,6 @@ if (window.presentationApi) {
         updatePresentation(restored);
         break;
       }
-      case 'VIDEO_COMMAND': {
-        const target = (cmd as { target?: string }).target;
-        // 'media-item' targets only the item video, not style background videos.
-        const selector = target === 'media-item' ? 'video[data-role="media-item"]' : 'video:not([data-role="media-cue"])';
-        const videos = document.querySelectorAll<HTMLVideoElement>(selector);
-        const action = (cmd as { action?: string }).action;
-        // Prefer the fadeDuration passed via IPC; fall back to localStorage for backwards compat.
-        // For media-item targets we intentionally skip fadeDuration — they are always muted
-        // and must never have their muted/volume state touched.
-        const cmdFadeDuration = (cmd as { fadeDuration?: number }).fadeDuration;
-        const fadeDuration = target === 'media-item' ? 0 : typeof cmdFadeDuration === 'number' ? cmdFadeDuration : getVideoFadeDuration();
-        videos.forEach((v) => {
-          switch (action) {
-            case 'play':
-              playWithFade(v, fadeDuration);
-              break;
-            case 'pause':
-              pauseWithFade(v, fadeDuration);
-              break;
-            case 'toggle':
-              if (v.paused) {
-                playWithFade(v, fadeDuration);
-              } else {
-                pauseWithFade(v, fadeDuration);
-              }
-              break;
-            case 'stop':
-              stopWithFade(v, fadeDuration);
-              break;
-            case 'mute':
-              v.muted = true;
-              break;
-            case 'unmute':
-              v.muted = false;
-              break;
-            case 'toggle_mute':
-              v.muted = !v.muted;
-              break;
-            case 'set_volume':
-              v.volume = Math.max(0, Math.min(1, (cmd as { value?: number }).value ?? 1));
-              break;
-            case 'loop':
-              v.loop = true;
-              break;
-            case 'unloop':
-              v.loop = false;
-              break;
-            case 'toggle_loop':
-              v.loop = !v.loop;
-              break;
-            case 'seek':
-              v.currentTime = (cmd as { value?: number }).value ?? 0;
-              break;
-            case 'seek_relative':
-              v.currentTime = Math.max(0, v.currentTime + ((cmd as { value?: number }).value ?? 0));
-              break;
-          }
-        });
-        break;
-      }
-      case 'SET_VIDEO_VISIBLE': {
-        // Toggle a body class that hides background videos via CSS. The
-        // controller can either set an explicit value or toggle the current
-        // state. The class is read by Presentation.tsx via a global stylesheet
-        // so React doesn't need to re-render to reflect the change.
-        // `mode` ('cut'|'fade') and `durationMs` come from settings; we apply
-        // them via a data-attribute + CSS variable so the stylesheet can pick
-        // the right transition. Default to instant cut for backwards compat.
-        const c = cmd as { value?: boolean; mode?: 'cut' | 'fade'; durationMs?: number };
-        const body = document.body;
-        const mode = c.mode === 'fade' ? 'fade' : 'cut';
-        const durationMs = typeof c.durationMs === 'number' && c.durationMs >= 0 ? c.durationMs : 0;
-        body.dataset.hideTransition = mode;
-        body.style.setProperty('--hide-bg-video-duration', `${mode === 'fade' ? durationMs : 0}ms`);
-        if (c.value === true) body.classList.remove('hide-bg-video');
-        else if (c.value === false) body.classList.add('hide-bg-video');
-        else body.classList.toggle('hide-bg-video');
-        break;
-      }
     }
   });
 
@@ -509,60 +305,3 @@ if (window.presentationApi) {
 
 // Initial render (blank)
 updatePresentation({ content: EMPTY_CONTENT });
-
-// ── Video status reporting ──
-// Only run the polling interval while a <video> element actually exists in the DOM.
-// Previously this fired every 250 ms even with no video, flooding IPC with messages
-// that the main process re-broadcasts to every other BrowserWindow → significant
-// background lag in Electron.
-if (window.presentationApi?.reportVideoStatus) {
-  let pollInterval: ReturnType<typeof setInterval> | null = null;
-  let lastReportedHasVideo = false;
-
-  const startPolling = () => {
-    if (pollInterval) return;
-    pollInterval = setInterval(() => {
-      const videos = document.querySelectorAll('video');
-      if (videos.length === 0) {
-        if (lastReportedHasVideo) {
-          window.presentationApi!.reportVideoStatus!({ hasVideo: false, windowName: urlName || undefined });
-          lastReportedHasVideo = false;
-        }
-        stopPolling();
-        return;
-      }
-      const v = videos[0];
-      window.presentationApi!.reportVideoStatus!({
-        hasVideo: true,
-        paused: v.paused,
-        muted: v.muted,
-        loop: v.loop,
-        volume: v.volume,
-        currentTime: v.currentTime,
-        duration: v.duration || 0,
-        windowName: urlName || undefined,
-      });
-      lastReportedHasVideo = true;
-    }, 500);
-  };
-
-  const stopPolling = () => {
-    if (pollInterval) {
-      clearInterval(pollInterval);
-      pollInterval = null;
-    }
-  };
-
-  // Watch the DOM for video elements being added/removed and start/stop polling accordingly.
-  const observer = new MutationObserver(() => {
-    const hasVideo = document.querySelector('video') !== null;
-    if (hasVideo) startPolling();
-    else if (!hasVideo && lastReportedHasVideo) {
-      // Send a final "no video" status so the controller hides its UI
-      window.presentationApi!.reportVideoStatus!({ hasVideo: false, windowName: urlName || undefined });
-      lastReportedHasVideo = false;
-      stopPolling();
-    }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
-}

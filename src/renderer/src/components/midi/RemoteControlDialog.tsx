@@ -36,6 +36,7 @@ import { useMidi, type MidiAction, type MidiStatus } from '@/hooks/useMidi';
 import type { KeyboardRemote } from '@/hooks/useKeyboardRemote';
 import { REMOTE_DEBOUNCE_MAX_MS } from '@/hooks/useRemoteActionFilter';
 import { useGetMusicianSettings, useUpdateMusicianSetting } from '@/store/musicianSlice';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 const ACTION_KEYS: MidiAction[] = [
   'next_page',
@@ -71,7 +72,7 @@ interface RemoteControlDialogProps {
   enabled?: boolean;
 }
 
-export const RemoteControlDialog = ({ open, onClose, onAction, keyboard, enabled = true }: RemoteControlDialogProps) => {
+const RemoteControlDialogBody = ({ open, onClose, onAction, keyboard, enabled = true }: RemoteControlDialogProps) => {
   const { LL } = useI18nContext();
   const midi = useMidi({ onAction, enabled: enabled && open });
   const { musicianRemoteDebounceMs: debounceMs } = useGetMusicianSettings();
@@ -410,3 +411,5 @@ export const RemoteControlDialog = ({ open, onClose, onAction, keyboard, enabled
     </Dialog>
   );
 };
+
+export const RemoteControlDialog = stillWhileClosed(RemoteControlDialogBody);

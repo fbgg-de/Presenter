@@ -63,7 +63,7 @@ interface UseAudioMixerHostOptions {
 
 export const useAudioMixerHost = ({ send }: UseAudioMixerHostOptions) => {
   const dispatch = useAppDispatch();
-  const { audioMixer } = useGetSettings();
+  const { audioMixer } = useGetSettings('audioMixer');
 
   const wsRef = useRef<WebSocket | null>(null);
   /** The desk's full state, unfiltered. Never enters Redux — see `audioMixerSlice`. */

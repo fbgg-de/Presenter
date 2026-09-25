@@ -18,9 +18,9 @@ session_start();
 header('Cache-Control: no-store');
 header('Referrer-Policy: no-referrer');
 if (isset($_GET['error'])) {
-    unset($_SESSION['oidc_state'], $_SESSION['oidc_transaction'], $_SESSION['redirect']);
-    header('Location: /unauthorized?error=oidc.authentication_failed');
-    exit;
+    OidcProtocol::forgetTransaction(is_string($_GET['state'] ?? null) ? $_GET['state'] : null);
+    // The provider said no (cancelled, consent refused, its own error): its code goes to the log.
+    failLogin('oidc.authentication_failed', 'Provider returned error: ' . (is_string($_GET['error']) ? substr($_GET['error'], 0, 80) : '?'));
 }
 // Repairs cookies issued under the older Origin-dependent SameSite rules, which could not
 // survive the cross-site return from the IdP. Must run after session_start().
@@ -119,18 +119,15 @@ if (!isset($_GET['code']) && !isset($_GET['state'])) {
     } catch (Throwable $e) {
         $state = bin2hex(openssl_random_pseudo_bytes(16));
     }
-    $_SESSION['oidc_state'] = $state;
-    $_SESSION['redirect'] = $redirect;
-    // Persist admin login intent across the OIDC redirect round-trip
-    $_SESSION['oidc_admin'] = !empty($_GET['admin']);
+    $isAdmin = !empty($_GET['admin']);
 
     // Determine which OIDC provider to use
     $license = isset($_GET['license']) ? intval($_GET['license']) : null;
+    $providerId = null;
 
-    if (!empty($_SESSION['oidc_admin'])) {
+    if ($isAdmin) {
         // Admin login — use global config
-        unset($_SESSION['oidc_license']);
-        unset($_SESSION['oidc_provider_id']);
+        $license = null;
         $oidc = OidcClient::fromGlobalConfig();
     } elseif ($license === null) {
         // Neither an admin login nor a license: the callback would run the tenant branch
@@ -144,17 +141,18 @@ if (!isset($_GET['code']) && !isset($_GET['state'])) {
             header('Location: /unauthorized?error=oidc.no_provider&license=' . $license);
             exit;
         }
-        $_SESSION['oidc_license'] = $license;
-        $_SESSION['oidc_provider_id'] = (int)$provider['id'];
+        $providerId = (int)$provider['id'];
         $oidc = OidcClient::fromProvider($provider);
     }
 
-    try { $authUrl = $oidc->getAuthorizationUrl($state); }
+    // Everything the callback needs rides with this sign-in's own transaction, so a second
+    // sign-in (another tab, a retry) cannot replace the account or return address of the first.
+    $context = ['admin' => $isAdmin, 'license' => $license, 'provider' => $providerId, 'redirect' => $redirect];
+    try { $authUrl = $oidc->getAuthorizationUrl($state, $context); }
     catch (Throwable $e) {
-        unset($_SESSION['oidc_transaction'], $_SESSION['oidc_state']);
-        Logging::error('OIDC authorization could not be started.');
-        header('Location: /unauthorized?error=oidc.authentication_failed');
-        exit;
+        OidcProtocol::forgetTransaction($state);
+        failLogin($e instanceof OidcTransportException ? 'oidc.provider_unreachable' : 'oidc.authentication_failed',
+            'OIDC authorization could not be started: ' . $e->getMessage());
     }
 
     header('Location: ' . $authUrl);
@@ -164,22 +162,25 @@ if (!isset($_GET['code']) && !isset($_GET['state'])) {
 $state = $_GET['state'] ?? null;
 $code = $_GET['code'] ?? null;
 
-if (!is_string($code) || !is_string($state) || !isset($_SESSION['oidc_state']) || !hash_equals($_SESSION['oidc_state'], $state)) {
+$transaction = is_string($code) ? OidcProtocol::pendingTransaction(is_string($state) ? $state : null) : null;
+if ($transaction === null) {
+    // Already signed in: a reload of this callback, the back button, or a second tab finishing
+    // after the first. The code is used up, but the session is fine — go into the app.
+    if (in_array($_SESSION['authType'] ?? '', ['oidc', 'oidc_admin'], true) && !empty($_SESSION['oidc_subject'])) {
+        header('Location: ' . BASE_URL);
+        exit;
+    }
+    // No transaction and no session: the session cookie did not survive the trip to the provider
+    // (blocked cookies, another host name, a very long pause), or the link was opened twice.
     MetricsHelper::record('login_failed', null, ['method' => 'oidc', 'reason' => 'invalid_state']);
-    header('Location: /unauthorized?error=oidc.invalid_state');
-    exit;
+    failLogin('oidc.session_lost', 'No sign-in transaction for the returned state (cookie lost, expired, or reused).');
 }
-unset($_SESSION['oidc_state']);
 
 try {
-    // Reconstruct the correct OidcClient instance
-    $isAdminLogin = !empty($_SESSION['oidc_admin']);
-    unset($_SESSION['oidc_admin']); // Clean up immediately
-
-    $license = $_SESSION['oidc_license'] ?? null;
-    $providerId = $_SESSION['oidc_provider_id'] ?? null;
-    unset($_SESSION['oidc_license']); // only needed during the redirect round-trip
-    // Keep oidc_provider_id in session so the token refresh can reconstruct the correct OidcClient
+    $context = is_array($transaction['context'] ?? null) ? $transaction['context'] : [];
+    $isAdminLogin = !empty($context['admin']);
+    $license = isset($context['license']) ? (int)$context['license'] : null;
+    $providerId = isset($context['provider']) ? (int)$context['provider'] : null;
 
     if ($isAdminLogin) {
         $oidc = OidcClient::fromGlobalConfig();
@@ -217,7 +218,21 @@ try {
     $sub = $userinfo['sub'];
     $email = $userinfo['email'] ?? null;
     $name = $userinfo['name'] ?? $userinfo['preferred_username'] ?? $sub;
-    $groups = OidcProtocol::groups($userinfo['groups'] ?? []);
+    // A malformed groups claim only fails the sign-in where a group is actually required — and
+    // then with its own error, so it is not mistaken for a broken login.
+    try {
+        $groups = OidcProtocol::groups($userinfo['groups'] ?? []);
+        $groupsValid = true;
+    } catch (RuntimeException $e) {
+        $groups = [];
+        $groupsValid = false;
+        Logging::warning('OIDC groups claim for ' . $sub . ' is not a list of names (' . get_debug_type($userinfo['groups'] ?? null) . ').');
+    }
+    $needsGroups = $isAdminLogin || !empty($providerRow['required_group'] ?? null);
+    if (!$groupsValid && $needsGroups) {
+        MetricsHelper::record('login_failed', $license, ['method' => 'oidc', 'reason' => 'groups_claim_invalid', 'sub' => $sub]);
+        failLogin('oidc.groups_claim_invalid', 'Groups claim malformed while a group is required.');
+    }
 
     if ($isAdminLogin) {
         // ── Admin login ──────────────────────────────────────────────────
@@ -250,8 +265,9 @@ try {
             header('Location: /unauthorized?error=oidc.admin_access_denied');
             exit;
         }
-        // Admin login successful
+        // Admin login successful. An earlier tenant sign-in's provider must not decide the logout.
         Auth::setAdminSessionFromOidc($sub, $name, $email);
+        unset($_SESSION['oidc_provider_id']);
     } else {
         // ── Tenant login ─────────────────────────────────────────────────
         // Check provider's required_group (if configured)
@@ -286,15 +302,14 @@ try {
 
     session_regenerate_id(true);
     $_SESSION['oidc_subject'] = $sub;
-    $_SESSION['oidc_session_expires'] = time() + 28800;
+    $_SESSION['oidc_session_expires'] = time() + OidcClient::signInLifetime(OIDC['session_hours'] ?? null);
     $_SESSION['oidc_tokens'] = [
       'access_token' => $tokens['access_token'],
       'id_token' => $tokens['id_token'] ?? null,
       'refresh_token' => $tokens['refresh_token'] ?? null,
       'expires_at' => time() + ($tokens['expires_in'] ?? 3600),
     ];
-    $redirectUrl = OidcProtocol::safeRedirect($_SESSION['redirect'] ?? null, BASE_URL);
-    unset($_SESSION['redirect']);
+    $redirectUrl = OidcProtocol::safeRedirect($context['redirect'] ?? null, BASE_URL);
     // Log the effective cookie parameters for iOS/session debugging
     $cookieParams = session_get_cookie_params();
     Logging::info('OIDC login successful for user: ' . $sub . ($license ? ' (license ' . $license . ')' : ' (admin)')
@@ -307,14 +322,31 @@ try {
     header('Location: ' . $redirectUrl);
     exit;
 } catch (Throwable $e) {
-    Logging::error('OIDC Auth error: ' . $e->getMessage());
     MetricsHelper::record('login_failed', null, ['method' => 'oidc', 'reason' => 'exception', 'message' => $e->getMessage()]);
-
-    header('Location: /unauthorized?error=oidc.authentication_failed');
-    exit;
+    // Name what went wrong where it helps the user: the provider did not answer, or the sign-in
+    // took so long (or was reused) that its transaction is gone.
+    $code = $e instanceof OidcTransportException ? 'oidc.provider_unreachable'
+        : ($e->getMessage() === 'Invalid or expired login transaction.' ? 'oidc.login_expired' : 'oidc.authentication_failed');
+    failLogin($code, 'OIDC Auth error: ' . $e->getMessage());
 }
 
 // ── Helper functions ──────────────────────────────────────────────────
+
+/**
+ * Ends a failed sign-in on the error page with a short reference that is also written to the log
+ * next to the reason, so "it says abc123" finds the cause without guessing.
+ */
+function failLogin(string $code, string $reason): never
+{
+    try {
+        $ref = bin2hex(random_bytes(3));
+    } catch (Throwable $e) {
+        $ref = substr(sha1(uniqid('', true)), 0, 6);
+    }
+    Logging::error('[login ' . $ref . '] ' . $code . ': ' . $reason);
+    header('Location: /unauthorized?error=' . rawurlencode($code) . '&ref=' . $ref);
+    exit;
+}
 
 /**
  * Look up the default OIDC provider for a given license from the DB.

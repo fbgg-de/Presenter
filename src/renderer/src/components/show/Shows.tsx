@@ -42,6 +42,7 @@ import { RowActionMenu } from '@/components/common/RowActionMenu';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { SONG_CUSTOM_NUMBER_LIMIT } from '@/song';
 import ccliIcon from '@/assets/ccli.svg';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 interface ShowsProps {
   open: boolean;
@@ -79,9 +80,9 @@ const resolveShowTemplate = (template: string, date?: Date): string => {
   return result;
 };
 
-export const Shows = ({ open, onShowSelected, onClose, allowClose = false, currentShowTitle }: ShowsProps) => {
+const ShowsBody = ({ open, onShowSelected, onClose, allowClose = false, currentShowTitle }: ShowsProps) => {
   const { LL } = useI18nContext();
-  const { showSaveFormat } = useGetSettings();
+  const { showSaveFormat } = useGetSettings('showSaveFormat');
   const isMobile = useIsMobile();
 
   const [selectedShow, setSelectedShow] = useState<Show | null>(null);
@@ -264,7 +265,6 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
         title: renameTitle.trim(),
         order: showToRename.order,
         groups: showToRename.groups,
-        mediaCues: showToRename.mediaCues,
         styleId: showToRename.styleId ?? null,
         eventId: renameEvent?.id ?? null,
         eventName: renameEvent?.name ?? null,
@@ -765,3 +765,5 @@ export const Shows = ({ open, onShowSelected, onClose, allowClose = false, curre
     </>
   );
 };
+
+export const Shows = stillWhileClosed(ShowsBody);

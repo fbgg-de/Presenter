@@ -27,9 +27,6 @@
 /** The schema this build understands. A bridge announcing another one is refused. */
 export const AUDIO_SCHEMA = 1;
 
-/** Default port of Streamer's bridge; 5001 is its backend and 5002 the Companion bridge. */
-export const AUDIO_BRIDGE_DEFAULT_PORT = 5003;
-
 /** A bus or the main output — the thing a musician listens on. */
 export interface IMix {
   /** Stable; `main` for the master, `bus1`…`bus16` for the buses. */
@@ -43,7 +40,7 @@ export interface IMix {
 }
 
 /** One strip's contribution to one mix. */
-export interface ISend {
+interface ISend {
   level: number;
   /**
    * Only present on buses, and only on a desk with `sendMutes` (an X32). Never on
@@ -70,7 +67,7 @@ export interface IStrip {
   sends: Record<string, ISend>;
 }
 
-export interface IMuteGroup {
+interface IMuteGroup {
   /** 1-based, as the desk counts. */
   index: number;
   name: string;
@@ -131,9 +128,6 @@ export interface AudioMeters {
   mixes: Record<string, number>;
 }
 
-/** Things that happen and have no resting state. */
-export type AudioEventName = 'mixerConnected' | 'mixerDisconnected' | 'metersUnavailable';
-
 /** The commands the bridge accepts, with the arguments each one needs. */
 export type AudioCommand =
   | { cmd: 'setSendLevel'; args: { stripId: string; mixId: string; level: number } }
@@ -144,9 +138,6 @@ export type AudioCommand =
   | { cmd: 'setMuteGroup'; args: { index: number; active: boolean } };
 
 export type AudioCommandName = AudioCommand['cmd'];
-
-/** Feeds a client may subscribe to. Meters are separate because they are a firehose. */
-export type AudioFeed = 'mixes' | 'strips' | 'muteGroups' | 'meters';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Relay — the envelope musicians actually see
@@ -179,9 +170,6 @@ export const AUDIO_ACTIONS = {
   /** operator → subscribers: a bridge event. */
   event: 'audio_event',
 } as const;
-
-/** Every action above, for the cheap "is this ours?" test on an incoming frame. */
-export const AUDIO_ACTION_VALUES: string[] = Object.values(AUDIO_ACTIONS);
 
 /**
  * How long a subscription survives without being renewed.
@@ -318,16 +306,6 @@ export interface MixerSubscription {
 export interface AudioFrom {
   from: string;
 }
-
-/** No permission at all — what a client assumes until the operator says otherwise. */
-export const NO_PERMISSIONS: MixerPermissions = {
-  main: false,
-  mainMute: false,
-  mixMute: false,
-  stripMutes: false,
-  muteGroups: false,
-  meters: false,
-};
 
 /**
  * Decide whether one command may run. `null` means yes; a string is the reason it may not.

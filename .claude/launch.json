@@ -4,14 +4,41 @@
     {
       "name": "web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:web"],
+      "runtimeArgs": [
+        "run",
+        "dev:web"
+      ],
       "port": 5173
     },
     {
       "name": "web-mock",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:web:mock"],
+      "runtimeArgs": [
+        "run",
+        "dev:web:mock"
+      ],
       "port": 5173
+    },
+    {
+      "name": "relay",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["ws-server/dist/server.js"],
+      "port": 9001
+    },
+    {
+      "name": "web-mock-relay",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:web:mock"],
+      "env": { "MOCK_WS_HOST": "localhost", "MOCK_WS_PORT": "9001" },
+      "port": 5173
+    },
+    {
+      "name": "web-mock-5174",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "C:/Users/MARCEL~1/AppData/Local/Temp/claude/C--Users-Marcel-Mobile-Documents-web-presenter/0b75e39f-4dfc-43dc-ad1a-00e339cd5672/scratchpad/mock-dev.cjs"
+      ],
+      "port": 5174
     }
   ]
 }

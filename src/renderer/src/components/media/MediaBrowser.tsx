@@ -51,6 +51,7 @@ import {
 } from '@mui/icons-material';
 import { alpha } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { ColorPicker } from '@/components/style/ColorPicker';
 import type { MediaSubType } from '@/api/shows.api';
 import { useGetSettings } from '@/store/settingsSlice';
@@ -58,6 +59,9 @@ import { formatFileSize, formatTime, getMediaBaseUrl, isElectronApp } from '@/ut
 import { useVideoThumbnails } from './useVideoThumbnails';
 import { VideoPreview } from './VideoPreview';
 import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
+import { nextcloudFileUrl, nextcloudMediaActive, nextcloudPath, useNextcloud } from '@/nextcloud/connection';
+import { listFolder, uploadFile } from '@/nextcloud/relay';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
@@ -117,7 +121,7 @@ interface MediaBrowserProps {
   onPick?: (relativePath: string) => void;
 }
 
-export const MediaBrowser = ({
+const MediaBrowserBody = ({
   open,
   onClose,
   onAdd,
@@ -128,6 +132,7 @@ export const MediaBrowser = ({
   selectLabel,
 }: MediaBrowserProps) => {
   const { LL, locale } = useI18nContext();
+  const isMobile = useIsMobile();
 
   // ── Type (images / videos / color) ──
   const allowedTypes = useMemo(() => {
@@ -217,9 +222,15 @@ export const MediaBrowser = ({
     },
     [open],
   );
-  const { mediaPath } = useGetSettings();
+  const { mediaPath } = useGetSettings('mediaPath');
 
-  const mediaBaseUrl = useMemo(() => getMediaBaseUrl(mediaPath), [mediaPath]);
+  // The web version connected to Nextcloud browses its media folder there instead.
+  const nextcloud = useNextcloud();
+  const viaNextcloud = !isElectronApp() && nextcloudMediaActive(nextcloud);
+  const mediaBaseUrl = useMemo(
+    () => (viaNextcloud ? `nextcloud:${nextcloud?.server}/${nextcloud?.root}` : getMediaBaseUrl(mediaPath)),
+    [mediaPath, viaNextcloud, nextcloud?.server, nextcloud?.root],
+  );
 
   // Abort controller for in-flight fetches
   const abortRef = useRef<AbortController | null>(null);
@@ -244,6 +255,44 @@ export const MediaBrowser = ({
       if (replace) setError(null);
 
       try {
+        if (viaNextcloud && nextcloud && nextcloudMediaActive(nextcloud)) {
+          // One listing per folder: filtered, sorted and not paged here.
+          const listing = await listFolder(nextcloudPath(nextcloud, path.join('/')), signal);
+          if (signal?.aborted) return;
+          const query = debouncedSearch.trim().toLowerCase();
+          const mapped: MediaFile[] = listing.files
+            .map((file): MediaFile | null => {
+              const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+              const type = VIDEO_EXTENSIONS.includes(ext) ? 'video' : IMAGE_EXTENSIONS.includes(ext) ? 'image' : null;
+              if (!type || type !== currentType) return null;
+              if (query && !file.name.toLowerCase().includes(query)) return null;
+              const relPath = [...path, file.name].join('/');
+              return {
+                name: file.name,
+                path: relPath,
+                type,
+                url: nextcloudFileUrl(nextcloud, relPath),
+                size: file.size,
+                mtime: file.mtime ?? undefined,
+              };
+            })
+            .filter((file): file is MediaFile => !!file);
+          const direction = serverSort.dir === 'desc' ? -1 : 1;
+          mapped.sort((a, b) =>
+            serverSort.key === 'size'
+              ? ((a.size ?? 0) - (b.size ?? 0)) * direction
+              : serverSort.key === 'date'
+                ? ((a.mtime ?? 0) - (b.mtime ?? 0)) * direction
+                : a.name.localeCompare(b.name, undefined, { numeric: true }) * direction,
+          );
+          setDirs(query ? [] : listing.dirs);
+          setFiles(mapped);
+          setHasMeta(true);
+          setTotalFiles(mapped.length);
+          setOffset(mapped.length);
+          setHasMore(false);
+          return;
+        }
         let baseUrl = mediaBaseUrl;
         if (isElectronApp() && window.api?.startMediaServer && mediaPath) baseUrl = await window.api.startMediaServer(mediaPath);
         if (signal?.aborted) return;
@@ -326,7 +375,7 @@ export const MediaBrowser = ({
         }
       }
     },
-    [mediaBaseUrl, mediaPath, LL, currentType, debouncedSearch, serverSort.key, serverSort.dir],
+    [mediaBaseUrl, mediaPath, LL, currentType, debouncedSearch, serverSort.key, serverSort.dir, viaNextcloud, nextcloud],
   );
 
   const folderKey = currentPath.join('/');
@@ -432,7 +481,7 @@ export const MediaBrowser = ({
 
   const handleAddFile = (file: MediaFile) => {
     // Keep custom server addresses (including Electron's fallback port) with the selection.
-    const path = file.url.startsWith(MEDIA_SERVER_BASE + '/') ? file.path : file.url;
+    const path = viaNextcloud || file.url.startsWith(MEDIA_SERVER_BASE + '/') ? file.path : file.url;
     if (mode === 'pick' && onPick) {
       onPick(path);
       onClose();
@@ -460,7 +509,8 @@ export const MediaBrowser = ({
   // ── Upload: copy files into the folder being browsed ──
   // Desktop app only. There the media folder is on this computer; on the web it is a URL on
   // somebody else's server, which offers nothing to write to.
-  const canUpload = isElectronApp() && !!window.api?.importMediaFiles && !!mediaPath;
+  const canUpload = viaNextcloud || (isElectronApp() && !!window.api?.importMediaFiles && !!mediaPath);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadNotice, setUploadNotice] = useState<{ severity: 'success' | 'warning' | 'error'; message: string } | null>(null);
   const [dragActive, setDragActive] = useState(false);
@@ -500,7 +550,41 @@ export const MediaBrowser = ({
     }
   };
 
+  /** The web version: upload into the Nextcloud folder being browsed. */
+  const uploadToNextcloud = async (picked: File[]) => {
+    const accepted = picked.filter((file) => typeOfName(file.name));
+    if (!accepted.length || uploading) return;
+    setUploading(true);
+    const uploaded: string[] = [];
+    let failed = 0;
+    try {
+      for (const file of accepted) {
+        try {
+          await uploadFile(file, currentPath.join('/'));
+          uploaded.push(file.name);
+        } catch {
+          failed++;
+        }
+      }
+      const parts: string[] = [];
+      if (uploaded.length) parts.push(LL.MEDIA.UPLOAD_DONE({ count: uploaded.length }));
+      if (failed) parts.push(LL.MEDIA.UPLOAD_SKIPPED({ count: failed }));
+      setUploadNotice({ severity: failed ? (uploaded.length ? 'warning' : 'error') : 'success', message: parts.join(' · ') });
+      if (uploaded.length) {
+        await fetchPage(currentPath, 0, true);
+        const shown = uploaded.find((name) => typeOfName(name) === currentType);
+        if (shown) setSelectedPath([...currentPath, shown].join('/'));
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const pickAndImport = async () => {
+    if (viaNextcloud) {
+      fileInputRef.current?.click();
+      return;
+    }
     const paths = await window.api?.pickMediaFiles?.();
     if (paths?.length) await importFiles(paths);
   };
@@ -528,6 +612,10 @@ export const MediaBrowser = ({
       e.preventDefault();
       dragDepthRef.current = 0;
       setDragActive(false);
+      if (viaNextcloud) {
+        void uploadToNextcloud(Array.from(e.dataTransfer.files));
+        return;
+      }
       const paths = Array.from(e.dataTransfer.files)
         .map((file) => window.api?.getPathForFile?.(file) ?? '')
         .filter(Boolean);
@@ -899,7 +987,15 @@ export const MediaBrowser = ({
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth slotProps={{ paper: { ...dropHandlers, sx: { position: 'relative' } } }}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      // Like the other pickers: a phone has no room for a dialog with a margin around it.
+      fullScreen={isMobile}
+      slotProps={{ paper: { ...dropHandlers, sx: { position: 'relative' } } }}
+    >
       {dragActive && (
         <Box
           sx={{
@@ -1016,6 +1112,19 @@ export const MediaBrowser = ({
                   >
                     {LL.MEDIA.UPLOAD()}
                   </Button>
+                  {viaNextcloud && (
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*,video/*"
+                      hidden
+                      onChange={(e) => {
+                        void uploadToNextcloud(Array.from(e.target.files ?? []));
+                        e.target.value = '';
+                      }}
+                    />
+                  )}
                 </span>
               </Tooltip>
             )}
@@ -1159,3 +1268,5 @@ export const MediaBrowser = ({
     </Dialog>
   );
 };
+
+export const MediaBrowser = stillWhileClosed(MediaBrowserBody);

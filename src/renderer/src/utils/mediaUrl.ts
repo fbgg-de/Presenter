@@ -11,6 +11,7 @@
  * This helper replaces previous duplicate `resolveMediaUrl` functions in
  * usePresentationSync, Control, ControlMedia, StyleEditor and MediaBrowser.
  */
+import { getNextcloud, nextcloudFileUrl, nextcloudMediaActive } from '@/nextcloud/connection';
 
 export const MEDIA_SERVER_BASE = 'http://127.0.0.1:9100';
 
@@ -32,6 +33,9 @@ export function resolveMediaUrl(path: string | undefined | null): string | undef
   }
   // Relative path — encode each segment, strip leading slashes.
   const clean = path.replace(/^\/+/, '').replace(/\\/g, '/');
+  // The web version connected to Nextcloud plays the media folder from its public link.
+  const nextcloud = getNextcloud();
+  if (nextcloudMediaActive(nextcloud)) return nextcloudFileUrl(nextcloud, clean);
   return `${MEDIA_SERVER_BASE}/${clean.split('/').map(encodeURIComponent).join('/')}`;
 }
 

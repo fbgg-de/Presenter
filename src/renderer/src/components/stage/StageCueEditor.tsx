@@ -7,24 +7,12 @@
  * appears once *Custom…* is chosen — pre-filled with the preset that was showing, so expert
  * mode starts from something that already works rather than an empty box.
  */
-import { useMemo } from 'react';
-import {
-  Alert,
-  Box,
-  Chip,
-  FormControlLabel,
-  MenuItem,
-  Select,
-  Stack,
-  Switch,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { useMemo, useState } from 'react';
+import { Alert, Box, Chip, FormControlLabel, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { StageCue } from '@/stage/types';
+import { InspectorRow, Segmented } from '@/components/media/Viewer';
+import { parseTimerInput } from './TimerAdjust';
 import {
   DURATION_PRESET_PATTERNS,
   LDML_TOKENS,
@@ -248,141 +236,179 @@ const DurationFormatControl = ({ format, onChange }: { format: DurationFormat; o
 
 // ── Cue editor ────────────────────────────────────────────────────────────────
 
+/** Seconds as "m:ss" ("25:00", "1:05:00" past an hour). */
+export const formatMmss = (seconds: number): string => {
+  const total = Math.max(0, Math.round(seconds));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = String(total % 60).padStart(2, '0');
+  return h ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`;
+};
+
+/**
+ * A length typed the way it is read — "25:00", "4:30", or just "5" for five minutes — instead
+ * of separate minute and second boxes. The typed text is kept while the field has focus and
+ * committed on Enter or leaving it; otherwise it shows the stored value.
+ */
+const DurationField = ({
+  seconds,
+  onChange,
+  placeholder,
+  allowEmpty = false,
+}: {
+  seconds: number | undefined;
+  onChange: (seconds: number | undefined) => void;
+  placeholder?: string;
+  /** Empty means "not set" (no warning, never move on) rather than 0:00. */
+  allowEmpty?: boolean;
+}) => {
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft ?? (seconds === undefined ? '' : formatMmss(seconds));
+  const parsed = draft === null ? null : draft.trim() === '' ? undefined : parseTimerInput(draft);
+  const invalid = draft !== null && parsed === null && !(allowEmpty && draft.trim() === '');
+  const commit = () => {
+    if (draft === null) return;
+    if (draft.trim() === '' && allowEmpty) onChange(undefined);
+    else if (parsed != null) onChange(parsed);
+    setDraft(null);
+  };
+  return (
+    <TextField
+      size="small"
+      value={text}
+      placeholder={placeholder ?? 'm:ss'}
+      error={invalid}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') setDraft(null);
+      }}
+      slotProps={{ htmlInput: { style: { fontFamily: 'monospace', width: 84 } } }}
+    />
+  );
+};
+
+const LABEL_WIDTH = 110;
+
 export const StageCueEditor = ({ cue, onChange }: { cue: StageCue; onChange: Patch }) => {
   const { LL } = useI18nContext();
-
+  const S = LL.STAGE;
+  const set = (patch: Record<string, unknown>) => onChange(patch as Partial<StageCue>);
   const timeError = cue.kind === 'countdown' && cue.source === 'timeOfDay' && !!cue.atTime && parseTimeOfDay(cue.atTime) === null;
 
   return (
-    <Stack spacing={1.5}>
-      <TextField
-        size="small"
-        label={LL.STAGE.CUE_NAME()}
-        value={cue.name ?? ''}
-        onChange={(e) => onChange({ name: e.target.value || undefined })}
-        placeholder={cueKindLabel(cue.kind, LL)}
-      />
+    <Stack spacing={0.75}>
+      <InspectorRow label={S.CUE_NAME()} labelWidth={LABEL_WIDTH}>
+        <TextField
+          size="small"
+          fullWidth
+          value={cue.name ?? ''}
+          onChange={(e) => onChange({ name: e.target.value || undefined })}
+          placeholder={cueKindLabel(cue.kind, LL)}
+        />
+      </InspectorRow>
 
-      {cue.kind === 'clock' && <ClockFormatControl format={cue.format} onChange={(format) => onChange({ format } as Partial<StageCue>)} />}
+      {cue.kind === 'clock' && (
+        <InspectorRow label={S.SHOWS_AS()} labelWidth={LABEL_WIDTH} align="start">
+          <Box sx={{ flex: 1 }}>
+            <ClockFormatControl format={cue.format} onChange={(format) => set({ format })} />
+          </Box>
+        </InspectorRow>
+      )}
 
       {cue.kind === 'countdown' && (
         <>
-          <ToggleButtonGroup
-            size="small"
-            exclusive
-            fullWidth
-            value={cue.source}
-            onChange={(_e, v: 'duration' | 'timeOfDay' | null) => v && onChange({ source: v } as Partial<StageCue>)}
-          >
-            <ToggleButton value="duration" sx={{ textTransform: 'none' }}>
-              {LL.STAGE.SOURCE_DURATION()}
-            </ToggleButton>
-            <ToggleButton value="timeOfDay" sx={{ textTransform: 'none' }}>
-              {LL.STAGE.SOURCE_TIME_OF_DAY()}
-            </ToggleButton>
-          </ToggleButtonGroup>
-
+          <InspectorRow label={S.COUNTS()} labelWidth={LABEL_WIDTH}>
+            <Segmented
+              value={cue.source}
+              onChange={(source) => set({ source })}
+              options={[
+                { value: 'duration', label: S.SOURCE_DURATION() },
+                { value: 'timeOfDay', label: S.SOURCE_TIME_OF_DAY() },
+              ]}
+            />
+          </InspectorRow>
           {cue.source === 'duration' ? (
-            <Stack direction="row" spacing={1}>
-              <TextField
-                size="small"
-                type="number"
-                label={LL.STAGE.MINUTES()}
-                value={Math.floor((cue.durationSec ?? 0) / 60)}
-                onChange={(e) =>
-                  onChange({ durationSec: Math.max(0, Number(e.target.value)) * 60 + ((cue.durationSec ?? 0) % 60) } as Partial<StageCue>)
-                }
-                sx={{ flex: 1 }}
-              />
-              <TextField
-                size="small"
-                type="number"
-                label={LL.STAGE.SECONDS()}
-                value={(cue.durationSec ?? 0) % 60}
-                onChange={(e) =>
-                  onChange({
-                    durationSec: Math.floor((cue.durationSec ?? 0) / 60) * 60 + Math.max(0, Math.min(59, Number(e.target.value))),
-                  } as Partial<StageCue>)
-                }
-                sx={{ flex: 1 }}
-              />
-            </Stack>
+            <InspectorRow label={S.LENGTH()} labelWidth={LABEL_WIDTH}>
+              <DurationField seconds={cue.durationSec ?? 0} onChange={(durationSec) => set({ durationSec: durationSec ?? 0 })} />
+            </InspectorRow>
           ) : (
-            <TextField
-              size="small"
-              label={LL.STAGE.AT_TIME()}
-              value={cue.atTime ?? ''}
-              placeholder="10:00"
-              error={timeError}
-              helperText={timeError ? 'HH:mm' : LL.STAGE.AT_TIME_HINT()}
-              onChange={(e) => onChange({ atTime: e.target.value } as Partial<StageCue>)}
-            />
+            <InspectorRow label={S.AT_TIME()} labelWidth={LABEL_WIDTH}>
+              <TextField
+                size="small"
+                value={cue.atTime ?? ''}
+                placeholder="10:00"
+                error={timeError}
+                onChange={(e) => set({ atTime: e.target.value })}
+                slotProps={{ htmlInput: { style: { fontFamily: 'monospace', width: 84 } } }}
+              />
+              <Typography variant="caption" sx={{ color: timeError ? 'error.main' : 'text.secondary' }}>
+                {timeError ? 'HH:mm' : S.AT_TIME_HINT()}
+              </Typography>
+            </InspectorRow>
           )}
-
-          <DurationFormatControl format={cue.format} onChange={(format) => onChange({ format } as Partial<StageCue>)} />
-
-          <Select size="small" value={cue.onZero} onChange={(e) => onChange({ onZero: e.target.value } as Partial<StageCue>)}>
-            <MenuItem value="hold">{LL.STAGE.ON_ZERO_HOLD()}</MenuItem>
-            <MenuItem value="countUp">{LL.STAGE.ON_ZERO_COUNT_UP()}</MenuItem>
-            <MenuItem value="next">{LL.STAGE.ON_ZERO_NEXT()}</MenuItem>
-            <MenuItem value="hide">{LL.STAGE.ON_ZERO_HIDE()}</MenuItem>
-          </Select>
-
-          <Stack direction="row" spacing={1}>
-            <TextField
-              size="small"
-              type="number"
-              label={`${LL.STAGE.WARN_AT()} (s)`}
-              value={cue.warnSec ?? ''}
-              onChange={(e) => onChange({ warnSec: e.target.value === '' ? undefined : Number(e.target.value) } as Partial<StageCue>)}
-              sx={{ flex: 1 }}
-            />
-            <TextField
-              size="small"
-              type="number"
-              label={`${LL.STAGE.DANGER_AT()} (s)`}
-              value={cue.dangerSec ?? ''}
-              onChange={(e) => onChange({ dangerSec: e.target.value === '' ? undefined : Number(e.target.value) } as Partial<StageCue>)}
-              sx={{ flex: 1 }}
-            />
-          </Stack>
+          <InspectorRow label={S.AT_ZERO()} labelWidth={LABEL_WIDTH}>
+            <Select size="small" value={cue.onZero} onChange={(e) => set({ onZero: e.target.value })} sx={{ minWidth: 200 }}>
+              <MenuItem value="hold">{S.ON_ZERO_HOLD()}</MenuItem>
+              <MenuItem value="countUp">{S.ON_ZERO_COUNT_UP()}</MenuItem>
+              <MenuItem value="next">{S.ON_ZERO_NEXT()}</MenuItem>
+              <MenuItem value="hide">{S.ON_ZERO_HIDE()}</MenuItem>
+            </Select>
+          </InspectorRow>
+          <InspectorRow label={S.WARN_AT()} labelWidth={LABEL_WIDTH}>
+            <DurationField seconds={cue.warnSec} allowEmpty placeholder="—" onChange={(warnSec) => set({ warnSec })} />
+            <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#FFB300', opacity: cue.warnSec == null ? 0.3 : 1 }} />
+          </InspectorRow>
+          <InspectorRow label={S.DANGER_AT()} labelWidth={LABEL_WIDTH}>
+            <DurationField seconds={cue.dangerSec} allowEmpty placeholder="—" onChange={(dangerSec) => set({ dangerSec })} />
+            <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#E53935', opacity: cue.dangerSec == null ? 0.3 : 1 }} />
+          </InspectorRow>
         </>
       )}
 
-      {cue.kind === 'countup' && (
-        <DurationFormatControl format={cue.format} onChange={(format) => onChange({ format } as Partial<StageCue>)} />
-      )}
-
       {(cue.kind === 'countdown' || cue.kind === 'countup') && (
-        <TextField
-          size="small"
-          label={LL.STAGE.LABEL()}
-          value={cue.label ?? ''}
-          helperText={LL.STAGE.LABEL_HINT()}
-          onChange={(e) => onChange({ label: e.target.value || undefined } as Partial<StageCue>)}
-        />
+        <>
+          <InspectorRow label={S.SHOWS_AS()} labelWidth={LABEL_WIDTH} align="start">
+            <Box sx={{ flex: 1 }}>
+              <DurationFormatControl format={cue.format} onChange={(format) => set({ format })} />
+            </Box>
+          </InspectorRow>
+          <InspectorRow label={S.LABEL()} labelWidth={LABEL_WIDTH}>
+            <TextField
+              size="small"
+              fullWidth
+              value={cue.label ?? ''}
+              placeholder={S.LABEL_HINT()}
+              onChange={(e) => set({ label: e.target.value || undefined })}
+            />
+          </InspectorRow>
+        </>
       )}
 
       {cue.kind === 'message' && (
-        <TextField
-          size="small"
-          label={LL.STAGE.TEXT()}
-          value={cue.text}
-          multiline
-          minRows={2}
-          onChange={(e) => onChange({ text: e.target.value } as Partial<StageCue>)}
-        />
+        <InspectorRow label={S.TEXT()} labelWidth={LABEL_WIDTH} align="start">
+          <TextField
+            size="small"
+            fullWidth
+            multiline
+            minRows={2}
+            value={cue.text}
+            placeholder={S.MESSAGE_PREVIEW()}
+            onChange={(e) => set({ text: e.target.value })}
+          />
+        </InspectorRow>
       )}
 
       {(cue.kind === 'message' || cue.kind === 'blank') && (
-        <TextField
-          size="small"
-          type="number"
-          label={`${LL.STAGE.AUTO_NEXT()} (s)`}
-          value={cue.autoNextSec ?? ''}
-          placeholder={LL.STAGE.AUTO_NEXT_NEVER()}
-          onChange={(e) => onChange({ autoNextSec: e.target.value === '' ? undefined : Number(e.target.value) } as Partial<StageCue>)}
-        />
+        <InspectorRow label={S.AUTO_NEXT()} labelWidth={LABEL_WIDTH}>
+          <DurationField
+            seconds={cue.autoNextSec}
+            allowEmpty
+            placeholder={S.AUTO_NEXT_NEVER()}
+            onChange={(autoNextSec) => set({ autoNextSec })}
+          />
+        </InspectorRow>
       )}
     </Stack>
   );

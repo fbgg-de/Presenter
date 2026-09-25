@@ -39,6 +39,7 @@ import {
   ToggleButtonGroup,
   Tooltip,
   Typography,
+  Drawer,
 } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
@@ -60,6 +61,7 @@ import {
   StarBorder as NotFavoriteIcon,
   Undo as UndoIcon,
   Album as SpotifyIcon,
+  Close as CloseIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
@@ -95,6 +97,7 @@ import { useBands } from '@/hooks/useBands';
 import { copyTextToClipboard } from '@/utils/clipboard';
 import { SetListTagEditor } from './SetListTagEditor';
 import { SetListSpotifyPicker } from './SetListSpotifyPicker';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 /** Section key for entries that have no Tag Assignments at all. */
 const UNTAGGED = '__untagged__';
@@ -179,7 +182,7 @@ interface SetListManagerProps {
   onClose: () => void;
 }
 
-export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
+const SetListManagerBody = ({ open, onClose }: SetListManagerProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const { trackEvent } = useMetrics();
@@ -187,7 +190,7 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
 
   const { currentShow } = useGetShow();
   const { songs } = useGetSongs();
-  const { setLists: setListSettings } = useGetSettings();
+  const { setLists: setListSettings } = useGetSettings('setLists');
   const updateSetting = useUpdateSetting();
   const { bandNames } = useBands();
 
@@ -726,7 +729,12 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
                 }}
               >
                 {track.imageUrl ? (
-                  <Box component="img" src={track.imageUrl} alt="" sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                  <Box
+                    component="img"
+                    src={track.imageUrl}
+                    alt=""
+                    sx={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
                 ) : (
                   <SpotifyIcon sx={{ fontSize: 14 }} />
                 )}
@@ -869,362 +877,365 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
 
   return (
     <>
-      <Dialog
-        open={open}
-        onClose={onClose}
-        maxWidth="md"
-        fullWidth
-        // Everything here is dense (tabs, per-row actions, chips) — on a phone it needs the
-        // whole screen to be operable at all.
-        fullScreen={isMobile}
-        slotProps={{ paper: { sx: { height: { xs: '100%', sm: 'min(90vh, 820px)' } } } }}
-      >
-        <DialogTitle sx={{ pb: 1, px: { xs: 2, sm: 3 } }}>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
+      {/* A drawer from the right, like settings, search and the style library. */}
+      <Drawer open={open} onClose={onClose} anchor="right">
+        <Stack sx={{ width: { xs: '100vw', md: 'min(96vw, 920px)' }, height: '100%' }}>
+          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', px: 2, pt: 2, pb: 1.5 }}>
             <SetListIcon color="primary" />
             <Typography variant="h6" noWrap sx={{ fontWeight: 700, flexGrow: 1, minWidth: 0 }}>
               {LL.SET_LISTS.TITLE()}
             </Typography>
+            <IconButton onClick={onClose} aria-label={LL.COMMON.CLOSE()}>
+              <CloseIcon />
+            </IconButton>
           </Stack>
-        </DialogTitle>
-
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, overflow: 'hidden', px: { xs: 2, sm: 3 } }}>
-          {/* Set list selector — scrolls horizontally rather than wrapping. The six list actions
-              sit beside it as icons on desktop; on a phone they collapse into one overflow menu so the
-              tab strip keeps the width. */}
-          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
-            <Tabs
-              value={activeId ?? false}
-              onChange={(_e, value) => setActiveId(value as number)}
-              variant="scrollable"
-              scrollButtons
-              allowScrollButtonsMobile
-              sx={{ flexGrow: 1, minWidth: 0, minHeight: 44, '& .MuiTab-root': { minHeight: 44, textTransform: 'none' } }}
-            >
-              {lists.map((list) => (
-                <Tab key={list.id} value={list.id} label={list.name} />
-              ))}
-            </Tabs>
-            {isMobile ? (
-              <RowActionMenu
-                edge={false}
-                actions={[
-                  {
-                    key: 'create',
-                    label: LL.SET_LISTS.CREATE(),
-                    icon: <AddIcon fontSize="small" />,
-                    onClick: () => setNameDialog({ mode: 'create', value: '', bandIds: [] }),
-                  },
-                  {
-                    key: 'rename',
-                    label: LL.SET_LISTS.RENAME(),
-                    icon: <EditIcon fontSize="small" />,
-                    onClick: () =>
-                      activeList && setNameDialog({ mode: 'rename', value: activeList.name, bandIds: activeList.bandIds ?? [] }),
-                    hidden: !activeList,
-                  },
-                  {
-                    key: 'copy',
-                    label: copied ? LL.SET_LISTS.COPIED() : LL.SET_LISTS.COPY(),
-                    icon: copied ? <CopiedIcon fontSize="small" /> : <CopyIcon fontSize="small" />,
-                    onClick: handleCopyToClipboard,
-                    disabled: !activeList || activeList.entries.length === 0,
-                    hidden: !activeList,
-                  },
-                  {
-                    key: 'move-left',
-                    label: LL.SET_LISTS.MOVE_LEFT(),
-                    icon: <MoveLeftIcon fontSize="small" />,
-                    onClick: () => handleMoveSetList(-1),
-                    disabled: activeIndex <= 0,
-                    hidden: !activeList,
-                  },
-                  {
-                    key: 'move-right',
-                    label: LL.SET_LISTS.MOVE_RIGHT(),
-                    icon: <MoveRightIcon fontSize="small" />,
-                    onClick: () => handleMoveSetList(1),
-                    disabled: activeIndex < 0 || activeIndex >= lists.length - 1,
-                    hidden: !activeList,
-                  },
-                  {
-                    key: 'delete',
-                    label: LL.SET_LISTS.DELETE(),
-                    icon: <DeleteIcon fontSize="small" />,
-                    onClick: () => setDeleteListConfirm(true),
-                    destructive: true,
-                    hidden: !activeList,
-                  },
-                ]}
-              />
-            ) : (
-              <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                <Tooltip title={LL.SET_LISTS.CREATE()}>
-                  <IconButton size="small" onClick={() => setNameDialog({ mode: 'create', value: '', bandIds: [] })}>
-                    <AddIcon />
-                  </IconButton>
-                </Tooltip>
-                {activeList && (
-                  <>
-                    <Tooltip title={LL.SET_LISTS.MOVE_LEFT()}>
-                      <span>
-                        <IconButton size="small" disabled={activeIndex <= 0} onClick={() => handleMoveSetList(-1)}>
-                          <MoveLeftIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title={LL.SET_LISTS.MOVE_RIGHT()}>
-                      <span>
-                        <IconButton
-                          size="small"
-                          disabled={activeIndex < 0 || activeIndex >= lists.length - 1}
-                          onClick={() => handleMoveSetList(1)}
-                        >
-                          <MoveRightIcon fontSize="small" />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title={LL.SET_LISTS.RENAME()}>
-                      <IconButton
-                        size="small"
-                        onClick={() => setNameDialog({ mode: 'rename', value: activeList.name, bandIds: activeList.bandIds ?? [] })}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title={copied ? LL.SET_LISTS.COPIED() : LL.SET_LISTS.COPY()}>
-                      <span>
-                        <IconButton
-                          size="small"
-                          color={copied ? 'success' : 'default'}
-                          disabled={activeList.entries.length === 0}
-                          onClick={handleCopyToClipboard}
-                        >
-                          {copied ? <CopiedIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                    <Tooltip title={LL.SET_LISTS.DELETE()}>
-                      <IconButton size="small" color="error" onClick={() => setDeleteListConfirm(true)}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </>
-                )}
-              </Stack>
-            )}
-          </Stack>
-
-          {/* Who plays this list. Read-only here; the picker lives in the rename dialog,
-              where the list's own properties are edited. */}
-          {activeList && (activeList.bandIds?.length ?? 0) > 0 && (
-            <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
-              <BandChips bandIds={activeList.bandIds} max={4} />
-            </Stack>
-          )}
-
-          {errorMsg && (
-            <Alert severity="error" onClose={() => setErrorMsg(null)}>
-              {errorMsg}
-            </Alert>
-          )}
-
-          {/* Search row — the mode control sits left of the field and drives its meaning */}
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <ToggleButtonGroup
-              exclusive
-              size="small"
-              value={mode}
-              onChange={(_e, value: SearchMode | null) => value && setMode(value)}
-              aria-label={LL.SET_LISTS.SEARCH_MODE()}
-            >
-              <ToggleButton value="filter" aria-label={LL.SET_LISTS.MODE_FILTER()}>
-                <Tooltip title={LL.SET_LISTS.MODE_FILTER()}>
-                  <FilterIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
-              <ToggleButton value="import" aria-label={LL.SET_LISTS.MODE_IMPORT()}>
-                <Tooltip title={LL.SET_LISTS.MODE_IMPORT()}>
-                  <ImportIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
-            </ToggleButtonGroup>
-            {/* The toggle above already shows the mode; on a phone this label is width the
-                search field needs more. */}
-            {!isMobile && (
-              <Chip
-                size="small"
-                color={mode === 'import' ? 'secondary' : 'default'}
-                variant={mode === 'import' ? 'filled' : 'outlined'}
-                label={mode === 'filter' ? LL.SET_LISTS.MODE_FILTER() : LL.SET_LISTS.MODE_IMPORT()}
-              />
-            )}
-            <TextField
-              fullWidth
-              size="small"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              disabled={!activeList}
-              placeholder={mode === 'filter' ? LL.SET_LISTS.FILTER_PLACEHOLDER() : LL.SET_LISTS.IMPORT_PLACEHOLDER()}
-              slotProps={{
-                input: {
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                },
-              }}
-            />
-            {/* Narrows the list to what this device has starred. Sits next to the search
-                field because it is the same kind of narrowing, just a saved one. */}
-            <Tooltip title={favoritesOnly ? LL.SET_LISTS.FAVORITES_SHOW_ALL() : LL.SET_LISTS.FAVORITES_ONLY()}>
-              <span>
-                <IconButton
-                  size="small"
-                  color={favoritesOnly ? 'warning' : 'default'}
-                  disabled={!activeList}
-                  onClick={() => setFavoritesOnly(!favoritesOnly)}
-                >
-                  {favoritesOnly ? <FavoriteIcon fontSize="small" /> : <NotFavoriteIcon fontSize="small" />}
-                </IconButton>
-              </span>
-            </Tooltip>
-            <Tooltip title={LL.SET_LISTS.USAGE_SLIDER({ count: usageShowCount })}>
-              <IconButton size="small" onClick={(e) => setUsageAnchor(e.currentTarget)}>
-                <UsageIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={LL.SET_LISTS.UNDO_LAST_ADD()}>
-              <span>
-                <IconButton size="small" disabled={!lastAdded || !currentShow} onClick={handleUndoLastAdd}>
-                  <UndoIcon fontSize="small" />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Stack>
-
           <Divider />
 
-          {/* Body */}
-          <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-            {isLoading ? (
-              <Stack sx={{ alignItems: 'center', p: 4 }}>
-                <CircularProgress />
-              </Stack>
-            ) : isError ? (
-              <Alert severity="error">{LL.SET_LISTS.ERROR_LOAD()}</Alert>
-            ) : lists.length === 0 ? (
-              <Stack spacing={2} sx={{ alignItems: 'center', p: 4, textAlign: 'center' }}>
-                <Typography color="text.secondary">{LL.SET_LISTS.EMPTY_NO_LISTS()}</Typography>
-                <Button
-                  variant="contained"
-                  startIcon={<AddIcon />}
-                  onClick={() => setNameDialog({ mode: 'create', value: '', bandIds: [] })}
-                >
-                  {LL.SET_LISTS.CREATE()}
-                </Button>
-              </Stack>
-            ) : mode === 'import' ? (
-              // ── Add mode: an empty box offers the current agenda, typing searches the library ──
-              importQuery.length < 2 ? (
-                agendaSuggestions.length > 0 ? (
-                  <Box sx={{ px: 1, pt: 1 }}>
-                    {renderSectionHeading(LL.SET_LISTS.FROM_AGENDA(), agendaSuggestions.length)}
-                    <List dense disablePadding>
-                      {agendaSuggestions.map(renderAddableRow)}
-                    </List>
-                    <Typography variant="caption" sx={{ px: 1, pb: 1, display: 'block', color: 'text.secondary' }}>
-                      {LL.SET_LISTS.IMPORT_HINT()}
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Stack spacing={1} sx={{ p: 3 }}>
-                    {(currentShow?.order ?? []).some((i) => i.type === 'song') && (
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                        {LL.SET_LISTS.FROM_AGENDA_EMPTY()}
-                      </Typography>
-                    )}
-                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                      {LL.SET_LISTS.IMPORT_HINT()}
-                    </Typography>
-                  </Stack>
-                )
-              ) : importFetching ? (
-                <Stack sx={{ alignItems: 'center', p: 4 }}>
-                  <CircularProgress size={28} />
-                </Stack>
-              ) : (libraryResults ?? []).length === 0 ? (
-                <Typography sx={{ p: 3, color: 'text.secondary' }}>{LL.SET_LISTS.EMPTY_IMPORT({ query: importQuery })}</Typography>
+          <Box
+            sx={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              overflow: 'hidden',
+              px: { xs: 2, sm: 3 },
+              py: 1.5,
+            }}
+          >
+            {/* Set list selector — scrolls horizontally rather than wrapping. The six list actions
+              sit beside it as icons on desktop; on a phone they collapse into one overflow menu so the
+              tab strip keeps the width. */}
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', borderBottom: 1, borderColor: 'divider' }}>
+              <Tabs
+                value={activeId ?? false}
+                onChange={(_e, value) => setActiveId(value as number)}
+                variant="scrollable"
+                scrollButtons
+                allowScrollButtonsMobile
+                sx={{ flexGrow: 1, minWidth: 0, minHeight: 44, '& .MuiTab-root': { minHeight: 44, textTransform: 'none' } }}
+              >
+                {lists.map((list) => (
+                  <Tab key={list.id} value={list.id} label={list.name} />
+                ))}
+              </Tabs>
+              {isMobile ? (
+                <RowActionMenu
+                  edge={false}
+                  actions={[
+                    {
+                      key: 'create',
+                      label: LL.SET_LISTS.CREATE(),
+                      icon: <AddIcon fontSize="small" />,
+                      onClick: () => setNameDialog({ mode: 'create', value: '', bandIds: [] }),
+                    },
+                    {
+                      key: 'rename',
+                      label: LL.SET_LISTS.RENAME(),
+                      icon: <EditIcon fontSize="small" />,
+                      onClick: () =>
+                        activeList && setNameDialog({ mode: 'rename', value: activeList.name, bandIds: activeList.bandIds ?? [] }),
+                      hidden: !activeList,
+                    },
+                    {
+                      key: 'copy',
+                      label: copied ? LL.SET_LISTS.COPIED() : LL.SET_LISTS.COPY(),
+                      icon: copied ? <CopiedIcon fontSize="small" /> : <CopyIcon fontSize="small" />,
+                      onClick: handleCopyToClipboard,
+                      disabled: !activeList || activeList.entries.length === 0,
+                      hidden: !activeList,
+                    },
+                    {
+                      key: 'move-left',
+                      label: LL.SET_LISTS.MOVE_LEFT(),
+                      icon: <MoveLeftIcon fontSize="small" />,
+                      onClick: () => handleMoveSetList(-1),
+                      disabled: activeIndex <= 0,
+                      hidden: !activeList,
+                    },
+                    {
+                      key: 'move-right',
+                      label: LL.SET_LISTS.MOVE_RIGHT(),
+                      icon: <MoveRightIcon fontSize="small" />,
+                      onClick: () => handleMoveSetList(1),
+                      disabled: activeIndex < 0 || activeIndex >= lists.length - 1,
+                      hidden: !activeList,
+                    },
+                    {
+                      key: 'delete',
+                      label: LL.SET_LISTS.DELETE(),
+                      icon: <DeleteIcon fontSize="small" />,
+                      onClick: () => setDeleteListConfirm(true),
+                      destructive: true,
+                      hidden: !activeList,
+                    },
+                  ]}
+                />
               ) : (
-                <Box sx={{ px: 1, pt: 1 }}>
-                  {renderSectionHeading(LL.SET_LISTS.LIBRARY_RESULTS(), (libraryResults ?? []).length)}
-                  <List dense disablePadding>
-                    {(libraryResults ?? []).map(renderAddableRow)}
-                  </List>
-                </Box>
-              )
-            ) : sections.length === 0 ? (
-              // ── Filter mode empty states ──
-              <Typography sx={{ p: 3, color: 'text.secondary' }}>
-                {favoritesOnly
-                  ? LL.SET_LISTS.EMPTY_FAVORITES()
-                  : search.trim()
-                    ? LL.SET_LISTS.EMPTY_FILTER({ query: search.trim() })
-                    : LL.SET_LISTS.EMPTY_SET_LIST()}
-              </Typography>
-            ) : (
-              sections.map((section) => (
-                <Accordion
-                  key={section.name}
-                  disableGutters
-                  // A filter query force-opens the sections so matches are never hidden.
-                  expanded={search.trim() ? true : (accordionState[section.name] ?? true)}
-                  onChange={(_e, expanded) => !search.trim() && setAccordionOpen(section.name, expanded)}
-                  sx={{ '&:before': { display: 'none' }, bgcolor: 'transparent' }}
-                >
-                  {/* Section header: the tag itself as a chip (so it reads as the thing it is),
+                <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                  <Tooltip title={LL.SET_LISTS.CREATE()}>
+                    <IconButton size="small" onClick={() => setNameDialog({ mode: 'create', value: '', bandIds: [] })}>
+                      <AddIcon />
+                    </IconButton>
+                  </Tooltip>
+                  {activeList && (
+                    <>
+                      <Tooltip title={LL.SET_LISTS.MOVE_LEFT()}>
+                        <span>
+                          <IconButton size="small" disabled={activeIndex <= 0} onClick={() => handleMoveSetList(-1)}>
+                            <MoveLeftIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title={LL.SET_LISTS.MOVE_RIGHT()}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            disabled={activeIndex < 0 || activeIndex >= lists.length - 1}
+                            onClick={() => handleMoveSetList(1)}
+                          >
+                            <MoveRightIcon fontSize="small" />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title={LL.SET_LISTS.RENAME()}>
+                        <IconButton
+                          size="small"
+                          onClick={() => setNameDialog({ mode: 'rename', value: activeList.name, bandIds: activeList.bandIds ?? [] })}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={copied ? LL.SET_LISTS.COPIED() : LL.SET_LISTS.COPY()}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color={copied ? 'success' : 'default'}
+                            disabled={activeList.entries.length === 0}
+                            onClick={handleCopyToClipboard}
+                          >
+                            {copied ? <CopiedIcon fontSize="small" /> : <CopyIcon fontSize="small" />}
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                      <Tooltip title={LL.SET_LISTS.DELETE()}>
+                        <IconButton size="small" color="error" onClick={() => setDeleteListConfirm(true)}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  )}
+                </Stack>
+              )}
+            </Stack>
+
+            {/* Who plays this list. Read-only here; the picker lives in the rename dialog,
+              where the list's own properties are edited. */}
+            {activeList && (activeList.bandIds?.length ?? 0) > 0 && (
+              <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', flexWrap: 'wrap', rowGap: 0.5 }}>
+                <BandChips bandIds={activeList.bandIds} max={4} />
+              </Stack>
+            )}
+
+            {errorMsg && (
+              <Alert severity="error" onClose={() => setErrorMsg(null)}>
+                {errorMsg}
+              </Alert>
+            )}
+
+            {/* Search row — the mode control sits left of the field and drives its meaning */}
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <ToggleButtonGroup
+                exclusive
+                size="small"
+                value={mode}
+                onChange={(_e, value: SearchMode | null) => value && setMode(value)}
+                aria-label={LL.SET_LISTS.SEARCH_MODE()}
+              >
+                <ToggleButton value="filter" aria-label={LL.SET_LISTS.MODE_FILTER()}>
+                  <Tooltip title={LL.SET_LISTS.MODE_FILTER()}>
+                    <FilterIcon fontSize="small" />
+                  </Tooltip>
+                </ToggleButton>
+                <ToggleButton value="import" aria-label={LL.SET_LISTS.MODE_IMPORT()}>
+                  <Tooltip title={LL.SET_LISTS.MODE_IMPORT()}>
+                    <ImportIcon fontSize="small" />
+                  </Tooltip>
+                </ToggleButton>
+              </ToggleButtonGroup>
+              {/* The toggle above already shows the mode; on a phone this label is width the
+                search field needs more. */}
+              {!isMobile && (
+                <Chip
+                  size="small"
+                  color={mode === 'import' ? 'secondary' : 'default'}
+                  variant={mode === 'import' ? 'filled' : 'outlined'}
+                  label={mode === 'filter' ? LL.SET_LISTS.MODE_FILTER() : LL.SET_LISTS.MODE_IMPORT()}
+                />
+              )}
+              <TextField
+                fullWidth
+                size="small"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                disabled={!activeList}
+                placeholder={mode === 'filter' ? LL.SET_LISTS.FILTER_PLACEHOLDER() : LL.SET_LISTS.IMPORT_PLACEHOLDER()}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+              {/* Narrows the list to what this device has starred. Sits next to the search
+                field because it is the same kind of narrowing, just a saved one. */}
+              <Tooltip title={favoritesOnly ? LL.SET_LISTS.FAVORITES_SHOW_ALL() : LL.SET_LISTS.FAVORITES_ONLY()}>
+                <span>
+                  <IconButton
+                    size="small"
+                    color={favoritesOnly ? 'warning' : 'default'}
+                    disabled={!activeList}
+                    onClick={() => setFavoritesOnly(!favoritesOnly)}
+                  >
+                    {favoritesOnly ? <FavoriteIcon fontSize="small" /> : <NotFavoriteIcon fontSize="small" />}
+                  </IconButton>
+                </span>
+              </Tooltip>
+              <Tooltip title={LL.SET_LISTS.USAGE_SLIDER({ count: usageShowCount })}>
+                <IconButton size="small" onClick={(e) => setUsageAnchor(e.currentTarget)}>
+                  <UsageIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={LL.SET_LISTS.UNDO_LAST_ADD()}>
+                <span>
+                  <IconButton size="small" disabled={!lastAdded || !currentShow} onClick={handleUndoLastAdd}>
+                    <UndoIcon fontSize="small" />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            </Stack>
+
+            <Divider />
+
+            {/* Body */}
+            <Box sx={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+              {isLoading ? (
+                <Stack sx={{ alignItems: 'center', p: 4 }}>
+                  <CircularProgress />
+                </Stack>
+              ) : isError ? (
+                <Alert severity="error">{LL.SET_LISTS.ERROR_LOAD()}</Alert>
+              ) : lists.length === 0 ? (
+                <Stack spacing={2} sx={{ alignItems: 'center', p: 4, textAlign: 'center' }}>
+                  <Typography color="text.secondary">{LL.SET_LISTS.EMPTY_NO_LISTS()}</Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<AddIcon />}
+                    onClick={() => setNameDialog({ mode: 'create', value: '', bandIds: [] })}
+                  >
+                    {LL.SET_LISTS.CREATE()}
+                  </Button>
+                </Stack>
+              ) : mode === 'import' ? (
+                // ── Add mode: an empty box offers the current agenda, typing searches the library ──
+                importQuery.length < 2 ? (
+                  agendaSuggestions.length > 0 ? (
+                    <Box sx={{ px: 1, pt: 1 }}>
+                      {renderSectionHeading(LL.SET_LISTS.FROM_AGENDA(), agendaSuggestions.length)}
+                      <List dense disablePadding>
+                        {agendaSuggestions.map(renderAddableRow)}
+                      </List>
+                      <Typography variant="caption" sx={{ px: 1, pb: 1, display: 'block', color: 'text.secondary' }}>
+                        {LL.SET_LISTS.IMPORT_HINT()}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Stack spacing={1} sx={{ p: 3 }}>
+                      {(currentShow?.order ?? []).some((i) => i.type === 'song') && (
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                          {LL.SET_LISTS.FROM_AGENDA_EMPTY()}
+                        </Typography>
+                      )}
+                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                        {LL.SET_LISTS.IMPORT_HINT()}
+                      </Typography>
+                    </Stack>
+                  )
+                ) : importFetching ? (
+                  <Stack sx={{ alignItems: 'center', p: 4 }}>
+                    <CircularProgress size={28} />
+                  </Stack>
+                ) : (libraryResults ?? []).length === 0 ? (
+                  <Typography sx={{ p: 3, color: 'text.secondary' }}>{LL.SET_LISTS.EMPTY_IMPORT({ query: importQuery })}</Typography>
+                ) : (
+                  <Box sx={{ px: 1, pt: 1 }}>
+                    {renderSectionHeading(LL.SET_LISTS.LIBRARY_RESULTS(), (libraryResults ?? []).length)}
+                    <List dense disablePadding>
+                      {(libraryResults ?? []).map(renderAddableRow)}
+                    </List>
+                  </Box>
+                )
+              ) : sections.length === 0 ? (
+                // ── Filter mode empty states ──
+                <Typography sx={{ p: 3, color: 'text.secondary' }}>
+                  {favoritesOnly
+                    ? LL.SET_LISTS.EMPTY_FAVORITES()
+                    : search.trim()
+                      ? LL.SET_LISTS.EMPTY_FILTER({ query: search.trim() })
+                      : LL.SET_LISTS.EMPTY_SET_LIST()}
+                </Typography>
+              ) : (
+                sections.map((section) => (
+                  <Accordion
+                    key={section.name}
+                    disableGutters
+                    // A filter query force-opens the sections so matches are never hidden.
+                    expanded={search.trim() ? true : (accordionState[section.name] ?? true)}
+                    onChange={(_e, expanded) => !search.trim() && setAccordionOpen(section.name, expanded)}
+                    sx={{ '&:before': { display: 'none' }, bgcolor: 'transparent' }}
+                  >
+                    {/* Section header: the tag itself as a chip (so it reads as the thing it is),
                       the entry count, and a rule running to the edge to anchor it as a heading
                       rather than a line of text floating above the rows. */}
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Stack direction="row" spacing={1} sx={{ alignItems: 'center', width: '100%', pr: 1 }}>
-                      <Chip
-                        icon={<TagIcon sx={{ fontSize: '0.85rem' }} />}
-                        label={section.label}
-                        size="small"
-                        color={section.name === UNTAGGED ? 'default' : 'primary'}
-                        variant={section.name === UNTAGGED ? 'outlined' : 'filled'}
-                        sx={{
-                          fontWeight: 700,
-                          fontStyle: section.name === UNTAGGED ? 'italic' : 'normal',
-                          flexShrink: 0,
-                          maxWidth: '60%',
-                        }}
-                      />
-                      <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
-                        {section.rows.length}
-                      </Typography>
-                      <Divider sx={{ flex: 1, minWidth: 16 }} />
-                    </Stack>
-                  </AccordionSummary>
-                  <AccordionDetails sx={{ pt: 0 }}>
-                    <List dense disablePadding>
-                      {section.rows.map((row) => renderRow(row, section.name))}
-                    </List>
-                  </AccordionDetails>
-                </Accordion>
-              ))
-            )}
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                      <Stack direction="row" spacing={1} sx={{ alignItems: 'center', width: '100%', pr: 1 }}>
+                        <Chip
+                          icon={<TagIcon sx={{ fontSize: '0.85rem' }} />}
+                          label={section.label}
+                          size="small"
+                          color={section.name === UNTAGGED ? 'default' : 'primary'}
+                          variant={section.name === UNTAGGED ? 'outlined' : 'filled'}
+                          sx={{
+                            fontWeight: 700,
+                            fontStyle: section.name === UNTAGGED ? 'italic' : 'normal',
+                            flexShrink: 0,
+                            maxWidth: '60%',
+                          }}
+                        />
+                        <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
+                          {section.rows.length}
+                        </Typography>
+                        <Divider sx={{ flex: 1, minWidth: 16 }} />
+                      </Stack>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ pt: 0 }}>
+                      <List dense disablePadding>
+                        {section.rows.map((row) => renderRow(row, section.name))}
+                      </List>
+                    </AccordionDetails>
+                  </Accordion>
+                ))
+              )}
+            </Box>
+
+            {/* Only mounted once a cover is clicked — no Spotify script or iframe before that. */}
+            {spotifyEnabled && playingTrack && <SetListSpotifyPlayer track={playingTrack} onClose={() => setPlayingTrack(null)} />}
           </Box>
-
-          {/* Only mounted once a cover is clicked — no Spotify script or iframe before that. */}
-          {spotifyEnabled && playingTrack && <SetListSpotifyPlayer track={playingTrack} onClose={() => setPlayingTrack(null)} />}
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={onClose}>{LL.COMMON.CLOSE()}</Button>
-        </DialogActions>
-      </Dialog>
+        </Stack>
+      </Drawer>
 
       {/* Remove: tag assignment only vs. the whole song */}
       <Popover
@@ -1369,3 +1380,5 @@ export const SetListManager = ({ open, onClose }: SetListManagerProps) => {
     </>
   );
 };
+
+export const SetListManager = stillWhileClosed(SetListManagerBody);

@@ -1,5 +1,6 @@
+import { newId } from '@/utils/ids';
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { useAppSelector, useAppDispatch } from './hooks';
+import { useAppDispatch, useSliceFields } from './hooks';
 import { useCallback } from 'react';
 import { persistState, registerEvictor, EVICT_PRIORITY } from './persist';
 
@@ -222,6 +223,8 @@ export interface SettingsState {
   keyboardMapping: Record<string, { enabled: boolean; key: string }>;
   lastSelectedAccount?: Account;
   mediaPath: string;
+  /** The media folder's subfolder dropped files were last copied into, relative to it. */
+  mediaImportFolder: string;
   /** Aspect ratio of the media preview frame in the control view. */
   mediaPreviewAspect: MediaPreviewAspect;
   metricsEnabled: boolean;
@@ -229,6 +232,40 @@ export interface SettingsState {
   notificationCount: number;
   notificationTime: number;
   offlineMode: boolean;
+  /** Startup only: server unreachable and a show saved on this device → switch to offline mode instead of the login page. */
+  offlineFallback: boolean;
+  /** Operator view: `prepare` allows arranging the set list and editing looks, `live` locks them. */
+  operatorMode: 'prepare' | 'live';
+  /** Width in pixels of each screen-group preview tile in the operator view's top bar. */
+  operatorMonitorWidth: number;
+  /** Minimum width in pixels of each song slide thumbnail in the operator view. */
+  operatorSlideSize: number;
+  /** Operator view: whether the set list column is shown. */
+  operatorSetListOpen: boolean;
+  /** Operator view: whether the side panel (the right-hand column) is shown at all. */
+  operatorSidePanelOpen: boolean;
+  /** Operator view: whether the side panel holds the inspector (look, backgrounds, stage). */
+  operatorInspectorOpen: boolean;
+  /** Operator view: set list column width in pixels (dragged at its edge). */
+  operatorSetListWidth: number;
+  /** Operator view: side panel width in pixels. */
+  operatorInspectorWidth: number;
+  /** Operator view: whether the side panel holds the preview (at its top). */
+  operatorPreviewOpen: boolean;
+  /** Live mode: a click only previews a slide or item; Enter or a second click sends it to the screens. */
+  operatorPreviewBeforeLive: boolean;
+  /** The search's type filter, remembered between searches ('' = everything). */
+  lastSearchType: string;
+  /** Song editor: the on-screen preview beside a block (off: just the text). */
+  songEditorPreviewOpen: boolean;
+  /** Which screen group the preview draws; null follows the first group. */
+  operatorPreviewGroupId: number | null;
+  /** Layer bar rows switched off in Settings, by row id; a row missing here is shown. */
+  operatorLayerRows: Partial<Record<'background' | 'slides' | 'media' | 'audio' | 'overlays', boolean>>;
+  /** Side panel: a Program monitor (what is on screen) above the Preview one. */
+  operatorPreviewProgram: boolean;
+  /** Side panel monitors: title- and action-safe guides over the picture. */
+  operatorPreviewGuides: boolean;
   /**
    * Whether this app instance is the one driving the show over the WS relay: it broadcasts
    * its position, answers `get_state` and acts on remote commands. `auto` (the default)
@@ -258,7 +295,10 @@ export interface SettingsState {
   errorBoundaryNotification: boolean;
   verseClick: ClickBehaviour;
   videoFadeDuration: number;
-  windowFooterVisible: boolean;
+  /** Fade out of audio items, in seconds. */
+  audioFadeOutSeconds: number;
+  /** A newly started video plays at the master speed (the layer bar's M control) until given its own. */
+  videosFollowMasterSpeed: boolean;
 }
 
 export const DEFAULT_AUDIO_MIXER: AudioMixerSettings = {
@@ -289,12 +329,7 @@ const defaultState: SettingsState = {
   companionCommandsEnabled: true,
   defaultNewVerseName: 'Vers 1',
   desktopAppDismissed: false,
-  // crypto.randomUUID() requires a secure context (HTTPS / localhost).
-  // Guard against HTTP deployments (common on local networks) and older iOS Safari (<15.4).
-  deviceId:
-    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-      ? crypto.randomUUID()
-      : `device-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  deviceId: newId('device'),
   globalStyleId: 0,
   hideTransitionDuration: 300,
   hideTransitionMode: 'cut',
@@ -302,12 +337,30 @@ const defaultState: SettingsState = {
   keyboardMapping: {},
   lastSelectedAccount: '',
   mediaPath: '',
+  mediaImportFolder: '',
   mediaPreviewAspect: '16:9',
   metricsEnabled: true,
   nextLinePreview: true,
   notificationCount: 4,
   notificationTime: 3500,
   offlineMode: false,
+  offlineFallback: false,
+  operatorMode: 'prepare',
+  operatorMonitorWidth: 140,
+  operatorSlideSize: 280,
+  operatorSetListOpen: true,
+  operatorSidePanelOpen: true,
+  operatorInspectorOpen: true,
+  operatorSetListWidth: 320,
+  operatorInspectorWidth: 290,
+  operatorPreviewOpen: true,
+  operatorPreviewBeforeLive: false,
+  lastSearchType: '',
+  songEditorPreviewOpen: false,
+  operatorPreviewGroupId: null,
+  operatorLayerRows: {},
+  operatorPreviewProgram: true,
+  operatorPreviewGuides: false,
   operatorSyncAuthority: 'auto',
   overrideSongImport: false,
   remoteControlCommands: {},
@@ -328,7 +381,8 @@ const defaultState: SettingsState = {
   errorBoundaryNotification: true,
   verseClick: 'double-click',
   videoFadeDuration: 0,
-  windowFooterVisible: true,
+  audioFadeOutSeconds: 3,
+  videosFollowMasterSpeed: true,
 };
 
 /** The value every setting falls back to — the UI compares against this to offer a reset. */
@@ -476,7 +530,12 @@ export const getSetting = <K extends keyof SettingsState>(k: K): SettingsState[K
   } catch {}
   return defaultState[k];
 };
-export const useGetSettings = () => useAppSelector((state) => state.settings);
+/** The named settings (re-renders when one of them changes); no names = all of them. */
+export function useGetSettings(): SettingsState;
+export function useGetSettings<K extends keyof SettingsState>(...keys: K[]): Pick<SettingsState, K>;
+export function useGetSettings(...keys: (keyof SettingsState)[]) {
+  return useSliceFields('settings', keys);
+}
 export const useUpdateSetting = () => {
   const dispatch = useAppDispatch();
   return useCallback(

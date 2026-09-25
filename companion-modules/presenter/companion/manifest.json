@@ -1,0 +1,27 @@
+{
+	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
+	"type": "connection",
+	"id": "efsh-presenter",
+	"name": "efsh-presenter",
+	"shortname": "Presenter",
+	"description": "Presenter — slides, agenda, black and text, video transport, with live titles and section colours",
+	"version": "0.1.0",
+	"license": "MIT",
+	"repository": "git+https://github.com/fbgg-de/presenter.git",
+	"bugs": "https://github.com/fbgg-de/presenter/issues",
+	"maintainers": [
+		{
+			"name": "Marcel Birkholz"
+		}
+	],
+	"runtime": {
+		"type": "node22",
+		"api": "nodejs-ipc",
+		"apiVersion": "2.1.3",
+		"entrypoint": "../dist/main.js"
+	},
+	"legacyIds": [],
+	"manufacturer": "efsh.de",
+	"products": ["Presenter"],
+	"keywords": ["lyrics", "worship", "presentation", "songs", "slides"]
+}

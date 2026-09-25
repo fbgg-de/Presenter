@@ -44,6 +44,9 @@ const OIDC = [
     'required_group' => '', // Optional: require user to be in this group (leave empty for no restriction)
     'redirect_uri'   => BASE_URL . 'oidc',
     'scopes'         => ['openid', 'email', 'profile', 'groups'],
+    // Hours a sign-in lasts; then the app asks the IdP again (no password while the IdP session
+    // lasts), which re-checks the person in ChurchTools.
+    'session_hours'  => 24,
 ];
 
 // WebSocket Relay Server

@@ -48,7 +48,7 @@ export const ConnectivityChecker = ({ children }: { children?: ReactNode }) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
 
-  const { backendUrl, offlineMode } = useGetSettings();
+  const { backendUrl, offlineMode } = useGetSettings('backendUrl', 'offlineMode');
   const updateSetting = useUpdateSetting();
 
   // Use the existing Session endpoint to detect connectivity issues
@@ -177,7 +177,7 @@ export const ConnectivityChecker = ({ children }: { children?: ReactNode }) => {
             </Stack>
           }
         >
-          {LL.CONNECTIVITY.SNACK_MESSAGE()}
+          {offlineMode ? LL.CONNECTIVITY.SNACK_OFFLINE_FALLBACK() : LL.CONNECTIVITY.SNACK_MESSAGE()}
         </Alert>
       </Snackbar>
       {/* ── Backend URL dialog ── */}

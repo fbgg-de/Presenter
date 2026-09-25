@@ -13,7 +13,14 @@
  * viewport-relative, whatever it is nested inside.)
  */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import { renderStageCue, stageUrgency, type StageAnchor, type StageLayerWire, type StageOverlayPayload } from '@/stage/types';
+import {
+  STAGE_MONO_FONT,
+  renderStageCue,
+  stageUrgency,
+  type StageAnchor,
+  type StageLayerWire,
+  type StageOverlayPayload,
+} from '@/stage/types';
 
 /**
  * How often the display re-reads the clock.
@@ -77,6 +84,8 @@ const StageLayerView = ({ layer, now, height }: { layer: StageLayerWire; now: nu
 
   return (
     <div
+      // Lets the editor's preview find the box to draw its move/resize frame around.
+      data-stage-layer={layer.id}
       style={{
         ...anchorStyles(placement.anchor, placement.marginPct, placement.widthPct),
         display: 'flex',
@@ -119,7 +128,8 @@ const StageLayerView = ({ layer, now, height }: { layer: StageLayerWire; now: nu
       <div
         style={{
           position: 'relative',
-          fontFamily: style.fontFamily,
+          // Clocks and timers share the stage's monospace face everywhere; only messages take the layer's font.
+          fontFamily: cue.kind === 'message' ? style.fontFamily : STAGE_MONO_FONT,
           fontSize: px(style.fontSizePct),
           fontWeight: style.bold ? 700 : 400,
           color: colorFor(layer, remainingSec),
@@ -140,7 +150,17 @@ const StageLayerView = ({ layer, now, height }: { layer: StageLayerWire; now: nu
   );
 };
 
-export const StageOverlay = ({ payload }: { payload?: StageOverlayPayload }) => {
+export const StageOverlay = ({
+  payload,
+  reserve,
+}: {
+  payload?: StageOverlayPayload;
+  /**
+   * Fractions of the height kept clear at the top and bottom — the theme's stage header and
+   * footer. Layers anchor inside what is left, so a timer sits under the header, not on it.
+   */
+  reserve?: { top: number; bottom: number };
+}) => {
   const layers = payload?.layers ?? [];
   // Only the presence of a live value justifies a timer; a payload of nothing but messages
   // does not need to wake this component up four times a second.
@@ -176,7 +196,19 @@ export const StageOverlay = ({ payload }: { payload?: StageOverlayPayload }) => 
   if (layers.length === 0) return null;
 
   return (
-    <div ref={rootRef} style={{ position: 'absolute', inset: 0, zIndex: STAGE_Z_INDEX, pointerEvents: 'none', overflow: 'hidden' }}>
+    <div
+      ref={rootRef}
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: `${(reserve?.top ?? 0) * 100}%`,
+        bottom: `${(reserve?.bottom ?? 0) * 100}%`,
+        zIndex: STAGE_Z_INDEX,
+        pointerEvents: 'none',
+        overflow: 'hidden',
+      }}
+    >
       {layers.map((layer) => (
         <StageLayerView key={layer.id} layer={layer} now={now} height={height} />
       ))}

@@ -23,6 +23,8 @@ import {
   updateWindowConfigInBridge,
 } from '@/utils/presentationBridge';
 import { screenIdForBounds, type ScreenInfo } from '@/components/layout/ScreenPicker';
+import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
+import { defaultGroupForWindows, groupForWindow, normaliseScreenGroupData } from '@/screens/types';
 
 export type WindowBounds = { x: number; y: number; width: number; height: number };
 
@@ -150,6 +152,8 @@ export interface RigWindow {
   frozen: boolean;
   bounds?: WindowBounds;
   screen?: ScreenInfo;
+  /** Whether its screen group shows text as stream lines rather than whole slides. */
+  stream: boolean;
   /**
    * A live window with no saved configuration — opened directly over IPC, or left behind by
    * a renderer reload. Shown so it can be controlled, but it has nothing to persist to.
@@ -176,12 +180,31 @@ export interface PresentationWindows {
 export const usePresentationWindows = (): PresentationWindows => {
   const configs = useWindowConfigs();
   const actions = useWindowActions();
-  const { frozenWindows } = useGetPresentationSettings();
+  const { frozenWindows } = useGetPresentationSettings('frozenWindows');
   const runtime = useSyncExternalStore(subscribe, () => snapshot);
+  const { data: groups } = useGetScreenGroupsQuery();
+  const groupsRef = useRef(groups);
+  groupsRef.current = groups;
+
+  /** Every window belongs to a group: one without (or whose group is gone) joins the default one. */
+  const withGroup = useCallback(<T extends WindowConfig>(config: T): T => {
+    const known = groupsRef.current ?? [];
+    if (known.length === 0 || known.some((g) => g.id === config.screenGroupId)) return config;
+    const fallback = defaultGroupForWindows(known);
+    return fallback ? { ...config, screenGroupId: fallback.id } : config;
+  }, []);
 
   /** Latest configs without making every callback depend on the array identity. */
   const configsRef = useRef(configs);
   configsRef.current = configs;
+
+  const isStream = useCallback(
+    (config: WindowConfig) => {
+      const group = groupForWindow(groups ?? [], config.screenGroupId);
+      return !!group && normaliseScreenGroupData(group.data).display.mode === 'stream';
+    },
+    [groups],
+  );
 
   const windows = useMemo<RigWindow[]>(() => {
     const entries: RigWindow[] = configs.map((cfg) => {
@@ -198,6 +221,7 @@ export const usePresentationWindows = (): PresentationWindows => {
         frozen: frozenWindows.includes(cfg.name || 'Window'),
         bounds,
         screen: runtime.screens.find((s) => s.id === screenIdForBounds(bounds, runtime.screens)),
+        stream: isStream(cfg),
         unmanaged: false,
       };
     });
@@ -218,30 +242,34 @@ export const usePresentationWindows = (): PresentationWindows => {
         frozen: frozenWindows.includes(config.name || 'Window'),
         bounds,
         screen: runtime.screens.find((s) => s.id === screenIdForBounds(bounds, runtime.screens)),
+        stream: isStream(config),
         unmanaged: true,
       });
     }
 
     return entries;
-  }, [configs, runtime, frozenWindows]);
+  }, [configs, runtime, frozenWindows, isStream]);
 
   const findConfig = useCallback((id: string) => configsRef.current.find((c) => c.id === id), []);
 
   const create = useCallback(
     async (config: WindowConfig): Promise<string> => {
       const id = newWindowConfigId();
-      const runtimeId = await openPresentationWindow(config);
-      actions.upsert({ ...config, id, _runtimeId: runtimeId });
+      const grouped = withGroup(config);
+      const runtimeId = await openPresentationWindow(grouped);
+      actions.upsert({ ...grouped, id, _runtimeId: runtimeId });
       refreshWindowRuntime();
       return id;
     },
-    [actions],
+    [actions, withGroup],
   );
 
   const open = useCallback(
     async (id: string): Promise<void> => {
-      const cfg = findConfig(id);
-      if (!cfg || cfg._runtimeId) return;
+      const saved = findConfig(id);
+      if (!saved || saved._runtimeId) return;
+      const cfg = withGroup(saved);
+      if (cfg !== saved) actions.upsert({ id, screenGroupId: cfg.screenGroupId });
       try {
         const runtimeId = await openPresentationWindow(cfg);
         actions.setRuntimeId(id, runtimeId);
@@ -250,7 +278,7 @@ export const usePresentationWindows = (): PresentationWindows => {
         console.error('Failed to open window:', e);
       }
     },
-    [actions, findConfig],
+    [actions, findConfig, withGroup],
   );
 
   /** Closing is not forgetting: the configuration stays so the window can be reopened. */
@@ -335,6 +363,18 @@ export const usePresentationWindows = (): PresentationWindows => {
     },
     [actions],
   );
+
+  // Windows saved before every window had a group, and windows whose group was deleted, join
+  // the default group as soon as the groups are known — open ones included, so they follow at once.
+  useEffect(() => {
+    if (!groups || groups.length === 0) return;
+    for (const cfg of configs) {
+      const grouped = withGroup(cfg);
+      if (grouped === cfg) continue;
+      actions.upsert({ id: cfg.id, screenGroupId: grouped.screenGroupId });
+      if (cfg._runtimeId) updateWindowConfigInBridge(cfg._runtimeId, { screenGroupId: grouped.screenGroupId });
+    }
+  }, [groups, configs, actions, withGroup]);
 
   // Fullscreen can be changed from the window itself (F11, the OS). Mirror it back so the
   // saved config does not disagree with what is on screen.

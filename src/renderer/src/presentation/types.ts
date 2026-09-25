@@ -1,5 +1,6 @@
 import type { ResolvedStyle } from '@/utils/styleUtils';
 import type { CuePacket } from '@/media/types';
+import type { StageLayoutSettings } from '@/screens/types';
 
 /**
  * Display mode for a presentation window.
@@ -34,7 +35,11 @@ export interface PresentationBlock {
  * Content payload sent from the control window to presentation windows.
  */
 export interface PresentationContent {
-  mediaCue?: CuePacket;
+  /**
+   * Media entries playing on this window's screen group: a background behind the text and
+   * content above it. Set per window by the bridge; see `media/playback.ts`.
+   */
+  media?: { background?: CuePacket; contents: CuePacket[] };
   /** What type of content is active */
   contentType: ContentType;
 
@@ -62,6 +67,9 @@ export interface PresentationContent {
   /** Song number */
   songNumber?: number;
 
+  /** The key the song is played in, for the stage monitor header. */
+  songKey?: string;
+
   /** Song copyright text */
   copyright?: string;
 
@@ -70,7 +78,7 @@ export interface PresentationContent {
 
   // ── Media fields ──
 
-  /** Media sub-type */
+  /** Media sub-type: only colour entries are drawn from these fields; images and videos arrive in `media`. */
   mediaSubType?: 'image' | 'video' | 'color';
 
   /** Media path (image / video URL) */
@@ -167,6 +175,9 @@ export interface PresentationContent {
 
   /** Transition duration in milliseconds */
   transitionDuration?: number;
+
+  /** Set per window by the bridge when the window belongs to a Stage group: draw the stage screen. */
+  stageLayout?: StageLayoutSettings;
 }
 
 /**

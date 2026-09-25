@@ -32,7 +32,7 @@ import { toggleBlack, toggleTextHidden, useGetPresentationSettings } from '@/sto
 import { toggleStageAllHidden } from '@/store/stageSlice';
 import { StyleEditor } from '@/components/style/StyleEditor';
 import { WindowManager } from '@/components/layout/WindowManager';
-import { FooterWindows } from '@/components/layout/FooterWindows';
+import { FooterWindows, WindowRestoreHost } from '@/components/layout/FooterWindows';
 import { StagePanel } from '@/components/stage/StagePanel';
 import { StageTransport } from '@/components/stage/StageTransport';
 import { useStageStatus } from '@/hooks/useStageEngine';
@@ -67,7 +67,16 @@ const ConnectedWebsocketClients = ({
   </Tooltip>
 );
 
-const FooterActions = ({ onOpenStyleEditor, onOpenWindowManager }: { onOpenStyleEditor: () => void; onOpenWindowManager: () => void }) => {
+const FooterActions = ({
+  onOpenStyleEditor,
+  onOpenWindowManager,
+  showWindowManager = true,
+}: {
+  onOpenStyleEditor: () => void;
+  onOpenWindowManager: () => void;
+  /** Off where the screen previews already open the Window Manager (the operator view's top bar). */
+  showWindowManager?: boolean;
+}) => {
   const { LL } = useI18nContext();
   return (
     <>
@@ -76,11 +85,13 @@ const FooterActions = ({ onOpenStyleEditor, onOpenWindowManager }: { onOpenStyle
           <StyleIcon fontSize="small" />
         </IconButton>
       </Tooltip>
-      <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
-        <IconButton size="small" onClick={onOpenWindowManager}>
-          <WindowManagerIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      {showWindowManager && (
+        <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
+          <IconButton size="small" onClick={onOpenWindowManager}>
+            <WindowManagerIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
     </>
   );
 };
@@ -99,11 +110,22 @@ export type FooterProps = {
   /**
    * `bar` is the desktop strip along the bottom of the window. `panel` is the same controls as a
    * full-height page, which is how the phone layout reaches them — it has no room for the strip.
+   * `status` is the connections and the style editor for the operator view's top bar. Windows are
+   * not repeated there: the screen previews list them. It still hosts the Window Manager, the
+   * restore-on-start pass and the connection dialogs.
    */
-  variant?: 'bar' | 'panel';
+  variant?: 'bar' | 'panel' | 'status';
+  /** Leave out the output controls (stage, text, black) — the operator view has them in its layer bar. */
+  compact?: boolean;
+  /**
+   * `status` only: where the pieces go. The operator top bar puts the connection chips under the
+   * Prepare/Live toggle and the style editor among its icons, while this component keeps hosting
+   * the dialogs, the Window Manager and the restore-on-start pass.
+   */
+  layout?: (parts: { connections: ReactNode; styleEditor: ReactNode }) => ReactNode;
 };
 
-const Footer = ({ variant = 'bar' }: FooterProps) => {
+const Footer = ({ variant = 'bar', compact = false, layout }: FooterProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
 
@@ -115,8 +137,8 @@ const Footer = ({ variant = 'bar' }: FooterProps) => {
     wsPeers,
     wsMidiSyncAt,
     wsOperatorConnected,
-  } = useGetPresentationSettings();
-  const { windowFooterVisible } = useGetSettings();
+  } = useGetPresentationSettings('isBlack', 'isTextHidden', 'wsConnectedCount', 'wsPeers', 'wsMidiSyncAt', 'wsOperatorConnected');
+  const { operatorMode } = useGetSettings('operatorMode');
   const { midiTrackingMaster } = useGetMusicianSettings();
   const updateMusicianSetting = useUpdateMusicianSetting();
 
@@ -275,9 +297,14 @@ const Footer = ({ variant = 'bar' }: FooterProps) => {
     setWindowManager({ open: true, ...options });
   }, []);
 
-  const stage = useStageStatus();
+  // Other parts of the operator view (a screen preview without windows) ask for the Window Manager.
+  useEffect(() => {
+    const handler = (e: Event) => openWindowManager((e as CustomEvent<{ withNew?: boolean; selectId?: string }>).detail ?? {});
+    window.addEventListener('presenter:open-window-manager', handler);
+    return () => window.removeEventListener('presenter:open-window-manager', handler);
+  }, [openWindowManager]);
 
-  if (!windowFooterVisible) return null;
+  const stage = useStageStatus();
 
   const connectionChips = (
     <>
@@ -350,7 +377,30 @@ const Footer = ({ variant = 'bar' }: FooterProps) => {
       {/* Phone layout: the bar's contents as a page. Everything the toolbar packs into 40px of
           height gets a section, a label and a tap target here — on a phone there is no hover to
           reveal what an icon means, and the vertical room to say it outright is free. */}
-      {variant === 'panel' ? (
+      {variant === 'status' ? (
+        <>
+          <WindowRestoreHost />
+          {(() => {
+            // Themes are preparation: in Live the style library is out of reach.
+            const styleEditor =
+              operatorMode === 'live' ? null : (
+                <FooterActions
+                  onOpenStyleEditor={() => setStyleEditorOpen(true)}
+                  onOpenWindowManager={() => openWindowManager()}
+                  showWindowManager={false}
+                />
+              );
+            return layout ? (
+              layout({ connections: connectionChips, styleEditor })
+            ) : (
+              <Stack direction="row" sx={{ gap: 0.5, alignItems: 'center', flexShrink: 0 }}>
+                {connectionChips}
+                {styleEditor}
+              </Stack>
+            );
+          })()}
+        </>
+      ) : variant === 'panel' ? (
         <Stack sx={{ height: '100%', overflowY: 'auto', p: 2, gap: 3 }}>
           <PanelSection title={LL.FOOTER.PANEL_WINDOWS()}>
             <FooterWindows variant="panel" onOpenWindowManager={openWindowManager} />
@@ -415,13 +465,15 @@ const Footer = ({ variant = 'bar' }: FooterProps) => {
             <Stack direction="row" sx={{ gap: 0.5, ml: 'auto', flexShrink: 0, alignItems: 'center' }}>
               {/* The stage transport sits next to the output controls, because during a
                   service the countdown is the other thing being watched. */}
-              <StageTransport statuses={stage.statuses} allHidden={stage.allHidden} onOpenPanel={() => setStagePanelOpen(true)} />
+              {!compact && (
+                <StageTransport statuses={stage.statuses} allHidden={stage.allHidden} onOpenPanel={() => setStagePanelOpen(true)} />
+              )}
 
               <Stack direction="row" sx={{ gap: 0.5, mx: 1 }}>
                 {connectionChips}
               </Stack>
 
-              {stage.anyLive && (
+              {!compact && stage.anyLive && (
                 <Tooltip title={stage.allHidden ? LL.STAGE.SHOW_ALL() : LL.STAGE.HIDE_ALL()}>
                   <IconButton size="small" onClick={() => dispatch(toggleStageAllHidden())} color={stage.allHidden ? 'warning' : 'default'}>
                     <StageIcon fontSize="small" />
@@ -429,17 +481,21 @@ const Footer = ({ variant = 'bar' }: FooterProps) => {
                 </Tooltip>
               )}
 
-              <Tooltip title={isTextHidden ? LL.FOOTER.SHOW_TEXT() : LL.FOOTER.HIDE_TEXT()}>
-                <IconButton size="small" onClick={() => dispatch(toggleTextHidden())} color={isTextHidden ? 'warning' : 'default'}>
-                  <HideTextIcon fontSize="small" />
-                </IconButton>
-              </Tooltip>
+              {!compact && (
+                <>
+                  <Tooltip title={isTextHidden ? LL.FOOTER.SHOW_TEXT() : LL.FOOTER.HIDE_TEXT()}>
+                    <IconButton size="small" onClick={() => dispatch(toggleTextHidden())} color={isTextHidden ? 'warning' : 'default'}>
+                      <HideTextIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
 
-              <Tooltip title={isBlack ? LL.FOOTER.SHOW() : LL.FOOTER.BLACK()}>
-                <IconButton size="small" onClick={() => dispatch(toggleBlack())} color={isBlack ? 'error' : 'default'}>
-                  {isBlack ? <ShowIcon fontSize="small" /> : <BlackIcon fontSize="small" />}
-                </IconButton>
-              </Tooltip>
+                  <Tooltip title={isBlack ? LL.FOOTER.SHOW() : LL.FOOTER.BLACK()}>
+                    <IconButton size="small" onClick={() => dispatch(toggleBlack())} color={isBlack ? 'error' : 'default'}>
+                      {isBlack ? <ShowIcon fontSize="small" /> : <BlackIcon fontSize="small" />}
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
               <FooterActions onOpenStyleEditor={() => setStyleEditorOpen(true)} onOpenWindowManager={() => openWindowManager()} />
             </Stack>
           </Toolbar>

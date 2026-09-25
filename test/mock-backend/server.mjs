@@ -30,10 +30,74 @@ const state = {
   viewerToken: null,
   /** Stage-monitor layers. Stateful so cue editing can actually be tried out locally. */
   stageLayers: [],
+  /** Screen groups — stateful for the same reason. */
+  screenGroups: [],
+  /** Screen sets — named shortcuts for several screen groups. */
+  screenSets: [],
+  /** Library entries — saved groups and media entries. */
+  libraryEntries: [],
 };
 
 let nextStageLayerId = 1;
+let nextScreenGroupId = 1;
+let nextScreenSetId = 1;
+let nextLibraryEntryId = 1;
 let nextBandId = 3;
+
+/** The account's integrations, created on first use so the session and the settings agree. */
+const integrations = () =>
+  (state.integrations ??= {
+    spotifyClientId: '0123456789abcdef0123456789abcdef',
+    spotifyEnabled: true,
+    nextcloudUrl: 'https://cloud.example.com',
+    churchToolsUrl: 'https://demo.church.tools/api/',
+    churchToolsEnabled: true,
+    privateNetwork: false,
+  });
+
+/**
+ * A pretend Nextcloud behind /rest/NextcloudRelay, so the web version's sign-in, folder picker
+ * and share link can be clicked through. Login Flow v2: loginStart hands out a login page on this
+ * server; "Grant access" there lets the next loginPoll return an app password.
+ */
+const nextcloudLogins = new Map(); // poll token → granted
+const nextcloudFolders = {
+  '': ['Gemeinde', 'Privat'],
+  Gemeinde: ['Presenter-Media', 'Fotos'],
+  'Gemeinde/Presenter-Media': ['Backgrounds', 'Audio'],
+};
+const nextcloudRelay = (req) => {
+  const action = req.path.split('/').pop();
+  const server = integrations().nextcloudUrl;
+  if (!server) return { __status: 400, message: 'This account has no Nextcloud' };
+  switch (action) {
+    case 'loginStart': {
+      const token = Math.random().toString(36).slice(2);
+      nextcloudLogins.set(token, false);
+      return {
+        server,
+        loginUrl: `http://localhost:${PORT}/mock/nextcloud-login?token=${token}`,
+        poll: { endpoint: `${server}/login/v2/poll`, token },
+      };
+    }
+    case 'loginPoll':
+      return nextcloudLogins.get(req.body?.token) ? { server, loginName: 'marcel', appPassword: 'mock-app-password' } : { pending: true };
+    case 'check':
+      return { user: 'marcel', displayName: 'Marcel (mock Nextcloud)' };
+    case 'list': {
+      const path = (req.query.path ?? '').replace(/^\/+|\/+$/g, '');
+      return { path, dirs: nextcloudFolders[path] ?? [], files: [] };
+    }
+    case 'mkdir':
+      return { path: req.body?.path ?? '' };
+    case 'share':
+      return { token: 'mockshare', url: `${server}/s/mockshare` };
+    case 'revoke':
+      return { message: 'revoked' };
+    default:
+      return {};
+  }
+};
 
 /** GET /rest/Session — an authenticated, non-admin session for account 1. */
 const session = () => ({
@@ -43,6 +107,8 @@ const session = () => ({
   mail: fixtures.account.mail,
   isAuthenticated: true,
   authType: 'oidc',
+  // When the sign-in ends; set with /mock/session-expires?minutes=N to see the renew notice.
+  expiresAt: state.sessionExpiresAt ?? null,
   // `viewerUrl` mirrors VIEWER_URL in config.php — a viewer deployed on its own
   // subdomain, which is the case the fallback (<app>/viewer/) gets wrong.
   // `viewerUrl` mirrors VIEWER_URL in config.php. Null by default (the viewer is then
@@ -54,6 +120,8 @@ const session = () => ({
     // MOCK_DEVELOPMENT=0 to see the pages without it.
     development: process.env.MOCK_DEVELOPMENT !== '0',
     bibleEnabled: true,
+    // Follows Settings → Connections, as the real session does.
+    nextcloudUrl: integrations().nextcloudUrl,
     // The account has Spotify credentials; /rest/SpotifyTracks answers with made-up tracks.
     spotifyEnabled: true,
     churchToolsEnabled: true,
@@ -78,7 +146,29 @@ const handlers = {
   '/rest/Session': (req) =>
     req.method === 'DELETE' ? { message: 'logged out' } : { ...session(), authType: isAdmin ? 'oidc_admin' : 'oidc' },
   '/rest/Accounts': () => [{ license: fixtures.account.license, name: fixtures.account.name }],
-  '/rest/AccountSettings': () => ({ defaultStyleId: null, showTitleTemplate: 'Show {dd}.{MM}.{yyyy}', languages: ['EN', 'DE'] }),
+  '/rest/NextcloudRelay': nextcloudRelay,
+  '/rest/AccountIntegrations': (req) => {
+    integrations();
+    if (req.method === 'PUT') {
+      const body = req.body ?? {};
+      if ('spotifyClientId' in body) {
+        state.integrations.spotifyClientId = body.spotifyClientId || null;
+        state.integrations.spotifyEnabled = !!body.spotifyClientId && (state.integrations.spotifyEnabled || !!body.spotifyClientSecret);
+      }
+      if ('churchToolsUrl' in body) {
+        state.integrations.churchToolsUrl = body.churchToolsUrl || null;
+        state.integrations.churchToolsEnabled = !!body.churchToolsUrl && (state.integrations.churchToolsEnabled || !!body.churchToolsToken);
+      }
+      if ('nextcloudUrl' in body) state.integrations.nextcloudUrl = body.nextcloudUrl ? body.nextcloudUrl.replace(/\/+$/, '') : null;
+      return { message: 'Integrations updated', ...state.integrations };
+    }
+    return state.integrations;
+  },
+  '/rest/AccountSettings': () => ({
+    defaultStyleId: null,
+    showTitleTemplate: 'Show {dd}.{MM}.{yyyy}',
+    languages: ['EN', 'DE'],
+  }),
   // Viewer token. GET reports whether one exists; POST mints one and returns it in full
   // (the only time the server ever does), DELETE revokes. Kept in `state` so the reveal
   // dialog and the "token exists" chip behave like the real thing for the life of the run.
@@ -248,6 +338,122 @@ const handlers = {
    * Stage-monitor layers, with real CRUD — a stub returning `[]` would make the panel look
    * broken, since every edit round-trips through here.
    */
+  '/rest/LibraryEntries': (req) => {
+    const idFromPath = Number(req.path.split('/')[3]);
+    if (req.method === 'POST') {
+      const entry = {
+        id: nextLibraryEntryId++,
+        kind: req.body?.kind ?? 'group',
+        name: req.body?.name ?? 'Entry',
+        data: req.body?.data ?? { items: [] },
+        updated_at: new Date().toISOString(),
+      };
+      state.libraryEntries.unshift(entry);
+      return { id: entry.id, message: 'Library entry created' };
+    }
+    if (req.method === 'PUT') {
+      const entry = state.libraryEntries.find((e) => e.id === idFromPath);
+      if (entry) {
+        for (const key of ['name', 'data']) {
+          if (req.body?.[key] !== undefined) entry[key] = req.body[key];
+        }
+        entry.updated_at = new Date().toISOString();
+      }
+      return { message: 'Library entry updated', id: idFromPath };
+    }
+    if (req.method === 'DELETE') {
+      state.libraryEntries = state.libraryEntries.filter((e) => e.id !== idFromPath);
+      return { message: 'Library entry deleted' };
+    }
+    return state.libraryEntries;
+  },
+  // Past-show groups, grouped like api/LibraryPastGroups.php does it.
+  '/rest/LibraryPastGroups': (req) => {
+    const exclude = req.query?.exclude ?? '';
+    return state.shows
+      .filter((show) => show.title !== exclude)
+      .flatMap((show) => {
+        const groups = show.groups?.length ? show.groups : [{ id: 'default', name: '' }];
+        return groups
+          .map((group) => ({
+            showTitle: show.title,
+            date: show.date,
+            group,
+            items: (show.order ?? []).filter((item) => (item.groupId ?? 'default') === group.id),
+          }))
+          .filter((entry) => entry.items.length > 0);
+      });
+  },
+  '/rest/ScreenSets': (req) => {
+    const idFromPath = Number(req.path.split('/')[3]);
+    if (req.method === 'POST') {
+      const set = { id: nextScreenSetId++, name: req.body?.name ?? 'Screen set', screenGroupIds: req.body?.screenGroupIds ?? [] };
+      state.screenSets.push(set);
+      return { id: set.id, message: 'Screen set created' };
+    }
+    if (req.method === 'PUT') {
+      const set = state.screenSets.find((s) => s.id === idFromPath);
+      if (set) {
+        for (const key of ['name', 'screenGroupIds']) {
+          if (req.body?.[key] !== undefined) set[key] = req.body[key];
+        }
+      }
+      return { message: 'Screen set updated', id: idFromPath };
+    }
+    if (req.method === 'DELETE') {
+      state.screenSets = state.screenSets.filter((s) => s.id !== idFromPath);
+      return { message: 'Screen set deleted' };
+    }
+    return state.screenSets;
+  },
+  '/rest/ScreenGroups': (req) => {
+    const idFromPath = Number(req.path.split('/')[3]);
+
+    // The starting pair, only while the account has none — see api/ScreenGroups.php.
+    if (req.method === 'POST' && req.path.split('/')[3] === 'defaults') {
+      if (state.screenGroups.length > 0) return { message: 'The account already has screen groups', created: 0 };
+      for (const [order, kind] of ['audience', 'stage'].entries()) {
+        state.screenGroups.push({
+          id: nextScreenGroupId++,
+          name: req.body?.[kind] ?? kind,
+          enabled: true,
+          sort_order: order,
+          data: { kind },
+        });
+      }
+      return { message: 'Default screen groups created', created: 2 };
+    }
+
+    if (req.method === 'POST') {
+      const group = {
+        id: nextScreenGroupId++,
+        name: req.body?.name ?? 'Screen group',
+        enabled: req.body?.enabled ?? true,
+        sort_order: req.body?.sort_order ?? state.screenGroups.length,
+        data: req.body?.data ?? { kind: 'custom', layers: {} },
+      };
+      state.screenGroups.push(group);
+      return { id: group.id, name: group.name, enabled: group.enabled, message: 'Screen group created' };
+    }
+
+    if (req.method === 'PUT') {
+      const group = state.screenGroups.find((g) => g.id === idFromPath);
+      if (group) {
+        for (const key of ['name', 'enabled', 'sort_order', 'data']) {
+          if (req.body?.[key] !== undefined) group[key] = req.body[key];
+        }
+      }
+      return { message: 'Screen group updated', id: idFromPath };
+    }
+
+    if (req.method === 'DELETE') {
+      state.screenGroups = state.screenGroups.filter((g) => g.id !== idFromPath);
+      return { message: 'Screen group deleted' };
+    }
+
+    return state.screenGroups;
+  },
+
   '/rest/StageLayers': (req) => {
     const idFromPath = Number(req.path.split('/')[3]);
 
@@ -406,7 +612,6 @@ const fallbackSong = (number) => ({
   initialOrder: ['Verse 1'],
   order: { Default: ['Verse 1'] },
   blocks: { 'Verse 1': ['[placeholder]'] },
-  styleId: null,
   ccliNumber: null,
   key: null,
   updatedAt: '2026-01-01 00:00:00',
@@ -433,6 +638,32 @@ const routes = Object.keys(handlers).sort((a, b) => b.length - a.length);
 createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   const path = url.pathname;
+
+  // Makes the session end in N minutes (the renew notice appears ten minutes before).
+  if (path === '/mock/session-expires') {
+    const minutes = Number(url.searchParams.get('minutes') ?? 8);
+    state.sessionExpiresAt = Math.floor(Date.now() / 1000) + minutes * 60;
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ expiresAt: state.sessionExpiresAt }));
+    return;
+  }
+
+  // The pretend Nextcloud's sign-in page (opened in a popup by the web version).
+  if (path === '/mock/nextcloud-login' || path === '/mock/nextcloud-grant') {
+    const token = url.searchParams.get('token') ?? '';
+    if (path === '/mock/nextcloud-grant' && nextcloudLogins.has(token)) nextcloudLogins.set(token, true);
+    const granted = nextcloudLogins.get(token) === true;
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=UTF-8' });
+    res.end(
+      `<!doctype html><title>Mock Nextcloud</title><body style="font:15px system-ui;background:#0082c9;color:#fff;display:grid;place-items:center;height:100vh;margin:0">` +
+        (granted
+          ? `<p>Access granted. This window can be closed.</p>`
+          : `<form action="/mock/nextcloud-grant"><input type="hidden" name="token" value="${token}"><p>Mock Nextcloud: connect the presenter to your account?</p><button style="font:inherit;padding:8px 16px">Grant access</button></form>`) +
+        `</body>`,
+    );
+    return;
+  }
+
   const body = req.method === 'GET' ? null : await readBody(req);
   const query = Object.fromEntries(url.searchParams);
 
@@ -449,6 +680,10 @@ createServer(async (req, res) => {
     payload = { error: String(error) };
   }
 
+  if (payload && typeof payload === 'object' && '__status' in payload) {
+    status = payload.__status;
+    delete payload.__status;
+  }
   console.log(`${req.method} ${path} → ${status}${handler ? '' : ' (unmapped)'}`);
   res.writeHead(status, { 'Content-Type': 'application/json; charset=UTF-8', 'Access-Control-Allow-Origin': '*' });
   res.end(JSON.stringify(payload));

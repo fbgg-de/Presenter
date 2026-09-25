@@ -1,3 +1,6 @@
+import { NextcloudSection } from '@/components/settings/NextcloudSection';
+import { SpotifySection } from './SpotifySection';
+import { ChurchToolsSection } from './ChurchToolsSection';
 import { useMemo, useState } from 'react';
 import {
   Box,
@@ -17,6 +20,8 @@ import {
   useMediaQuery,
   useTheme,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import type { SvgIconComponent } from '@mui/icons-material';
 import { Close as CloseIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSettings } from '@/store/settingsSlice';
@@ -43,15 +48,16 @@ import {
 } from '@/components/settings/SettingsBlocks';
 import { buildSettingsCatalog, type SettingsCategory, type SettingsSection } from '@/components/settings/settingsCatalog';
 import { isElectronApp } from '@/utils';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
-const NAV_WIDTH = 210;
+const NAV_WIDTH = 250;
 
 /**
  * The settings panel: a category list on the left, the settings of one category on the
  * right, and a search that cuts across both. What it can show comes from the catalog
  * (`settingsCatalog.tsx`) — this file only decides how it is laid out and searched.
  */
-export const Settings = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
+const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
   const { LL } = useI18nContext();
   const theme = useTheme();
   const settings = useGetSettings();
@@ -76,6 +82,9 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
       viewerToken: () => <ViewerTokenSection />,
       remoteCommands: () => <RemoteCommandsBlock />,
       keyboardMapping: () => <KeyboardMappingEditor />,
+      nextcloud: () => <NextcloudSection />,
+      spotify: () => <SpotifySection />,
+      churchTools: () => <ChurchToolsSection />,
       companion: () => <CompanionBlock onOpen={() => setCompanionOpen(true)} />,
       audioMixer: () => <AudioMixerSection />,
       autoUpdater: () => <AutoUpdaterSection />,
@@ -182,10 +191,17 @@ export const Settings = (props: { open: boolean; setOpen: (open: boolean) => voi
                     onClick={() => setActiveCategoryId(category.id)}
                     sx={{ borderRadius: 1, mx: 1, mb: 0.25 }}
                   >
-                    <ListItemIcon sx={{ minWidth: 34 }}>
-                      <Icon fontSize="small" />
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      <CategoryBadge icon={Icon} color={categoryColor(category.id)} size={26} />
                     </ListItemIcon>
-                    <ListItemText slotProps={{ primary: { variant: 'body2' } }} primary={category.label} />
+                    <ListItemText
+                      slotProps={{
+                        primary: { variant: 'body2', sx: { fontWeight: 600 } },
+                        secondary: { variant: 'caption', noWrap: true, sx: { display: 'block' } },
+                      }}
+                      primary={category.label}
+                      secondary={category.description}
+                    />
                   </ListItemButton>
                 );
               })}
@@ -226,47 +242,93 @@ const CategoryPanel = ({ category, showHeading }: { category: SettingsCategory; 
   const sections = category.sections;
 
   return (
-    <Stack spacing={1}>
+    <Stack spacing={2}>
       {showHeading && (
-        <Box sx={{ pb: 1 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            {category.label}
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {category.description}
-          </Typography>
-        </Box>
+        <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', pb: 1 }}>
+          <CategoryBadge icon={category.icon} color={categoryColor(category.id)} size={40} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+              {category.label}
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {category.description}
+            </Typography>
+          </Box>
+        </Stack>
       )}
       {sections.length === 0 ? (
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {LL.SETTINGS.NOTHING_HERE()}
         </Typography>
       ) : (
-        sections.map((section, index) => <SectionBlock key={section.id} section={section} divider={index > 0} />)
+        sections.map((section) => <SectionBlock key={section.id} section={section} />)
       )}
     </Stack>
   );
 };
 
-const SectionBlock = ({ section, divider }: { section: SettingsSection; divider: boolean }) => (
-  <Box>
-    {divider && <Divider sx={{ my: 1.5 }} />}
-    {section.title && (
-      <Typography variant="subtitle2" sx={{ fontWeight: 600, pt: 0.5 }}>
-        {section.title}
-      </Typography>
+/**
+ * One section as a card: a header (title and what the section is for) over its rows, the rows
+ * separated by hairlines. Cards chunk a long category into pieces the eye can find again.
+ */
+const SectionBlock = ({ section }: { section: SettingsSection }) => (
+  <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper', overflow: 'hidden' }}>
+    {(section.title || section.description) && (
+      <Box sx={{ px: 2, pt: 1.5, pb: 1, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
+        {section.title && (
+          <Typography sx={{ fontSize: 11.5, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' }}>{section.title}</Typography>
+        )}
+        {section.description && (
+          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.45 }}>
+            {section.description}
+          </Typography>
+        )}
+      </Box>
     )}
-    {section.description && (
-      <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', pb: 0.5 }}>
-        {section.description}
-      </Typography>
-    )}
-    {section.settings?.map((def) => (
-      <SettingRow key={def.key} def={def} />
-    ))}
-    {section.render?.()}
+    <Box
+      sx={{ px: 2, py: section.settings?.length ? 0.25 : 1.5, '& > .setting-row + .setting-row': { borderTop: 1, borderColor: 'divider' } }}
+    >
+      {section.settings?.map((def) => (
+        <SettingRow key={def.key} def={def} />
+      ))}
+      {section.render?.()}
+    </Box>
   </Box>
 );
+
+/** A category's icon on a tinted square in the category's own colour. */
+const CategoryBadge = ({ icon: Icon, color, size }: { icon: SvgIconComponent; color: string; size: number }) => (
+  <Box
+    sx={{
+      width: size,
+      height: size,
+      borderRadius: size > 30 ? 1.5 : 1,
+      display: 'grid',
+      placeItems: 'center',
+      flexShrink: 0,
+      bgcolor: alpha(color, 0.18),
+      color,
+    }}
+  >
+    <Icon sx={{ fontSize: size * 0.6 }} />
+  </Box>
+);
+
+/** A colour per category, so a category is found by its badge before its name is read. */
+const CATEGORY_COLORS: Record<string, string> = {
+  general: '#8f96ff',
+  presentation: '#3fc2b3',
+  library: '#f0a94a',
+  notifications: '#e8a33d',
+  keyboard: '#9aa3ab',
+  remote: '#d77ad9',
+  'audio-mixer': '#e07bbf',
+  companion: '#81b9ee',
+  connections: '#4ecdc4',
+  desktop: '#6ea8fe',
+  privacy: '#ef8b57',
+};
+const categoryColor = (id: string) => CATEGORY_COLORS[id] ?? '#9aa3ab';
 
 type SearchHit = { category: SettingsCategory; sections: SettingsSection[] };
 
@@ -333,12 +395,16 @@ const SearchResults = ({ results, query }: { results: SearchHit[]; query: string
                 {category.label}
               </Typography>
             </Stack>
-            {sections.map((section) => (
-              <SectionBlock key={section.id} section={section} divider={false} />
-            ))}
+            <Stack spacing={1.5}>
+              {sections.map((section) => (
+                <SectionBlock key={section.id} section={section} />
+              ))}
+            </Stack>
           </Box>
         );
       })}
     </Stack>
   );
 };
+
+export const Settings = stillWhileClosed(SettingsBody);

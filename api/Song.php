@@ -31,7 +31,7 @@ class Song extends RestController
     private function fetchSongData(int $account, int $songNumber): ?array
     {
         $stmt = self::prepare('
-				SELECT `title`, `initialOrder`, `order`, `authors`, `copyright`, `background`, `css`, `style_id`, `ccli_number`, `song_key`, `languages`, `updated_at`
+				SELECT `title`, `initialOrder`, `order`, `authors`, `copyright`, `background`, `css`, `ccli_number`, `song_key`, `languages`, `updated_at`
 				FROM `songs`
 				WHERE `songnumber` = ?
 				AND `account` = ?
@@ -59,7 +59,6 @@ class Song extends RestController
           'copyright' => $row['copyright'],
           'background' => $row['background'],
           'css' => $row['css'],
-          'styleId' => $row['style_id'] ? (int)$row['style_id'] : null,
           'ccliNumber' => $row['ccli_number'],
           'key' => $row['song_key'],
           'languages' => self::decodeLanguages($row['languages'] ?? null),

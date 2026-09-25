@@ -15,6 +15,8 @@ export class PresenterWebSocketServer {
   private mainWindow: BrowserWindow | null = null;
   private clients: Set<WebSocket> = new Set();
   private commandHandlingEnabled = true;
+  /** The renderer's last `state_update`, so `get_state` and a fresh connection get an answer at once. */
+  private lastState: Record<string, unknown> | null = null;
 
   constructor(port: number, windowManager: PresentationWindowManager) {
     this.port = port;
@@ -41,6 +43,13 @@ export class PresenterWebSocketServer {
     this.wss.on('connection', (ws) => {
       this.clients.add(ws);
       this.notifyClientCount();
+      if (this.lastState)
+        this.sendResponse(ws, {
+          type: 'broadcast',
+          action: 'state_update',
+          success: true,
+          data: { ...this.lastState, sentAt: Date.now() },
+        });
 
       ws.on('message', (data) => {
         try {
@@ -128,6 +137,7 @@ export class PresenterWebSocketServer {
    * Called from the renderer (via IPC) after every navigation action.
    */
   broadcastStateUpdate(data: Record<string, unknown>): void {
+    this.lastState = data;
     this.broadcast('state_update', data);
   }
 
@@ -187,6 +197,14 @@ export class PresenterWebSocketServer {
         case 'set_item':
         case 'set_block':
         case 'set_line':
+        case 'toggle_text':
+        case 'set_text_hidden':
+        case 'take':
+        case 'set_mode':
+        case 'toggle_background':
+        case 'toggle_media_layer':
+        case 'toggle_stage_overlays':
+        case 'stage':
           this.sendToRenderer('ws-navigation-action', { action, payload });
           this.sendResponse(ws, { id, type: 'response', action, success: true });
           break;
@@ -269,6 +287,9 @@ export class PresenterWebSocketServer {
         // ── Video controls (delegated to renderer) ──
         case 'video_play':
         case 'video_pause':
+        case 'video_toggle':
+        case 'video_rate':
+        case 'master_speed':
         case 'video_stop':
         case 'video_seek':
           this.sendToRenderer('ws-video-action', { action, target, payload });
@@ -277,9 +298,14 @@ export class PresenterWebSocketServer {
 
         // ── State queries ──
         case 'get_state':
-          // Request current state from renderer
-          this.sendToRenderer('ws-get-state', { requestId: id });
-          // The renderer will respond via IPC, which triggers a WS response
+          // Answered from the renderer's last broadcast — nothing in the renderer listens for a request.
+          this.sendResponse(ws, {
+            id,
+            type: 'response',
+            action,
+            success: this.lastState !== null,
+            data: this.lastState ? { ...this.lastState, sentAt: Date.now() } : undefined,
+          });
           break;
 
         case 'get_windows': {

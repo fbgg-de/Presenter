@@ -21,6 +21,7 @@ export const SettingFrame = ({
   info,
   action,
   control,
+  modified,
 }: {
   label: ReactNode;
   description?: ReactNode;
@@ -32,8 +33,11 @@ export const SettingFrame = ({
   /** Rendered between label and control (the reset button). */
   action?: ReactNode;
   control: ReactNode;
+  /** Changed from its default: a dot before the label says so. */
+  modified?: boolean;
 }) => (
   <Stack
+    className="setting-row"
     direction="row"
     spacing={2}
     sx={{
@@ -45,13 +49,19 @@ export const SettingFrame = ({
   >
     <Stack sx={{ flex: 1, minWidth: 0 }}>
       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-        <Typography variant="body2">{label}</Typography>
+        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+          {label}
+        </Typography>
         {info && (
           // enterTouchDelay 0 because on a phone the icon is the whole affordance — waiting out
           // a long press to find out what it does is not a discovery anyone makes.
           <Tooltip title={info} enterTouchDelay={0} leaveTouchDelay={10000}>
             <InfoIcon sx={{ fontSize: 15, color: 'text.secondary', cursor: 'help' }} />
           </Tooltip>
+        )}
+        {/* Changed from its default: a dot after the label, right before the reset button. */}
+        {modified && (
+          <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'primary.main', flexShrink: 0, ml: 0.5 }} />
         )}
         {action}
       </Stack>
@@ -81,6 +91,7 @@ export const SettingRow = ({ def }: { def: SettingDef }) => {
   return (
     <SettingFrame
       label={label}
+      modified={isModified}
       description={def.description}
       action={
         isModified ? (

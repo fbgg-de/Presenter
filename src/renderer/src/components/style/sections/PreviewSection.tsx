@@ -18,7 +18,7 @@ import { MAIN_LANGUAGE_SLOT } from '@/utils/languageSlots';
  */
 export const PreviewSection = ({ ctx }: { ctx: StyleFormCtx }) => {
   const { LL } = ctx;
-  const { stylePreview } = useGetSettings();
+  const { stylePreview } = useGetSettings('stylePreview');
   const updateSetting = useUpdateSetting();
 
   const write = (patch: Partial<StylePreviewSample>) => updateSetting('stylePreview', { ...stylePreview, ...patch });

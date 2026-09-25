@@ -62,10 +62,8 @@ const stageApi = presenterApi.injectEndpoints({
     }),
     updateStageLayer: build.mutation<ApiSuccess<{ message: string }>, { id: number } & Partial<StageLayerEntity>>({
       query: ({ id, ...body }) => ({ url: `rest/StageLayers/${id}`, method: 'PUT', body }),
-      invalidatesTags: (_res, _err, arg) => [
-        { type: 'StageLayers', id: 'LIST' },
-        { type: 'StageLayers', id: arg.id },
-      ],
+      // No invalidation: the cache is already right (below), and refetching after every save made
+      // a dragged slider snap back whenever an older answer arrived after a newer edit.
       async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
         // Editing a cue has to reach the presentation windows as the operator types —
         // waiting for the round trip would make the live preview lag behind the form.
@@ -97,3 +95,23 @@ export const {
   useUpdateStageLayerMutation,
   useDeleteStageLayerMutation,
 } = stageApi;
+
+/**
+ * Show an edit at once without saving it — the layer list, the preview and the stage windows all
+ * read this cache. The editor saves the settled value a moment later (see StagePanel).
+ */
+export const patchStageLayerCache = (id: number, patch: Partial<StageLayerEntity>) =>
+  stageApi.util.updateQueryData('getStageLayers', undefined, (draft) => {
+    const layer = draft.find((l) => l.id === id);
+    if (layer) Object.assign(layer, patch);
+  });
+
+/** Put the layers in the given order in the cache at once (their `sort_order` follows the index). */
+export const reorderStageLayersCache = (ids: number[]) =>
+  stageApi.util.updateQueryData('getStageLayers', undefined, (draft) => {
+    draft.forEach((layer) => {
+      const index = ids.indexOf(layer.id);
+      if (index >= 0) layer.sort_order = index;
+    });
+    draft.sort((a, b) => a.sort_order - b.sort_order);
+  });

@@ -17,8 +17,9 @@ RewriteRule ^admin/(.*)$ admin.html [L,QSA]
 RewriteRule ^notes$ musician.html [L,QSA]
 RewriteRule ^control$ control.html [L,QSA]
 
-# Protect data directory from direct access
+# Protect data and cache directories from direct access
 RewriteRule ^data/ - [F,L]
+RewriteRule ^cache/ - [F,L]
 
 # Handle React Router (HTML5 History Mode)
 # Don't rewrite if file or directory exists

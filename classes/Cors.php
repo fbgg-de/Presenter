@@ -60,6 +60,9 @@ class Cors
      */
     public static function configureSession(): void
     {
+        // Session files live in cache/sessions, where no shared cleanup deletes them early.
+        require_once __DIR__ . '/OidcProtocol.php';
+        OidcProtocol::sessionStore(self::SESSION_LIFETIME);
         if (!defined('CORS_ALLOWED_ORIGINS')) {
             return;
         }
@@ -67,7 +70,6 @@ class Cors
         // Keep the session alive for 30 days so users stay logged in across restarts.
         // Session ini settings can only be changed while no session is active, which is
         // why this lives here and not in sessionCookieParams() (also called afterwards).
-        ini_set('session.gc_maxlifetime', (string)self::SESSION_LIFETIME);
         session_set_cookie_params(self::sessionCookieParams());
     }
 

@@ -59,7 +59,7 @@ const BATCH = 6;
  */
 export const SongLanguageReview = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const { LL } = useI18nContext();
-  const { uiLanguage } = useGetSettings();
+  const { uiLanguage } = useGetSettings('uiLanguage');
   const { available, defaultLanguage } = useAccountLanguages();
 
   const { data: allSongs } = useGetSongsAllQuery();

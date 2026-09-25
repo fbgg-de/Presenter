@@ -2,12 +2,16 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { useAppSelector, useAppDispatch } from './hooks';
 import { useCallback, useMemo } from 'react';
 import { persistState } from './persist';
+import { newId } from '@/utils/ids';
 
 export const WINDOWS_KEY = 'presenter_windows';
 
+/**
+ * A window is only a placement on this computer plus the screen group it joins. Everything about
+ * what it shows — theme variant, languages, stream mode, transparency, layers, stage overlays —
+ * belongs to the group, which is stored in the database and the same on every device.
+ */
 export interface WindowConfig {
-  /** Portable cue output role, explicitly bound to this local saved configuration. */
-  mediaRole?: string;
   name?: string;
   top?: number;
   left?: number;
@@ -15,21 +19,29 @@ export interface WindowConfig {
   positionY?: number;
   width?: number;
   height?: number;
-  displayMode?: 'normal' | 'stream';
-  languages?: string[];
-  streamLines?: number;
   fullscreen?: boolean;
   frameless?: boolean;
   alwaysOnTop?: boolean;
-  transparent?: boolean;
   hideMouse?: boolean;
-  hideText?: boolean;
-  hideBackground?: boolean;
-  /** Optional preset (style entity id) applied to this window only. */
-  styleId?: number;
-  /** Stage-monitor layers this window subscribes to (stage_layers ids). */
-  stageLayerIds?: number[];
+  /**
+   * The screen group (screen_groups id) this window belongs to — at most one. The group is
+   * account-wide; membership is local to this device, like the rest of the rig.
+   */
+  screenGroupId?: number;
 }
+
+/** Per-window content settings from before screen groups decided everything; dropped on load. */
+const RETIRED_WINDOW_KEYS = [
+  'displayMode',
+  'languages',
+  'streamLines',
+  'transparent',
+  'hideText',
+  'hideBackground',
+  'styleId',
+  'stageLayerIds',
+  'mediaRole',
+] as const;
 
 export interface SavedWindowConfig extends WindowConfig {
   /**
@@ -51,11 +63,8 @@ const defaultState: WindowState = {
   windowPresets: {},
 };
 
-/** Ids only have to be unique within this browser profile; `randomUUID` needs a secure context. */
-export const newWindowConfigId = (): string =>
-  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : `win-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+/** Ids only have to be unique within this browser profile. */
+export const newWindowConfigId = (): string => newId('win');
 
 /**
  * Bring stored configs up to the current shape.
@@ -77,6 +86,7 @@ const migrateConfigs = (raw: unknown): SavedWindowConfig[] => {
       // `_runtimeId` names a window in a process that has since exited, so it is dropped
       // rather than carried over — keeping it would make a config look open when it is not.
       void _runtimeId;
+      for (const key of RETIRED_WINDOW_KEYS) delete rest[key];
       return { ...(rest as WindowConfig), id: typeof id === 'string' && id ? id : newWindowConfigId() };
     });
 };

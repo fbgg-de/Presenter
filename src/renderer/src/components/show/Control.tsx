@@ -1,22 +1,90 @@
-﻿import { useEffect, useMemo, useState } from 'react';
-import { Stack, Typography, IconButton, Tooltip } from '@mui/material';
-import { MusicNote as MusicNoteIcon, Image as ImageIcon, Videocam as VideocamIcon, MenuBook as MenuBookIcon } from '@mui/icons-material';
+﻿import { useMemo } from 'react';
+import { Button, Stack, Typography, IconButton, Tooltip } from '@mui/material';
+import {
+  PlayArrow as GoLiveIcon,
+  Lyrics as MusicNoteIcon,
+  Image as ImageIcon,
+  Videocam as VideocamIcon,
+  MenuBook as MenuBookIcon,
+} from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import ControlSong from '@/components/show/ControlSong';
 import ControlBibleVerse from '@/components/show/ControlBibleVerse';
 import ControlMedia from '@/components/show/ControlMedia';
-import MediaCuePanel from '@/media/MediaCuePanel';
+import ControlAudio from '@/components/show/ControlAudio';
 import { useGetSessionQuery } from '@/api/session.api';
-import { useGetStylesQuery } from '@/api/styles.api';
-import { resolveStyleCascade, mergeStyles, DEFAULT_STYLE } from '@/utils/styleUtils';
-import VideoControlPanel from '@/components/media/VideoControlPanel';
-import { resolveMediaUrl } from '@/utils/mediaUrl';
-import { getOpenWindows } from '@/utils/presentationBridge';
-import { useGetSettings } from '@/store/settingsSlice';
-import { useGetPresentationSettings } from '@/store/presentationSlice';
-import { WindowConfig } from '@/store/windowSlice';
+import { setOpenItemIndex, useGetPresentationSettings, useOpenItem } from '@/store/presentationSlice';
+import { useGetSongs } from '@/store/songsSlice';
+import { useAppDispatch } from '@/store';
+import { useSlideSelect } from '@/hooks/useSlideSelect';
+import { useShortcut, withShortcut } from '@/hooks/useShortcut';
+import { mediaItemLabel } from '@/media/mediaItem';
+import { useEntryRunning } from '@/media/useMediaHost';
+import type { ShowItem } from '@/api/shows.api';
 import { useGetShow } from '@/store/showSlice';
 import { DEFAULT_SONG_ITEM_COLOR, DEFAULT_MEDIA_ITEM_COLOR, DEFAULT_BIBLE_ITEM_COLOR } from '@/theme';
+
+/**
+ * Above an entry opened in the agenda that is not on screen: says so, names what is on screen,
+ * and sends the opened entry live or goes back to the live one.
+ */
+const OpenedBar = ({
+  liveItem,
+  goLiveKey,
+  onGoLive,
+  onBack,
+}: {
+  liveItem: ShowItem | undefined;
+  goLiveKey: string | undefined;
+  onGoLive: () => void;
+  onBack: () => void;
+}) => {
+  const { LL } = useI18nContext();
+  const { songs } = useGetSongs();
+  const liveName = !liveItem
+    ? ''
+    : liveItem.type === 'song'
+      ? ((liveItem.songNumber != null ? songs[liveItem.songNumber]?.title : undefined) ?? '')
+      : liveItem.type === 'bible_verse'
+        ? liveItem.bibleRef || LL.BIBLE.VERSE()
+        : mediaItemLabel(liveItem);
+  return (
+    <Stack
+      direction="row"
+      spacing={1}
+      useFlexGap
+      sx={{ alignItems: 'center', flexWrap: 'wrap', px: 1.5, py: 0.75, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}
+    >
+      <Tooltip title={LL.CONTROL.OPENED_HINT()}>
+        <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          {LL.CONTROL.OPENED()}
+        </Typography>
+      </Tooltip>
+      {liveName && (
+        <Typography variant="caption" noWrap sx={{ color: 'text.secondary', minWidth: 0, flex: '1 1 120px' }}>
+          {LL.CONTROL.LIVE_NOW({ name: liveName })}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={1} sx={{ ml: 'auto' }}>
+        <Button size="small" color="inherit" onClick={onBack} sx={{ textTransform: 'none' }}>
+          {LL.CONTROL.BACK_TO_LIVE()}
+        </Button>
+        <Tooltip title={withShortcut(LL.CONTROL.GO_LIVE(), goLiveKey)}>
+          <Button
+            size="small"
+            variant="contained"
+            color="error"
+            startIcon={<GoLiveIcon />}
+            onClick={onGoLive}
+            sx={{ textTransform: 'none' }}
+          >
+            {LL.CONTROL.GO_LIVE()}
+          </Button>
+        </Tooltip>
+      </Stack>
+    </Stack>
+  );
+};
 
 const Control = ({
   onOpenSearch,
@@ -32,83 +100,39 @@ const Control = ({
   const { data: session } = useGetSessionQuery();
   const bibleEnabled = session?.settings?.bibleEnabled ?? false;
 
-  const { globalStyleId } = useGetSettings();
-  const { activeItemIndex } = useGetPresentationSettings();
+  const dispatch = useAppDispatch();
+  // The entry opened in the agenda, else the live one.
+  const { index: activeItemIndex, isLive } = useOpenItem();
+  const { activeItemIndex: liveIndex } = useGetPresentationSettings('activeItemIndex');
   const { currentShow } = useGetShow();
+  const { sendPreviewLive } = useSlideSelect();
+  const goLiveKey = useShortcut('send_preview_live');
 
-  const { data: allStyles } = useGetStylesQuery();
-
-  // Get the active show item
   const activeItem = currentShow?.order?.[activeItemIndex];
-
-  // Resolve style cascade to check for background video
-  const backgroundVideoUrl = useMemo(() => {
-    if (!allStyles) return undefined;
-    const globalStyle = globalStyleId ? allStyles.find((s) => s.id === globalStyleId) : undefined;
-    const showStyle = currentShow?.styleId ? allStyles.find((s) => s.id === currentShow.styleId) : undefined;
-    const itemStyle = activeItem?.styleId ? allStyles.find((s) => s.id === activeItem.styleId) : undefined;
-    const resolved = mergeStyles(DEFAULT_STYLE, resolveStyleCascade(globalStyle, showStyle, itemStyle, undefined, allStyles));
-    return resolved.backgroundVideo ? resolveMediaUrl(resolved.backgroundVideo) : undefined;
-  }, [allStyles, globalStyleId, currentShow?.styleId, activeItem?.styleId]);
-
-  // Determine if current item is a video media item
-  const mediaVideoUrl =
-    activeItem?.type === 'media' && activeItem.mediaSubType === 'video' && activeItem.mediaPath
-      ? resolveMediaUrl(activeItem.mediaPath)
-      : undefined;
-
-  // Collect all active video sources for the global control bar
-  const videoSources = useMemo(() => {
-    const sources: string[] = [];
-    if (backgroundVideoUrl) sources.push(backgroundVideoUrl);
-    if (mediaVideoUrl) sources.push(mediaVideoUrl);
-    return sources;
-  }, [backgroundVideoUrl, mediaVideoUrl]);
-
-  const localHasVideos = videoSources.length > 0;
-
-  // Track open presentation windows so we can render one compact control row
-  // per window. Polled lazily — `getOpenWindows()` calls into the main process
-  // (in Electron) so we throttle to once per second.
-  const [openWindows, setOpenWindows] = useState<Array<{ id: string; config: WindowConfig }>>([]);
-  useEffect(() => {
-    let cancelled = false;
-    const refresh = () => {
-      getOpenWindows()
-        .then((list) => {
-          if (cancelled) return;
-          setOpenWindows(list.filter((w) => !w.closed).map(({ id, config }) => ({ id, config })));
-        })
-        .catch(() => {});
-    };
-    refresh();
-    const t = setInterval(refresh, 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
-  }, []);
-
-  const perWindowRows = useMemo(() => openWindows.filter((w) => w.config.name), [openWindows]);
+  // An image or video started from its card is on the screens without being the live entry.
+  // Audio is heard here only, so it never waits to go "live" on the screens.
+  const running = useEntryRunning(activeItem, activeItemIndex) || activeItem?.mediaSubType === 'audio';
 
   const renderControl = useMemo(() => {
     if (!activeItem) return null;
     switch (activeItem.type) {
-      case 'song':
-        return <ControlSong />;
       case 'bible_verse':
-        return <ControlBibleVerse item={activeItem} />;
+        return <ControlBibleVerse item={activeItem} index={activeItemIndex} isLive={isLive} />;
       case 'media':
-        return <ControlMedia item={activeItem} />;
+        return activeItem.mediaSubType === 'audio' ? (
+          <ControlAudio item={activeItem} index={activeItemIndex} />
+        ) : (
+          <ControlMedia item={activeItem} index={activeItemIndex} />
+        );
       default:
-        return <ControlSong />;
+        return <ControlSong index={activeItemIndex} isLive={isLive} />;
     }
   }, [
     activeItemIndex,
+    isLive,
     activeItem?.type,
     activeItem?.mediaSubType,
     activeItem?.mediaPath,
-    activeItem?.styleId,
     // Media display props — must trigger re-render so the preview updates immediately
     activeItem?.mediaZoom,
     activeItem?.mediaBlur,
@@ -116,7 +140,10 @@ const Control = ({
     activeItem?.mediaObjectPosition,
     activeItem?.mediaAutoplay,
     activeItem?.mediaLoop,
+    activeItem?.mediaVolume,
+    activeItem?.media,
     activeItem?.mediaColor,
+    activeItem?.label,
   ]);
 
   // No show loaded or no items
@@ -172,16 +199,15 @@ const Control = ({
 
   return (
     <Stack sx={{ flexGrow: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-      {!(activeItem.type === 'media' && activeItem.mediaCue) && renderControl}
-      <MediaCuePanel key={`${currentShow.title}/${activeItemIndex}`} />
-      {!activeItem.mediaCue && (
-        <VideoControlPanel
-          videoSources={videoSources}
-          windowNames={perWindowRows.map((w) => w.config.name!).filter(Boolean)}
-          mediaItemMaster={!!mediaVideoUrl}
-          showIfNoLocalSources={!localHasVideos}
+      {!isLive && !running && (
+        <OpenedBar
+          liveItem={currentShow.order[liveIndex]}
+          goLiveKey={goLiveKey}
+          onGoLive={() => sendPreviewLive()}
+          onBack={() => dispatch(setOpenItemIndex(null))}
         />
       )}
+      {renderControl}
     </Stack>
   );
 };

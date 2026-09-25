@@ -1,711 +1,722 @@
-import { useCallback, useEffect, useRef, useState, memo, CSSProperties, ReactNode } from 'react';
+/**
+ * An image, video, slideshow or colour entry in the operator view, laid out like an editing
+ * suite: a **viewer** that holds everything that plays — the picture framed for one screen group,
+ * the scrubber with the entry's sections or slide changes, the transport, and a slideshow's
+ * filmstrip — and an **inspector** below with everything that is set up, in folding sections
+ * (playback, slideshow, screens, timeline). Changes apply live to a running entry.
+ */
+import { memo, useCallback, useMemo, useState } from 'react';
 import {
   Alert,
-  Button,
   Box,
-  Card,
-  CardContent,
-  CardMedia,
-  Divider,
-  FormControl,
-  FormControlLabel,
+  Button,
+  Chip,
   IconButton,
-  InputLabel,
   MenuItem,
   Select,
   Slider,
   Stack,
   Switch,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
 import {
-  Image as ImageIcon,
-  Videocam as VideocamIcon,
+  Add as AddIcon,
+  Crop as FrameIcon,
+  DeleteOutlined as DeleteIcon,
+  Edit as RenameIcon,
   Palette as PaletteIcon,
   PlayArrow as PlayIcon,
-  Pause as PauseIcon,
+  Repeat as LoopIcon,
   Stop as StopIcon,
-  Loop as LoopIcon,
+  VisibilityOff as HiddenIcon,
+  Visibility as VisibleIcon,
+  VolumeOff as MutedIcon,
   VolumeUp as VolumeIcon,
-  VolumeOff as MuteIcon,
-  Tune as TuneIcon,
-  RestartAlt as ResetIcon,
-  Visibility as ShowIcon,
-  VisibilityOff as HideIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { ShowItem } from '@/api/shows.api';
-import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { useAppDispatch } from '@/store';
-import { updateShowItem } from '@/store/showSlice';
-import CompactPositionPicker from '@/components/common/CompactPositionPicker';
-import { setVideoVisible as setVideoVisibleRedux, useGetPresentationSettings } from '@/store/presentationSlice';
+import { updateShowItem, useGetShow } from '@/store/showSlice';
 import { useGetSettings, type MediaPreviewAspect } from '@/store/settingsSlice';
+import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
+import { SlideCard, SlideGrid } from '@/components/show/SlideCard';
+import { CueSource, SlideshowSource } from '@/media/CueMedia';
+import { SlideshowFilmstrip, SlideshowSettings } from '@/components/show/SlideshowEditor';
+import { MediaTimelineSection } from '@/components/show/MediaTimelineSection';
+import { useGetScreenSetsQuery } from '@/api/screenSets.api';
+import { FrameEditor } from '@/media/FrameEditor';
+import { advanceCue, initialTransport } from '@/media/engine';
 import { useMediaLabels } from '@/media/labels';
-import { formatTime } from '@/utils';
+import {
+  ALL_SCREENS,
+  activeVersionOf,
+  duplicateVersion,
+  hasClock,
+  slideAt,
+  slideStarts,
+  armedRegions,
+  groupIdOfRole,
+  mediaItemDataOf,
+  mediaItemLabel,
+  screenRole,
+  toggleScreen,
+  type MediaItemData,
+  type MediaRole,
+  type MediaVersion,
+} from '@/media/mediaItem';
+import { commandPlayback, endPlayback, setPlaybackFollowsMaster, setPlaybackHidden, usePlaybacks } from '@/media/playback';
+import { playbackKeyOf, startItem } from '@/media/useMediaHost';
+import type { CuePacket, CueTransport, MediaFrame, MediaSource } from '@/media/types';
+import { mediaKindOf, mediaLabelOf } from '@/media/mediaFiles';
+import { newId } from '@/utils/ids';
+import { MediaBrowser } from '@/components/media/MediaBrowser';
+import { PlaybackButtons } from '@/components/media/PlaybackButtons';
+import { SpeedControl } from '@/components/media/SpeedControl';
+import {
+  Scrubber,
+  Timecode,
+  TransportButton,
+  TransportCluster,
+  TransportDivider,
+  formatTimecode,
+  LiveTime,
+  PLAYHEAD,
+} from '@/components/media/Transport';
+import { InspectorRow, InspectorSection, Segmented, ViewerFrame, type LampState } from '@/components/media/Viewer';
+import { resolveMediaUrl } from '@/utils/mediaUrl';
 
-// ── Shared utility ───────────────────────────────────────────────────────────
+/** The file menu's entry that opens the media browser. */
+const OTHER_FILE = '__other__';
 
-/**
- * Send a video command that targets ONLY the media-item <video> elements
- * (identified by data-role="media-item") in all presentation windows.
- * Style background videos are NOT affected.
- */
-const sendMediaItemCommand = (action: string, value?: number) => {
-  if (window.api?.videoCommand) {
-    void window.api.videoCommand({ action, value, target: 'media-item' });
-  }
-};
+const ASPECT_RATIOS: Record<MediaPreviewAspect, string> = { '16:9': '16/9', '16:10': '16/10', '4:3': '4/3' };
 
-/** Show or hide the video layer on ALL presentation windows. */
-const sendSetVideoVisible = (visible: boolean, hideTransitionMode?: string, hideTransitionDuration?: number) => {
-  if (window.api?.setVideoVisible) {
-    void window.api.setVideoVisible({
-      value: visible,
-      mode: hideTransitionMode as 'cut' | 'fade' | undefined,
-      durationMs: hideTransitionDuration,
-    });
-  }
-};
-
-// ── Reusable sub-components ──────────────────────────────────────────────────
-
-/** Screen shapes the preview can be framed in (see the `mediaPreviewAspect` setting). */
-const ASPECT_RATIOS: Record<MediaPreviewAspect, number> = {
-  '16:9': 16 / 9,
-  '16:10': 16 / 10,
-  '4:3': 4 / 3,
-};
-
-/** Tallest the preview frame may get; the width follows from the aspect ratio. */
-const PREVIEW_MAX_HEIGHT = '45vh';
-
-/**
- * Frames the preview in the configured screen shape so the operator sees the
- * same crop the presentation window will show. The media inside fills the frame
- * exactly the way MediaContent fills a presentation window.
- */
-const PreviewFrame = ({ children, bgcolor = '#000', ratio }: { children: ReactNode; bgcolor?: string; ratio: number }) => (
-  <Box
-    sx={{
-      display: 'flex',
-      justifyContent: 'center',
-      // Letterbox around the frame, so its edges stay visible on a black image.
-      bgcolor: 'background.default',
-    }}
-  >
-    <Box
-      sx={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: `calc(${PREVIEW_MAX_HEIGHT} * ${ratio})`,
-        aspectRatio: `${ratio}`,
-        bgcolor,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
-      {children}
-    </Box>
-  </Box>
-);
-
-/** Empty-state placeholder shown when no media path is available. */
-const MediaPlaceholder = ({ icon, label, ratio }: { icon: ReactNode; label: string; ratio: number }) => (
-  <PreviewFrame ratio={ratio}>
-    <Stack
-      spacing={1}
-      sx={{
-        alignItems: 'center',
-        opacity: 0.5,
-      }}
-    >
-      <Box sx={{ fontSize: 48 }}>{icon}</Box>
-      <Typography
-        variant="caption"
-        sx={{
-          color: 'text.secondary',
-        }}
-      >
-        {label}
-      </Typography>
-    </Stack>
-  </PreviewFrame>
-);
-
-interface VideoControlsProps {
-  playing: boolean;
-  muted: boolean;
-  volume: number;
-  loop: boolean;
-  videoVisible: boolean;
-  currentTime: number;
-  duration: number;
-  mediaPath?: string;
-  onToggle: () => void;
-  onStop: () => void;
-  onMute: () => void;
-  onLoopToggle: () => void;
-  onToggleVisible: () => void;
-  onSeek: (value: number) => void;
-  onVolume: (value: number) => void;
-}
-
-/**
- * Media-item transport controls; monitoring audio remains local.
- * Play, pause, stop and seek also broadcast
- * to presentation windows. Appearance/autoplay/loop follow
- * based on the item's saved settings.
- */
-const VideoControls = ({
-  playing,
-  muted,
-  volume,
-  loop,
-  videoVisible,
-  currentTime,
-  duration,
-  mediaPath,
-  onToggle,
-  onStop,
-  onMute,
-  onLoopToggle,
-  onToggleVisible,
-  onSeek,
-  onVolume,
-}: VideoControlsProps) => {
+const ColorCard = ({ item, aspectRatio }: { item: ShowItem; aspectRatio: string }) => {
   const { LL } = useI18nContext();
-
-  // Seek slider — keep the drag value set until the external currentTime
-  // catches up so the slider never snaps back before the seek is reflected.
-  const seekDragging = useRef(false);
-  const seekTarget = useRef<number | null>(null);
-  const [seekDisplay, setSeekDisplay] = useState<number | null>(null);
-
-  const displayTime = seekDisplay !== null ? seekDisplay : currentTime;
-
-  if (seekTarget.current !== null && Math.abs(currentTime - seekTarget.current) < 1.5) {
-    seekTarget.current = null;
-    if (!seekDragging.current) setSeekDisplay(null);
-  }
-
-  // Volume slider
-  const volumeDragging = useRef(false);
-  const [volumeDisplay, setVolumeDisplay] = useState<number | null>(null);
-  const displayVolume = volumeDisplay !== null ? volumeDisplay : muted ? 0 : volume;
-
   return (
-    <Box sx={{ px: 1.5, pt: 0.5, pb: 1 }}>
-      {/* Row 1: seek bar */}
-      <Stack
-        direction="row"
-        spacing={1}
-        sx={{
-          alignItems: 'center',
-        }}
-      >
-        <Typography
-          variant="caption"
-          sx={{
-            color: 'text.secondary',
-            minWidth: 36,
-          }}
+    <SlideGrid title={item.label || item.mediaColor || ''}>
+      <SlideCard blockIndex={0} name="" selected label={LL.OPERATOR.LIVE_SLIDE({ index: 1 })} aspectRatio={aspectRatio}>
+        <Stack
+          spacing={0.5}
+          sx={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', bgcolor: item.mediaColor || '#000000' }}
         >
-          {formatTime(displayTime)}
-        </Typography>
-        <Slider
-          size="small"
-          min={0}
-          max={duration || 1}
-          step={0.5}
-          value={displayTime}
-          onPointerDown={() => {
-            seekDragging.current = true;
-            setSeekDisplay(currentTime);
-          }}
-          onChange={(_, v) => {
-            setSeekDisplay(v as number);
-          }}
-          onChangeCommitted={(_, v) => {
-            seekDragging.current = false;
-            seekTarget.current = v as number;
-            setSeekDisplay(v as number);
-            onSeek(v as number);
-          }}
-          sx={{ flex: 1 }}
-        />
-        <Typography
-          variant="caption"
-          sx={{
-            color: 'text.secondary',
-            minWidth: 36,
-            textAlign: 'right',
-          }}
-        >
-          {formatTime(duration)}
-        </Typography>
-      </Stack>
-      {/* Row 2: transport + visibility + loop + audio + filename */}
-      <Stack
-        direction="row"
-        spacing={0.5}
-        sx={{
-          alignItems: 'center',
-        }}
-      >
-        <Tooltip title={playing ? LL.VIDEO.PAUSE() : LL.VIDEO.PLAY()}>
-          <IconButton size="small" onClick={onToggle}>
-            {playing ? <PauseIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={LL.VIDEO.STOP()}>
-          <IconButton size="small" onClick={onStop}>
-            <StopIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={videoVisible ? LL.VIDEO.HIDE_ALL() : LL.VIDEO.SHOW_ALL()}>
-          <IconButton size="small" onClick={onToggleVisible} color={videoVisible ? 'default' : 'warning'}>
-            {videoVisible ? <ShowIcon fontSize="small" /> : <HideIcon fontSize="small" />}
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={loop ? LL.VIDEO.LOOP_ON() : LL.VIDEO.LOOP_OFF()}>
-          <IconButton size="small" onClick={onLoopToggle} color={loop ? 'primary' : 'default'}>
-            <LoopIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={muted ? LL.VIDEO.UNMUTE() : LL.VIDEO.MUTE()}>
-          <IconButton size="small" onClick={onMute}>
-            {muted ? <MuteIcon fontSize="small" /> : <VolumeIcon fontSize="small" />}
-          </IconButton>
-        </Tooltip>
-        <Slider
-          size="small"
-          min={0}
-          max={1}
-          step={0.05}
-          value={displayVolume}
-          onPointerDown={() => {
-            volumeDragging.current = true;
-            setVolumeDisplay(muted ? 0 : volume);
-          }}
-          onChange={(_, v) => {
-            setVolumeDisplay(v as number);
-          }}
-          onChangeCommitted={(_, v) => {
-            volumeDragging.current = false;
-            setVolumeDisplay(null);
-            onVolume(v as number);
-          }}
-          sx={{ width: 80 }}
-        />
-        <Box
-          sx={{
-            flex: 1,
-          }}
-        />
-        {mediaPath && (
-          <Typography
-            variant="caption"
-            noWrap
-            sx={{
-              color: 'text.secondary',
-              maxWidth: 180,
-            }}
-          >
-            {mediaPath.replace(/.*[/\\]/, '')}
+          <PaletteIcon sx={{ fontSize: 32, filter: 'drop-shadow(0 0 4px rgba(0,0,0,.6))', color: '#fff' }} />
+          <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#fff', textShadow: '0 1px 3px #000' }}>
+            {item.mediaColor || '#000000'}
           </Typography>
-        )}
-      </Stack>
-    </Box>
+        </Stack>
+      </SlideCard>
+    </SlideGrid>
   );
 };
 
-interface DisplayOptionsProps {
-  item: ShowItem;
-  patch: (fields: Partial<ShowItem>) => void;
-}
-
-/** Display options panel — single row with fit / position / zoom / blur / autoplay. */
-const DisplayOptions = ({ item, patch }: DisplayOptionsProps) => {
+const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: number }) => {
   const { LL } = useI18nContext();
-  const isVideo = item.mediaSubType === 'video';
+  const M = LL.MEDIA_ITEM;
+  const T = LL.TRANSPORT;
+  const l = useMediaLabels();
+  const dispatch = useAppDispatch();
+  const { currentShow } = useGetShow();
+  const { mediaPreviewAspect, hideTransitionMode, hideTransitionDuration } = useGetSettings(
+    'mediaPreviewAspect',
+    'hideTransitionMode',
+    'hideTransitionDuration',
+  );
+  const fadeMs = hideTransitionMode === 'fade' ? hideTransitionDuration : 0;
+  const { data: screenGroups = [] } = useGetScreenGroupsQuery();
+  const { data: screenSets = [] } = useGetScreenSetsQuery();
+  const groups = useMemo(() => screenGroups.filter((group) => group.enabled), [screenGroups]);
+  const aspectRatio = ASPECT_RATIOS[mediaPreviewAspect] ?? ASPECT_RATIOS['16:9'];
 
-  const [zoomLocal, setZoomLocal] = useState<number | null>(null);
-  const [blurLocal, setBlurLocal] = useState<number | null>(null);
+  const data = mediaItemDataOf(item);
+  const version = data ? activeVersionOf(data) : undefined;
+  const key = playbackKeyOf(item, itemIndex);
+  const playback = usePlaybacks().find((p) => p.key === key && p.endsAt === undefined);
 
-  const objectFit = item.mediaObjectFit ?? 'cover';
-  const objectPosition = item.mediaObjectPosition ?? 'center';
-  const zoom = zoomLocal ?? item.mediaZoom ?? 100;
-  const blur = blurLocal ?? item.mediaBlur ?? 0;
-  const autoplay = item.mediaAutoplay !== false;
+  const [screenTab, setScreenTab] = useState<string | undefined>(undefined);
+  const [framing, setFraming] = useState<string | undefined>(undefined);
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [volumeDraft, setVolumeDraft] = useState<number | null>(null);
+  // The screen a file is being picked for ("Other file…").
+  const [pickingFor, setPickingFor] = useState<string | null>(null);
 
-  return (
-    <>
-      <Divider />
-      <CardContent sx={{ pt: 1.5, pb: '12px !important' }}>
-        <Stack
-          direction="row"
-          spacing={0.5}
-          sx={{
-            alignItems: 'center',
-            mb: 1.5,
-          }}
-        >
-          <TuneIcon fontSize="small" color="action" />
-          <Typography
-            variant="caption"
-            sx={{
-              fontWeight: 700,
-              color: 'text.secondary',
-              textTransform: 'uppercase',
-              letterSpacing: 0.5,
-            }}
-          >
-            {LL.MEDIA.DISPLAY_OPTIONS()}
-          </Typography>
-        </Stack>
-        <Stack
-          direction="row"
-          spacing={2}
-          useFlexGap
-          sx={{
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          }}
-        >
-          <FormControl size="small" sx={{ minWidth: 110 }}>
-            <InputLabel>Fit</InputLabel>
-            <Select label="Fit" value={objectFit} onChange={(e) => patch({ mediaObjectFit: e.target.value as ShowItem['mediaObjectFit'] })}>
-              <MenuItem value="cover">{LL.MEDIA.FIT_COVER()}</MenuItem>
-              <MenuItem value="contain">{LL.MEDIA.FIT_CONTAIN()}</MenuItem>
-              <MenuItem value="fill">{LL.MEDIA.FIT_FILL()}</MenuItem>
-            </Select>
-          </FormControl>
-          {/* Position picker — reuses the compact 3×3 grid from the style editor */}
-          <CompactPositionPicker value={objectPosition} onChange={(v) => patch({ mediaObjectPosition: v })} tooltip={LL.MEDIA.POSITION()} />
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {LL.MEDIA.ZOOM()} {zoom}%
-          </Typography>
-          <Slider
-            size="small"
-            min={50}
-            max={300}
-            step={5}
-            value={zoom}
-            onChange={(_, v) => setZoomLocal(v as number)}
-            onChangeCommitted={(_, v) => {
-              setZoomLocal(null);
-              patch({ mediaZoom: v as number });
-            }}
-            sx={{ flex: 1, minWidth: 60 }}
+  const saveData = useCallback(
+    (next: MediaItemData) => dispatch(updateShowItem({ index: itemIndex, item: { media: next } })),
+    [dispatch, itemIndex],
+  );
+
+  if (item.mediaSubType === 'color') return <ColorCard item={item} aspectRatio={aspectRatio} />;
+  if (!data || !version) {
+    return (
+      <SlideGrid title={item.label || ''}>
+        <Alert severity="warning" sx={{ m: 1.5 }}>
+          {M.NO_FILE()}
+        </Alert>
+      </SlideGrid>
+    );
+  }
+
+  const saveVersion = (next: MediaVersion) => saveData({ ...data, versions: data.versions.map((v) => (v.id === next.id ? next : v)) });
+  const isVideo = version.sources.some((source) => source.type === 'video');
+  const isSlideshow = !!version.slideshow;
+  // Videos and slideshows run on a clock: they play, pause, seek and end.
+  const clock = hasClock(version);
+  const label = mediaItemLabel(item);
+
+  // The screen whose framing the viewer shows: the chosen one, else the first assignment.
+  const assignment = version.assignments.find((a) => a.role === screenTab) ?? version.assignments[0];
+  const source = version.sources.find((s) => s.id === assignment?.sourceId) ?? version.sources[0];
+  const previewSource = source ? { ...source, path: resolveMediaUrl(source.path) || source.path } : undefined;
+  const packet: CuePacket = playback
+    ? { cue: playback.cue, transport: playback.transport, at: playback.at }
+    : {
+        cue: {
+          ...version,
+          sources: version.sources.map((s) => ({ ...s, path: resolveMediaUrl(s.path) || s.path })),
+          duration: version.duration || 1,
+        },
+        transport: initialTransport(`still/${key}`),
+        at: Date.now(),
+      };
+  const transport = playback ? advanceCue(playback.cue, playback.transport, Math.max(0, (Date.now() - playback.at) / 1000)) : undefined;
+  const cue = playback?.cue ?? version;
+  const duration = cue.duration;
+
+  const lamp: LampState = !playback ? 'off' : playback.hidden ? 'cleared' : clock && !transport?.playing ? 'paused' : 'live';
+
+  const screenName = (role: string) => {
+    if (role === ALL_SCREENS) return M.ALL_SCREENS();
+    const id = groupIdOfRole(role);
+    return screenGroups.find((group) => group.id === id)?.name ?? M.UNKNOWN_SCREEN();
+  };
+  const hasScreen = (role: string) => version.assignments.some((a) => a.role === role && a.sourceId !== null);
+
+  const setRole = (role: MediaRole) => saveData({ ...data, role });
+  const setFrame = (role: string, frame: MediaFrame) =>
+    saveVersion({ ...version, assignments: version.assignments.map((a) => (a.role === role ? { ...a, frame } : a)) });
+  const setScreenSource = (role: string, sourceId: string) =>
+    saveVersion({ ...version, assignments: version.assignments.map((a) => (a.role === role ? { ...a, sourceId } : a)) });
+  // A picked file joins the version's files and shows on that screen.
+  const addScreenSource = (role: string, path: string) => {
+    const type = mediaKindOf(path) === 'video' ? 'video' : 'image';
+    const added: MediaSource = { id: newId('m'), name: mediaLabelOf(path), path, type, offset: 0 };
+    saveVersion({
+      ...version,
+      sources: [...version.sources, added],
+      assignments: version.assignments.map((a) => (a.role === role ? { ...a, sourceId: added.id } : a)),
+    });
+  };
+
+  const start = () => {
+    if (currentShow) void startItem(currentShow, itemIndex, screenGroups, fadeMs);
+  };
+
+  const framingAssignment = version.assignments.find((a) => a.role === framing);
+  const framingSource = version.sources.find((s) => s.id === framingAssignment?.sourceId);
+  const shownOn = version.assignments.filter((a) => a.sourceId !== null).map((a) => screenName(a.role));
+  const slideOf = (now?: CueTransport) => (playback && now && isSlideshow ? slideAt(playback.cue, now.time).index : undefined);
+
+  // ── Viewer ──
+  const picture = (
+    <Box sx={{ position: 'relative', aspectRatio, maxHeight: '52vh', mx: 'auto', width: '100%' }}>
+      {isSlideshow && assignment ? (
+        <SlideshowSource packet={packet} frame={assignment.frame} />
+      ) : (
+        previewSource &&
+        assignment && (
+          <CueSource
+            key={`${packet.transport.session}/${previewSource.id}`}
+            packet={packet}
+            source={previewSource}
+            frame={assignment.frame}
           />
-          <Tooltip title={LL.CONTROL.RESET_ZOOM()}>
-            <IconButton
+        )
+      )}
+      {/* Screens the viewer can show the framing of */}
+      {version.assignments.length > 1 && (
+        <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', left: 8, bottom: 8, flexWrap: 'wrap' }}>
+          {version.assignments.map((a) => (
+            <Chip
+              key={a.role}
               size="small"
-              onClick={() => {
-                setZoomLocal(null);
-                patch({ mediaZoom: 100 });
+              label={screenName(a.role)}
+              onClick={() => setScreenTab(a.role)}
+              sx={{
+                height: 22,
+                fontSize: 11,
+                color: '#fff',
+                bgcolor: a.role === assignment?.role ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.55)',
+                backdropFilter: 'blur(4px)',
+                '&:hover': { bgcolor: 'rgba(255,255,255,0.35)' },
               }}
-            >
-              <ResetIcon fontSize="small" />
-            </IconButton>
-          </Tooltip>
-          <Typography
-            variant="caption"
-            sx={{
-              color: 'text.secondary',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {LL.MEDIA.BLUR()} {blur}px
-          </Typography>
-          <Slider
-            size="small"
-            min={0}
-            max={40}
-            step={1}
-            value={blur}
-            onChange={(_, v) => setBlurLocal(v as number)}
-            onChangeCommitted={(_, v) => {
-              setBlurLocal(null);
-              patch({ mediaBlur: v as number });
-            }}
-            sx={{ flex: 1, minWidth: 60 }}
-          />
-          {/* Autoplay toggle for videos — Loop is exposed as the toggle button
-              in the preview controls (no separate switch here). */}
+            />
+          ))}
+        </Stack>
+      )}
+    </Box>
+  );
+
+  const showOnScreens = (
+    <Button
+      variant="contained"
+      color="error"
+      size="small"
+      startIcon={<PlayIcon />}
+      onClick={start}
+      sx={{ textTransform: 'none', fontWeight: 600, height: 32, mx: 0.25, bgcolor: PLAYHEAD, '&:hover': { bgcolor: '#c93a3f' } }}
+    >
+      {T.SHOW_ON_SCREENS()}
+    </Button>
+  );
+
+  const transportRow = (
+    <>
+      {clock ? (
+        <LiveTime playback={playback} fast>
+          {(now) => <Timecode size="large" time={now?.time ?? 0} duration={duration} />}
+        </LiveTime>
+      ) : (
+        <Box sx={{ minWidth: 92 }} />
+      )}
+      <Box sx={{ flex: 1 }} />
+      {clock ? (
+        <PlaybackButtons
+          cue={cue}
+          transport={transport}
+          size="large"
+          onCommand={(command) => commandPlayback(key, command)}
+          playSlot={playback ? undefined : showOnScreens}
+        >
+          <TransportDivider />
           {isVideo && (
-            <FormControlLabel
-              control={<Switch size="small" checked={autoplay} onChange={(e) => patch({ mediaAutoplay: e.target.checked })} />}
-              label={<Typography variant="caption">{LL.MEDIA.AUTOPLAY()}</Typography>}
+            <SpeedControl
+              size="large"
+              transport={playback ? transport : undefined}
+              onCommand={(command) => commandPlayback(key, command)}
+              followsMaster={playback?.followsMaster}
+              onFollowMaster={(follow) => setPlaybackFollowsMaster(key, follow)}
             />
           )}
-        </Stack>
-      </CardContent>
+          <TransportButton
+            label={T.LOOP()}
+            size="large"
+            active={!!version.loop}
+            onClick={() => saveVersion({ ...version, loop: !version.loop })}
+          >
+            <LoopIcon />
+          </TransportButton>
+          {isVideo && (
+            <TransportButton
+              label={T.SOUND()}
+              size="large"
+              active={!!version.audioEnabled}
+              onClick={() =>
+                saveVersion({
+                  ...version,
+                  audioEnabled: !version.audioEnabled,
+                  audioSourceId: version.audioSourceId ?? version.sources.find((s) => s.type === 'video')?.id,
+                })
+              }
+            >
+              {version.audioEnabled ? <VolumeIcon /> : <MutedIcon />}
+            </TransportButton>
+          )}
+        </PlaybackButtons>
+      ) : (
+        // An image does not play: it is on the screens or not.
+        !playback && <TransportCluster>{showOnScreens}</TransportCluster>
+      )}
+      <Box sx={{ flex: 1 }} />
+      {playback && (
+        <TransportCluster>
+          <TransportButton
+            label={playback.hidden ? M.SHOW_HINT() : M.CLEAR_HINT()}
+            size="large"
+            active={playback.hidden}
+            onClick={() => setPlaybackHidden(key, !playback.hidden)}
+          >
+            {playback.hidden ? <HiddenIcon /> : <VisibleIcon />}
+          </TransportButton>
+          <TransportButton
+            label={
+              <>
+                {T.END()}
+                <br />
+                {T.END_SHIFT()}
+              </>
+            }
+            size="large"
+            danger
+            onClick={(event) => endPlayback(key, event.shiftKey ? 0 : fadeMs)}
+          >
+            <StopIcon />
+          </TransportButton>
+        </TransportCluster>
+      )}
+      {clock && (
+        <Typography sx={{ fontFamily: 'monospace', fontSize: 12, color: 'rgba(233,236,239,0.5)', minWidth: 64, textAlign: 'right' }}>
+          {formatTimecode(duration)}
+        </Typography>
+      )}
     </>
   );
-};
-
-// ── Main component ───────────────────────────────────────────────────────────
-
-interface ControlMediaProps {
-  item: ShowItem;
-}
-
-const ControlMedia = ({ item }: ControlMediaProps) => {
-  const dispatch = useAppDispatch();
-  const { hideTransitionMode, hideTransitionDuration, mediaPreviewAspect } = useGetSettings();
-  const { activeItemIndex } = useGetPresentationSettings();
-
-  const ml = useMediaLabels();
-  const [mediaStatus, setMediaStatus] = useState<'ready' | 'error' | 'playback'>('ready'),
-    [retry, setRetry] = useState(0);
-  useEffect(() => {
-    setMediaStatus('ready');
-    setPlaying(false);
-    setDuration(0);
-  }, [item.mediaPath]);
-  const resolvedPath = resolveMediaUrl(item.mediaPath);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [muted, setMuted] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  // Track whether the media-item video is visible on all presentation windows.
-  const { videoVisible } = useGetPresentationSettings();
-
-  const patch = useCallback(
-    (fields: Partial<ShowItem>) => dispatch(updateShowItem({ index: activeItemIndex, item: fields })),
-    [dispatch, activeItemIndex],
-  );
-
-  // Play/Pause — affects both the local preview AND the media-item video in
-  // every presentation window (but NOT style background videos).
-  const handleVideoToggle = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) {
-      void v.play().catch(() => setMediaStatus('playback'));
-      sendMediaItemCommand('play');
-    } else {
-      v.pause();
-      sendMediaItemCommand('pause');
-    }
-  }, []);
-
-  const handleStop = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.pause();
-    v.currentTime = 0;
-    setCurrentTime(0);
-    sendMediaItemCommand('stop');
-  }, []);
-
-  const handleMuteToggle = useCallback(() => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (!v.muted) {
-      v.muted = true;
-
-      setMuted(true);
-    } else {
-      v.muted = false;
-      if (v.volume === 0) {
-        v.volume = 1;
-        setVolume(1);
-      }
-      setMuted(false);
-    }
-  }, []);
-
-  const handleSeek = useCallback((value: number) => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.currentTime = value;
-    sendMediaItemCommand('seek', value);
-  }, []);
-
-  const handleVolume = useCallback((value: number) => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.volume = value;
-    if (value === 0) {
-      v.muted = true;
-      setMuted(true);
-    } else if (v.muted) {
-      v.muted = false;
-      setMuted(false);
-    }
-    setVolume(value);
-  }, []);
-
-  // Loop toggle — flips the item's `mediaLoop` setting. This propagates to
-  // both the preview (via the loop attribute) and presentation windows
-  // (through the broadcast in usePresentationSync).
-  const handleLoopToggle = useCallback(() => {
-    patch({ mediaLoop: item.mediaLoop === false });
-  }, [patch, item.mediaLoop]);
-
-  // Hide/Show all presentation windows for this video.
-  const handleToggleVisible = useCallback(() => {
-    const next = !videoVisible;
-    dispatch(setVideoVisibleRedux(next));
-    sendSetVideoVisible(next, hideTransitionMode, hideTransitionDuration);
-  }, [dispatch, videoVisible, hideTransitionMode, hideTransitionDuration]);
-
-  const objectFit = item.mediaObjectFit ?? 'cover';
-  const objectPosition = item.mediaObjectPosition ?? 'center';
-  const zoom = item.mediaZoom ?? 100;
-  const blur = item.mediaBlur ?? 0;
-  const loop = item.mediaLoop !== false;
-  const autoplay = item.mediaAutoplay !== false;
-
-  const ratio = ASPECT_RATIOS[mediaPreviewAspect] ?? ASPECT_RATIOS['16:9'];
-
-  // Mirrors MediaContent: fill the frame, then apply fit/position/zoom/blur.
-  const mediaStyle: CSSProperties = {
-    position: 'absolute',
-    inset: 0,
-    width: '100%',
-    height: '100%',
-    objectFit,
-    objectPosition,
-    transform: zoom !== 100 ? `scale(${zoom / 100})` : undefined,
-    transformOrigin: objectPosition,
-    filter: blur > 0 ? `blur(${blur}px)` : undefined,
-    display: 'block',
-  };
-
-  const renderPreview = () => {
-    switch (item.mediaSubType) {
-      case 'color':
-        return (
-          <PreviewFrame bgcolor={item.mediaColor || '#000000'} ratio={ratio}>
-            <Stack
-              spacing={0.5}
-              sx={{
-                alignItems: 'center',
-              }}
-            >
-              <PaletteIcon sx={{ fontSize: 32, filter: 'drop-shadow(0 0 4px rgba(0,0,0,.6))', color: '#fff' }} />
-              <Typography variant="caption" sx={{ fontFamily: 'monospace', color: '#fff', textShadow: '0 1px 3px #000' }}>
-                {item.mediaColor || '#000000'}
-              </Typography>
-            </Stack>
-          </PreviewFrame>
-        );
-
-      case 'video':
-        return resolvedPath ? (
-          <>
-            <PreviewFrame ratio={ratio}>
-              <Box
-                component="video"
-                key={`${resolvedPath}/${retry}`}
-                onError={() => setMediaStatus('error')}
-                onCanPlay={() => setMediaStatus('ready')}
-                ref={videoRef}
-                src={resolvedPath}
-                playsInline
-                loop={loop}
-                autoPlay={autoplay}
-                style={{ ...mediaStyle, cursor: 'pointer' }}
-                onPlay={() => setPlaying(true)}
-                onPause={() => setPlaying(false)}
-                onLoadedMetadata={(e) => {
-                  const vid = e.target as HTMLVideoElement;
-                  setDuration(vid.duration);
-                  setVolume(vid.volume);
-                  setMuted(vid.muted);
-                }}
-                onTimeUpdate={(e) => setCurrentTime((e.target as HTMLVideoElement).currentTime)}
-                onVolumeChange={(e) => {
-                  const vid = e.target as HTMLVideoElement;
-                  setMuted(vid.muted);
-                  setVolume(vid.volume);
-                }}
-                onClick={handleVideoToggle}
-              />
-            </PreviewFrame>
-            <VideoControls
-              playing={playing}
-              muted={muted}
-              volume={volume}
-              loop={loop}
-              videoVisible={videoVisible}
-              currentTime={currentTime}
-              duration={duration}
-              mediaPath={item.mediaPath}
-              onToggle={handleVideoToggle}
-              onStop={handleStop}
-              onMute={handleMuteToggle}
-              onLoopToggle={handleLoopToggle}
-              onToggleVisible={handleToggleVisible}
-              onSeek={handleSeek}
-              onVolume={handleVolume}
-            />
-          </>
-        ) : (
-          <MediaPlaceholder icon={<VideocamIcon sx={{ fontSize: 40 }} />} label={item.mediaPath || 'Video'} ratio={ratio} />
-        );
-
-      case 'image':
-      default:
-        return resolvedPath ? (
-          <PreviewFrame ratio={ratio}>
-            <CardMedia
-              component="img"
-              key={`${resolvedPath}/${retry}`}
-              onLoad={() => setMediaStatus('ready')}
-              image={resolvedPath}
-              alt={item.label || 'Media'}
-              style={mediaStyle}
-              onError={() => setMediaStatus('error')}
-            />
-          </PreviewFrame>
-        ) : (
-          <MediaPlaceholder icon={<ImageIcon sx={{ fontSize: 40 }} />} label={item.label || item.mediaPath || 'Image'} ratio={ratio} />
-        );
-    }
-  };
-
-  const isMedia = item.mediaSubType === 'image' || item.mediaSubType === 'video';
 
   return (
-    <Stack sx={{ flexGrow: 1, padding: '0 25px 20px', overflowY: 'auto', userSelect: 'none' }}>
-      <Card sx={{ border: '1px solid #f9a825', overflow: 'hidden' }}>
-        {renderPreview()}
-        {mediaStatus !== 'ready' && (
-          <Alert
-            severity="warning"
-            action={
-              <Button
-                onClick={() => {
-                  setRetry((v) => v + 1);
-                  setMediaStatus('ready');
-                }}
-              >
-                {ml('retry')}
-              </Button>
-            }
+    <SlideGrid
+      single
+      title={label}
+      subtitle={data.versions.length > 1 ? version.name : undefined}
+      pills={<Chip size="small" variant="outlined" label={data.role === 'background' ? M.ROLE_BACKGROUND() : M.ROLE_CONTENT()} />}
+      footer={
+        <Box sx={{ maxWidth: 1040 }}>
+          {/* ── Playback ── */}
+          <InspectorSection
+            id="playback"
+            title={T.PLAYBACK()}
+            summary={`${data.role === 'background' ? M.ROLE_BACKGROUND() : M.ROLE_CONTENT()} · ${version.name}`}
           >
-            {ml(mediaStatus)}
-          </Alert>
-        )}
-        {isMedia && <DisplayOptions item={item} patch={patch} />}
-      </Card>
-    </Stack>
+            <InspectorRow label={M.ROLE()}>
+              <Segmented
+                value={data.role}
+                options={[
+                  { value: 'content', label: M.ROLE_CONTENT() },
+                  { value: 'background', label: M.ROLE_BACKGROUND() },
+                ]}
+                onChange={setRole}
+              />
+            </InspectorRow>
+            <InspectorRow label={M.VERSION()}>
+              {renaming !== null ? (
+                <TextField
+                  size="small"
+                  autoFocus
+                  value={renaming}
+                  onChange={(e) => setRenaming(e.target.value)}
+                  onBlur={() => {
+                    if (renaming.trim()) saveVersion({ ...version, name: renaming.trim() });
+                    setRenaming(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                    if (e.key === 'Escape') setRenaming(null);
+                  }}
+                  sx={{ width: 200 }}
+                />
+              ) : (
+                <Select
+                  size="small"
+                  value={version.id}
+                  onChange={(e) => saveData({ ...data, versionId: e.target.value })}
+                  sx={{ minWidth: 180, height: 32 }}
+                >
+                  {data.versions.map((v) => (
+                    <MenuItem key={v.id} value={v.id}>
+                      {v.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              )}
+              <Tooltip title={M.RENAME_VERSION()}>
+                <IconButton size="small" onClick={() => setRenaming(version.name)}>
+                  <RenameIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={M.NEW_VERSION()}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const copy = duplicateVersion(version, M.VERSION_NAME({ number: data.versions.length + 1 }));
+                    saveData({ ...data, versions: [...data.versions, copy], versionId: copy.id });
+                  }}
+                >
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {data.versions.length > 1 && (
+                <Tooltip title={M.DELETE_VERSION()}>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      const versions = data.versions.filter((v) => v.id !== version.id);
+                      saveData({ ...data, versions, versionId: versions[0].id });
+                    }}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </InspectorRow>
+            {isVideo && (
+              <>
+                <InspectorRow label={M.AUTOPLAY()}>
+                  <Switch
+                    size="small"
+                    checked={item.mediaAutoplay !== false}
+                    onChange={(e) => dispatch(updateShowItem({ index: itemIndex, item: { mediaAutoplay: e.target.checked } }))}
+                  />
+                </InspectorRow>
+                <InspectorRow label={M.SOUND_HERE()}>
+                  <Switch
+                    size="small"
+                    checked={!!version.audioEnabled}
+                    onChange={(e) =>
+                      saveVersion({
+                        ...version,
+                        audioEnabled: e.target.checked,
+                        audioSourceId: version.audioSourceId ?? version.sources.find((s) => s.type === 'video')?.id,
+                      })
+                    }
+                  />
+                  {version.audioEnabled && (
+                    <>
+                      <Slider
+                        size="small"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={volumeDraft ?? version.volume ?? 1}
+                        aria-label={LL.AUDIO.VOLUME()}
+                        onChange={(_, v) => setVolumeDraft(v as number)}
+                        onChangeCommitted={(_, v) => {
+                          setVolumeDraft(null);
+                          saveVersion({ ...version, volume: v as number });
+                        }}
+                        sx={{ flex: '1 1 140px', maxWidth: 240, mx: 1 }}
+                      />
+                      <Typography sx={{ fontSize: 12.5, fontFamily: 'monospace', minWidth: 40 }}>
+                        {Math.round((volumeDraft ?? version.volume ?? 1) * 100)}%
+                      </Typography>
+                    </>
+                  )}
+                </InspectorRow>
+              </>
+            )}
+          </InspectorSection>
+
+          {/* ── Slideshow ── */}
+          {isSlideshow && (
+            <InspectorSection
+              id="slideshow"
+              title={T.SLIDESHOW()}
+              summary={`${M.IMAGES({ count: version.sources.length })} · ${version.slideshow?.seconds ?? 0} s`}
+            >
+              <SlideshowSettings version={version} onChange={saveVersion} />
+            </InspectorSection>
+          )}
+
+          {/* ── Screens ── */}
+          <InspectorSection id="screens" title={T.SCREENS()} summary={shownOn.join(' · ') || M.NO_SCREENS_HINT()}>
+            <InspectorRow label={M.SHOW_ON()} align="start">
+              {(groups.length === 0 || hasScreen(ALL_SCREENS)) && (
+                <Chip
+                  size="small"
+                  label={M.ALL_SCREENS()}
+                  color={hasScreen(ALL_SCREENS) ? 'primary' : 'default'}
+                  variant={hasScreen(ALL_SCREENS) ? 'filled' : 'outlined'}
+                  onClick={() => saveVersion(toggleScreen(version, ALL_SCREENS, !hasScreen(ALL_SCREENS)))}
+                />
+              )}
+              {screenSets.map((set) => {
+                const members = groups.filter((group) => set.screenGroupIds.includes(group.id));
+                if (members.length === 0) return null;
+                const on = members.every((group) => hasScreen(screenRole(group.id)));
+                return (
+                  <Tooltip key={`set-${set.id}`} title={members.map((group) => group.name).join(' + ')}>
+                    <Chip
+                      size="small"
+                      label={set.name}
+                      color={on ? 'secondary' : 'default'}
+                      variant={on ? 'filled' : 'outlined'}
+                      onClick={() => saveVersion(members.reduce((next, group) => toggleScreen(next, screenRole(group.id), !on), version))}
+                    />
+                  </Tooltip>
+                );
+              })}
+              {groups.map((group) => {
+                const role = screenRole(group.id);
+                const on = hasScreen(role);
+                return (
+                  <Chip
+                    key={group.id}
+                    size="small"
+                    label={group.name}
+                    color={on ? 'primary' : 'default'}
+                    variant={on ? 'filled' : 'outlined'}
+                    onClick={() => saveVersion(toggleScreen(version, role, !on))}
+                  />
+                );
+              })}
+              {version.assignments.length === 0 && (
+                <Typography variant="caption" sx={{ color: 'warning.main', width: '100%' }}>
+                  {M.NO_SCREENS_HINT()}
+                </Typography>
+              )}
+            </InspectorRow>
+            {/* One row per screen: which file, how it fills the screen, crop and place. */}
+            {version.assignments.map((a) => (
+              <InspectorRow key={a.role} label={screenName(a.role)}>
+                {!isSlideshow && (
+                  <Tooltip title={M.OTHER_FILE_HINT()} placement="top">
+                    <Select
+                      size="small"
+                      value={a.sourceId ?? ''}
+                      aria-label={M.SCREEN_FILE()}
+                      onChange={(e) => {
+                        if (e.target.value === OTHER_FILE) setPickingFor(a.role);
+                        else setScreenSource(a.role, e.target.value);
+                      }}
+                      sx={{ minWidth: 140, maxWidth: 220, height: 32 }}
+                    >
+                      {version.sources.map((s) => (
+                        <MenuItem key={s.id} value={s.id}>
+                          {s.name}
+                        </MenuItem>
+                      ))}
+                      <MenuItem value={OTHER_FILE}>{M.OTHER_FILE()}</MenuItem>
+                    </Select>
+                  </Tooltip>
+                )}
+                <Select
+                  size="small"
+                  value={a.frame.fit}
+                  onChange={(e) => setFrame(a.role, { ...a.frame, fit: e.target.value as MediaFrame['fit'] })}
+                  sx={{ minWidth: 120, height: 32 }}
+                >
+                  {(['cover', 'contain', 'fill'] as const).map((fit) => (
+                    <MenuItem key={fit} value={fit}>
+                      {l(fit)}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <Button
+                  size="small"
+                  color="inherit"
+                  startIcon={<FrameIcon />}
+                  onClick={() => setFraming(a.role)}
+                  sx={{ textTransform: 'none' }}
+                >
+                  {M.FRAME()}
+                </Button>
+                {a.role !== assignment?.role && version.assignments.length > 1 && (
+                  <Button
+                    size="small"
+                    color="inherit"
+                    onClick={() => setScreenTab(a.role)}
+                    sx={{ textTransform: 'none', color: 'text.secondary' }}
+                  >
+                    {T.VIEWING()}
+                  </Button>
+                )}
+              </InspectorRow>
+            ))}
+          </InspectorSection>
+
+          {/* ── Timeline and the song it follows ── */}
+          {isVideo && currentShow && (
+            <InspectorSection
+              id="timeline"
+              title={T.TIMELINE()}
+              defaultOpen={false}
+              summary={version.regions.length ? LL.MEDIA_TIMELINE.SECTIONS({ count: version.regions.length }) : undefined}
+            >
+              <MediaTimelineSection
+                embedded
+                show={currentShow}
+                itemIndex={itemIndex}
+                version={version}
+                playback={playback}
+                onChange={saveVersion}
+              />
+            </InspectorSection>
+          )}
+
+          <MediaBrowser
+            open={pickingFor !== null}
+            mode="pick"
+            pickType={isVideo ? 'video' : 'image'}
+            initialType={isVideo ? 'video' : 'image'}
+            selectLabel={M.OTHER_FILE()}
+            onClose={() => setPickingFor(null)}
+            onAdd={() => {}}
+            onPick={(path) => {
+              if (pickingFor !== null) addScreenSource(pickingFor, path);
+              setPickingFor(null);
+            }}
+          />
+
+          {framingAssignment && framingSource && (
+            <FrameEditor
+              value={framingAssignment.frame}
+              source={framingSource}
+              packet={packet}
+              onClose={() => setFraming(undefined)}
+              onApply={(frame) => {
+                setFrame(framingAssignment.role, frame);
+                setFraming(undefined);
+              }}
+            />
+          )}
+        </Box>
+      }
+    >
+      <ViewerFrame
+        lamp={lamp}
+        // The card header names the entry; the viewer names the screen whose framing it shows.
+        title={assignment ? screenName(assignment.role) : ''}
+        headerRight={
+          isSlideshow && playback ? (
+            <LiveTime playback={playback} fast>
+              {(now) =>
+                slideOf(now) !== undefined && (
+                  <Typography sx={{ fontFamily: 'monospace', fontSize: 11.5, color: 'rgba(233,236,239,0.7)' }}>
+                    {slideOf(now)! + 1} / {version.sources.length}
+                  </Typography>
+                )
+              }
+            </LiveTime>
+          ) : undefined
+        }
+        scrubber={
+          clock ? (
+            <LiveTime playback={playback} fast>
+              {(now) => (
+                <Scrubber
+                  variant="full"
+                  time={now?.time ?? 0}
+                  duration={duration}
+                  disabled={!playback}
+                  regions={armedRegions(cue, transport?.enabled)}
+                  ticks={isSlideshow ? slideStarts(cue) : undefined}
+                  onSeek={(time) => commandPlayback(key, { type: 'seek', time })}
+                />
+              )}
+            </LiveTime>
+          ) : undefined
+        }
+        transport={transportRow}
+        below={
+          isSlideshow ? (
+            <LiveTime playback={playback} fast>
+              {(now) => (
+                <SlideshowFilmstrip
+                  version={version}
+                  currentIndex={slideOf(now)}
+                  onChange={saveVersion}
+                  onJump={
+                    playback
+                      ? (index) => commandPlayback(key, { type: 'seek', time: index * Math.max(0.5, playback.cue.slideshow?.seconds ?? 1) })
+                      : undefined
+                  }
+                />
+              )}
+            </LiveTime>
+          ) : undefined
+        }
+      >
+        {picture}
+      </ViewerFrame>
+    </SlideGrid>
   );
 };
 

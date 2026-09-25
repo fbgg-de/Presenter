@@ -18,6 +18,7 @@ import {
 import { oidcErrorTitle } from '@/utils/oidcErrors';
 import { useBackendConfig } from '@/components/settings/ConnectivityChecker';
 import { LogoutResetDialog } from '@/components/layout/LogoutResetDialog';
+import { RELOGIN_DONE_MESSAGE } from '@/utils/relogin';
 
 const useQueryParam = (name: string): string | null => {
   const { search } = useLocation();
@@ -35,8 +36,24 @@ export const LoginPage = () => {
   const { openDialog: openBackendDialog } = useBackendConfig();
 
   const next = useQueryParam('next') ?? '/';
+  /**
+   * The small sign-in window a running page opens when its session ran out (`utils/relogin`):
+   * `1` signs in by itself with the last account, `done` is the return from the provider — it
+   * tells the page and closes.
+   */
+  const relogin = useQueryParam('relogin');
+  useEffect(() => {
+    if (relogin !== 'done' || !window.opener) return;
+    try {
+      (window.opener as Window).postMessage({ type: RELOGIN_DONE_MESSAGE }, window.location.origin);
+    } catch {
+      // The opener is gone (closed, navigated away): nothing to tell.
+    }
+    const timer = window.setTimeout(() => window.close(), 600);
+    return () => window.clearTimeout(timer);
+  }, [relogin]);
 
-  const { offlineMode, lastSelectedAccount } = useGetSettings();
+  const { offlineMode, lastSelectedAccount } = useGetSettings('offlineMode', 'lastSelectedAccount');
   const updateSetting = useUpdateSetting();
 
   // Notify the main process of the backend origin so it can identify OIDC callbacks
@@ -67,6 +84,8 @@ export const LoginPage = () => {
    * finished in its hidden window. Shown below, and it keeps the automatic sign-in from retrying.
    */
   const loginError = useQueryParam('error');
+  /** The reference the backend logged beside the cause of `loginError`. */
+  const loginErrorRef = useQueryParam('ref');
   /** Set when the automatic sign-in was skipped because the previous one did not end in a session. */
   const [autoLoginStopped, setAutoLoginStopped] = useState(false);
   /** "Trouble signing in?" — resets cookies and/or local data when a sign-in keeps failing or looping. */
@@ -175,12 +194,13 @@ export const LoginPage = () => {
 
   const [errorText, setErrorText] = useState<string | null>(null);
 
-  // ── Auto-proceed in Electron when last account was auto-restored ──
-  // Once the OIDC URL is ready and the account was restored from saved settings,
-  // automatically redirect without requiring the user to click the Login button.
+  // ── Auto-proceed when the last account was auto-restored ──
+  // Once the OIDC URL is ready and the account was restored from saved settings, go straight to the
+  // IdP (desktop, browser and the small re-sign-in window alike): no password while its session
+  // lasts, and ChurchTools is asked again. Not after a logout (account switch) or a sign-in error.
   useEffect(() => {
     // A login error means the last attempt was just rejected — signing in again would repeat it.
-    if (!isElectronApp() || switchAccount || loginError || !autoRestoredRef.current) return;
+    if (switchAccount || loginError || !autoRestoredRef.current) return;
     const url =
       isAdminSelected && !adminOidcLoading ? adminOidcUrlData?.url : isTenantSelected && !oidcLoading ? oidcUrlData?.url : undefined;
     if (!url) return;
@@ -201,7 +221,7 @@ export const LoginPage = () => {
       return;
     }
     openUrl(url);
-  }, [isAdminSelected, isTenantSelected, adminOidcLoading, oidcLoading, adminOidcUrlData, oidcUrlData, loginError]);
+  }, [isAdminSelected, isTenantSelected, adminOidcLoading, oidcLoading, adminOidcUrlData, oidcUrlData, loginError, switchAccount]);
 
   const onSelectLicense = (value: Account) => {
     // User manually selected — disable auto-proceed
@@ -238,12 +258,19 @@ export const LoginPage = () => {
           >
             <Typography variant="h5">{LL.AUTH.LOGIN()}</Typography>
 
+            {relogin === 'done' && window.opener && <Alert severity="success">{LL.AUTH.RELOGIN_DONE()}</Alert>}
+
             {loginError && (
               <Alert severity="error" action={resetAction}>
                 <Typography variant="subtitle2">{oidcErrorTitle(LL, loginError)}</Typography>
                 <Typography variant="body2">
                   {LL.AUTH.LOGIN_REJECTED()} ({loginError})
                 </Typography>
+                {loginErrorRef && (
+                  <Typography variant="caption" sx={{ fontFamily: 'monospace', userSelect: 'text' }}>
+                    {LL.AUTH.ERROR_REFERENCE({ ref: loginErrorRef })}
+                  </Typography>
+                )}
               </Alert>
             )}
             {autoLoginStopped && !loginError && (

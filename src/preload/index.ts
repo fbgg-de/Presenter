@@ -44,9 +44,6 @@ const api = {
   updateStageOverlay: (id: string, payload: unknown) => {
     ipcRenderer.send('update-stage-overlay', id, payload);
   },
-  broadcastPresentationContent: (content: unknown) => {
-    ipcRenderer.send('broadcast-presentation-content', content);
-  },
   listScreens: () => electronAPI.ipcRenderer.invoke('list-screens'),
   getWindowStates: () => electronAPI.ipcRenderer.invoke('get-window-states'),
 
@@ -70,6 +67,9 @@ const api = {
   startMediaServer: (mediaPath: string) => electronAPI.ipcRenderer.invoke('start-media-server', mediaPath),
   /** Media browser upload: choose files, then copy them into a folder of the media root. */
   pickMediaFiles: () => electronAPI.ipcRenderer.invoke('pick-media-files'),
+  /** Create a folder inside the media folder; resolves to its relative path. */
+  createMediaFolder: (mediaPath: string, subPath: string, name: string) =>
+    electronAPI.ipcRenderer.invoke('create-media-folder', mediaPath, subPath, name),
   importMediaFiles: (mediaPath: string, subPath: string, sources: string[]) =>
     electronAPI.ipcRenderer.invoke('import-media-files', mediaPath, subPath, sources),
   /** A dropped file's path on disk. `File.path` no longer exists, so this is the only way to get it. */

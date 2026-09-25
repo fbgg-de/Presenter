@@ -27,7 +27,7 @@ export const CredentialsSection = () => {
   const [savedOk, setSavedOk] = useState(false);
   const [encryptionAvailable, setEncryptionAvailable] = useState(true);
 
-  const { autoLogin } = useGetSettings();
+  const { autoLogin } = useGetSettings('autoLogin');
   const updateSetting = useUpdateSetting();
 
   const api = isElectronApp() ? window.api : undefined;

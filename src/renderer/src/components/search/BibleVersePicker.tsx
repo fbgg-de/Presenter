@@ -22,6 +22,7 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetBibleVersesQuery, useGetBibleTranslationsQuery } from '@/api/bible.api';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useGetSessionQuery } from '@/api/session.api';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 interface BibleVersePickerProps {
   open: boolean;
@@ -29,10 +30,10 @@ interface BibleVersePickerProps {
   onAdd: (bibleRef: string, bibleTranslation: string, label: string, text: string) => void;
 }
 
-export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps) => {
+const BibleVersePickerBody = ({ open, onClose, onAdd }: BibleVersePickerProps) => {
   const { LL } = useI18nContext();
 
-  const { bibleTranslation } = useGetSettings();
+  const { bibleTranslation } = useGetSettings('bibleTranslation');
   const { data: session } = useGetSessionQuery();
   const bibleEnabled = session?.settings?.bibleEnabled ?? false;
 
@@ -235,3 +236,5 @@ export const BibleVersePicker = ({ open, onClose, onAdd }: BibleVersePickerProps
     </Dialog>
   );
 };
+
+export const BibleVersePicker = stillWhileClosed(BibleVersePickerBody);

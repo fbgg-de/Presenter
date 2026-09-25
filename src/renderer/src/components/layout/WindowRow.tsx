@@ -16,7 +16,6 @@ import {
   Monitor as NormalIcon,
   MoreVert as MoreIcon,
   OpenInNew as BringToFrontIcon,
-  Palette as StyleIcon,
   PlayArrow as OpenIcon,
   Tv as ScreenIcon,
   Visibility as ShowIcon,
@@ -28,7 +27,8 @@ import type { RigWindow } from '@/hooks/usePresentationWindows';
 export interface WindowRowProps {
   window: RigWindow;
   selected: boolean;
-  styleName?: string;
+  /** Name of the screen group the window belongs to, if any. */
+  groupName?: string;
   stageLayerCount: number;
   onSelect: () => void;
   onOpen: () => void;
@@ -42,7 +42,7 @@ export interface WindowRowProps {
 export const WindowRow = ({
   window: win,
   selected,
-  styleName,
+  groupName,
   stageLayerCount,
   onSelect,
   onOpen,
@@ -87,11 +87,7 @@ export const WindowRow = ({
           '&:hover': { bgcolor: alpha(theme.palette.primary.main, selected ? 0.12 : 0.04) },
         })}
       >
-        {win.config.displayMode === 'stream' ? (
-          <StreamIcon fontSize="small" color="action" />
-        ) : (
-          <NormalIcon fontSize="small" color="action" />
-        )}
+        {win.stream ? <StreamIcon fontSize="small" color="action" /> : <NormalIcon fontSize="small" color="action" />}
 
         <Typography variant="body2" noWrap sx={{ fontWeight: 600, minWidth: 0, flexShrink: 1 }}>
           {win.name}
@@ -115,14 +111,8 @@ export const WindowRow = ({
           />
         )}
 
-        {styleName && (
-          <Chip
-            icon={<StyleIcon sx={{ fontSize: '0.7rem' }} />}
-            label={styleName}
-            size="small"
-            variant="outlined"
-            sx={{ height: 17, fontSize: '0.6rem', maxWidth: 120 }}
-          />
+        {groupName && (
+          <Chip label={groupName} size="small" color="warning" variant="outlined" sx={{ height: 17, fontSize: '0.6rem', maxWidth: 120 }} />
         )}
 
         {stageLayerCount > 0 && (

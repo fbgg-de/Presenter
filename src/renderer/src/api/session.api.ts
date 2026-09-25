@@ -15,10 +15,14 @@ export type SessionInfo = {
   mail: string;
   isAuthenticated?: boolean;
   authType?: 'oidc' | 'oidc_admin' | null;
+  /** Unix seconds when the sign-in ends; null for sessions without a ceiling. */
+  expiresAt?: number | null;
   settings?: {
     /** `DEVELOPMENT` in the backend's config.php. Drives the dev banner — see devBanner.ts. */
     development?: boolean;
     bibleEnabled: boolean;
+    /** The account's Nextcloud, used by the web version through api/NextcloudRelay.php; null when none is set up. */
+    nextcloudUrl?: string | null;
     /** `SPOTIFY_API` is enabled and has credentials — set list entries can link a Spotify track. */
     spotifyEnabled?: boolean;
     churchToolsEnabled?: boolean;

@@ -18,7 +18,7 @@ import { peekQueue } from '@/utils/metricQueue';
  */
 export const useMetricSync = () => {
   const { flushQueue } = useMetrics();
-  const { offlineMode } = useGetSettings();
+  const { offlineMode } = useGetSettings('offlineMode');
 
   // Re-use the cached session result — no extra network request.
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });

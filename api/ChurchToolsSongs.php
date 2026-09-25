@@ -25,19 +25,7 @@ class ChurchToolsSongs extends RestController
      */
     private function getCtConfig(): ?array
     {
-        $account = $_SESSION['account'] ?? 0;
-        if (!$account) {
-            return null;
-        }
-        $stmt = self::prepare('SELECT `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
-        $stmt->bind_param('i', $account)->execute()->fetchOne($row)->close();
-        if (!$row || empty($row['church_tools_url']) || empty($row['church_tools_token'])) {
-            return null;
-        }
-        return [
-            'url'   => $row['church_tools_url'],
-            'token' => $row['church_tools_token'],
-        ];
+        return ChurchToolsClient::forAccount((int)($_SESSION['account'] ?? 0));
     }
 
     /**
@@ -182,17 +170,12 @@ class ChurchToolsSongs extends RestController
             }
 
             // Stream the file through PHP so no credentials are exposed
-            $ch = curl_init($fileUrl);
-            curl_setopt_array($ch, [
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HEADER         => true,
-            ]);
-            $raw = curl_exec($ch);
-            $headerSize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
-            $contentType = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
-
-            $body = substr($raw, $headerSize);
+            $answer = ChurchToolsClient::fetchRaw($fileUrl, $cfg);
+            if (!is_string($answer['body']) || $answer['status'] >= 400) {
+                $res->error(502, 'The file could not be loaded from ChurchTools');
+            }
+            $contentType = $answer['contentType'];
+            $body = $answer['body'];
             $safeName = basename($filename);
 
             header('Content-Type: ' . ($contentType ?: 'application/octet-stream'));

@@ -3,6 +3,11 @@ import {
   Button,
   Chip,
   Box,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -21,27 +26,48 @@ import { useAppDispatch } from '@/store';
 import { SongOrderEditor } from './SongOrderEditor';
 import { LyricBlockEditor } from './LyricBlockEditor';
 import { SongLanguagesEditor } from './SongLanguagesEditor';
-import { Close as CloseIcon, Delete as DeleteIcon, Info as InfoIcon, Add as AddIcon, Save as SaveIcon } from '@mui/icons-material';
+import { SongTextEditor } from './SongTextEditor';
+import { SongBlockPreview } from '@/components/preview/SongBlockPreview';
+import {
+  Close as CloseIcon,
+  Delete as DeleteIcon,
+  SlideshowOutlined as PreviewIcon,
+  Info as InfoIcon,
+  Add as AddIcon,
+  Save as SaveIcon,
+  Subject as TextIcon,
+} from '@mui/icons-material';
 import type { ISong, LyricEffect, LyricPage, TBlocks } from '@/song';
 import {
   PRIMARY_LANGUAGE_KEY,
   Song,
   applyLyricEffects,
+  blocksToSongText,
   countLinesWithLanguage,
+  followBlockChanges,
   parseBlockLines,
   resolvePrimaryLanguage,
   seedSongLanguages,
   serialiseBlockLines,
+  songTextToBlocks,
 } from '@/song';
 import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
 import { addSongToStore, updateSongInStore } from '@/store/songsSlice';
-import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
+import { useSongStyle } from '@/hooks/useSongStyle';
+import { fitLimits } from '@/song/lyricFit';
 import { useAccountLanguages } from '@/hooks/useAccountLanguages';
 import { useMetrics } from '@/hooks/useMetrics';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 /** A block as the editor holds it: lyrics stay parsed until save. */
 type Block = { name: string; pages: LyricPage[] };
+
+/** Tab positions: info, the whole song as text, then one tab per block, then “add block”. */
+const INFO_TAB = 0;
+const TEXT_TAB = 1;
+const FIRST_BLOCK_TAB = 2;
 
 const StyledInput = styled(TextField)(({ theme }) => ({
   background: theme.palette.background.paper,
@@ -62,7 +88,7 @@ const Input = (props: TextFieldProps & { startAdornment?: ReactNode; endAdornmen
   return <StyledInput {...inputProps} slotProps={customSlotProps} />;
 };
 
-export const SongEditor = (props: {
+const SongEditorBody = (props: {
   open: boolean;
   setOpen: (open: boolean) => void;
   song?: ISong;
@@ -70,7 +96,8 @@ export const SongEditor = (props: {
 }) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const { defaultNewVerseName } = useGetSettings();
+  const { defaultNewVerseName, songEditorPreviewOpen } = useGetSettings('defaultNewVerseName', 'songEditorPreviewOpen');
+  const updateSetting = useUpdateSetting();
   const isMobile = useIsMobile();
   const { available: accountLanguages, defaultLanguage } = useAccountLanguages();
 
@@ -79,6 +106,10 @@ export const SongEditor = (props: {
   const { trackEvent } = useMetrics();
 
   const { open, setOpen, song, onSongCreated } = props;
+
+  // What one screen holds in this song's theme — for the "line too long" marks.
+  const songStyle = useSongStyle(song?.songNumber ?? 0);
+  const fit = useMemo(() => fitLimits(songStyle), [songStyle]);
 
   const [isDirty, setIsDirty] = useState(false);
 
@@ -96,6 +127,13 @@ export const SongEditor = (props: {
   const [orders, setOrders] = useState<{ [key: string]: string[] }>({ Default: [] });
   const [currentOrder, setCurrentOrder] = useState<string>('Default');
   const [newBlock, setNewBlock] = useState('');
+  /**
+   * The whole-song text being typed, remembered with the blocks it was typed over. Once the text is
+   * applied the blocks change, the draft goes stale and the text is derived from the blocks again.
+   */
+  const [songTextDraft, setSongTextDraft] = useState<{ blocks: Block[]; text: string } | null>(null);
+  /** Blocks the text would remove although arrangements use them, waiting for confirmation. */
+  const [pendingRemoval, setPendingRemoval] = useState<{ text: string; blocks: { name: string; orders: string[] }[] } | null>(null);
 
   const markDirty = () => setIsDirty(true);
 
@@ -111,8 +149,10 @@ export const SongEditor = (props: {
   const init = () => {
     if (!song) return;
 
-    setTab(0);
+    setTab(INFO_TAB);
     setIsDirty(false);
+    setSongTextDraft(null);
+    setPendingRemoval(null);
 
     // Songs stored before the language list existed are read back off their own tags.
     const stored = song.languages ?? [];
@@ -199,6 +239,36 @@ export const SongEditor = (props: {
     markDirty();
   };
 
+  const songText = songTextDraft && songTextDraft.blocks === blocks ? songTextDraft.text : blocksToSongText(blocks, languages);
+
+  /**
+   * Apply the whole-song text: blocks take the text's order, renamed headings carry their block
+   * through every arrangement, and removing a block an arrangement uses needs a confirmation.
+   */
+  const applySongText = (text: string, confirmed = false) => {
+    if (text === blocksToSongText(blocks, languages)) return;
+
+    const previousNames = blocks.map((block) => block.name);
+    const result = songTextToBlocks(text, languages, defaultNewVerseName, previousNames);
+    if (result.problems.length > 0) return;
+
+    const allOrders = { ...orders, [currentOrder]: order };
+    const usedRemovals = result.removed
+      .map((name) => ({ name, orders: Object.keys(allOrders).filter((key) => allOrders[key].includes(name)) }))
+      .filter((removal) => removal.orders.length > 0);
+    if (usedRemovals.length > 0 && !confirmed) {
+      setPendingRemoval({ text, blocks: usedRemovals });
+      return;
+    }
+
+    const names = result.blocks.map((block) => block.name);
+    _setBlocks(result.blocks);
+    setBlocksOrder(names);
+    setOrders(Object.fromEntries(Object.entries(orders).map(([key, list]) => [key, followBlockChanges(list, result.renames, names)])));
+    setOrder(followBlockChanges(order, result.renames, names));
+    markDirty();
+  };
+
   const setBlockPages = (index: number, pages: LyricPage[]) => {
     _setBlocks(blocks.map((block, i) => (i === index ? { ...block, pages } : block)));
     markDirty();
@@ -270,7 +340,7 @@ export const SongEditor = (props: {
     return null;
   }
 
-  const activeBlockIndex = tab > 0 && tab <= blocks.length ? tab - 1 : -1;
+  const activeBlockIndex = tab >= FIRST_BLOCK_TAB && tab < FIRST_BLOCK_TAB + blocks.length ? tab - FIRST_BLOCK_TAB : -1;
 
   return (
     // Without an onClose the backdrop is inert — on a phone that leaves the ✕ as the only exit.
@@ -296,9 +366,17 @@ export const SongEditor = (props: {
             alignItems: 'center',
           }}
         >
-          <Typography variant={isMobile ? 'h6' : 'h4'} noWrap>
-            {LL.SONG_EDITOR.TITLE()}
-          </Typography>
+          {/* Which song is open, so the Info tab is not needed to tell. */}
+          <Stack sx={{ minWidth: 0 }}>
+            <Typography variant={isMobile ? 'h6' : 'h5'} noWrap>
+              {title.trim() || LL.SONG_EDITOR.TITLE()}
+            </Typography>
+            {(song?.songNumber ?? 0) > 0 && (
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {'# ' + (song?.songNumber ?? 0)}
+              </Typography>
+            )}
+          </Stack>
           {isDirty && <Chip label={LL.SONG_EDITOR.UNSAVED()} size="small" color="warning" sx={{ ml: 2 }} />}
           <Box
             sx={{
@@ -322,19 +400,33 @@ export const SongEditor = (props: {
             onChange={(_, next) => {
               setTab(next);
               // The add-block tab starts from the configured default every time it is opened.
-              if (next > blocks.length) setNewBlock(defaultNewVerseName);
+              if (next >= FIRST_BLOCK_TAB + blocks.length) setNewBlock(defaultNewVerseName);
             }}
             variant="scrollable"
             scrollButtons="auto"
           >
             <Tab icon={<InfoIcon />} sx={{ minWidth: '50px' }} />
+            <Tab
+              icon={<TextIcon />}
+              title={LL.SONG_EDITOR.TEXT_TAB_HINT()}
+              aria-label={LL.SONG_EDITOR.TEXT_TAB()}
+              sx={{ minWidth: '50px' }}
+            />
             {blocks.map(({ name }) => (
               <Tab key={name} label={name} />
             ))}
             <Tab icon={<AddIcon />} sx={{ minWidth: '50px' }} />
           </Tabs>
 
-          {tab < 1 ? (
+          {tab === TEXT_TAB ? (
+            <SongTextEditor
+              text={songText}
+              languages={languages}
+              defaultBlockName={defaultNewVerseName}
+              onChange={(text) => setSongTextDraft({ blocks, text })}
+              onCommit={(text) => applySongText(text)}
+            />
+          ) : tab === INFO_TAB ? (
             <Stack
               sx={{
                 gap: 2,
@@ -379,32 +471,57 @@ export const SongEditor = (props: {
             </Stack>
           ) : activeBlockIndex >= 0 ? (
             <Stack sx={{ gap: 1 }}>
-              <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-                <Typography variant="subtitle2" color="text.secondary" noWrap sx={{ flexGrow: 1, minWidth: 0 }}>
-                  {blocks[activeBlockIndex].name}
-                </Typography>
-                <IconButton
-                  title={LL.SONG_EDITOR.DELETE_BLOCK()}
-                  color="error"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const next = [...blocks];
-                    if (tab > blocks.length - 1) setTab(tab - 1);
-                    next.splice(activeBlockIndex, 1);
-                    setBlocks(next);
-                  }}
-                >
-                  <DeleteIcon />
-                </IconButton>
+              <Stack direction={{ xs: 'column', lg: 'row' }} sx={{ gap: 2, alignItems: 'flex-start' }}>
+                <Box sx={{ flex: 1, minWidth: 0, width: '100%' }}>
+                  <LyricBlockEditor
+                    pages={blocks[activeBlockIndex].pages}
+                    languages={languages}
+                    visibleLanguages={visibleLanguages}
+                    onVisibleLanguagesChange={setVisibleLanguages}
+                    onChange={(pages) => setBlockPages(activeBlockIndex, pages)}
+                    fit={fit}
+                    textTransform={songStyle.textTransform}
+                    actions={
+                      <>
+                        <IconButton
+                          size="small"
+                          title={songEditorPreviewOpen ? LL.SONG_EDITOR.HIDE_PREVIEW() : LL.SONG_EDITOR.SHOW_PREVIEW()}
+                          color={songEditorPreviewOpen ? 'primary' : 'default'}
+                          onClick={() => updateSetting('songEditorPreviewOpen', !songEditorPreviewOpen)}
+                        >
+                          <PreviewIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          title={LL.SONG_EDITOR.DELETE_BLOCK()}
+                          color="error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const next = [...blocks];
+                            if (tab > FIRST_BLOCK_TAB + blocks.length - 2) setTab(Math.max(INFO_TAB, tab - 1));
+                            next.splice(activeBlockIndex, 1);
+                            setBlocks(next);
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </>
+                    }
+                  />
+                </Box>
+                {/* How the block's first page breaks and fits in the theme on screen — off by default. */}
+                {songEditorPreviewOpen && (
+                  <Box sx={{ width: { xs: '100%', lg: 360 }, flexShrink: 0, position: { lg: 'sticky' }, top: 0 }}>
+                    <SongBlockPreview
+                      name={blocks[activeBlockIndex].name}
+                      lines={serialiseBlockLines(blocks[activeBlockIndex].pages.slice(0, 1), languages)}
+                      languages={languages}
+                      songNumber={song.songNumber}
+                      title={title}
+                    />
+                  </Box>
+                )}
               </Stack>
-
-              <LyricBlockEditor
-                pages={blocks[activeBlockIndex].pages}
-                languages={languages}
-                visibleLanguages={visibleLanguages}
-                onVisibleLanguagesChange={setVisibleLanguages}
-                onChange={(pages) => setBlockPages(activeBlockIndex, pages)}
-              />
             </Stack>
           ) : (
             <Stack
@@ -443,7 +560,7 @@ export const SongEditor = (props: {
             onSelectBlock={(name) => {
               const blockIndex = blocks.findIndex((block) => block.name === name);
               if (blockIndex >= 0) {
-                setTab(blockIndex + 1);
+                setTab(blockIndex + FIRST_BLOCK_TAB);
               }
             }}
             onChange={({ orders: nextOrders, currentOrder: nextCurrentOrder, order: nextOrder }) => {
@@ -472,6 +589,37 @@ export const SongEditor = (props: {
           </Button>
         </Stack>
       </Stack>
+
+      <Dialog open={!!pendingRemoval} onClose={() => setPendingRemoval(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>{LL.SONG_EDITOR.TEXT_REMOVE_TITLE()}</DialogTitle>
+        <DialogContent>
+          <DialogContentText variant="body2" sx={{ mb: 1.5 }}>
+            {LL.SONG_EDITOR.TEXT_REMOVE_MESSAGE()}
+          </DialogContentText>
+          <Stack component="ul" sx={{ m: 0, pl: 2.5, gap: 0.5 }}>
+            {pendingRemoval?.blocks.map((block) => (
+              <Typography key={block.name} component="li" variant="body2">
+                <b>{block.name}</b> · {LL.SONG_EDITOR.TEXT_REMOVE_USED_IN({ orders: block.orders.join(', ') })}
+              </Typography>
+            ))}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingRemoval(null)}>{LL.COMMON.CANCEL()}</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => {
+              if (pendingRemoval) applySongText(pendingRemoval.text, true);
+              setPendingRemoval(null);
+            }}
+          >
+            {LL.SONG_EDITOR.TEXT_REMOVE_CONFIRM()}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Drawer>
   );
 };
+
+export const SongEditor = stillWhileClosed(SongEditorBody);

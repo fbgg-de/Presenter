@@ -18,6 +18,8 @@ CREATE TABLE `account` (
   `church_tools_token` VARCHAR(500) DEFAULT NULL,
   `spotify_client_id` VARCHAR(100) DEFAULT NULL,
   `spotify_client_secret` VARCHAR(200) DEFAULT NULL,
+  `nextcloud_url` VARCHAR(500) DEFAULT NULL,
+  `integrations_private_network` TINYINT(1) NOT NULL DEFAULT 0,
   `viewer_token` VARCHAR(64) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `lastactivity` timestamp NOT NULL DEFAULT current_timestamp(),
@@ -126,7 +128,6 @@ CREATE TABLE `shows` (
   `date` timestamp NOT NULL DEFAULT current_timestamp(),
   `order` JSON NOT NULL,
   `groups` JSON DEFAULT NULL,
-  `media_cues` JSON DEFAULT NULL,
   `style_id` INT DEFAULT NULL,
   `event_id` INT DEFAULT NULL,
   `event_name` VARCHAR(255) DEFAULT NULL,
@@ -308,6 +309,64 @@ CREATE TABLE `stage_layers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
+-- Screen Groups
+--
+-- A logical output ("Audience", "Stage", "Stream") that presentation windows are assigned
+-- to. The group is account-wide; which window belongs to it is stored on the device. `data`
+-- holds the kind and which layers (background, slides, media, bible verses, overlays) it shows.
+-- --------------------------------------------------------
+CREATE TABLE `screen_groups` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `account` INT NOT NULL,
+  `name` VARCHAR(200) NOT NULL,
+  `enabled` TINYINT(1) DEFAULT 1,
+  `sort_order` INT NOT NULL DEFAULT 0,
+  `data` JSON NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY `uk_screen_groups_account_name` (`account`, `name`),
+  CONSTRAINT `fk_screen_groups_account` FOREIGN KEY (`account`)
+    REFERENCES `account` (`license`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- Screen Sets
+--
+-- A named shortcut for several screen groups ("LED wall" = LED left + LED right), offered as
+-- one chip wherever media entries choose their screens. Each group keeps its own settings.
+-- --------------------------------------------------------
+CREATE TABLE `screen_sets` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `account` INT NOT NULL,
+  `name` VARCHAR(200) NOT NULL,
+  `screen_group_ids` JSON NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `idx_screen_sets_account` (`account`),
+  CONSTRAINT `fk_screen_sets_account` FOREIGN KEY (`account`)
+    REFERENCES `account` (`license`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+-- Library
+--
+-- Saved copies of agenda groups (with their songs, media entries and playback settings) and of
+-- single media entries, to reuse in other shows. `data` is { group?, items }.
+-- --------------------------------------------------------
+CREATE TABLE `library_entries` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY,
+  `account` INT NOT NULL,
+  `kind` VARCHAR(20) NOT NULL,
+  `name` VARCHAR(200) NOT NULL,
+  `data` JSON NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `idx_library_entries_account` (`account`, `kind`),
+  CONSTRAINT `fk_library_entries_account` FOREIGN KEY (`account`)
+    REFERENCES `account` (`license`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
 -- Bands
 --
 -- A band is the group of people that plays a show: a name, a colour for its chips, and
@@ -365,7 +424,7 @@ CREATE TABLE IF NOT EXISTS `schema_version` (
   PRIMARY KEY (`version`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT INTO `schema_version` (`version`, `description`) VALUES (25, 'Fresh install — all migrations included');
+INSERT INTO `schema_version` (`version`, `description`) VALUES (33, 'Fresh install — all migrations included');
 
 COMMIT;
 

@@ -12,7 +12,7 @@ for (const name of ['engine', 'framing'])
       compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
     }).outputText,
   );
-const { advanceCue, commandCue, initialTransport, lyricAt, lyricOccurrences, validateCue } = await import(
+const { advanceCue, commandCue, followClock, initialTransport, lyricAt, lyricOccurrences, validateCue } = await import(
   pathToFileURL(join(dir, 'engine.mjs'))
 );
 const { frameGeometry } = await import(pathToFileURL(join(dir, 'framing.mjs')));
@@ -188,5 +188,67 @@ test('mapped sections loop independently of lyric mapping and unmapped overlaps'
   assert.equal(t.activeLoop, undefined);
   assert.equal(lyricAt(c, t.time, map).id, 'mapped');
   assert.equal(validateCue(c), undefined);
+});
+test('a looping version starts again at the end, keeping the time past it', () => {
+  const c = { ...cue, duration: 10, loop: true, regions: [] };
+  const t = advanceCue(c, commandCue(c, initialTransport('s'), { type: 'play' }), 23);
+  assert.equal(t.playing, true);
+  assert.ok(Math.abs(t.time - 3) < 1e-6);
+});
+test('without loop it stops at the end', () => {
+  const c = { ...cue, duration: 10, regions: [] };
+  const t = advanceCue(c, commandCue(c, initialTransport('s'), { type: 'play' }), 23);
+  assert.equal(t.playing, false);
+  assert.equal(t.time, 10);
+});
+test('a pause at the very beginning holds a looping version on its next lap', () => {
+  const c = { ...cue, duration: 10, loop: true, regions: [region('p', 'pause', 0, 0.5)] };
+  const t = advanceCue(c, commandCue(c, initialTransport('s'), { type: 'play' }), 12);
+  assert.equal(t.pausedAt, 'p');
+  assert.equal(t.time, 0);
+});
+test('playback speed: the clock counts media time at the chosen rate', () => {
+  const c = { ...cue, duration: 100, regions: [] };
+  const fast = commandCue(c, commandCue(c, initialTransport('s'), { type: 'play' }), { type: 'rate', rate: 1.5 });
+  assert.equal(advanceCue(c, fast, 10).time, 15);
+  const slow = commandCue(c, fast, { type: 'rate', rate: 0.5 });
+  assert.equal(advanceCue(c, slow, 10).time, 5);
+});
+test('playback speed: holds and loops are reached in media time', () => {
+  // The hold at 15 s is 7.5 wall seconds away at 2×.
+  const t = advanceCue(cue, commandCue(cue, start(), { type: 'rate', rate: 2 }), 7.5);
+  assert.equal(t.time, 15);
+  assert.equal(t.pausedAt, 'hold');
+  // A looping version wraps at the same media point whatever the speed.
+  const c = { ...cue, duration: 10, loop: true, regions: [] };
+  const looped = advanceCue(c, commandCue(c, commandCue(c, initialTransport('s'), { type: 'play' }), { type: 'rate', rate: 2 }), 6);
+  assert.ok(Math.abs(looped.time - 2) < 1e-6);
+});
+test('playback speed: normal speed leaves no field, limits hold, stop keeps the choice', () => {
+  const c = { ...cue, duration: 100, regions: [] };
+  let t = commandCue(c, initialTransport('s'), { type: 'rate', rate: 1.25 });
+  assert.equal(t.rate, 1.25);
+  assert.equal(commandCue(c, t, { type: 'rate', rate: 1 }).rate, undefined);
+  assert.equal(commandCue(c, t, { type: 'rate', rate: 99 }).rate, 4);
+  assert.equal(commandCue(c, t, { type: 'rate', rate: 0.01 }).rate, 0.25);
+  assert.equal(commandCue(c, t, { type: 'rate', rate: NaN }), t);
+  t = commandCue(c, commandCue(c, t, { type: 'play' }), { type: 'stop' });
+  assert.equal(t.rate, 1.25);
+  assert.equal(t.time, 0);
+});
+test('following the clock: small drift is nudged, big drift is sought, the speed is kept', () => {
+  assert.deepEqual(followClock(10, 10.01, 1), { playbackRate: 1 });
+  // 0.2 s behind: play 10 % faster, no seek (a seek would stutter every crop of the video).
+  const behind = followClock(10.2, 10, 1);
+  assert.equal(behind.seek, undefined);
+  assert.ok(Math.abs(behind.playbackRate - 1.1) < 1e-9);
+  // Ahead at 1.5×: slower than 1.5, never a jump.
+  const ahead = followClock(10, 10.1, 1.5);
+  assert.equal(ahead.seek, undefined);
+  assert.ok(ahead.playbackRate < 1.5 && ahead.playbackRate > 1.5 * 0.9);
+  // A seek or a loop wrap: go there.
+  assert.deepEqual(followClock(2, 9.8, 1.25), { seek: 2, playbackRate: 1.25 });
+  // A seek aims ahead by the element's seek time (in media time at the playing speed).
+  assert.deepEqual(followClock(2, 9.8, 2, 0.25), { seek: 2.5, playbackRate: 2 });
 });
 console.log(`${checks} media cue checks passed`);

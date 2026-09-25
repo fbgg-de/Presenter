@@ -30,6 +30,14 @@ export const oidcErrorTitle = (LL: ReturnType<typeof useI18nContext>['LL'], code
       return LL.ERRORS.USERINFO_FAILED();
     case 'oidc.authentication_failed':
       return LL.ERRORS.AUTHENTICATION_FAILED();
+    case 'oidc.session_lost':
+      return LL.ERRORS.SESSION_LOST();
+    case 'oidc.provider_unreachable':
+      return LL.ERRORS.PROVIDER_UNREACHABLE();
+    case 'oidc.login_expired':
+      return LL.ERRORS.LOGIN_EXPIRED();
+    case 'oidc.groups_claim_invalid':
+      return LL.ERRORS.GROUPS_CLAIM_INVALID();
     case 'oidc.auth_url_failed':
       return LL.ERRORS.AUTH_URL_FAILED();
     default:

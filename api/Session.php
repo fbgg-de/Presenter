@@ -46,6 +46,7 @@ class Session extends RestController
                 $account = $_SESSION['account'] ?? 0;
                 $ctEnabled = false;
                 $spotifyEnabled = false;
+                $nextcloudUrl = null;
                 // The name the user picked on the login page — shown instead of the mail
                 // address wherever the app names the current account.
                 $name = $_SESSION['name'] ?? $_SESSION['admin_name'] ?? '';
@@ -62,6 +63,14 @@ class Session extends RestController
                     } catch (\Throwable $e) {
                         $spotifyEnabled = false;
                     }
+                    // The account's Nextcloud (migration 32), guarded the same way.
+                    try {
+                        $ncStmt = self::prepare('SELECT `nextcloud_url` FROM `account` WHERE `license` = ?');
+                        $ncStmt->bind_param('i', $account)->execute()->fetchOne($ncRow)->close();
+                        $nextcloudUrl = !empty($ncRow['nextcloud_url']) ? $ncRow['nextcloud_url'] : null;
+                    } catch (\Throwable $e) {
+                        $nextcloudUrl = null;
+                    }
                     // Sessions established before the name was stored have none — read it
                     // from the account row instead of forcing a re-login.
                     if ($name === '' && !empty($ctRow['name'])) {
@@ -74,6 +83,9 @@ class Session extends RestController
                     'mail' => $_SESSION['mail'] ?? '',
                     'isAuthenticated' => isset($_SESSION['authType']) && !empty($_SESSION['authType']),
                     'authType' => $_SESSION['authType'] ?? null,
+                    // When the sign-in ends (the eight-hour ceiling in oidc.php), so the app can
+                    // offer to renew it before it runs out in the middle of a service.
+                    'expiresAt' => isset($_SESSION['oidc_session_expires']) ? (int)$_SESSION['oidc_session_expires'] : null,
                     'settings' => [
                         // Drives the dev banner every page paints over itself. Deliberately
                         // part of the unauthenticated response: the login page has to show it
@@ -82,6 +94,8 @@ class Session extends RestController
                         'development' => defined('DEVELOPMENT') && (bool) DEVELOPMENT,
                         'bibleEnabled' => defined('BIBLE_API') && is_array(BIBLE_API) && !empty(BIBLE_API['enabled']) && BIBLE_API['enabled'],
                         'spotifyEnabled' => $spotifyEnabled,
+                        // The account's Nextcloud, which the web version reaches through api/NextcloudRelay.php.
+                        'nextcloudUrl' => $nextcloudUrl,
                         'churchToolsEnabled' => $ctEnabled,
                         'wsHost' => defined('WS_HOST') && is_array(WS_HOST) && !empty(WS_HOST['host'])
                             ? [

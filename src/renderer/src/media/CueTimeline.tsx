@@ -43,23 +43,21 @@ import {
   Logout,
   Add,
 } from '@mui/icons-material';
-import type { CuePacket, MediaCue, MediaCueBinding, MediaRegion, LyricOccurrence, RegionKind } from './types';
-import { defaultFrame, mediaId } from './types';
+import type { CueCommand, CuePacket, MediaCue, MediaCueBinding, MediaRegion, LyricOccurrence, RegionKind } from './types';
+import { defaultFrame, mediaId, REGION_HIGHLIGHT, REGION_HIGHLIGHT_FILL, REGION_INK } from './types';
 import { clamp, isEnabled, isLoop, milliseconds } from './engine';
-import { sendCueCommand } from './runtime';
 import { useMediaLabels } from './labels';
 import { useWaveform } from './useWaveform';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
-import { useAppDispatch } from '@/store';
-import { setActiveBlockFromMedia } from '@/store/presentationSlice';
 import { CueSource } from './CueMedia';
+import { Timecode, TransportButton, TransportCluster } from '@/components/media/Transport';
 
 export const cueTime = (seconds: number) => {
   const ms = Math.round(Math.max(0, seconds) * 1000);
   return `${Math.floor(ms / 60000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}.${String(ms % 1000).padStart(3, '0')}`;
 };
 const icons = { section: <MusicNote fontSize="small" />, loop: <Repeat fontSize="small" />, pause: <Pause fontSize="small" /> };
-const ink = { section: '#81b9ee', loop: '#c6a0ee', pause: '#ed9ca7' };
+const ink = REGION_INK;
 const colors = { section: 'info', loop: 'secondary', pause: 'error' } as const;
 type Props = {
   cue: MediaCue;
@@ -67,15 +65,18 @@ type Props = {
   packet?: CuePacket;
   occurrences: LyricOccurrence[];
   onChange: (cue: MediaCue, binding: MediaCueBinding) => void;
+  /** Transport commands for the version being edited. */
+  onCommand: (command: CueCommand) => void;
+  /** Move the mapped song to a slide, when that song is the active item. */
+  onLyricJump?: (blockIndex: number) => void;
 };
-export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Props) {
-  const l = useMediaLabels(),
-    dispatch = useAppDispatch();
+export function CueTimeline({ cue, binding, packet, occurrences, onChange, onCommand, onLyricJump }: Props) {
+  const l = useMediaLabels();
   const jump = (section: MediaRegion) => {
     const target = binding.lyrics[section.id];
     const index = target === 'clear' ? -1 : occurrences.find((o) => o.id === target)?.index;
-    if (section.kind !== 'pause' && index !== undefined) dispatch(setActiveBlockFromMedia(index));
-    sendCueCommand({ type: 'seek', time: section.start, navigate: true });
+    if (section.kind !== 'pause' && index !== undefined) onLyricJump?.(index);
+    onCommand({ type: 'seek', time: section.start, navigate: true });
   };
   const [selected, setSelected] = useState<string>();
   const [zoom, setZoom] = useState(1),
@@ -137,7 +138,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
     onChange(next, nextBinding);
   };
   const open = (s: Partial<MediaRegion> & { start: number; end: number }) => {
-    sendCueCommand({ type: 'pause' });
+    onCommand({ type: 'pause' });
     setDraft(
       s.kind === 'pause' ? { ...s, end: milliseconds(s.start + 0.001) } : { ...s, kind: s.kind ? 'section' : undefined, loop: isLoop(s) },
     );
@@ -158,7 +159,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
             ? l('enabled')
             : l('off');
   const enabled = (s: MediaRegion) => (transport ? isEnabled(s, transport) : s.enabled !== false);
-  const toggle = (s: MediaRegion) => sendCueCommand({ type: 'enable', id: s.id, enabled: !enabled(s) });
+  const toggle = (s: MediaRegion) => onCommand({ type: 'enable', id: s.id, enabled: !enabled(s) });
   const auditionEdge = (s: { start: number; end: number }, edge: 'start' | 'end') => {
     if (!packet || !waveformSource || !Number.isFinite(s[edge])) return;
     const start = Math.max(0, s[edge] - (edge === 'start' ? 1 : 2)),
@@ -193,8 +194,8 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
               <IconButton
                 aria-label={l(edge === 'start' ? 'seekStart' : 'seekEnd')}
                 onClick={() => {
-                  sendCueCommand({ type: 'pause' });
-                  sendCueCommand({ type: 'seek', time: s[edge] });
+                  onCommand({ type: 'pause' });
+                  onCommand({ type: 'seek', time: s[edge] });
                 }}
               >
                 {edge === 'start' ? <SkipPrevious /> : <SkipNext />}
@@ -242,7 +243,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
     setWorking(undefined);
     setRange(undefined);
     if (cancel || !d.moved) {
-      if (!cancel && !d.id) sendCueCommand({ type: 'seek', time: d.anchor });
+      if (!cancel && !d.id) onCommand({ type: 'seek', time: d.anchor });
       return;
     }
     if (d.id) commit({ ...cue, regions: d.regions });
@@ -273,47 +274,41 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
       sx={{
         p: 1.5,
         '& .MuiButton-root': { textTransform: 'none', fontSize: 12 },
-        '& .MuiIconButton-root': { borderRadius: 1, padding: '7px' },
+        // Transport buttons keep their own size.
+        '& .MuiIconButton-root:not(.transport-button)': { borderRadius: 1, padding: '7px' },
         '& .MuiFormControlLabel-label': { fontSize: 12 },
       }}
       onKeyDown={(e) => {
         if (e.key === ' ' && !(e.target as HTMLElement).closest('input, textarea, button, [role=dialog], [role=slider], [role=combobox]')) {
           e.preventDefault();
-          sendCueCommand({ type: 'toggle' });
+          onCommand({ type: 'toggle' });
         }
       }}
     >
       <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
-        <Tooltip title={l('play')}>
-          <span>
-            <IconButton aria-label={l('play')} disabled={!packet} onClick={() => sendCueCommand({ type: 'toggle' })}>
-              {transport?.playing ? <Pause /> : <PlayArrow />}
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Tooltip title={l('stop')}>
-          <IconButton aria-label={l('stop')} onClick={() => sendCueCommand({ type: 'stop' })}>
+        <TransportCluster>
+          <TransportButton primary label={l('play')} disabled={!packet} onClick={() => onCommand({ type: 'toggle' })}>
+            {transport?.playing ? <Pause /> : <PlayArrow />}
+          </TransportButton>
+          <TransportButton label={l('stop')} onClick={() => onCommand({ type: 'stop' })}>
             <Stop />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title={l('exit')}>
-          <span>
-            <IconButton
-              aria-label={l('exit')}
-              disabled={!transport?.activeLoop}
-              color={transport?.exitLoop ? 'secondary' : 'default'}
-              onClick={() => sendCueCommand({ type: transport?.exitLoop ? 'cancel' : 'exit' })}
-            >
-              <Logout />
-            </IconButton>
-          </span>
-        </Tooltip>
-        <Typography variant="body2" sx={{ ml: 'auto', fontVariantNumeric: 'tabular-nums', fontFamily: 'monospace', fontSize: 13 }}>
-          {cueTime(time)} / {cueTime(duration)}
-        </Typography>
+          </TransportButton>
+          <TransportButton
+            label={l('exit')}
+            disabled={!transport?.activeLoop}
+            active={!!transport?.exitLoop}
+            onClick={() => onCommand({ type: transport?.exitLoop ? 'cancel' : 'exit' })}
+          >
+            <Logout />
+          </TransportButton>
+        </TransportCluster>
         {transport?.pausedAt && (
           <Chip color="error" icon={<Pause />} label={`${l('paused')} · ${cue.regions.find((s) => s.id === transport.pausedAt)?.name}`} />
         )}
+        <Stack direction="row" spacing={0.75} sx={{ ml: 'auto', alignItems: 'center' }}>
+          <Timecode time={time} duration={duration} />
+          <Typography sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>{cueTime(duration)}</Typography>
+        </Stack>
       </Stack>
       <Stack direction="row" sx={{ flexWrap: 'wrap', columnGap: 1, px: 0.5 }}>
         <FormControlLabel
@@ -462,7 +457,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
           onPointerMove={(e) => {
             const d = drag.current;
             if (!d || (Math.abs(d.x - e.clientX) < 3 && !d.moved)) return;
-            if (!d.moved) sendCueCommand({ type: 'pause' });
+            if (!d.moved) onCommand({ type: 'pause' });
             d.moved = true;
             const t = snapped(position(e.clientX));
             if (!d.original) {
@@ -505,7 +500,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
                   : (boundaries.findLast((t) => t < time - 0.0001) ?? 0);
             } else target += (e.key === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 1 : snap);
             target = clamp(milliseconds(target), 0, duration);
-            sendCueCommand({ type: 'seek', time: target });
+            onCommand({ type: 'seek', time: target });
             if (target < view || target > view + span) setPan(clamp(target - span / 2, 0, duration - span));
           }}
         >
@@ -579,9 +574,9 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
                   width: pos.w,
                   height: 32,
                   border: selected === s.id ? 2 : 1,
-                  borderColor: selected === s.id ? '#e7bb69' : ink[visualKind],
+                  borderColor: selected === s.id ? REGION_HIGHLIGHT : ink[visualKind],
                   borderStyle: (s.kind === 'pause' || isLoop(s)) && !enabled(s) ? 'dashed' : 'solid',
-                  bgcolor: alpha(selected === s.id ? '#c59032' : ink[visualKind], 0.18),
+                  bgcolor: alpha(selected === s.id ? REGION_HIGHLIGHT_FILL : ink[visualKind], 0.18),
                   borderRadius: 1,
                   opacity: (s.kind === 'pause' || isLoop(s)) && !enabled(s) ? 0.55 : 1,
                   pointerEvents: drawing ? 'none' : 'auto',
@@ -641,7 +636,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
                         height: 30,
                         cursor: 'ew-resize',
                         color: 'text.primary',
-                        bgcolor: '#e7bb69',
+                        bgcolor: REGION_HIGHLIGHT,
                         fontSize: 8,
                         padding: 0,
                         border: 0,
@@ -742,7 +737,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
         max={duration}
         step={snap}
         value={clamp(time, 0, duration)}
-        onChange={(_, v) => sendCueCommand({ type: 'seek', time: v as number })}
+        onChange={(_, v) => onCommand({ type: 'seek', time: v as number })}
       />
       {zoom > 1 && (
         <Slider aria-label={l('pan')} min={0} max={duration - span} step={0.001} value={view} onChange={(_, v) => setPan(v as number)} />
@@ -786,6 +781,8 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
                       borderColor: alpha(ink[k], 0.45),
                       borderRadius: 1.5,
                       bgcolor: alpha(ink[k], selected === s.id ? 0.16 : 0.05),
+                      // Disarmed pauses and loops look as they do in the layer bar: dashed and dim.
+                      ...(!enabled(s) ? { borderStyle: 'dashed', opacity: 0.6 } : {}),
                     }}
                   >
                     <Button
@@ -806,7 +803,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
                         <Typography noWrap sx={{ fontSize: 12, maxWidth: '100%' }}>
                           {s.name}
                         </Typography>
-                        {(isLoop(s) || kind === 'pause') && <Typography variant="caption">{state(s)}</Typography>}
+                        <Typography variant="caption">{state(s)}</Typography>
                       </Stack>
                     </Button>
                     {isLoop(s) && (
@@ -824,7 +821,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
                           sx={{ color: enabled(s) ? ink.loop : 'text.disabled' }}
                           onClick={() => {
                             setSelected(s.id);
-                            if (s.id === transport?.activeLoop) sendCueCommand({ type: transport.exitLoop ? 'cancel' : 'exit' });
+                            if (s.id === transport?.activeLoop) onCommand({ type: transport.exitLoop ? 'cancel' : 'exit' });
                             else toggle(s);
                           }}
                         >
@@ -869,7 +866,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
         >
           {l('jump')}
         </MenuItem>
-        {current && (current.kind === 'pause' || isLoop(current)) && (
+        {current && (
           <MenuItem
             onClick={() => {
               if (current) toggle(current);
@@ -884,7 +881,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
             <MenuItem
               key="enter"
               onClick={() => {
-                sendCueCommand({ type: 'enter', id: current.id });
+                onCommand({ type: 'enter', id: current.id });
                 setMenu(undefined);
               }}
             >
@@ -894,7 +891,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
               key="queue"
               disabled={!transport?.activeLoop || transport.activeLoop === current.id}
               onClick={() => {
-                sendCueCommand({ type: 'queue', id: current.id });
+                onCommand({ type: 'queue', id: current.id });
                 setMenu(undefined);
               }}
             >
@@ -903,7 +900,7 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange }: Pro
             <MenuItem
               key="cancel"
               onClick={() => {
-                sendCueCommand({ type: 'cancel' });
+                onCommand({ type: 'cancel' });
                 setMenu(undefined);
               }}
             >

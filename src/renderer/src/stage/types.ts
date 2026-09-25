@@ -1,3 +1,4 @@
+import { newId } from '@/utils/ids';
 /**
  * Stage-monitor layers, cues, and the payload the presentation windows receive.
  *
@@ -110,7 +111,19 @@ export interface StageLayerData {
   placement: StagePlacement;
   style: StageLayerStyle;
   cues: StageCue[];
+  /** Screen groups (screen_groups ids) whose windows show this layer. */
+  screenGroupIds?: number[];
 }
+
+/**
+ * The one face every clock, countdown and timer is set in — on the stage screen, in custom
+ * overlays and in the operator's transport — so a number never changes typeface between surfaces.
+ */
+export const STAGE_MONO_FONT = 'ui-monospace, "Cascadia Mono", "JetBrains Mono", "IBM Plex Mono", Consolas, monospace';
+
+/** Whether a window in `screenGroupId` shows a layer: only through the groups the layer is assigned to. */
+export const stageLayerShownOnWindow = (layer: { screenGroupIds?: number[] }, screenGroupId: number | undefined): boolean =>
+  screenGroupId !== undefined && !!layer.screenGroupIds?.includes(screenGroupId);
 
 export interface StageLayerEntity {
   id: number;
@@ -143,10 +156,7 @@ export const emptyStageLayerData = (): StageLayerData => ({
 });
 
 /** Cue ids only need to be unique inside their layer. */
-export const newCueId = (): string =>
-  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : `cue-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+export const newCueId = (): string => newId('cue');
 
 /** A fresh cue of the given kind, with the defaults an operator would otherwise have to fill in. */
 export const newCue = (kind: StageCueKind): StageCue => {
@@ -174,6 +184,45 @@ export const newCue = (kind: StageCueKind): StageCue => {
   }
 };
 
+/** What "New layer" offers: a layer that works the moment it exists. */
+export type StageLayerPreset = 'countdown' | 'countup' | 'message' | 'clock' | 'empty';
+export const STAGE_LAYER_PRESETS: StageLayerPreset[] = ['countdown', 'countup', 'message', 'clock', 'empty'];
+
+/**
+ * A new layer for a preset: one cue of that kind, placed and sized for what it is — a timer in a
+ * top corner, a message as a banner along the bottom, the clock top left — so nobody has to
+ * design a box before the first countdown runs. Everything stays adjustable afterwards.
+ */
+export const stageLayerPreset = (preset: StageLayerPreset): StageLayerData => {
+  const base = emptyStageLayerData();
+  switch (preset) {
+    case 'countdown':
+    case 'countup':
+      return {
+        ...base,
+        placement: { anchor: 'top right', widthPct: 30, marginPct: 4 },
+        style: { ...base.style, fontSizePct: 14 },
+        cues: [newCue(preset)],
+      };
+    case 'message':
+      return {
+        ...base,
+        placement: { anchor: 'bottom center', widthPct: 90, marginPct: 4 },
+        style: { ...base.style, fontSizePct: 8, background: '#000000', backgroundOpacity: 0.6 },
+        cues: [newCue('message')],
+      };
+    case 'clock':
+      return {
+        ...base,
+        placement: { anchor: 'top left', widthPct: 24, marginPct: 4 },
+        style: { ...base.style, fontSizePct: 9 },
+        cues: [newCue('clock')],
+      };
+    case 'empty':
+      return base;
+  }
+};
+
 // ── When a cue ends ───────────────────────────────────────────────────────────
 
 /**
@@ -182,11 +231,11 @@ export const newCue = (kind: StageCueKind): StageCue => {
  * operator process needs a timer at all: everything else is arithmetic the windows do
  * for themselves.
  */
-export const cueEndsAt = (cue: StageCue, startedAt: number): number | null => {
+export const cueEndsAt = (cue: StageCue, startedAt: number, adjustMs = 0): number | null => {
   switch (cue.kind) {
     case 'countdown':
       if (cue.onZero !== 'next' && cue.onZero !== 'hide') return null;
-      return countdownTarget(cue, startedAt);
+      return countdownTarget(cue, startedAt) + adjustMs;
     case 'message':
     case 'blank':
       return cue.autoNextSec && cue.autoNextSec > 0 ? startedAt + cue.autoNextSec * 1000 : null;
@@ -245,6 +294,8 @@ export interface StageLayerWire {
   style: StageLayerStyle;
   /** Resolved cue, or absent when the layer currently shows nothing. */
   cue?: StageCueWire;
+  /** Screen groups the layer is assigned to; the bridge filters on it per window. */
+  screenGroupIds?: number[];
 }
 
 export interface StageOverlayPayload {
@@ -259,6 +310,12 @@ export interface StageCueRuntime {
   startedAt: number;
   pausedAt?: number;
   hidden: boolean;
+  /**
+   * The operator's correction to a running timer, in ms: more time left on a countdown, more
+   * elapsed on a count-up. An offset rather than a moved start, because a countdown to a time
+   * of day has no start to move. Cleared when the layer enters another cue.
+   */
+  adjustMs?: number;
 }
 
 /**
@@ -271,7 +328,7 @@ export const resolveCue = (cue: StageCue, runtime: StageCueRuntime, locale: stri
       return { kind: 'clock', pattern: clockPattern(cue.format), locale };
 
     case 'countdown': {
-      const target = countdownTarget(cue, runtime.startedAt);
+      const target = countdownTarget(cue, runtime.startedAt) + (runtime.adjustMs ?? 0);
       return {
         kind: 'timer',
         direction: 'down',
@@ -291,7 +348,7 @@ export const resolveCue = (cue: StageCue, runtime: StageCueRuntime, locale: stri
       return {
         kind: 'timer',
         direction: 'up',
-        anchor: runtime.startedAt,
+        anchor: runtime.startedAt - (runtime.adjustMs ?? 0),
         frozenAt: runtime.pausedAt,
         clampAtZero: true,
         format: cue.format,
@@ -333,7 +390,13 @@ export const resolveStagePayload = (
     const resolved = resolveCue(cue, runtime, locale);
     if (!resolved) continue;
 
-    wire.push({ id: layer.id, placement: layer.data.placement, style: layer.data.style, cue: resolved });
+    wire.push({
+      id: layer.id,
+      placement: layer.data.placement,
+      style: layer.data.style,
+      cue: resolved,
+      screenGroupIds: layer.data.screenGroupIds,
+    });
   }
   return { layers: wire };
 };

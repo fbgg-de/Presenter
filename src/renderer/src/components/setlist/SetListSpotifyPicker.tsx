@@ -50,14 +50,12 @@ import {
   type SetListEntry,
   type SetListSpotifyTrack,
 } from '@/api/setLists.api';
+import { formatTime } from '@/utils';
 
 /** Below this the field counts as empty and the song's own suggestions stay on screen. */
 const MIN_QUERY_LENGTH = 2;
 
-const formatDuration = (ms: number) => {
-  const seconds = Math.round(ms / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
-};
+const formatDuration = (ms: number) => formatTime(Math.round(ms / 1000));
 
 const TrackCover = ({ url }: { url: string | null }) => (
   <Avatar variant="rounded" src={url ?? undefined} sx={{ width: 40, height: 40 }}>

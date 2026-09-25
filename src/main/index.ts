@@ -8,6 +8,7 @@ import { registerIpcHandlers } from './ipc';
 import { IMPORTABLE_EXTS, LocalMediaServer } from './mediaServer';
 import { PresenterWebSocketServer } from './wsServer';
 import { getCredentials } from './credentials';
+import { migrateSessionCookies, persistCookieChanges } from './sessionCookies';
 import { ShutdownCoordinator, startControlServer, setShutdownLogFile, CONTROL_PORT } from './shutdown';
 import iconIco from '../../favicon.ico?asset';
 import iconPng from '../../favicon.svg?asset';
@@ -125,89 +126,8 @@ const saveWindowBounds = (bounds: WindowBoundsData) => {
   }
 };
 
-// ── Session cookie persistence ──
-// Chromium treats cookies without an explicit expiry as "session cookies" and
-// discards them when the process exits. We save them to disk before quit and
-// restore them (with a 30-day expiry) on the next launch so the user stays
-// logged in across app restarts.
-
-const saveSessionCookies = async (): Promise<void> => {
-  try {
-    // Only save cookies that belong to the presenter backend — never save IDP /
-    // SAML / third-party cookies because restoring them causes "Lost
-    // authentication state" errors on the next login attempt.
-    let allowedHost: string | null = null;
-    try {
-      if (existsSync(backendOriginFile)) {
-        const raw = JSON.parse(readFileSync(backendOriginFile, 'utf-8')) as { origin?: string };
-        if (raw.origin) allowedHost = new URL(raw.origin).hostname;
-      }
-    } catch {
-      /* ignore */
-    }
-
-    const allCookies = await session.defaultSession.cookies.get({});
-    const cookies = allowedHost
-      ? allCookies.filter((c) => {
-          const domain = c.domain?.replace(/^\./, '') ?? '';
-          return domain === allowedHost || domain.endsWith(`.${allowedHost}`);
-        })
-      : []; // if backend origin is unknown, save nothing rather than saving IDP cookies
-
-    const dir = app.getPath('userData');
-    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(cookiesFile, JSON.stringify(cookies), 'utf-8');
-    console.log(`[Cookies] Saved ${cookies.length} backend cookie(s)`);
-  } catch (err) {
-    console.error('[Cookies] Failed to save session cookies:', err);
-  }
-};
-
-const restoreSessionCookies = async (): Promise<void> => {
-  try {
-    if (!existsSync(cookiesFile)) return;
-    const saved = JSON.parse(readFileSync(cookiesFile, 'utf-8')) as Electron.Cookie[];
-    const thirtyDaysFromNow = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
-
-    // One cookie per host + name + path. Restoring used to pass `domain` for every cookie, which
-    // makes Chromium store even a host-only cookie as a DOMAIN cookie (".host"). The next login then
-    // set a fresh host-only PHPSESSID next to it; the browser sends both, the older restored one
-    // first, and PHP reads the first — so the backend kept seeing the dead session and the login page
-    // looped. Each restart saved and restored both again. The backend only ever sets host-only
-    // cookies (Cors::sessionCookieParams), so a host-only entry wins over a domain duplicate.
-    const byKey = new Map<string, Electron.Cookie>();
-    for (const cookie of saved) {
-      const key = `${cookie.domain?.replace(/^\./, '')}|${cookie.name}|${cookie.path ?? '/'}`;
-      const existing = byKey.get(key);
-      const isHostOnly = (c: Electron.Cookie) => c.hostOnly !== false && !c.domain?.startsWith('.');
-      if (!existing || (isHostOnly(cookie) && !isHostOnly(existing))) byKey.set(key, cookie);
-    }
-    const cookies = [...byKey.values()];
-
-    for (const cookie of cookies) {
-      const hostOnly = cookie.hostOnly !== false && !cookie.domain?.startsWith('.');
-      try {
-        await session.defaultSession.cookies.set({
-          url: `${cookie.secure ? 'https' : 'http'}://${cookie.domain?.replace(/^\./, '')}`,
-          name: cookie.name,
-          value: cookie.value,
-          // Omitted for host-only cookies: any explicit domain turns them into domain cookies.
-          ...(hostOnly ? {} : { domain: cookie.domain }),
-          path: cookie.path,
-          secure: cookie.secure,
-          httpOnly: cookie.httpOnly,
-          expirationDate: cookie.expirationDate ?? thirtyDaysFromNow,
-          sameSite: cookie.sameSite,
-        });
-      } catch {
-        // Individual cookie may fail (e.g. invalid domain); skip and continue
-      }
-    }
-    console.log(`[Cookies] Restored ${cookies.length} session cookie(s)`);
-  } catch (err) {
-    console.error('[Cookies] Failed to restore session cookies:', err);
-  }
-};
+// Chromium owns persistent cookies; no shutdown snapshot should replace its current state.
+let flushSessionCookies: (() => Promise<void>) | null = null;
 
 // ── Single instance lock ──
 const gotTheLock = app.requestSingleInstanceLock();
@@ -239,7 +159,8 @@ const requestShutdown = (reason: string): void => {
   app.quit(); // → 'before-quit' → shutdown.run()
 };
 
-// Order matters: stop accepting work, let peers see us go, then persist.
+// Flush authentication first, before slow server teardown can exhaust the quit budget.
+shutdown.register({ name: 'session cookies', run: () => flushSessionCookies?.(), timeoutMs: 3000 });
 shutdown.register({ name: 'stop command server', run: () => stopControlServer?.() });
 shutdown.register({
   name: 'websocket server',
@@ -254,7 +175,6 @@ shutdown.register({ name: 'presentation windows', run: () => windowManager.destr
 // the forced exit in 'before-quit' does not — so force it here, after the child windows are
 // gone and their last writes have arrived.
 shutdown.register({ name: 'local storage', run: () => session.defaultSession.flushStorageData() });
-shutdown.register({ name: 'session cookies', run: () => saveSessionCookies(), timeoutMs: 3000 });
 
 if (gotTheLock) {
   // Started at module scope, not in whenReady: the stop command is the only
@@ -359,7 +279,7 @@ const createWindow = () => {
   const persistForSessionEnd = (): void => {
     session.defaultSession.flushStorageData();
     persistBounds();
-    void saveSessionCookies();
+    void flushSessionCookies?.().catch(() => console.error('[Cookies] Failed to flush cookies at session end'));
   };
   mainWindow.on('query-session-end', persistForSessionEnd);
   mainWindow.on('session-end', persistForSessionEnd);
@@ -387,6 +307,19 @@ const createWindow = () => {
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
+    // The operator's popped-out preview: the app's own presentation page in preview mode, opened
+    // as a plain child window it can talk to. Never an output, so it is not a managed window.
+    try {
+      const target = new URL(details.url);
+      if (target.pathname.endsWith('/presentation.html') && target.searchParams.get('preview') === '1') {
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: { width: 960, height: 560, autoHideMenuBar: true, backgroundColor: '#000000', title: 'Preview' },
+        };
+      }
+    } catch {
+      /* not a URL we open ourselves */
+    }
     // A new-window request raised while we are ON a web origin is part of that site's own
     // flow — typically the identity provider (SimpleSAMLphp form posts, MFA steps). Handing
     // those to the system browser moves the flow into a different cookie jar, so the IdP's
@@ -478,17 +411,20 @@ const createWindow = () => {
       // login page carrying the reason, which also stops the automatic sign-in there.
       exchangeWin.webContents.on('did-finish-load', () => {
         let error: string | null = null;
+        // The short reference the backend wrote to its log beside the cause.
+        let ref: string | null = null;
         try {
           const landed = new URL(exchangeWin.webContents.getURL());
           if (landed.pathname.replace(/\/+$/, '').endsWith('/unauthorized')) {
             error = landed.searchParams.get('error') || 'oidc.authentication_failed';
+            ref = landed.searchParams.get('ref');
           }
         } catch {
           // Not a parseable URL — nothing to report, carry on as before.
         }
         if (error) {
           console.error('[OIDC] Login rejected by the backend:', error);
-          loadPage('/login', { error });
+          loadPage('/login', ref ? { error, ref } : { error });
         } else {
           loadPage(page);
         }
@@ -720,7 +656,9 @@ const createWindow = () => {
         !parsed.searchParams.has('code')
       ) {
         if (path === '/unauthorized') {
-          loadPage('/login', { error: parsed.searchParams.get('error') || 'oidc.authentication_failed' });
+          const ref = parsed.searchParams.get('ref');
+          const error = parsed.searchParams.get('error') || 'oidc.authentication_failed';
+          loadPage('/login', ref ? { error, ref } : { error });
           return;
         }
         if (Object.hasOwn(PAGE_FILES, path)) {
@@ -779,7 +717,7 @@ ipcMain.on('set-auto-login', (_event, enabled: boolean) => {
 // Renderer reports the configured backend URL so will-navigate can identify callbacks
 ipcMain.on('set-backend-origin', (_event, origin: string) => {
   backendOrigin = origin;
-  // Persist so saveSessionCookies knows which domain to keep
+  // Persist for legacy cookie migration on the next launch
   if (origin) {
     try {
       const dir = app.getPath('userData');
@@ -797,6 +735,7 @@ ipcMain.on('set-backend-origin', (_event, origin: string) => {
 // start go too, or the stale session would simply be restored on relaunch.
 ipcMain.handle('clear-all-cookies', async () => {
   await session.defaultSession.clearStorageData({ storages: ['cookies'] });
+  await flushSessionCookies?.();
   try {
     rmSync(cookiesFile, { force: true });
   } catch {
@@ -901,12 +840,24 @@ app.whenReady().then(async () => {
   // Set app user model id for windows
   electronApp.setAppUserModelId('de.fbbg.presenter');
 
-  // Restore session cookies saved from the previous run so the user stays
-  // logged in without re-entering credentials every time.
-  // Clear any pre-existing stale cookies first (removes lingering IDP/SAML
-  // cookies from old sessions that would cause "Lost authentication state").
-  await session.defaultSession.clearStorageData({ storages: ['cookies'] });
-  await restoreSessionCookies();
+  // Keep Chromium's persistent cookie store intact. The old snapshot is migration-only:
+  // it must never overwrite a newer login or be replayed after logout.
+  try {
+    const origin = existsSync(backendOriginFile)
+      ? ((JSON.parse(readFileSync(backendOriginFile, 'utf-8')) as { origin?: string }).origin ?? '')
+      : '';
+    backendOrigin = origin;
+    await migrateSessionCookies(session.defaultSession.cookies, cookiesFile, origin);
+  } catch {
+    console.error('[Cookies] Failed to migrate legacy cookies');
+    // A malformed/partially imported snapshot must not be retried after a later logout.
+    try {
+      rmSync(cookiesFile, { force: true });
+    } catch {
+      /* ignore */
+    }
+  }
+  flushSessionCookies = persistCookieChanges(session.defaultSession.cookies);
 
   // Default open or close DevTools by F12 in development
   // In production, F12 still opens DevTools for debugging purposes
@@ -1013,7 +964,7 @@ app.whenReady().then(async () => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
     const result = await dialog.showOpenDialog(win as BrowserWindow, {
       properties: ['openFile', 'multiSelections'],
-      filters: [{ name: 'Images & videos', extensions: [...IMPORTABLE_EXTS].map((ext) => ext.slice(1)) }],
+      filters: [{ name: 'Images, videos & audio', extensions: [...IMPORTABLE_EXTS].map((ext) => ext.slice(1)) }],
     });
     return result.canceled ? [] : result.filePaths;
   });
@@ -1028,6 +979,13 @@ app.whenReady().then(async () => {
       sources.filter((source) => typeof source === 'string'),
       typeof subPath === 'string' ? subPath : '',
     );
+  });
+
+  ipcMain.handle('create-media-folder', async (_event, mediaPath: string, subPath: string, name: string) => {
+    if (!mediaPath) throw new Error('No media folder configured');
+    const { resolve: resolvePath } = await import('path');
+    const target = mediaServer && mediaServer.getMediaPath() === resolvePath(mediaPath) ? mediaServer : new LocalMediaServer(mediaPath);
+    return target.createFolder(typeof subPath === 'string' ? subPath : '', String(name ?? ''));
   });
 
   // Handle second-instance (single instance lock)

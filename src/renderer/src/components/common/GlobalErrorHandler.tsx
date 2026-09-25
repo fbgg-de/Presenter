@@ -20,7 +20,7 @@ interface ErrorInfo {
  */
 export const GlobalErrorHandler = ({ boundaryError }: { boundaryError?: Error | null }) => {
   const { trackEvent } = useMetrics();
-  const { errorBoundaryNotification } = useGetSettings();
+  const { errorBoundaryNotification } = useGetSettings('errorBoundaryNotification');
   const [notification, setNotification] = useState<ErrorInfo | null>(null);
 
   const report = useCallback(

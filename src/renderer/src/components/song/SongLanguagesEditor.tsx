@@ -84,7 +84,7 @@ const SortableRow = ({ code, children }: { code: string; children: React.ReactNo
  */
 export const SongLanguagesEditor = ({ languages, available, usage, onChange }: SongLanguagesEditorProps) => {
   const { LL } = useI18nContext();
-  const { uiLanguage } = useGetSettings();
+  const { uiLanguage } = useGetSettings('uiLanguage');
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
 
   const sensors = useSensors(

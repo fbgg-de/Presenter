@@ -27,7 +27,7 @@ export type LanguagePickerProps = {
  */
 export const LanguagePicker = ({ selected, suggested = [], onAdd, disabled }: LanguagePickerProps) => {
   const { LL } = useI18nContext();
-  const { uiLanguage } = useGetSettings();
+  const { uiLanguage } = useGetSettings('uiLanguage');
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const [query, setQuery] = useState('');
 

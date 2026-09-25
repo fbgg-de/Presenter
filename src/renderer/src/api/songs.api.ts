@@ -20,7 +20,6 @@ export type SongEntity = {
   blocks: Record<string, string[]>;
   background?: string;
   css?: string;
-  styleId?: number;
   languages?: string[];
   /** Server-side last-modified timestamp (MySQL DATETIME string) */
   updatedAt?: string | null;

@@ -1,6 +1,8 @@
-﻿import { useEffect, useMemo, useRef } from 'react';
+﻿import { sidePanelState, toggleSidePanel } from '@/components/operator/sidePanel';
+import { useEffect, useMemo, useRef } from 'react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import {
+  setActiveItemAndBlock,
   setActiveItemIndex,
   setActiveBlockIndex,
   setActiveLineIndex,
@@ -13,9 +15,14 @@ import {
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { DEFAULT_KEYBOARD_MAPPING } from '@/components/settings/KeyboardMappingEditor';
 import { countPrimaryLines } from '@/song';
-import { useGetSettings } from '@/store/settingsSlice';
+import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useGetShow } from '@/store/showSlice';
-import { sendCueCommand } from '@/media/runtime';
+import { shuttle, togglePlaybackKey } from '@/media/mediaControls';
+import { goMedia, switchBackground } from '@/media/useMediaHost';
+import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
+import { DEFAULT_GROUP_ID } from '@/utils/showGroups';
+import { toggleFocusedAudio } from '@/media/audioPlayers';
+import { navigableBlockCount } from '@/utils/itemBlocks';
 
 /** Count only primary (non-translated) lines in a raw block lines array. */
 
@@ -40,10 +47,41 @@ const eventToCombo = (e: KeyboardEvent): string => {
 export const useKeyboardNavigation = () => {
   const dispatch = useAppDispatch();
 
-  const { resetBlackOnSwitch, keyboardMapping, hideTransitionMode, hideTransitionDuration, videoFadeDuration } = useGetSettings();
-  const { keyboardDisabled, videoVisible, activeItemIndex, activeBlockIndex, activeLineIndex } = useGetPresentationSettings();
+  const {
+    resetBlackOnSwitch,
+    keyboardMapping,
+    hideTransitionMode,
+    hideTransitionDuration,
+    videoFadeDuration,
+    operatorSetListOpen,
+    operatorSidePanelOpen,
+    operatorInspectorOpen,
+    operatorPreviewOpen,
+  } = useGetSettings(
+    'resetBlackOnSwitch',
+    'keyboardMapping',
+    'hideTransitionMode',
+    'hideTransitionDuration',
+    'videoFadeDuration',
+    'operatorSetListOpen',
+    'operatorSidePanelOpen',
+    'operatorInspectorOpen',
+    'operatorPreviewOpen',
+  );
+  const updateSetting = useUpdateSetting();
+  const { keyboardDisabled, videoVisible, activeItemIndex, activeBlockIndex, activeLineIndex, previewTarget, openItemIndex } =
+    useGetPresentationSettings(
+      'keyboardDisabled',
+      'videoVisible',
+      'activeItemIndex',
+      'activeBlockIndex',
+      'activeLineIndex',
+      'previewTarget',
+      'openItemIndex',
+    );
   const { songsOrder, songs } = useGetSongs();
   const { currentShow } = useGetShow();
+  const { data: screenGroups = [] } = useGetScreenGroupsQuery();
 
   // Resolve the current song from the SHOW order (not songsOrder — that array only
   // contains songs, so its indices diverge from activeItemIndex once non-song items exist).
@@ -56,6 +94,8 @@ export const useKeyboardNavigation = () => {
   const currentSong = currentSongNumber != null ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber != null ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
   const showItemCount = currentShow?.order?.length ?? songsOrder.length;
+  // Song sections or verse pages — what next/previous block steps through.
+  const blockCount = navigableBlockCount(activeShowItem, currentSong, orderName);
 
   // Build reverse mapping: combo string → action id
   const comboToAction = useMemo(() => {
@@ -87,10 +127,18 @@ export const useKeyboardNavigation = () => {
     currentSong,
     orderName,
     showItemCount,
+    blockCount,
+    setListOpen: operatorSetListOpen !== false,
+    sidePanel: sidePanelState({ operatorSidePanelOpen, operatorInspectorOpen, operatorPreviewOpen }),
+    updateSetting,
     hideTransitionMode,
     hideTransitionDuration,
     videoVisible,
     videoFadeDuration,
+    previewTarget,
+    openItemIndex,
+    currentShow,
+    screenGroups,
   });
   stateRef.current = {
     keyboardDisabled,
@@ -103,10 +151,18 @@ export const useKeyboardNavigation = () => {
     currentSong,
     orderName,
     showItemCount,
+    blockCount,
+    setListOpen: operatorSetListOpen !== false,
+    sidePanel: sidePanelState({ operatorSidePanelOpen, operatorInspectorOpen, operatorPreviewOpen }),
+    updateSetting,
     hideTransitionMode,
     hideTransitionDuration,
     videoVisible,
     videoFadeDuration,
+    previewTarget,
+    openItemIndex,
+    currentShow,
+    screenGroups,
   };
 
   // Register the listener only ONCE
@@ -123,6 +179,17 @@ export const useKeyboardNavigation = () => {
       }
 
       const combo = eventToCombo(e);
+      const mediaFade = s.hideTransitionMode === 'fade' ? s.hideTransitionDuration : 0;
+      const agendaGroupId = s.currentShow?.order?.[s.activeItemIndex]?.groupId ?? DEFAULT_GROUP_ID;
+
+      // Alt+1…9: switch to that background of the active agenda group (fixed, like the tiles show).
+      const digit = /^Alt\+Digit([1-9])$/.exec(combo);
+      if (digit && s.currentShow) {
+        e.preventDefault();
+        void switchBackground(s.currentShow, agendaGroupId, Number(digit[1]), s.screenGroups, mediaFade);
+        return;
+      }
+
       const action = s.comboToAction[combo];
       if (!action) return;
 
@@ -150,15 +217,17 @@ export const useKeyboardNavigation = () => {
       };
 
       const nextBlock = () => {
-        if (s.currentSong) {
-          const allBlocks = s.currentSong.getBlocks(s.orderName);
-          if (s.activeBlockIndex < allBlocks.length - 1) {
-            dispatch(setActiveBlockIndex(s.activeBlockIndex + 1));
-          }
+        if (s.activeBlockIndex < s.blockCount - 1) {
+          dispatch(setActiveBlockIndex(s.activeBlockIndex + 1));
         }
       };
 
       const prevLine = () => {
+        // Verse pages have no line navigation of their own: a line step is a page step.
+        if (!s.currentSong) {
+          prevBlock();
+          return;
+        }
         if (s.currentSong) {
           if (s.activeLineIndex > 0) {
             dispatch(setActiveLineIndex(s.activeLineIndex - 1));
@@ -172,6 +241,10 @@ export const useKeyboardNavigation = () => {
       };
 
       const nextLine = () => {
+        if (!s.currentSong) {
+          nextBlock();
+          return;
+        }
         if (s.currentSong) {
           const currentLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex);
           const primaryCount = countPrimaryLines(currentLines, s.currentSong.languages?.[0]);
@@ -201,6 +274,7 @@ export const useKeyboardNavigation = () => {
           e.preventDefault();
           prevBlock();
           break;
+        case 'advance':
         case 'next_block':
           e.preventDefault();
           nextBlock();
@@ -217,6 +291,31 @@ export const useKeyboardNavigation = () => {
           e.preventDefault();
           dispatch(toggleBlack());
           break;
+        // Operator view columns (also in the View menu).
+        case 'toggle_set_list':
+          e.preventDefault();
+          s.updateSetting('operatorSetListOpen', !s.setListOpen);
+          break;
+        case 'send_preview_live': {
+          // A slide waiting in the preview, else the first slide of an entry opened in the agenda.
+          // Neither: leave Enter to whatever has focus.
+          const target =
+            s.previewTarget ??
+            (s.openItemIndex !== null && s.openItemIndex !== s.activeItemIndex ? { itemIndex: s.openItemIndex, blockIndex: 0 } : null);
+          if (!target) return;
+          e.preventDefault();
+          if (target.itemIndex !== s.activeItemIndex) {
+            dispatch(setActiveItemAndBlock({ itemIndex: target.itemIndex, blockIndex: target.blockIndex }));
+            if (s.resetBlackOnSwitch) dispatch(setBlack(false));
+          } else {
+            dispatch(setActiveBlockIndex(target.blockIndex));
+          }
+          break;
+        }
+        case 'toggle_inspector':
+          e.preventDefault();
+          toggleSidePanel(s.sidePanel, s.updateSetting);
+          break;
         case 'toggle_text_hidden':
           e.preventDefault();
           dispatch(toggleTextHidden());
@@ -225,24 +324,24 @@ export const useKeyboardNavigation = () => {
           e.preventDefault();
           dispatch(setActiveBlockIndex(0));
           break;
+        case 'media_go':
+          if (!s.currentShow) return;
+          e.preventDefault();
+          void goMedia(s.currentShow, agendaGroupId, s.screenGroups, mediaFade);
+          break;
+        case 'media_back':
+        case 'media_play':
+          // Nothing to play: leave the key alone.
+          if (shuttle(action === 'media_back' ? 'back' : 'play')) e.preventDefault();
+          break;
         case 'toggle_video_playback':
           e.preventDefault();
-          if (sendCueCommand({ type: 'toggle' })) break;
-          if (window.api?.videoCommand) {
-            window.api.videoCommand({ action: 'toggle', fadeDuration: s.videoFadeDuration });
-          }
+          if (!toggleFocusedAudio()) togglePlaybackKey();
           break;
         case 'toggle_video_visible':
           e.preventDefault();
+          // Backgrounds are hidden through the content every window gets (see media/playback).
           dispatch(toggleVideoVisible());
-          if (window.api?.setVideoVisible) {
-            const nextVisible = !s.videoVisible;
-            window.api.setVideoVisible({
-              value: nextVisible,
-              mode: s.hideTransitionMode,
-              durationMs: s.hideTransitionDuration,
-            });
-          }
           break;
       }
     };

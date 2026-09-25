@@ -188,20 +188,13 @@ export const WindowDesk = ({
                   }}
                 >
                   <Stack direction="row" spacing={0.25} sx={{ alignItems: 'center', maxWidth: '100%' }}>
-                    {w.config.displayMode === 'stream' ? <StreamIcon sx={{ fontSize: 11 }} /> : <NormalIcon sx={{ fontSize: 11 }} />}
+                    {w.stream ? <StreamIcon sx={{ fontSize: 11 }} /> : <NormalIcon sx={{ fontSize: 11 }} />}
                     {w.frozen && <FreezeIcon sx={{ fontSize: 11 }} />}
                     {w.hidden && <HiddenIcon sx={{ fontSize: 11 }} />}
                     <Typography variant="caption" noWrap sx={{ fontSize: '0.6rem', fontWeight: 700 }}>
                       {w.name}
                     </Typography>
                   </Stack>
-                  {/* Which stage layers land here — the fastest way to see that the countdown
-                      is going to the wrong beamer. */}
-                  {(w.config.stageLayerIds?.length ?? 0) > 0 && height_ > 34 && (
-                    <Typography variant="caption" sx={{ fontSize: '0.5rem', opacity: 0.8 }}>
-                      ⏱ {w.config.stageLayerIds!.length}
-                    </Typography>
-                  )}
                 </Box>
               </Tooltip>
             );

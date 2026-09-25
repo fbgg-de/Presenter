@@ -1,5 +1,12 @@
-import { useMemo, useRef, useEffect, memo, useCallback, Ref } from 'react';
-import { Card, CardContent, CardMedia, Stack, Typography, useTheme } from '@mui/material';
+/**
+ * The slides of the active song, as the operator view shows them: slide cards drawn in the theme
+ * of the song's agenda group.
+ *
+ * Primary lines stay clickable inside a card, so line navigation (stream windows) keeps working;
+ * translations are left out of the picture to keep it readable.
+ */
+import { memo, useCallback, useEffect, useMemo, useRef, type ReactNode, type Ref } from 'react';
+import { Stack, Typography } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppSelector, useAppDispatch } from '@/store';
 import { setActiveBlockIndex, setActiveLineIndex, useGetPresentationSettings } from '@/store/presentationSlice';
@@ -7,193 +14,94 @@ import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { useGetShow } from '@/store/showSlice';
 import { isPrimaryLine, parseTaggedLine, resolvePrimaryLanguage } from '@/song';
 import { useGetSettings } from '@/store/settingsSlice';
+import { useActiveLook } from '@/hooks/useActiveLook';
+import { useSlideSelect } from '@/hooks/useSlideSelect';
+import { resolveLook, themeSource } from '@/look/resolveLook';
+import { LookPill } from '@/components/operator/LookPill';
+import { SlideCard, SlideGrid } from '@/components/show/SlideCard';
 
-// Stable sx objects (module scope so identity never changes between renders)
-const containerSx = {
-  flexGrow: 1,
-  flexWrap: 'wrap',
-  gap: 2,
-  padding: '0 25px 20px',
-  alignContent: 'flex-start',
-  justifyContent: 'flex-start',
-  overflowY: 'auto',
-  userSelect: 'none',
-} as const;
-const blockNameSx = { padding: '6px', textAlign: 'center', cursor: 'pointer' } as const;
-const cardContentSx = { paddingX: 0 } as const;
-
-interface BlockCardProps {
-  blockIndex: number;
-  name: string;
-  lines: string[];
-  copyright?: boolean;
-  /** The song's anchor language; undefined for songs whose primary lines carry no tag. */
-  primaryLanguage?: string;
-  selected: boolean;
-  activeLineIndex: number;
-  color: string;
-  songNumber?: number;
-  songTitle?: string;
-  songAuthors?: string;
-  songCopyright?: string;
-  licenseNumber?: number;
-  showLicenseNumber?: boolean;
-  licenseLabel?: string;
-  unknownLabel: string;
-  onBlockClick: (i: number) => void;
-  onBlockDoubleClick: (i: number) => void;
-  onLineClick: (b: number, l: number) => void;
-  forwardRef?: Ref<HTMLDivElement>;
-}
-
-/**
- * Memoized block card. Re-renders only when its own props change.
- * Translation lines (tagged with [XX]) are shown italic/grey and non-selectable.
- * Only primary (untagged) lines count for activeLineIndex navigation.
- */
-const BlockCard = memo(function BlockCard({
-  blockIndex,
-  name,
-  lines,
-  copyright,
-  primaryLanguage,
+/** The song's credits slide, shown after the lyrics. */
+const CopyrightCard = ({
   selected,
-  activeLineIndex,
-  color,
-  songNumber,
-  songTitle,
-  songAuthors,
-  songCopyright,
-  licenseNumber,
-  showLicenseNumber,
-  licenseLabel,
-  unknownLabel,
-  onBlockClick,
-  onBlockDoubleClick,
-  onLineClick,
+  label,
+  lines,
+  onClick,
+  onDoubleClick,
   forwardRef,
-}: BlockCardProps) {
-  // Build display rows: each primary line may be followed by translation lines
-  type Row = { primaryIdx: number; text: string; translations: string[] };
-  const rows: Row[] = [];
-  let primaryIdx = 0;
-  // Which language anchors a row is resolved from the block itself, so a block whose tags do
-  // not match the song's declared list still shows one row per lyric line rather than one row
-  // holding everything.
-  const anchor = resolvePrimaryLanguage(lines, primaryLanguage);
-  for (let i = 0; i < lines.length; i++) {
-    const parsed = parseTaggedLine(lines[i]);
-    if (isPrimaryLine(lines[i], anchor)) {
-      rows.push({ primaryIdx: primaryIdx++, text: parsed.text, translations: [] });
-    } else if (rows.length > 0) {
-      rows[rows.length - 1].translations.push(parsed.text);
-    }
-  }
-
-  return (
-    <Card ref={forwardRef} sx={{ flexGrow: 1, minWidth: '150px', border: `1px solid ${color}` }}>
-      <CardMedia sx={{ background: color }}>
+}: {
+  selected: boolean;
+  label: string;
+  lines: string[];
+  onClick: () => void;
+  onDoubleClick: () => void;
+  forwardRef?: Ref<HTMLDivElement>;
+}) => (
+  <Stack spacing={0.5} ref={forwardRef} sx={{ minWidth: 0 }}>
+    <Stack
+      onClick={onClick}
+      onDoubleClick={onDoubleClick}
+      sx={{
+        aspectRatio: '16/9',
+        borderRadius: 1,
+        border: 2,
+        borderColor: selected ? 'error.main' : 'divider',
+        bgcolor: 'action.hover',
+        cursor: 'pointer',
+        px: 1.5,
+        pb: 1.25,
+        pt: 1,
+        gap: 0.25,
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        overflow: 'hidden',
+      }}
+    >
+      {/* Like the screen: the credits sit at the bottom, centred, and wrap instead of being cut. */}
+      {lines.map((line, index) => (
         <Typography
-          variant="h6"
-          sx={blockNameSx}
-          onClick={() => onBlockClick(blockIndex)}
-          onDoubleClick={() => onBlockDoubleClick(blockIndex)}
+          key={index}
+          sx={{
+            fontWeight: index === 0 ? 600 : 400,
+            fontSize: 'clamp(0.68rem, 1.05vw, 0.95rem)',
+            lineHeight: 1.25,
+            textAlign: 'center',
+            overflowWrap: 'anywhere',
+          }}
         >
-          {name}
+          {line}
         </Typography>
-      </CardMedia>
-      <CardContent sx={cardContentSx}>
-        {copyright ? (
-          <Stack
-            sx={{
-              paddingX: '14px',
-              background: selected ? color : 'none',
-              cursor: 'pointer',
-            }}
-            onDoubleClick={() => onBlockDoubleClick(blockIndex)}
-          >
-            <Typography
-              sx={{
-                fontWeight: 'bold',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              (#{songNumber}) {songTitle ?? unknownLabel}
-            </Typography>
-            {songAuthors && <Typography>{songAuthors}</Typography>}
-            {songCopyright && <Typography sx={{ fontStyle: 'italic' }}>{songCopyright}</Typography>}
-            {showLicenseNumber && licenseNumber && licenseLabel ? (
-              <Typography sx={{ fontStyle: 'italic' }}>{licenseLabel}</Typography>
-            ) : null}
-          </Stack>
-        ) : (
-          rows.map((row) => {
-            const isActive = selected && row.primaryIdx === activeLineIndex;
-            return (
-              <div key={row.primaryIdx}>
-                {/* Primary line — selectable */}
-                <Typography
-                  variant="body1"
-                  sx={{
-                    paddingX: '14px',
-                    background: isActive ? color : 'none',
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onClick={() => onLineClick(blockIndex, row.primaryIdx)}
-                >
-                  {row.text}
-                </Typography>
-                {/* Translation lines — italic, grey, non-selectable */}
-                {row.translations.map((t, ti) => (
-                  <Typography
-                    key={ti}
-                    variant="body2"
-                    sx={{
-                      paddingX: '14px',
-                      fontStyle: 'italic',
-                      color: 'text.disabled',
-                      pointerEvents: 'none',
-                      lineHeight: 1.2,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {t}
-                  </Typography>
-                ))}
-              </div>
-            );
-          })
-        )}
-      </CardContent>
-    </Card>
-  );
-});
+      ))}
+    </Stack>
+    <Typography variant="caption" sx={{ color: selected ? 'error.main' : 'text.secondary' }}>
+      {label}
+    </Typography>
+  </Stack>
+);
 
-const ControlSong = () => {
-  const { palette } = useTheme();
+const ControlSong = ({ index: itemIndex, isLive }: { index: number; isLive: boolean }) => {
   const dispatch = useAppDispatch();
   const { LL } = useI18nContext();
+  const O = LL.OPERATOR;
 
-  const { verseClick, showLicenseNumber } = useGetSettings();
-  const { activeBlockIndex, activeLineIndex, activeItemIndex } = useGetPresentationSettings();
+  const { songClick, showLicenseNumber } = useGetSettings('songClick', 'showLicenseNumber');
+  const { activeBlockIndex, activeLineIndex } = useGetPresentationSettings('activeBlockIndex', 'activeLineIndex');
   const { songsOrder, songs } = useGetSongs();
   const { currentShow } = useGetShow();
 
   // Resolve the current song from the SHOW order (not songsOrder — that array only
-  // contains songs, so its indices diverge from activeItemIndex once non-song items exist).
-  const activeShowItem = currentShow?.order?.[activeItemIndex];
+  // contains songs, so its indices diverge from item indices once non-song items exist).
+  const activeShowItem = currentShow?.order?.[itemIndex];
   const currentSongNumber = activeShowItem
     ? activeShowItem.type === 'song'
       ? activeShowItem.songNumber
       : undefined
-    : songsOrder[activeItemIndex];
+    : songsOrder[itemIndex];
   const currentSong = currentSongNumber ? songs[currentSongNumber] : undefined;
   const orderName = useAppSelector((state) => (currentSongNumber ? selectCurrentSongOrder(state, currentSongNumber) : 'Default'));
 
   const selectedRef = useRef<HTMLDivElement | null>(null);
 
-  // Scroll selected block into view only when activeBlockIndex changes.
+  // Scroll selected slide into view only when activeBlockIndex changes.
   // Use 'auto' (not 'smooth') — smooth-scrolls stack up under fast key auto-repeat
   // and animations get cancelled mid-flight, making the controller appear to lag.
   useEffect(() => {
@@ -201,78 +109,104 @@ const ControlSong = () => {
   }, [activeBlockIndex]);
 
   // Memoize blocks so getBlocks isn't called on every line-index change
-  const songBlocks = useMemo(() => {
-    if (!currentSong) return [];
-    return currentSong.getBlocks(orderName);
-  }, [currentSong, orderName]);
+  const songBlocks = useMemo(() => (currentSong ? currentSong.getBlocks(orderName) : []), [currentSong, orderName]);
 
+  // Primary lines per block — the rows line navigation counts.
+  const primaryLines = useMemo(
+    () =>
+      songBlocks.map(({ lines, copyright }) => {
+        if (copyright) return [];
+        const anchor = resolvePrimaryLanguage(lines, currentSong?.languages?.[0]);
+        return lines.filter((line) => isPrimaryLine(line, anchor)).map((line) => parseTaggedLine(line).text);
+      }),
+    [songBlocks, currentSong],
+  );
+
+  // One theme for every slide: the agenda group's.
+  const { input } = useActiveLook(itemIndex);
+  const style = useMemo(() => resolveLook(input).style, [input]);
+  const theme = themeSource(input);
+
+  const { select: selectSlide, previewTarget } = useSlideSelect();
   const handleBlockClick = useCallback(
     (blockIndex: number) => {
-      if (verseClick === 'click') {
-        dispatch(setActiveBlockIndex(blockIndex));
-      }
+      if (songClick === 'click') selectSlide(itemIndex, blockIndex);
     },
-    [verseClick, dispatch],
+    [songClick, selectSlide, itemIndex],
   );
 
   const handleBlockDoubleClick = useCallback(
     (blockIndex: number) => {
-      if (verseClick === 'double-click') {
-        dispatch(setActiveBlockIndex(blockIndex));
-      }
+      if (songClick === 'double-click') selectSlide(itemIndex, blockIndex);
     },
-    [verseClick, dispatch],
+    [songClick, selectSlide, itemIndex],
   );
 
   const handleLineClick = useCallback(
     (blockIndex: number, lineIndex: number) => {
+      // A line of a song that is not on screen yet sends its slide, like a slide click.
+      if (!isLive) {
+        selectSlide(itemIndex, blockIndex);
+        return;
+      }
       dispatch(setActiveBlockIndex(blockIndex));
       dispatch(setActiveLineIndex(lineIndex));
     },
-    [dispatch],
+    [dispatch, isLive, selectSlide, itemIndex],
   );
 
   if (!currentSong) {
     return null;
   }
 
-  const licenseLabel = showLicenseNumber && currentSong.account ? `${LL.AUTH.LICENSE_NUMBER()}: ${currentSong.account}` : undefined;
-  const unknownLabel = LL.COMMON.TITLE_UNKNOWN();
-
   return (
-    <Stack direction="row" sx={containerSx}>
-      {songBlocks.map(({ name, lines, copyright }, blockIndex) => {
-        const selected = activeBlockIndex === blockIndex;
-        const color = selected ? palette.secondary.main : palette.primary.main;
-        return (
-          <BlockCard
+    <SlideGrid title={currentSong.title} subtitle={orderName} pills={theme.name ? <LookPill kind="theme" label={theme.name} /> : undefined}>
+      {songBlocks.flatMap(({ name, copyright }, blockIndex) => {
+        const selected = isLive && activeBlockIndex === blockIndex;
+        const nodes: ReactNode[] = [];
+
+        if (copyright) {
+          const credits = [
+            `#${currentSong.songNumber} ${currentSong.title ?? LL.COMMON.TITLE_UNKNOWN()}`,
+            currentSong.authors,
+            currentSong.copyright,
+            showLicenseNumber && currentSong.account ? `${LL.AUTH.LICENSE_NUMBER()}: ${currentSong.account}` : undefined,
+          ].filter((line): line is string => !!line);
+          nodes.push(
+            <CopyrightCard
+              key={blockIndex}
+              selected={selected}
+              label="©"
+              lines={credits}
+              onClick={() => handleBlockClick(blockIndex)}
+              onDoubleClick={() => handleBlockDoubleClick(blockIndex)}
+              forwardRef={selected ? selectedRef : undefined}
+            />,
+          );
+          return nodes;
+        }
+
+        nodes.push(
+          <SlideCard
             key={blockIndex}
             blockIndex={blockIndex}
             name={name}
-            lines={lines}
-            copyright={copyright}
-            primaryLanguage={currentSong.languages?.[0]}
+            lines={primaryLines[blockIndex]}
+            style={style}
             selected={selected}
-            // Pass activeLineIndex only when this block is selected so non-selected
-            // blocks do not re-render when the active line moves within the active block.
+            previewed={previewTarget?.itemIndex === itemIndex && previewTarget.blockIndex === blockIndex}
+            // Only the selected slide follows the active line, so the others do not re-render.
             activeLineIndex={selected ? activeLineIndex : -1}
-            color={color}
-            songNumber={currentSong.songNumber}
-            songTitle={currentSong.title}
-            songAuthors={currentSong.authors}
-            songCopyright={currentSong.copyright}
-            licenseNumber={currentSong.account}
-            showLicenseNumber={showLicenseNumber}
-            licenseLabel={licenseLabel}
-            unknownLabel={unknownLabel}
+            label={selected ? O.LIVE_SLIDE({ index: blockIndex + 1 }) : String(blockIndex + 1)}
             onBlockClick={handleBlockClick}
             onBlockDoubleClick={handleBlockDoubleClick}
             onLineClick={handleLineClick}
             forwardRef={selected ? selectedRef : undefined}
-          />
+          />,
         );
+        return nodes;
       })}
-    </Stack>
+    </SlideGrid>
   );
 };
 

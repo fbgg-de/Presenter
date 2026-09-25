@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent, type ReactNode } from 'react';
 import { Box, Chip, Divider, IconButton, InputBase, Stack, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import {
   DragIndicator as DragIcon,
@@ -8,11 +8,14 @@ import {
   Notes as RawIcon,
   ViewAgenda as BlocksIcon,
   Close as CloseIcon,
+  ReportProblemOutlined as TooLongIcon,
 } from '@mui/icons-material';
 import { DndContext, DragEndEvent, KeyboardSensor, PointerSensor, TouchSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { lineOverflows, type FitLimits } from '@/song/lyricFit';
+import type { ResolvedStyle } from '@/utils/styleUtils';
 import { useGetSettings } from '@/store/settingsSlice';
 import { languageName } from '@/song/languageNames';
 import {
@@ -37,6 +40,11 @@ export type LyricBlockEditorProps = {
   visibleLanguages: string[];
   onVisibleLanguagesChange: (visible: string[]) => void;
   onChange: (pages: LyricPage[]) => void;
+  /** Buttons at the right end of the toolbar (the song editor's preview and delete). */
+  actions?: ReactNode;
+  /** What one screen holds in the song's theme; without it nothing is flagged. */
+  fit?: FitLimits;
+  textTransform?: ResolvedStyle['textTransform'];
 };
 
 /** The key a language occupies on a lyric line: the default language holds the untagged text. */
@@ -58,6 +66,7 @@ const LyricRow = ({
   onPaste,
   onInsertAfter,
   onDelete,
+  tooLong,
   labels,
 }: {
   line: { id: string; texts: Record<string, string> };
@@ -69,6 +78,8 @@ const LyricRow = ({
   onPaste: (event: ClipboardEvent<Element>, lineId: string, key: string) => void;
   onInsertAfter: (lineId: string) => void;
   onDelete: (lineId: string) => void;
+  /** Keys of the line's texts the theme would wrap, with what to say about it. */
+  tooLong: { keys: string[]; label: string };
   labels: { addLine: string; deleteLine: string; placeholder: string; translationPlaceholder: (name: string) => string };
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: line.id });
@@ -134,6 +145,11 @@ const LyricRow = ({
               >
                 {column.code}
               </Typography>
+            )}
+            {tooLong.keys.includes(column.key) && (
+              <Tooltip title={tooLong.label}>
+                <TooLongIcon sx={{ fontSize: 16, color: 'warning.main', flexShrink: 0 }} />
+              </Tooltip>
             )}
             <InputBase
               fullWidth
@@ -207,11 +223,27 @@ const BreakRow = ({ id, label, onRemove, removeLabel }: { id: string; label: str
  * the lines are serialised back to the same flat `string[]` the presentation reads (see
  * `song/lyrics.ts`), and the raw mode below hands that exact text over for bulk edits.
  */
-export const LyricBlockEditor = ({ pages, languages, visibleLanguages, onVisibleLanguagesChange, onChange }: LyricBlockEditorProps) => {
+export const LyricBlockEditor = ({
+  pages,
+  languages,
+  visibleLanguages,
+  onVisibleLanguagesChange,
+  onChange,
+  actions,
+  fit,
+  textTransform,
+}: LyricBlockEditorProps) => {
   const { LL } = useI18nContext();
-  const { uiLanguage } = useGetSettings();
+  const { uiLanguage } = useGetSettings('uiLanguage');
   const [raw, setRaw] = useState(false);
-  const [rawText, setRawText] = useState('');
+  /**
+   * The text being typed, remembered together with the pages it was typed over. The editor is
+   * reused when the song editor switches block tabs, so a draft for other pages is stale and the
+   * text is derived from the current block again — the same happens after a commit on blur.
+   */
+  const [rawDraft, setRawDraft] = useState<{ pages: LyricPage[]; text: string } | null>(null);
+  const rawText = rawDraft && rawDraft.pages === pages ? rawDraft.text : pagesToRawText(pages, languages);
+  const setRawText = (text: string) => setRawDraft({ pages, text });
   const rawRef = useRef<HTMLTextAreaElement | null>(null);
 
   const inputs = useRef(new Map<string, HTMLInputElement>());
@@ -475,11 +507,30 @@ export const LyricBlockEditor = ({ pages, languages, visibleLanguages, onVisible
   };
 
   const toggleRaw = (next: boolean) => {
-    if (next) setRawText(pagesToRawText(pages, languages));
+    if (next) setRawDraft(null);
     else onChange(rawTextToPages(rawText, languages[0]));
 
     setRaw(next);
   };
+
+  // Lines the theme would wrap, and pages with more lines than fit — measured, not guessed.
+  const tooLongKeys = useMemo(() => {
+    const flagged = new Map<string, string[]>();
+    if (!fit) return flagged;
+    for (const page of pages) {
+      for (const line of page.lines) {
+        const keys = Object.entries(line.texts)
+          .filter(([, text]) => lineOverflows(text, fit, textTransform))
+          .map(([key]) => key);
+        if (keys.length) flagged.set(line.id, keys);
+      }
+    }
+    return flagged;
+  }, [pages, fit, textTransform]);
+  const longPages = useMemo(
+    () => new Set(fit ? pages.filter((page) => page.lines.length > fit.maxLines).map((page) => page.id) : []),
+    [pages, fit],
+  );
 
   const pageCount = items.filter((item) => item.kind === 'break').length + 1;
   let pageIndex = 0;
@@ -488,6 +539,20 @@ export const LyricBlockEditor = ({ pages, languages, visibleLanguages, onVisible
   return (
     <Stack sx={{ gap: 1 }}>
       <Stack direction="row" sx={{ gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          value={raw ? 'raw' : 'blocks'}
+          onChange={(_, value) => value && toggleRaw(value === 'raw')}
+        >
+          <ToggleButton value="blocks" title={LL.SONG_EDITOR.BLOCK_MODE()}>
+            <BlocksIcon fontSize="small" />
+          </ToggleButton>
+          <ToggleButton value="raw" title={LL.SONG_EDITOR.RAW_MODE()}>
+            <RawIcon fontSize="small" />
+          </ToggleButton>
+        </ToggleButtonGroup>
+
         {languages.length > 1 && (
           <Stack direction="row" sx={{ gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
             <Typography variant="caption" color="text.secondary">
@@ -521,21 +586,16 @@ export const LyricBlockEditor = ({ pages, languages, visibleLanguages, onVisible
         )}
 
         <Box sx={{ flexGrow: 1 }} />
-
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          value={raw ? 'raw' : 'blocks'}
-          onChange={(_, value) => value && toggleRaw(value === 'raw')}
-        >
-          <ToggleButton value="blocks" title={LL.SONG_EDITOR.BLOCK_MODE()}>
-            <BlocksIcon fontSize="small" />
-          </ToggleButton>
-          <ToggleButton value="raw" title={LL.SONG_EDITOR.RAW_MODE()}>
-            <RawIcon fontSize="small" />
-          </ToggleButton>
-        </ToggleButtonGroup>
+        {actions}
       </Stack>
+
+      {/* Pages the theme would cut off: said once, above the lines. */}
+      {longPages.size > 0 && !raw && (
+        <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', color: 'warning.main' }}>
+          <TooLongIcon sx={{ fontSize: 16 }} />
+          <Typography variant="caption">{LL.SONG_EDITOR.PAGE_TOO_LONG({ lines: fit?.maxLines ?? 0 })}</Typography>
+        </Stack>
+      )}
 
       {raw ? (
         <Stack sx={{ gap: 0.5 }}>
@@ -600,6 +660,7 @@ export const LyricBlockEditor = ({ pages, languages, visibleLanguages, onVisible
                 return (
                   <LyricRow
                     key={item.line.id}
+                    tooLong={{ keys: tooLongKeys.get(item.line.id) ?? [], label: LL.SONG_EDITOR.LINE_TOO_LONG() }}
                     line={item.line}
                     columns={columns}
                     pageLineNumber={lineNumber}

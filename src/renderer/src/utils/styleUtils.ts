@@ -1,4 +1,4 @@
-import type { LanguageStyleEntry, StyleData, StyleEntity } from '@/api/styles.api';
+import type { LanguageStyleEntry, StyleData } from '@/api/styles.api';
 import { MAIN_LANGUAGE_SLOT, entryForSlot, normaliseLanguageEntries } from '@/utils/languageSlots';
 import type { CSSProperties } from 'react';
 
@@ -197,71 +197,6 @@ export function mergeStyles(base: ResolvedStyle, override: ResolvedStyle): Resol
   // Merge CSS strings
   if (base.css && override.css) {
     result.css = `${base.css}\n${override.css}`;
-  }
-
-  return result;
-}
-
-/**
- * Three-level style cascade resolution:
- *   1. Global (account default)
- *   2. Show level
- *   3. Item level
- *
- * Each level overrides enabled properties from the previous level.
- * If a `windowName` is provided, window-specific overrides are applied
- * from each level's style.
- */
-export function resolveStyleCascade(
-  globalStyle: StyleEntity | undefined,
-  showStyle: StyleEntity | undefined,
-  itemStyle: StyleEntity | undefined,
-  windowName?: string,
-  allStyles?: StyleEntity[],
-): ResolvedStyle {
-  let result: ResolvedStyle = {};
-
-  // Apply global style (skip if entity-level enabled is false)
-  if (globalStyle && globalStyle.enabled) {
-    result = mergeStyles(result, resolveStyleData(globalStyle.data));
-    // Apply window override for global
-    if (windowName && globalStyle.windowOverrides) {
-      const windowOverride = globalStyle.windowOverrides.find((w) => w.window_name === windowName);
-      if (windowOverride && allStyles) {
-        const overrideStyle = allStyles.find((s) => s.id === windowOverride.override_style_id);
-        if (overrideStyle) {
-          result = mergeStyles(result, resolveStyleData(overrideStyle.data));
-        }
-      }
-    }
-  }
-
-  // Apply show style (skip if entity-level enabled is false)
-  if (showStyle && showStyle.enabled) {
-    result = mergeStyles(result, resolveStyleData(showStyle.data));
-    if (windowName && showStyle.windowOverrides) {
-      const windowOverride = showStyle.windowOverrides.find((w) => w.window_name === windowName);
-      if (windowOverride && allStyles) {
-        const overrideStyle = allStyles.find((s) => s.id === windowOverride.override_style_id);
-        if (overrideStyle) {
-          result = mergeStyles(result, resolveStyleData(overrideStyle.data));
-        }
-      }
-    }
-  }
-
-  // Apply item style (skip if entity-level enabled is false)
-  if (itemStyle && itemStyle.enabled) {
-    result = mergeStyles(result, resolveStyleData(itemStyle.data));
-    if (windowName && itemStyle.windowOverrides) {
-      const windowOverride = itemStyle.windowOverrides.find((w) => w.window_name === windowName);
-      if (windowOverride && allStyles) {
-        const overrideStyle = allStyles.find((s) => s.id === windowOverride.override_style_id);
-        if (overrideStyle) {
-          result = mergeStyles(result, resolveStyleData(overrideStyle.data));
-        }
-      }
-    }
   }
 
   return result;

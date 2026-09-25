@@ -36,6 +36,13 @@ export interface StageLayerStatus {
   pausedAt?: number;
   paused: boolean;
   hidden: boolean;
+  /** The operator's correction to the running timer, ms. */
+  adjustMs?: number;
+  /**
+   * The layer has been started in this session. Before that `cue` is only the first cue it would
+   * show — nothing is on screen and there is no clock to read.
+   */
+  started: boolean;
   /** True once the layer has been stepped past its last cue. */
   finished: boolean;
 }
@@ -57,7 +64,7 @@ export interface StageEngine {
 export const useStageStatus = (): StageEngine => {
   const { data: layers = [] } = useGetStageLayersQuery();
   const stage = useGetStageState();
-  const { uiLanguage } = useGetSettings();
+  const { uiLanguage } = useGetSettings('uiLanguage');
 
   const statuses = useStageStatuses(layers, stage.layers);
 
@@ -85,6 +92,8 @@ const useStageStatuses = (layers: StageLayerEntity[], runtimes: Record<number, S
           pausedAt: runtime?.pausedAt,
           paused: runtime?.pausedAt !== undefined,
           hidden: runtime?.hidden ?? false,
+          started: !!runtime,
+          adjustMs: runtime?.adjustMs,
           finished: layer.data.cues.length > 0 && cueIndex >= layer.data.cues.length,
         };
       }),
@@ -102,9 +111,9 @@ export const useStageEngine = (): StageEngine => {
   const dispatch = useAppDispatch();
   const { data: layers = [] } = useGetStageLayersQuery();
   const stage = useGetStageState();
-  const { uiLanguage } = useGetSettings();
+  const { uiLanguage } = useGetSettings('uiLanguage');
   const { currentShow } = useGetShow();
-  const { activeItemIndex } = useGetPresentationSettings();
+  const { activeItemIndex } = useGetPresentationSettings('activeItemIndex');
 
   const locale = uiLanguage || 'en';
 
@@ -170,7 +179,7 @@ export const useStageEngine = (): StageEngine => {
       if (!runtime || runtime.pausedAt !== undefined) continue;
       const cue = layer.data.cues[runtime.cueIndex];
       if (!cue) continue;
-      const at = cueEndsAt(cue, runtime.startedAt);
+      const at = cueEndsAt(cue, runtime.startedAt, runtime.adjustMs);
       if (at !== null) due.push({ layerId: layer.id, at, cueCount: layer.data.cues.length });
     }
     return due;

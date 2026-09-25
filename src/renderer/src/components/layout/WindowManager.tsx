@@ -23,6 +23,8 @@ import {
   Drawer,
   IconButton,
   Stack,
+  Tab,
+  Tabs,
   Typography,
 } from '@mui/material';
 import {
@@ -37,8 +39,10 @@ import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
 import { toggleBlack, toggleFreezeWindow, toggleIdentify, useGetPresentationSettings } from '@/store/presentationSlice';
 import type { WindowConfig } from '@/store/windowSlice';
-import { useGetStylesQuery } from '@/api/styles.api';
 import { useGetStageLayersQuery } from '@/api/stage.api';
+import { stageLayerShownOnWindow } from '@/stage/types';
+import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
+import { ScreenGroupsPanel } from './ScreenGroupsPanel';
 import { useMetrics } from '@/hooks/useMetrics';
 import { usePresentationWindows } from '@/hooks/usePresentationWindows';
 import { hideIdentify, identifyWindows } from '@/utils/presentationBridge';
@@ -46,6 +50,7 @@ import type { ScreenInfo } from './ScreenPicker';
 import { WindowDesk } from './WindowDesk';
 import { WindowInspector } from './WindowInspector';
 import { WindowRow } from './WindowRow';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 interface WindowManagerProps {
   open: boolean;
@@ -58,27 +63,26 @@ interface WindowManagerProps {
 /** A sensible new window: 1080p on the primary screen unless a screen says otherwise. */
 const draftConfig = (screen?: ScreenInfo, name = 'Presentation'): WindowConfig => ({
   name,
-  displayMode: 'normal',
   frameless: true,
   fullscreen: false,
   alwaysOnTop: false,
   hideMouse: false,
-  transparent: false,
   width: screen?.bounds.width ?? 1920,
   height: screen?.bounds.height ?? 1080,
   positionX: screen?.bounds.x ?? 0,
   positionY: screen?.bounds.y ?? 0,
 });
 
-export const WindowManager = ({ open, onClose, openWithNew, selectWindowId }: WindowManagerProps) => {
+const WindowManagerBody = ({ open, onClose, openWithNew, selectWindowId }: WindowManagerProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const { trackEvent } = useMetrics();
-  const { isBlack, isIdentifying } = useGetPresentationSettings();
+  const { isBlack, isIdentifying } = useGetPresentationSettings('isBlack', 'isIdentifying');
 
-  const { data: styles = [] } = useGetStylesQuery();
   const { data: stageLayers = [] } = useGetStageLayersQuery();
+  const { data: screenGroups = [] } = useGetScreenGroupsQuery();
   const rig = usePresentationWindows();
+  const [view, setView] = useState<'windows' | 'groups'>('windows');
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   /** Non-null while creating: the config being filled in, not yet a window. */
@@ -119,7 +123,6 @@ export const WindowManager = ({ open, onClose, openWithNew, selectWindowId }: Wi
     );
     trackEvent('window_opened', 'window', id, {
       name: draft.name,
-      displayMode: draft.displayMode,
       width: draft.width,
       height: draft.height,
       left: draft.positionX,
@@ -127,9 +130,8 @@ export const WindowManager = ({ open, onClose, openWithNew, selectWindowId }: Wi
       screen: screen?.label,
       fullscreen: draft.fullscreen,
       frameless: draft.frameless,
-      transparent: draft.transparent,
       alwaysOnTop: draft.alwaysOnTop,
-      styleId: draft.styleId,
+      screenGroupId: draft.screenGroupId,
     });
     setDraft(null);
     setSelectedId(id);
@@ -153,7 +155,7 @@ export const WindowManager = ({ open, onClose, openWithNew, selectWindowId }: Wi
 
   return (
     <Drawer open={open} anchor="right" onClose={onClose}>
-      <Stack sx={{ width: 'min(96vw, 900px)', height: '100%' }}>
+      <Stack sx={{ width: 'min(96vw, 1320px)', height: '100%' }}>
         {/* Header */}
         <Stack direction="row" sx={{ alignItems: 'center', p: 2, borderBottom: 1, borderColor: 'divider' }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>
@@ -164,6 +166,11 @@ export const WindowManager = ({ open, onClose, openWithNew, selectWindowId }: Wi
             <CloseIcon />
           </IconButton>
         </Stack>
+
+        <Tabs value={view} onChange={(_e, v) => setView(v)} sx={{ px: 1.5, minHeight: 38, '& .MuiTab-root': { minHeight: 38 } }}>
+          <Tab value="windows" label={LL.WINDOW.TAB_WINDOWS()} />
+          <Tab value="groups" label={LL.WINDOW.TAB_GROUPS()} />
+        </Tabs>
 
         {/* Global actions */}
         <Stack direction="row" spacing={1} sx={{ p: 1.5, pb: 1, flexWrap: 'wrap', gap: 1 }}>
@@ -209,104 +216,119 @@ export const WindowManager = ({ open, onClose, openWithNew, selectWindowId }: Wi
           </Button>
         </Stack>
 
-        {/* The desk */}
-        <Box sx={{ px: 1.5, pb: 1 }}>
-          <WindowDesk
-            screens={rig.screens}
-            windows={rig.windows}
-            selectedId={selectedId}
-            onSelect={(id) => {
-              setDraft(null);
-              setSelectedId(id);
-            }}
-            onAssign={handleAssign}
-            onCreateOnScreen={(screen) => startDraft(screen)}
-          />
-        </Box>
-
-        <Divider />
-
-        {/* List + inspector, side by side so choosing a window never hides the others. */}
-        <Stack direction="row" sx={{ flex: 1, minHeight: 0 }}>
-          <Stack sx={{ width: '45%', minWidth: 260, overflow: 'auto', borderRight: 1, borderColor: 'divider' }}>
-            <Typography variant="overline" sx={{ px: 1.5, pt: 1, color: 'text.secondary' }}>
-              {LL.WINDOW.CONFIGURED()} ({rig.windows.length})
-            </Typography>
-            {rig.windows.length === 0 ? (
-              <Stack sx={{ p: 2, gap: 0.5 }}>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  {LL.WINDOW.NONE_CONFIGURED()}
-                </Typography>
-                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                  {LL.WINDOW.NONE_CONFIGURED_HINT()}
-                </Typography>
-              </Stack>
-            ) : (
-              rig.windows.map((win) => (
-                <WindowRow
-                  key={win.id}
-                  window={win}
-                  selected={selectedId === win.id}
-                  styleName={win.config.styleId ? styles.find((s) => s.id === win.config.styleId)?.name : undefined}
-                  stageLayerCount={win.config.stageLayerIds?.length ?? 0}
-                  onSelect={() => {
-                    setDraft(null);
-                    setSelectedId(win.id);
-                  }}
-                  onOpen={() => void rig.open(win.id)}
-                  onClose={() => void rig.close(win.id)}
-                  onDelete={() => setPendingDelete(win.id)}
-                  onToggleFreeze={() => dispatch(toggleFreezeWindow(win.name))}
-                  onToggleHidden={() => void rig.setHidden(win.id, !win.hidden)}
-                  onBringToFront={() => {
-                    if (win.runtimeId) void window.api?.focusPresentationWindow?.(win.runtimeId);
-                  }}
-                />
-              ))
-            )}
-          </Stack>
-
-          <Box sx={{ flex: 1, minWidth: 0, display: 'flex' }}>
-            {draft ? (
-              <WindowInspector
-                config={draft}
-                onChange={(patch) => setDraft((prev) => (prev ? { ...prev, ...patch } : prev))}
-                screens={rig.screens}
-                openWindows={deskWindows}
-                styles={styles}
-                stageLayers={stageLayers}
-                footer={
-                  <Stack direction="row" spacing={1}>
-                    <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate} sx={{ flex: 1 }}>
-                      {LL.WINDOW.CREATE()}
-                    </Button>
-                    <Button onClick={() => setDraft(null)}>{LL.COMMON.CANCEL()}</Button>
-                  </Stack>
-                }
-              />
-            ) : selected ? (
-              // Edits apply as they are made. There is no Apply button because there is
-              // nothing to batch: every change is already reversible by changing it back,
-              // and seeing it happen on the beamer is the whole point.
-              <WindowInspector
-                key={selected.id}
-                config={selected.config}
-                onChange={(patch) => void rig.update(selected.id, patch)}
-                screens={rig.screens}
-                openWindows={deskWindows}
-                styles={styles}
-                stageLayers={stageLayers}
-                bounds={selected.bounds}
-              />
-            ) : (
-              <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', p: 3 }}>
-                <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
-                  {LL.WINDOW.SELECT_HINT()}
-                </Typography>
-              </Stack>
-            )}
+        {view === 'groups' ? (
+          <Box sx={{ flex: 1, minHeight: 0, overflow: 'auto', borderTop: 1, borderColor: 'divider' }}>
+            <ScreenGroupsPanel
+              windows={rig.windows}
+              onAssign={(windowId, groupId) => void rig.update(windowId, { screenGroupId: groupId })}
+            />
           </Box>
-        </Stack>
+        ) : (
+          <>
+            {/* The desk */}
+            <Box sx={{ px: 1.5, pb: 1 }}>
+              <WindowDesk
+                screens={rig.screens}
+                windows={rig.windows}
+                selectedId={selectedId}
+                onSelect={(id) => {
+                  setDraft(null);
+                  setSelectedId(id);
+                }}
+                onAssign={handleAssign}
+                onCreateOnScreen={(screen) => startDraft(screen)}
+              />
+            </Box>
+
+            <Divider />
+
+            {/* List + inspector, side by side so choosing a window never hides the others. */}
+            <Stack direction="row" sx={{ flex: 1, minHeight: 0 }}>
+              <Stack sx={{ width: '45%', minWidth: 260, overflow: 'auto', borderRight: 1, borderColor: 'divider' }}>
+                <Typography variant="overline" sx={{ px: 1.5, pt: 1, color: 'text.secondary' }}>
+                  {LL.WINDOW.CONFIGURED()} ({rig.windows.length})
+                </Typography>
+                {rig.windows.length === 0 ? (
+                  <Stack sx={{ p: 2, gap: 0.5 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                      {LL.WINDOW.NONE_CONFIGURED()}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                      {LL.WINDOW.NONE_CONFIGURED_HINT()}
+                    </Typography>
+                  </Stack>
+                ) : (
+                  rig.windows.map((win) => (
+                    <WindowRow
+                      key={win.id}
+                      window={win}
+                      selected={selectedId === win.id}
+                      groupName={
+                        win.config.screenGroupId !== undefined
+                          ? screenGroups.find((g) => g.id === win.config.screenGroupId)?.name
+                          : undefined
+                      }
+                      stageLayerCount={stageLayers.filter((l) => stageLayerShownOnWindow(l.data, win.config.screenGroupId)).length}
+                      onSelect={() => {
+                        setDraft(null);
+                        setSelectedId(win.id);
+                      }}
+                      onOpen={() => void rig.open(win.id)}
+                      onClose={() => void rig.close(win.id)}
+                      onDelete={() => setPendingDelete(win.id)}
+                      onToggleFreeze={() => dispatch(toggleFreezeWindow(win.name))}
+                      onToggleHidden={() => void rig.setHidden(win.id, !win.hidden)}
+                      onBringToFront={() => {
+                        if (win.runtimeId) void window.api?.focusPresentationWindow?.(win.runtimeId);
+                      }}
+                    />
+                  ))
+                )}
+              </Stack>
+
+              <Box sx={{ flex: 1, minWidth: 0, display: 'flex' }}>
+                {draft ? (
+                  <WindowInspector
+                    config={draft}
+                    onChange={(patch) => setDraft((prev) => (prev ? { ...prev, ...patch } : prev))}
+                    screens={rig.screens}
+                    openWindows={deskWindows}
+                    stageLayers={stageLayers}
+                    screenGroups={screenGroups}
+                    footer={
+                      <Stack direction="row" spacing={1}>
+                        <Button variant="contained" startIcon={<AddIcon />} onClick={handleCreate} sx={{ flex: 1 }}>
+                          {LL.WINDOW.CREATE()}
+                        </Button>
+                        <Button onClick={() => setDraft(null)}>{LL.COMMON.CANCEL()}</Button>
+                      </Stack>
+                    }
+                  />
+                ) : selected ? (
+                  // Edits apply as they are made. There is no Apply button because there is
+                  // nothing to batch: every change is already reversible by changing it back,
+                  // and seeing it happen on the beamer is the whole point.
+                  <WindowInspector
+                    key={selected.id}
+                    config={selected.config}
+                    onChange={(patch) => void rig.update(selected.id, patch)}
+                    screens={rig.screens}
+                    openWindows={deskWindows}
+                    stageLayers={stageLayers}
+                    screenGroups={screenGroups}
+                    bounds={selected.bounds}
+                  />
+                ) : (
+                  <Stack sx={{ flex: 1, alignItems: 'center', justifyContent: 'center', p: 3 }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+                      {LL.WINDOW.SELECT_HINT()}
+                    </Typography>
+                  </Stack>
+                )}
+              </Box>
+            </Stack>
+          </>
+        )}
       </Stack>
 
       <Dialog open={!!pendingDelete} onClose={() => setPendingDelete(null)} maxWidth="xs" fullWidth>
@@ -334,3 +356,5 @@ export const WindowManager = ({ open, onClose, openWithNew, selectWindowId }: Wi
     </Drawer>
   );
 };
+
+export const WindowManager = stillWhileClosed(WindowManagerBody);

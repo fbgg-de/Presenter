@@ -57,7 +57,8 @@ class OidcClient extends OidcProtocol
         // Old sessions without a verified identity must authenticate once after this update.
         if (empty($_SESSION['oidc_subject']) || ($_SESSION['oidc_session_expires'] ?? 0) <= time()) { $clear(); return false; }
         if (time() < $expires - $refreshBeforeExpireSeconds) return false;
-        if (empty($tokens['refresh_token'])) { if (time() >= $expires) $clear(); return false; }
+        // The access token is only used at sign-in; without a refresh token the session simply runs to its end.
+        if (empty($tokens['refresh_token'])) return false;
         try {
             $admin = $_SESSION['authType'] === 'oidc_admin';
             $provider = null;
@@ -78,9 +79,13 @@ class OidcClient extends OidcProtocol
             $_SESSION['oidc_tokens'] = ['access_token' => $new['access_token'], 'id_token' => $new['id_token'] ?? $tokens['id_token'] ?? null,
                 'refresh_token' => $new['refresh_token'] ?? $tokens['refresh_token'], 'expires_at' => time() + (int)$new['expires_in']];
             return true;
+        } catch (OidcTransportException $e) {
+            // The IdP did not answer: keep the sign-in and try again on the next request.
+            error_log('OIDC session refresh postponed: provider unreachable.');
+            return false;
         } catch (Throwable $e) {
-            error_log('OIDC session refresh failed.');
-            if (time() >= $expires) $clear();
+            error_log('OIDC session refresh failed: ' . $e->getMessage());
+            $clear();
             return false;
         }
     }

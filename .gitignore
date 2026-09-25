@@ -17,6 +17,9 @@ out
 churchtools.openapi.json
 
 config.php
+
+# Provider discovery and signing keys (classes/OidcProtocol.php); rebuilt on demand.
+/cache
 copy.config.php
 
 # Annotated captures written by `npm run test:screens`

@@ -26,7 +26,6 @@ export class PresentationWindowManager {
   /** IDs of windows currently being recreated — prevents closed-handler deletion */
   private recreating = new Set<string>();
   /** Last broadcast content — re-sent after window recreation */
-  private lastBroadcastContent: PresentationContentIPC | null = null;
   /** Reference to main window for sending bounds-change notifications */
   private mainWindow: BrowserWindow | null = null;
 
@@ -89,9 +88,6 @@ export class PresentationWindowManager {
     queryParams.set('mode', config.displayMode || 'normal');
     if (config.name) queryParams.set('name', config.name);
     if (config.streamLines) queryParams.set('lines', String(config.streamLines));
-    if (config.languages && config.languages !== 'all') {
-      queryParams.set('languages', config.languages);
-    }
     if (config.streamTransparentBg) {
       queryParams.set('transparent', '1');
     }
@@ -111,28 +107,6 @@ export class PresentationWindowManager {
       win.show();
       if (config.fullscreen) {
         win.setFullScreen(true);
-      }
-      // Re-send the last known presentation content so the window doesn't show
-      // a black screen (happens when windows are restored on startup).
-      // A short delay lets the React app bootstrap before the IPC payload arrives.
-      if (this.lastBroadcastContent) {
-        const lastContent = this.lastBroadcastContent;
-        setTimeout(() => {
-          const m = this.windows.get(id);
-          if (m && !m.browserWindow.isDestroyed()) {
-            const wc: PresentationContentIPC = {
-              ...lastContent,
-              displayMode: config.displayMode || lastContent.displayMode,
-              languages: config.languages !== 'all' ? config.languages.split(',').map((l) => l.trim()) : lastContent.languages,
-              streamLines: config.streamLines || lastContent.streamLines,
-              hideText: config.hideText || lastContent.hideText,
-              hideBackground: config.hideBackground || lastContent.hideBackground,
-              windowName: config.name || lastContent.windowName,
-            };
-            m.lastSentPayload = null; // reset dedup so the payload is always sent
-            this._sendContent(m, wc);
-          }
-        }, 300);
       }
     });
 
@@ -300,34 +274,6 @@ export class PresentationWindowManager {
     const managed = this.windows.get(id);
     if (!managed || managed.browserWindow.isDestroyed()) return;
     managed.browserWindow.webContents.send('presentation-stage', payload);
-  }
-
-  /**
-   * Broadcast content to all presentation windows.
-   * Per-window config overrides (displayMode, languages, etc.) are applied.
-   */
-  broadcastContent(content: PresentationContentIPC): void {
-    this.lastBroadcastContent = content;
-    for (const [, managed] of this.windows) {
-      if (managed.browserWindow.isDestroyed()) continue;
-
-      // Apply per-window config overrides
-      const windowContent: PresentationContentIPC = {
-        ...content,
-        displayMode: managed.config.displayMode || content.displayMode,
-        languages: managed.config.languages !== 'all' ? managed.config.languages.split(',').map((l) => l.trim()) : content.languages,
-        streamLines: managed.config.streamLines || content.streamLines,
-        hideText: managed.config.hideText || content.hideText,
-        hideBackground: managed.config.hideBackground || content.hideBackground,
-        windowName: managed.config.name || content.windowName,
-      };
-
-      if (managed.frozen) {
-        managed.queuedContent = windowContent;
-      } else {
-        this._sendContent(managed, windowContent);
-      }
-    }
   }
 
   /**
@@ -577,21 +523,9 @@ export class PresentationWindowManager {
       cfg.displayMode = partial.displayMode;
       applied.push('displayMode');
     }
-    if (partial.languages !== undefined && partial.languages !== cfg.languages) {
-      cfg.languages = partial.languages;
-      applied.push('languages');
-    }
     if (partial.streamLines !== undefined && partial.streamLines !== cfg.streamLines) {
       cfg.streamLines = partial.streamLines;
       applied.push('streamLines');
-    }
-    if (partial.hideText !== undefined && partial.hideText !== cfg.hideText) {
-      cfg.hideText = partial.hideText;
-      applied.push('hideText');
-    }
-    if (partial.hideBackground !== undefined && partial.hideBackground !== cfg.hideBackground) {
-      cfg.hideBackground = partial.hideBackground;
-      applied.push('hideBackground');
     }
 
     // Frame / transparency cannot be toggled on a live BrowserWindow — recreate it.
@@ -602,7 +536,9 @@ export class PresentationWindowManager {
     }
     if (partial.streamTransparentBg !== undefined && partial.streamTransparentBg !== cfg.streamTransparentBg) {
       cfg.streamTransparentBg = partial.streamTransparentBg;
-      requiresReload.push('streamTransparentBg');
+      // Set by the window's screen group, which can change while the window is open.
+      this._recreateWindow(managed);
+      applied.push('streamTransparentBg');
     }
 
     return { applied, requiresReload };
@@ -705,7 +641,6 @@ export class PresentationWindowManager {
     queryParams.set('mode', config.displayMode || 'normal');
     if (config.name) queryParams.set('name', config.name);
     if (config.streamLines) queryParams.set('lines', String(config.streamLines));
-    if (config.languages && config.languages !== 'all') queryParams.set('languages', config.languages);
     if (config.streamTransparentBg) queryParams.set('transparent', '1');
     const queryString = queryParams.toString();
 
@@ -719,15 +654,6 @@ export class PresentationWindowManager {
       this.recreating.delete(id);
       win.show();
       if (config.fullscreen) win.setFullScreen(true);
-      // Re-send the last broadcast content to the new window
-      if (this.lastBroadcastContent) {
-        const windowContent: PresentationContentIPC = {
-          ...this.lastBroadcastContent,
-          displayMode: managed.config.displayMode || this.lastBroadcastContent.displayMode,
-          windowName: managed.config.name || this.lastBroadcastContent.windowName,
-        };
-        this._sendContent(managed, windowContent);
-      }
     });
 
     win.on('closed', () => {

@@ -24,7 +24,7 @@ import { useAppDispatch } from '@/store';
 import { toggleFreezeWindow, useGetPresentationSettings } from '@/store/presentationSlice';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useWindowActions, useWindowConfigs, type SavedWindowConfig } from '@/store/windowSlice';
-import { useGetStylesQuery } from '@/api/styles.api';
+import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { usePresentationWindows, refreshWindowRuntime, type RigWindow } from '@/hooks/usePresentationWindows';
 import { getHasRestoredSavedWindows, markRestoredSavedWindows, openPresentationWindow } from '@/utils/presentationBridge';
 import type { ScreenInfo } from './ScreenPicker';
@@ -46,14 +46,14 @@ export interface FooterWindowsProps {
 const useRestoreSavedWindows = (adopt: (runtimeId: string, config: SavedWindowConfig) => void): void => {
   const configs = useWindowConfigs();
   const actions = useWindowActions();
-  const { windowFooterVisible, restoreWindowsOnStart } = useGetSettings();
+  const { restoreWindowsOnStart } = useGetSettings('restoreWindowsOnStart');
 
   const configsRef = useRef(configs);
   configsRef.current = configs;
 
   useEffect(() => {
     if (getHasRestoredSavedWindows()) return;
-    if (!(windowFooterVisible || restoreWindowsOnStart)) return;
+    if (!restoreWindowsOnStart) return;
     const initial = configsRef.current;
     // Configs can arrive after mount (settings load asynchronously) — wait for them rather
     // than marking the restore done against an empty list.
@@ -96,13 +96,13 @@ const useRestoreSavedWindows = (adopt: (runtimeId: string, config: SavedWindowCo
       refreshWindowRuntime();
       window.dispatchEvent(new CustomEvent('presenter:force-broadcast'));
     })();
-  }, [configs.length, windowFooterVisible, restoreWindowsOnStart, adopt, actions]);
+  }, [configs.length, restoreWindowsOnStart, adopt, actions]);
 };
 
 /** One window as a footer chip. Name and mode only; state is in the tooltip and the tint. */
 const WindowChip = ({
   window: win,
-  styleName,
+  groupName,
   isBlack,
   draggable,
   onOpenActions,
@@ -111,7 +111,7 @@ const WindowChip = ({
   dragProps,
 }: {
   window: RigWindow;
-  styleName?: string;
+  groupName?: string;
   isBlack: boolean;
   draggable: boolean;
   onOpenActions: (e: MouseEvent<HTMLElement>) => void;
@@ -125,12 +125,11 @@ const WindowChip = ({
   // twice as wide as its name, on a strip where names are what you scan for.
   const details = [
     win.screen?.label,
-    styleName,
+    groupName,
     win.frozen ? LL.FOOTER.FREEZE() : null,
     win.config.fullscreen ? LL.WINDOW.FULLSCREEN() : null,
     win.config.alwaysOnTop ? LL.WINDOW.ALWAYS_ON_TOP() : null,
     win.hidden ? LL.FOOTER.HIDE_WINDOW() : null,
-    (win.config.stageLayerIds?.length ?? 0) > 0 ? LL.WINDOW.STAGE_LAYERS() : null,
   ].filter(Boolean);
 
   const tooltip = <Box sx={{ whiteSpace: 'pre-line' }}>{[win.name, ...(details.length ? [details.join(' · ')] : [])].join('\n')}</Box>;
@@ -156,7 +155,7 @@ const WindowChip = ({
     <Box {...dragProps} sx={{ display: 'inline-flex', cursor: draggable ? 'grab' : undefined }}>
       <Tooltip title={tooltip}>
         <Chip
-          icon={win.config.displayMode === 'stream' ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />}
+          icon={win.stream ? <StreamIcon fontSize="small" /> : <NormalIcon fontSize="small" />}
           label={win.name}
           size="small"
           variant={win.frozen ? 'filled' : 'outlined'}
@@ -175,11 +174,18 @@ const WindowChip = ({
   );
 };
 
+/** Restores the saved windows on start, for views that show no window strip (the operator view). */
+export const WindowRestoreHost = () => {
+  const rig = usePresentationWindows();
+  useRestoreSavedWindows(rig.adopt);
+  return null;
+};
+
 export const FooterWindows = ({ variant, onOpenWindowManager }: FooterWindowsProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
-  const { isBlack } = useGetPresentationSettings();
-  const { data: styles = [] } = useGetStylesQuery();
+  const { isBlack } = useGetPresentationSettings('isBlack');
+  const { data: screenGroups = [] } = useGetScreenGroupsQuery();
   const actions = useWindowActions();
   const rig = usePresentationWindows();
 
@@ -229,7 +235,7 @@ export const FooterWindows = ({ variant, onOpenWindowManager }: FooterWindowsPro
     <WindowChip
       key={win.id}
       window={win}
-      styleName={win.config.styleId ? styles.find((s) => s.id === win.config.styleId)?.name : undefined}
+      groupName={screenGroups.find((g) => g.id === win.config.screenGroupId)?.name}
       isBlack={isBlack}
       draggable={!win.unmanaged}
       dragProps={dragPropsFor(win)}
@@ -251,7 +257,7 @@ export const FooterWindows = ({ variant, onOpenWindowManager }: FooterWindowsPro
     <WindowQuickActions
       anchorEl={actionsAnchor}
       window={actionsWindow}
-      styles={styles}
+      screenGroups={screenGroups}
       screens={rig.screens}
       onClose={closeActions}
       onUpdate={(patch) => actionsWindow && void rig.update(actionsWindow.id, patch)}

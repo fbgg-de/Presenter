@@ -12,6 +12,8 @@ export const REMOTE_COMMAND_IDS = [
   'toggle_video',
   'toggle_video_playback',
   'toggle_black',
+  // Carries a value: { command: 'master_speed', value: 1.25 } — the master playback speed.
+  'master_speed',
 ] as const;
 
 export type RemoteCommandId = (typeof REMOTE_COMMAND_IDS)[number];

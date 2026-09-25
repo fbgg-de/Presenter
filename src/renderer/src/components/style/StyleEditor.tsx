@@ -1,8 +1,13 @@
-import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, type CSSProperties, type SetStateAction } from 'react';
 import {
   Box,
   Button,
   Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   Drawer,
   IconButton,
@@ -55,11 +60,16 @@ import { useAppDispatch } from '@/store';
 import { useGetShow, setShowStyleId, setDirty } from '@/store/showSlice';
 import { useSaveShowMutation } from '@/api/shows.api';
 import { useUpdateAccountSettingsMutation } from '@/api/session.api';
+import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
+import { GroupPreviewStrip } from '@/components/style/GroupPreviewStrip';
+import { withoutBackgroundMedia } from '@/look/resolveLook';
 
 import { createEmptyStyleData, previewSlotStyles, splitSampleAtSeparator, usePreviewScale } from '@/components/style/styleFormUtils';
 import { StylePreviewPanel } from '@/components/style/StylePreviewPanel';
 import { buildStyleCategories, filterStyleCategories } from '@/components/style/styleCategories';
 import { StyleInheritanceContext, type InheritedSource, type StyleFormCtx } from '@/components/style/styleFormContext';
+import { DEFAULT_GROUP_ID } from '@/utils/showGroups';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 /** Sidebar (category list + preview) sizing, remembered across sessions. */
 const SIDEBAR_WIDTH_KEY = 'presenter_style_sidebar_width';
@@ -71,8 +81,6 @@ interface StyleEditorProps {
   onClose: () => void;
   editStyleId?: number;
 }
-
-type WindowOverride = { window_name: string; override_style_id: number };
 
 /** How many rows a thumbnail shows before it stops being readable at card size. */
 const THUMB_ROWS = 4;
@@ -86,13 +94,12 @@ const THUMB_ROWS = 4;
  * you a style's actual proportions at all.
  */
 export const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew?: boolean }) => {
-  const { stylePreview } = useGetSettings();
+  const { stylePreview } = useGetSettings('stylePreview');
   const { measureRef, scale } = usePreviewScale();
-
-  const resolved = useMemo(() => {
-    if (!style) return DEFAULT_STYLE;
-    return mergeStyles(DEFAULT_STYLE, resolveStyleData(style.data));
-  }, [style]);
+  const resolved = useMemo(
+    () => (style ? withoutBackgroundMedia(mergeStyles(DEFAULT_STYLE, resolveStyleData(style.data))) : DEFAULT_STYLE),
+    [style],
+  );
   // Exclude padding so the thumb's 16:9 aspect-ratio box is not offset by style padding
   const containerCss = useMemo(() => {
     const css: Record<string, unknown> = { ...styleToContainerCss(resolved) };
@@ -228,7 +235,7 @@ export const StyleGalleryThumb = ({ style, isNew }: { style?: StyleEntity; isNew
   );
 };
 
-export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) => {
+const StyleEditorBody = ({ open, onClose, editStyleId }: StyleEditorProps) => {
   const { LL } = useI18nContext();
   const { data: styles = [] } = useGetStylesQuery();
   const [createStyleMutation] = useCreateStyleMutation();
@@ -236,7 +243,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   const [deleteStyleMutation] = useDeleteStyleMutation();
 
   // Assignment context: global style (settings + account) and current show
-  const { globalStyleId, offlineMode } = useGetSettings();
+  const { globalStyleId, offlineMode } = useGetSettings('globalStyleId', 'offlineMode');
   const updateSetting = useUpdateSetting();
   const [updateAccountSettings] = useUpdateAccountSettingsMutation();
   const { currentShow } = useGetShow();
@@ -246,12 +253,13 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   /** 'overview' = manage/assign styles in a card grid; 'edit' = full editor with live preview. */
   const [view, setView] = useState<'overview' | 'edit'>('overview');
   const [cardMenu, setCardMenu] = useState<{ anchor: HTMLElement; style: StyleEntity } | null>(null);
+  // The style waiting for the delete confirmation.
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; name: string } | null>(null);
 
   const [selectedStyleId, setSelectedStyleId] = useState<number | 'new'>('new');
   const [styleName, setStyleName] = useState<string>(LL.STYLE.NEW());
   const [styleEnabled, setStyleEnabled] = useState(true);
   const [styleData, setStyleData] = useState<StyleData>(createEmptyStyleData());
-  const [windowOverrides, setWindowOverrides] = useState<WindowOverride[]>([]);
   const [isDirty, setIsDirty] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [nameEditing, setNameEditing] = useState(false);
@@ -311,6 +319,10 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   const [activeCategoryId, setActiveCategoryId] = useState('background');
   const [categoryQuery, setCategoryQuery] = useState('');
 
+  /** The screen group whose variant is being edited; null edits the theme for all groups. */
+  const [variantKey, setVariantKey] = useState<string | null>(null);
+  const { data: screenGroups = [] } = useGetScreenGroupsQuery();
+
   // Language-section UI state (lifted here so the section can render conditionally)
 
   // Custom-CSS tab: generated-CSS viewer state (top level — never inside render IIFEs)
@@ -322,7 +334,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
   // changed the media path mid-session this kicks an updatePath. Mirrors the
   // pattern in MediaBrowser so previews of saved background images/videos work
   // immediately.
-  const { mediaPath } = useGetSettings();
+  const { mediaPath } = useGetSettings('mediaPath');
   useEffect(() => {
     if (!open) return;
     const api = (window as unknown as { api?: { startMediaServer?: (p: string) => Promise<unknown> } }).api;
@@ -337,7 +349,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
     setStyleName(style.name);
     setStyleEnabled(style.enabled);
     setStyleData(style.data || createEmptyStyleData());
-    setWindowOverrides(style.windowOverrides || []);
+    setVariantKey(null);
     setIsDirty(false);
   }, []);
 
@@ -374,8 +386,8 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
     setSelectedStyleId('new');
     setStyleName(LL.STYLE.NEW());
     setStyleData(createEmptyStyleData());
-    setWindowOverrides([]);
     setStyleEnabled(true);
+    setVariantKey(null);
     setIsDirty(false);
     setNameEditing(true);
     setActiveCategoryId('background');
@@ -404,7 +416,6 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
         title: currentShow.title,
         order: currentShow.order,
         groups: currentShow.groups,
-        mediaCues: currentShow.mediaCues,
         styleId: id,
       }).unwrap();
       dispatch(setDirty(false));
@@ -413,13 +424,54 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
     }
   };
 
-  /** How many items of the current show use a style directly. */
-  const itemUsageCount = (id: number): number => (currentShow?.order ?? []).filter((it) => it.styleId === id).length;
+  /** How many items of the current show are in an agenda group that uses a style. */
+  const itemUsageCount = (id: number): number => {
+    const groupIds = new Set((currentShow?.groups ?? []).filter((g) => g.styleId === id).map((g) => g.id));
+    return (currentShow?.order ?? []).filter((it) => groupIds.has(it.groupId ?? DEFAULT_GROUP_ID)).length;
+  };
 
-  const updateProp = useCallback(<K extends keyof StyleData>(key: K, value: StyleData[K]) => {
-    setStyleData((prev) => ({ ...prev, [key]: value }));
-    setIsDirty(true);
-  }, []);
+  /**
+   * What the form edits: the theme itself, or — on a screen-group tab — that group's variant,
+   * which holds only the properties the group changes.
+   */
+  const editData: StyleData = variantKey ? (styleData.variants?.[variantKey] ?? {}) : styleData;
+  const setEditData = useCallback(
+    (update: SetStateAction<StyleData>) => {
+      setStyleData((prev) => {
+        if (!variantKey) return typeof update === 'function' ? update(prev) : update;
+        const current = prev.variants?.[variantKey] ?? {};
+        const next = typeof update === 'function' ? update(current) : update;
+        return { ...prev, variants: { ...prev.variants, [variantKey]: next } };
+      });
+    },
+    [variantKey],
+  );
+
+  /** The theme as a group sees it: the base with the group's set properties laid over it. */
+  const previewData = useMemo<StyleData>(() => {
+    if (!variantKey) return styleData;
+    const merged: StyleData = { ...styleData };
+    for (const [key, value] of Object.entries(styleData.variants?.[variantKey] ?? {})) {
+      if (value === undefined) continue;
+      if (value && typeof value === 'object' && 'enabled' in value && !value.enabled) continue;
+      (merged as Record<string, unknown>)[key] = value;
+    }
+    return merged;
+  }, [styleData, variantKey]);
+
+  /** How many properties a group variant sets, for the tab label. */
+  const variantOverrideCount = (variant: StyleData | undefined): number =>
+    Object.values(variant ?? {}).filter((value) =>
+      value && typeof value === 'object' && 'enabled' in value ? value.enabled : value !== undefined,
+    ).length;
+
+  const updateProp = useCallback(
+    <K extends keyof StyleData>(key: K, value: StyleData[K]) => {
+      setEditData((prev) => ({ ...prev, [key]: value }));
+      setIsDirty(true);
+    },
+    [setEditData],
+  );
 
   const DEFAULT_PROP_VALUES: Partial<Record<keyof StyleData, unknown>> = {
     backgroundColor: '#000000',
@@ -472,17 +524,24 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
     copyrightShowSongNumber: false,
   };
 
-  const togglePropEnabled = useCallback((key: keyof StyleData, enabled: boolean) => {
-    setStyleData((prev) => {
-      const existing = prev[key];
-      if (existing && typeof existing === 'object' && 'enabled' in existing) return { ...prev, [key]: { ...existing, enabled } };
-      return { ...prev, [key]: { enabled, value: DEFAULT_PROP_VALUES[key] } } as StyleData;
-    });
-    setIsDirty(true);
-  }, []);
+  const togglePropEnabled = useCallback(
+    (key: keyof StyleData, enabled: boolean) => {
+      setEditData((prev) => {
+        const existing = prev[key];
+        if (existing && typeof existing === 'object' && 'enabled' in existing) return { ...prev, [key]: { ...existing, enabled } };
+        // A new group override starts from what the group currently sees, not from the app default.
+        const seen = previewData[key];
+        const value = seen && typeof seen === 'object' && 'value' in seen ? seen.value : DEFAULT_PROP_VALUES[key];
+        return { ...prev, [key]: { enabled, value } } as StyleData;
+      });
+      setIsDirty(true);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [setEditData, previewData],
+  );
 
   const getProp = <T,>(key: keyof StyleData): { enabled: boolean; value: T } => {
-    const prop = styleData[key];
+    const prop = editData[key];
     if (prop && typeof prop === 'object' && 'enabled' in prop) return prop as { enabled: boolean; value: T };
     return { enabled: false, value: undefined as unknown as T };
   };
@@ -523,9 +582,15 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           levels.push({ source: LL.STYLE.INHERITED_FROM_GLOBAL({ name: globalStyle.name }), value: fromGlobal });
       }
 
+      // On a screen-group tab, the theme's own value for all groups is the nearest level.
+      if (variantKey) {
+        const fromBase = firstDefined(resolveStyleData(styleData) as Record<string, unknown>);
+        if (fromBase !== undefined) levels.push({ source: LL.LOOK.VARIANT_BASE(), value: fromBase });
+      }
+
       return levels;
     },
-    [styles, globalStyleId, editStyleId, LL],
+    [styles, globalStyleId, editStyleId, LL, variantKey, styleData],
   );
 
   /**
@@ -534,8 +599,8 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
    */
   const formCtx: StyleFormCtx = {
     LL,
-    styleData,
-    setStyleData,
+    styleData: editData,
+    setStyleData: setEditData,
     setIsDirty,
     getProp,
     updateProp,
@@ -559,10 +624,9 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
         const result = await createStyleMutation({ name: styleName, enabled: styleEnabled, data: styleData }).unwrap();
         id = result.id;
         setSelectedStyleId(id);
-        if (windowOverrides.length > 0) await updateStyleMutation({ id, windowOverrides } as never).unwrap();
       } else {
         id = selectedStyleId;
-        await updateStyleMutation({ id, name: styleName, enabled: styleEnabled, data: styleData, windowOverrides } as never).unwrap();
+        await updateStyleMutation({ id, name: styleName, enabled: styleEnabled, data: styleData }).unwrap();
       }
       setIsDirty(false);
       setStatusMessage(LL.STYLE.APPLIED());
@@ -586,16 +650,23 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
     }
   };
 
-  const handleDelete = async () => {
-    if (selectedStyleId !== 'new') {
-      if (!confirm(LL.STYLE.DELETE_CONFIRM())) return;
-      try {
-        await deleteStyleMutation({ id: selectedStyleId }).unwrap();
+  const handleDelete = () => {
+    if (selectedStyleId !== 'new') setPendingDelete({ id: selectedStyleId, name: styleName });
+  };
+
+  const confirmDelete = async () => {
+    const target = pendingDelete;
+    setPendingDelete(null);
+    if (!target) return;
+    try {
+      await deleteStyleMutation({ id: target.id }).unwrap();
+      // Deleting the style being edited leaves nothing to edit.
+      if (target.id === selectedStyleId) {
         setIsDirty(false);
         setView('overview');
-      } catch (error) {
-        console.error('Failed to delete style:', error);
       }
+    } catch (error) {
+      console.error('Failed to delete style:', error);
     }
   };
 
@@ -641,8 +712,8 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
       />
       {/* A phone has no room for a drawer that leaves a sliver of the page behind it, and no
           mouse to hit that sliver with — full width, closed by its own button. */}
-      <Drawer open={open} anchor={isMobile ? 'bottom' : 'right'} onClose={onClose}>
-        <Stack sx={{ width: isMobile ? '100vw' : 'min(98vw, 1520px)', height: isMobile ? '100dvh' : '100%' }}>
+      <Drawer open={open} anchor="right" onClose={onClose}>
+        <Stack sx={{ width: isMobile ? '100vw' : 'min(98vw, 1520px)', height: '100%' }}>
           {view === 'overview' && (
             <>
               {/* ── Overview: manage & assign styles ── */}
@@ -815,7 +886,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                   onClick={() => {
                     const st = cardMenu?.style;
                     setCardMenu(null);
-                    if (st && confirm(LL.STYLE.DELETE_CONFIRM())) void deleteStyleMutation({ id: st.id });
+                    if (st) setPendingDelete({ id: st.id, name: st.name });
                   }}
                 >
                   <ListItemIcon>
@@ -1022,7 +1093,8 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                         })}
                       </List>
 
-                      <StylePreviewPanel styleData={styleData} expanded={isSidebarExpanded} onToggleExpanded={toggleSidebarExpanded} />
+                      <StylePreviewPanel styleData={previewData} expanded={isSidebarExpanded} onToggleExpanded={toggleSidebarExpanded} />
+                      <GroupPreviewStrip styleData={styleData} groups={screenGroups} activeKey={variantKey} onSelect={setVariantKey} />
                     </Stack>
 
                     <Box
@@ -1043,6 +1115,35 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                 )}
 
                 <Stack sx={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+                  {/* One tab per screen group: a group tab edits only what that group changes. */}
+                  {screenGroups.length > 0 && (
+                    <Stack
+                      direction="row"
+                      spacing={1.5}
+                      sx={{ alignItems: 'center', px: isMobile ? 1 : 2, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}
+                    >
+                      <Tabs
+                        value={variantKey ?? 'all'}
+                        onChange={(_, value: string) => setVariantKey(value === 'all' ? null : value)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        sx={{ minHeight: 40, '& .MuiTab-root': { minHeight: 40, textTransform: 'none' } }}
+                      >
+                        <Tab value="all" label={LL.LOOK.VARIANT_ALL_GROUPS()} />
+                        {screenGroups.map((group) => {
+                          const count = variantOverrideCount(styleData.variants?.[String(group.id)]);
+                          return (
+                            <Tab key={group.id} value={String(group.id)} label={count > 0 ? `${group.name} · ${count}` : group.name} />
+                          );
+                        })}
+                      </Tabs>
+                      {variantKey && !isMobile && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary', minWidth: 0 }}>
+                          {LL.LOOK.VARIANT_HINT()}
+                        </Typography>
+                      )}
+                    </Stack>
+                  )}
                   {isMobile && (
                     // Folded by default: what you came to the phone to do is edit a value, and the
                     // preview would push every field below the fold before you saw one.
@@ -1057,7 +1158,7 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
                       >
                         {LL.STYLE.PREVIEW()}
                       </Button>
-                      {previewOpen && <StylePreviewPanel styleData={styleData} expanded={false} />}
+                      {previewOpen && <StylePreviewPanel styleData={previewData} expanded={false} />}
                     </Box>
                   )}
                   <Stack sx={{ flex: 1, overflow: 'auto', px: isMobile ? 1.5 : 2.5, py: 2 }} spacing={0.25}>
@@ -1087,6 +1188,20 @@ export const StyleEditor = ({ open, onClose, editStyleId }: StyleEditorProps) =>
           )}
         </Stack>
       </Drawer>
+      <Dialog open={!!pendingDelete} onClose={() => setPendingDelete(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>{LL.STYLE.DELETE_TITLE()}</DialogTitle>
+        <DialogContent>
+          <DialogContentText variant="body2">{LL.STYLE.DELETE_CONFIRM({ name: pendingDelete?.name ?? '' })}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingDelete(null)}>{LL.COMMON.CANCEL()}</Button>
+          <Button color="error" variant="contained" onClick={() => void confirmDelete()}>
+            {LL.COMMON.DELETE()}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
+
+export const StyleEditor = stillWhileClosed(StyleEditorBody);

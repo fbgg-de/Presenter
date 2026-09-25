@@ -1,5 +1,5 @@
 import { usePresentationSync } from '@/hooks/usePresentationSync';
-import { MainCueAudio } from '@/media/MainCueAudio';
+import { MediaAudio } from '@/media/useMediaHost';
 
 /**
  * Tiny null-rendering component that hosts the heavy `usePresentationSync`
@@ -15,7 +15,7 @@ import { MainCueAudio } from '@/media/MainCueAudio';
  */
 const PresentationSyncHost = () => {
   usePresentationSync();
-  return <MainCueAudio />;
+  return <MediaAudio />;
 };
 
 export default PresentationSyncHost;

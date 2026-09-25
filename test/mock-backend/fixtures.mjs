@@ -115,6 +115,8 @@ export const adminAccounts = [
     church_tools_enabled: true,
     spotify_client_id: '0123456789abcdef0123456789abcdef',
     spotify_enabled: true,
+    nextcloud_url: 'https://cloud.example.com',
+    integrations_private_network: false,
     providers: [],
   },
   {
@@ -128,6 +130,8 @@ export const adminAccounts = [
     church_tools_enabled: false,
     spotify_client_id: null,
     spotify_enabled: false,
+    nextcloud_url: null,
+    integrations_private_network: false,
     providers: [],
   },
 ];

@@ -12,6 +12,7 @@ files:
   - '!ws-server/**'
   - '!sng/**'
   - '!scripts/**'
+  - '!companion-modules/**'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!vite.config.ts'
   - '!vite.shared.ts'

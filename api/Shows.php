@@ -23,7 +23,7 @@ class Shows extends RestController
 
         if ($title !== '') {
             $stmt = self::prepare('
-			SELECT `title`, `order`, `groups`, `media_cues`, `date`, `style_id`, `event_id`, `event_name`
+			SELECT `title`, `order`, `groups`, `date`, `style_id`, `event_id`, `event_name`
 			FROM `shows`
 			WHERE `account` = ? AND `title` = ?
 			LIMIT 1
@@ -31,7 +31,7 @@ class Shows extends RestController
             $stmt->bind_param('is', $account, $title)->execute();
         } else {
             $stmt = self::prepare('
-			SELECT `title`, `order`, `groups`, `media_cues`, `date`, `style_id`, `event_id`, `event_name`
+			SELECT `title`, `order`, `groups`, `date`, `style_id`, `event_id`, `event_name`
 			FROM `shows`
 			WHERE `account` = ?
 			ORDER BY `date` DESC
@@ -56,7 +56,6 @@ class Shows extends RestController
                 'title' => $row['title'],
                 'order' => is_array($decoded) ? $decoded : [],
                 'groups' => is_array($groups) ? $groups : null,
-                'mediaCues' => json_decode($row['media_cues'] ?? '[]', true) ?? [],
                 'date' => $row['date'],
                 'styleId' => $row['style_id'] ? (int)$row['style_id'] : null,
                 'eventId' => $row['event_id'] !== null ? (int)$row['event_id'] : null,
@@ -161,11 +160,6 @@ class Shows extends RestController
         $groups = $req->params->getAsArray('groups', []);
         $groupsValue = $req->params->provided('groups') ? json_encode($groups) : null;
 
-        $cuesValue = $req->params->provided('mediaCues') ? json_encode($req->params->getAsArray('mediaCues', [])) : null;
-        if ($cuesValue === false || ($cuesValue !== null && strlen($cuesValue) > 2000000)) {
-            $res->error(400, 'Invalid or oversized media cues');
-        }
-        $cuesUpdate = $req->params->provided('mediaCues') ? "`media_cues` = VALUES(`media_cues`), " : '';
         // Preserve the existing event link on update unless the caller explicitly sent eventId.
         $eventUpdate = $updateEvent
             ? "`event_id` = VALUES(`event_id`),\n\t\t\t\t\t`event_name` = VALUES(`event_name`),\n\t\t\t\t\t"
@@ -175,17 +169,17 @@ class Shows extends RestController
 					" : '';
         $stmt = self::prepare("
 				INSERT INTO `shows` (
-					`account`, `title`, `order`, `groups`, `media_cues`, `style_id`, `event_id`, `event_name`
+					`account`, `title`, `order`, `groups`, `style_id`, `event_id`, `event_name`
 				) VALUES (
-					?, ?, ?, ?, ?, ?, ?, ?
+					?, ?, ?, ?, ?, ?, ?
 				)
 				ON DUPLICATE KEY UPDATE
 					`order` = VALUES(`order`),
-					{$groupsUpdate}{$cuesUpdate}`style_id` = VALUES(`style_id`),
+					{$groupsUpdate}`style_id` = VALUES(`style_id`),
 					{$eventUpdate}`date` = CURRENT_TIMESTAMP
 			");
 
-        $stmt->bind_param('issssiis', $account, $title, $orderValue, $groupsValue, $cuesValue, $styleId, $eventId, $eventName)->execute()->close();
+        $stmt->bind_param('isssiis', $account, $title, $orderValue, $groupsValue, $styleId, $eventId, $eventName)->execute()->close();
 
         // Same rule as the event link: only rewrite the bands when the caller actually sent
         // them, so an order-only auto-save cannot strip a show of the bands playing it.
@@ -264,16 +258,7 @@ class Shows extends RestController
     /** Load the account's ChurchTools config (url + token), or null if not configured. */
     private function getCtConfig(int $account): ?array
     {
-        if (!$account) {
-            return null;
-        }
-        $row = null;
-        $stmt = self::prepare('SELECT `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
-        $stmt->bind_param('i', $account)->execute()->fetchOne($row)->close();
-        if (!$row || empty($row['church_tools_url']) || empty($row['church_tools_token'])) {
-            return null;
-        }
-        return ['url' => $row['church_tools_url'], 'token' => $row['church_tools_token']];
+        return ChurchToolsClient::forAccount($account);
     }
 
     protected function delete(Request &$req, Response &$res): never

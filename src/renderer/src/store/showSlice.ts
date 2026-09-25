@@ -1,9 +1,8 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import type { Show, ShowGroup, ShowItem } from '@/api/shows.api';
-import { DEFAULT_GROUP_ID, normalizeShowGroups } from '@/utils/showGroups';
+import { DEFAULT_GROUP_ID, genItemId, normalizeShowGroups } from '@/utils/showGroups';
 import { useAppSelector } from './hooks';
 import { persistState } from './persist';
-import type { MediaCue, MediaCueBinding } from '@/media/types';
 
 const SHOW_STORAGE_KEY = 'presenter_show';
 
@@ -44,18 +43,6 @@ export const showSlice = createSlice({
   name: 'show',
   initialState,
   reducers: {
-    saveMediaCue: (state, action: PayloadAction<{ cue: MediaCue; itemIndex: number; binding: MediaCueBinding }>) => {
-      const show = state.currentShow;
-      if (!show?.order[action.payload.itemIndex]) return;
-      const { cue, itemIndex, binding } = action.payload;
-      show.mediaCues ??= [];
-      const index = show.mediaCues.findIndex((c) => c.id === cue.id);
-      if (index < 0) show.mediaCues.push(cue);
-      else show.mediaCues[index] = cue;
-      show.order[itemIndex].mediaCue = binding;
-      state.isDirty = true;
-      persistState(SHOW_STORAGE_KEY, state);
-    },
     setCurrentShow: (state, action: PayloadAction<Show | null>) => {
       let show = action.payload;
       if (show) {
@@ -105,7 +92,7 @@ export const showSlice = createSlice({
       if (state.currentShow) {
         const order = state.currentShow.order;
         const groups = state.currentShow.groups;
-        const item = { ...action.payload };
+        const item = { id: genItemId(), ...action.payload };
         // Append to the last group's block (keeps groups contiguous) unless a group is given.
         if (!item.groupId) {
           item.groupId = order.length > 0 ? order[order.length - 1].groupId : (groups?.[groups.length - 1]?.id ?? DEFAULT_GROUP_ID);
@@ -119,7 +106,7 @@ export const showSlice = createSlice({
       if (state.currentShow) {
         const { index } = action.payload;
         const order = state.currentShow.order;
-        const item = { ...action.payload.item };
+        const item = { id: genItemId(), ...action.payload.item };
         // Inherit the group of the preceding (or following) neighbor so it stays contiguous.
         if (!item.groupId) {
           item.groupId = (order[index - 1] ?? order[index])?.groupId ?? DEFAULT_GROUP_ID;
@@ -128,6 +115,35 @@ export const showSlice = createSlice({
         state.isDirty = true;
         persistState(SHOW_STORAGE_KEY, state);
       }
+    },
+    /**
+     * Insert items into a group, keeping the group contiguous: right after `afterIndex` when that
+     * entry is in the group, else at the end of the group's block. Returns nothing; the new
+     * entries get ids.
+     */
+    insertItemsIntoGroup: (state, action: PayloadAction<{ items: ShowItem[]; groupId: string; afterIndex?: number }>) => {
+      if (!state.currentShow) return;
+      const order = state.currentShow.order;
+      const { groupId, afterIndex } = action.payload;
+      const inGroup = (entry: ShowItem | undefined) => !!entry && (entry.groupId ?? DEFAULT_GROUP_ID) === groupId;
+      let at: number;
+      if (afterIndex !== undefined && inGroup(order[afterIndex])) {
+        at = afterIndex + 1;
+      } else {
+        const last = order.reduce((found, entry, index) => (inGroup(entry) ? index : found), -1);
+        if (last >= 0) {
+          at = last + 1;
+        } else {
+          // An empty group: place its block where the group sits among the others.
+          const groupOrder = (state.currentShow.groups ?? []).map((g) => g.id);
+          const position = groupOrder.indexOf(groupId);
+          const firstLater = order.findIndex((entry) => groupOrder.indexOf(entry.groupId ?? DEFAULT_GROUP_ID) > position);
+          at = firstLater >= 0 ? firstLater : order.length;
+        }
+      }
+      order.splice(at, 0, ...action.payload.items.map((item) => ({ id: genItemId(), ...item, groupId })));
+      state.isDirty = true;
+      persistState(SHOW_STORAGE_KEY, state);
     },
     removeShowItem: (state, action: PayloadAction<number>) => {
       if (state.currentShow) {
@@ -179,7 +195,6 @@ export const useGetShow = () => useAppSelector((state) => state.show);
 export default showSlice.reducer;
 
 export const {
-  saveMediaCue,
   setCurrentShow,
   setShowGroups,
   setOrderAndGroups,
@@ -188,6 +203,7 @@ export const {
   closeShowSelector,
   addShowItem,
   insertShowItem,
+  insertItemsIntoGroup,
   removeShowItem,
   reorderShowItems,
   updateShowItem,

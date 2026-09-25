@@ -36,6 +36,7 @@ export const buildStyleCategories = (LL: StyleFormCtx['LL']): StyleCategory[] =>
   const S = LL.STYLE;
   const D = S.CATEGORY_DESC;
 
+  // Stage screens have their own layouts on the Stage screen group, not theme settings.
   return [
     {
       id: 'background',
@@ -43,17 +44,7 @@ export const buildStyleCategories = (LL: StyleFormCtx['LL']): StyleCategory[] =>
       description: D.BACKGROUND(),
       icon: BackgroundIcon,
       render: (ctx) => <BackgroundSection ctx={ctx} />,
-      keywords: [
-        S.BACKGROUND_COLOR(),
-        S.BACKGROUND_IMAGE(),
-        S.BACKGROUND_IMAGE_NONE(),
-        S.BACKGROUND_VIDEO(),
-        S.BACKGROUND_VIDEO_NONE(),
-        S.BG_ZOOM(),
-        S.BG_BLUR(),
-        S.VIDEO_EASE_IN(),
-        S.VIDEO_EASE_OUT(),
-      ],
+      keywords: [S.BACKGROUND_COLOR(), S.BACKGROUND_TRANSPARENT()],
     },
     {
       id: 'layout',

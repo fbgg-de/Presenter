@@ -1,6 +1,7 @@
 <?php
 
 require_once(__DIR__ . '/RestController.php');
+require_once(__DIR__ . '/../classes/AccountSchema.php');
 
 class AdminAccounts extends RestController
 {
@@ -38,19 +39,21 @@ class AdminAccounts extends RestController
         $stmt->fetchAll($accounts);
         $stmt->close();
 
-        // Spotify credentials arrive with migration 25 — read separately so the account list
-        // still loads on an older schema.
-        $spotifyByLicense = [];
+        // The integration columns arrive with migrations 32 and 33.
+        $nextcloudByLicense = [];
         try {
-            $spStmt = self::prepare('SELECT `license`, `spotify_client_id`, `spotify_client_secret` FROM `account`');
-            $spStmt->execute();
-            $spStmt->fetchAll($spotifyRows);
-            $spStmt->close();
-            foreach ($spotifyRows as $row) {
-                $spotifyByLicense[(int)$row['license']] = $row;
+            $privateColumn = AccountSchema::privateNetworkColumn();
+            $ncStmt = self::prepare(
+                'SELECT `license`, `nextcloud_url`' . ($privateColumn ? ", `{$privateColumn}` AS `private_network`" : '') . ' FROM `account`'
+            );
+            $ncStmt->execute();
+            $ncStmt->fetchAll($nextcloudRows);
+            $ncStmt->close();
+            foreach ($nextcloudRows as $row) {
+                $nextcloudByLicense[(int)$row['license']] = $row;
             }
         } catch (\Throwable $e) {
-            $spotifyByLicense = [];
+            $nextcloudByLicense = [];
         }
 
         // Parse providers for each account
@@ -62,10 +65,11 @@ class AdminAccounts extends RestController
             $account['church_tools_enabled'] = !empty($account['church_tools_url']) && !empty($account['church_tools_token']);
             unset($account['church_tools_token']);
 
-            // The client id is not a secret and is shown for editing; the secret never leaves.
-            $spotify = $spotifyByLicense[$account['license']] ?? [];
-            $account['spotify_client_id'] = $spotify['spotify_client_id'] ?? null;
-            $account['spotify_enabled'] = !empty($spotify['spotify_client_id']) && !empty($spotify['spotify_client_secret']);
+            // The account manages its own connections in Settings; the admin only decides whether
+            // they may be in a private network.
+            $nextcloud = $nextcloudByLicense[$account['license']] ?? [];
+            $account['nextcloud_url'] = $nextcloud['nextcloud_url'] ?? null;
+            $account['integrations_private_network'] = !empty($nextcloud['private_network']);
 
             $providersList = [];
             if (!empty($account['providers'])) {
@@ -124,8 +128,6 @@ class AdminAccounts extends RestController
         $mail = $req->params->get('mail', null, false);
         $name = $req->params->get('name', null, false);
         $active = $req->params->has('active') ? $req->params->getAsBool('active') : null;
-        $churchToolsUrl = $req->params->has('churchToolsUrl') ? $req->params->get('churchToolsUrl', null) : false;
-        $churchToolsToken = $req->params->has('churchToolsToken') ? $req->params->get('churchToolsToken', null) : false;
 
         // Build dynamic update query
         $updates = [];
@@ -150,48 +152,16 @@ class AdminAccounts extends RestController
             $values[] = $active ? 1 : 0;
         }
 
-        if ($churchToolsUrl !== false) {
-            $ctUrl = $churchToolsUrl ? trim($churchToolsUrl) : null;
-            if ($ctUrl === null || $ctUrl === '') {
-                $updates[] = '`church_tools_url` = NULL';
-            } else {
-                $updates[] = '`church_tools_url` = ?';
-                $types .= 's';
-                $values[] = $ctUrl;
+        // Whether the account's integrations (Nextcloud, ChurchTools) may be in a private network:
+        // it lets the server reach its own network, so it is the server admin's call, not the account's.
+        if ($req->params->provided('integrationsPrivateNetwork')) {
+            $column = AccountSchema::privateNetworkColumn();
+            if (!$column) {
+                $res->error(409, 'The database is missing the private-network column; run the migrations first', false);
             }
-        }
-
-        if ($churchToolsToken !== false) {
-            $ctToken = $churchToolsToken ? trim($churchToolsToken) : null;
-            if ($ctToken === null || $ctToken === '') {
-                $updates[] = '`church_tools_token` = NULL';
-            } else {
-                $updates[] = '`church_tools_token` = ?';
-                $types .= 's';
-                $values[] = $ctToken;
-            }
-        }
-
-        // Spotify app credentials. An explicitly empty client id clears both halves — a secret
-        // without its id is useless. The secret is write-only: only a typed value replaces it.
-        if ($req->params->provided('spotifyClientId')) {
-            $spotifyClientId = trim((string)$req->params->get('spotifyClientId', '', false));
-            if ($spotifyClientId === '') {
-                $updates[] = '`spotify_client_id` = NULL';
-                $updates[] = '`spotify_client_secret` = NULL';
-            } else {
-                $updates[] = '`spotify_client_id` = ?';
-                $types .= 's';
-                $values[] = mb_substr($spotifyClientId, 0, 100);
-            }
-        }
-
-        $spotifyClientSecret = trim((string)$req->params->get('spotifyClientSecret', '', false));
-        $clearsSpotify = $req->params->provided('spotifyClientId') && trim((string)$req->params->get('spotifyClientId', '', false)) === '';
-        if ($spotifyClientSecret !== '' && !$clearsSpotify) {
-            $updates[] = '`spotify_client_secret` = ?';
-            $types .= 's';
-            $values[] = mb_substr($spotifyClientSecret, 0, 200);
+            $updates[] = "`{$column}` = ?";
+            $types .= 'i';
+            $values[] = $req->params->get('integrationsPrivateNetwork', false, false) ? 1 : 0;
         }
 
         if (empty($updates)) {

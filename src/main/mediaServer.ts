@@ -5,7 +5,7 @@
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'http';
 import { join, extname, resolve, normalize, relative, isAbsolute, basename, parse as parsePath } from 'path';
 import { createReadStream } from 'fs';
-import { stat, readdir, copyFile, constants as fsConstants } from 'fs/promises';
+import { stat, readdir, copyFile, mkdir, constants as fsConstants } from 'fs/promises';
 
 /**
  * What the media browser can show, and so what an import accepts. `.ogg` is left out on
@@ -25,12 +25,30 @@ export const IMPORTABLE_EXTS = new Set([
   '.mov',
   '.avi',
   '.mkv',
+  '.mp3',
+  '.wav',
+  '.m4a',
+  '.aac',
+  '.flac',
+  '.ogg',
 ]);
 
 export interface MediaImportResult {
   /** Names as written into the folder — renamed to `name (2).ext` where the name was taken. */
   copied: string[];
   skipped: { name: string; reason: 'unsupported' | 'not-a-file' | 'exists' | 'error'; message?: string }[];
+  /**
+   * Where each source ended up, by its name inside the target folder: freshly copied, or an
+   * identical file (same name and size) that was already there and is reused instead of copied.
+   */
+  placed: { source: string; name: string; reused: boolean }[];
+}
+
+/** One file found by name anywhere in the media folder. */
+export interface MediaFindResult {
+  /** Relative to the media folder, with forward slashes. */
+  path: string;
+  size: number;
 }
 
 const MIME_TYPES: Record<string, string> = {
@@ -50,6 +68,9 @@ const MIME_TYPES: Record<string, string> = {
   '.mp3': 'audio/mpeg',
   '.wav': 'audio/wav',
   '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac',
+  '.flac': 'audio/flac',
   '.pdf': 'application/pdf',
 };
 
@@ -71,6 +92,9 @@ const LISTABLE_EXTS = new Set([
   '.mp3',
   '.wav',
   '.ogg',
+  '.m4a',
+  '.aac',
+  '.flac',
 ]);
 
 interface ListedFile {
@@ -190,7 +214,7 @@ export class LocalMediaServer {
 
     const same = (a: string, b: string) =>
       process.platform === 'win32' ? resolve(a).toLowerCase() === resolve(b).toLowerCase() : resolve(a) === resolve(b);
-    const result: MediaImportResult = { copied: [], skipped: [] };
+    const result: MediaImportResult = { copied: [], skipped: [], placed: [] };
     for (const source of sources) {
       const name = basename(source);
       if (!IMPORTABLE_EXTS.has(extname(name).toLowerCase())) {
@@ -204,6 +228,13 @@ export class LocalMediaServer {
       // Dropped from this very folder: copying would only produce a duplicate.
       if (same(source, join(targetDir, name))) {
         result.skipped.push({ name, reason: 'exists' });
+        result.placed.push({ source, name, reused: true });
+        continue;
+      }
+      // The same file was copied here before (same name and size): reuse it rather than make a copy.
+      const existing = await stat(join(targetDir, name)).catch(() => null);
+      if (existing?.isFile() && existing.size === (await stat(source)).size) {
+        result.placed.push({ source, name, reused: true });
         continue;
       }
       const { name: stem, ext } = parsePath(name);
@@ -213,6 +244,7 @@ export class LocalMediaServer {
           // COPYFILE_EXCL makes "is the name free?" and the copy one atomic step.
           await copyFile(source, join(targetDir, candidate), fsConstants.COPYFILE_EXCL);
           result.copied.push(candidate);
+          result.placed.push({ source, name: candidate, reused: false });
           break;
         } catch (err) {
           if ((err as NodeJS.ErrnoException).code === 'EEXIST' && n < 1000) continue;
@@ -224,6 +256,46 @@ export class LocalMediaServer {
     // The listing is cached for a few seconds; the browser reloads right after an upload.
     this.listings.delete(targetDir);
     return result;
+  }
+
+  /** Create a folder inside the media folder (or inside one of its folders). Returns its relative path. */
+  async createFolder(subPath: string, name: string): Promise<string> {
+    const clean = name.trim();
+    if (!clean || /[\\/:*?"<>|]/.test(clean) || clean === '.' || clean === '..') throw new Error('Invalid folder name');
+    const parent = subPath ? normalize(join(this.mediaPath, subPath)) : this.mediaPath;
+    const target = join(parent, clean);
+    if (!this.contains(parent) || !this.contains(target)) throw new Error('The folder is outside the media folder');
+    await mkdir(target, { recursive: true });
+    this.listings.delete(parent);
+    return relative(this.mediaPath, target).split(/[\\/]/).join('/');
+  }
+
+  /**
+   * Find media files by file name anywhere in the media folder, case-insensitively. Bounded, so a
+   * huge folder cannot stall the server: it stops after `limit` matches or 50 000 entries.
+   */
+  async findByName(name: string, limit = 20): Promise<MediaFindResult[]> {
+    const wanted = name.trim().toLocaleLowerCase();
+    if (!wanted) return [];
+    const found: MediaFindResult[] = [];
+    let visited = 0;
+    const queue: string[] = [this.mediaPath];
+    while (queue.length > 0 && found.length < limit && visited < 50000) {
+      const dir = queue.shift()!;
+      const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+      for (const entry of entries) {
+        visited++;
+        if (entry.name.startsWith('.')) continue;
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) queue.push(full);
+        else if (entry.isFile() && entry.name.toLocaleLowerCase() === wanted) {
+          const info = await stat(full).catch(() => null);
+          found.push({ path: relative(this.mediaPath, full).split(/[\\/]/).join('/'), size: info?.size ?? 0 });
+          if (found.length >= limit) break;
+        }
+      }
+    }
+    return found;
   }
 
   /**
@@ -264,6 +336,21 @@ export class LocalMediaServer {
     // Parse the URL and decode
     const url = new URL(req.url || '/', `http://localhost:${this.port}`);
     const requestedPath = decodeURIComponent(url.pathname);
+
+    // ── /find — files with this exact name anywhere in the media folder ──
+    if (requestedPath === '/find') {
+      const name = url.searchParams.get('name') || '';
+      const limit = Math.max(1, Math.min(100, parseInt(url.searchParams.get('limit') || '20', 10) || 20));
+      try {
+        const results = await this.findByName(name, limit);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ results }));
+      } catch {
+        res.writeHead(500);
+        res.end('Error searching files');
+      }
+      return;
+    }
 
     // ── /list — non-recursive directory listing with pagination ──
     if (requestedPath === '/list') {

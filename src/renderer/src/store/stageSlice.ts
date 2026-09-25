@@ -25,6 +25,8 @@ export interface StageLayerRuntime {
   /** Set while paused; the display holds at the value it had at this instant. */
   pausedAt?: number;
   hidden: boolean;
+  /** Time added to (or taken from) the running timer — see StageCueRuntime.adjustMs. */
+  adjustMs?: number;
 }
 
 export interface StageState {
@@ -49,6 +51,7 @@ const enter = (runtime: StageLayerRuntime, cueIndex: number, at: number): void =
   runtime.cueIndex = Math.max(0, cueIndex);
   runtime.startedAt = at;
   delete runtime.pausedAt;
+  delete runtime.adjustMs;
 };
 
 export const stageSlice = createSlice({
@@ -66,11 +69,15 @@ export const stageSlice = createSlice({
     /**
      * Advance one cue. `cueCount` bounds it: stepping off the end parks the layer one past
      * the last cue, which renders as nothing — the natural "sequence finished" state.
+     *
+     * On a layer that never started, Go starts it at its FIRST cue: nothing was on screen, so
+     * "next" is the first one — stepping from the implied cue 0 used to skip it.
      */
     stageGo: (state, action: PayloadAction<{ layerId: number; cueCount: number; at: number }>) => {
       const { layerId, cueCount, at } = action.payload;
+      const fresh = !state.layers[layerId];
       const runtime = ensure(state, layerId, at);
-      enter(runtime, Math.min(runtime.cueIndex + 1, cueCount), at);
+      enter(runtime, fresh ? 0 : Math.min(runtime.cueIndex + 1, cueCount), at);
     },
 
     stageBack: (state, action: PayloadAction<{ layerId: number; at: number }>) => {
@@ -93,6 +100,12 @@ export const stageSlice = createSlice({
     },
 
     /** Back to the beginning of the sequence. */
+    /** Take the layer off the screens: parked past its last cue, where Go or Start picks it up again. */
+    stageStop: (state, action: PayloadAction<{ layerId: number; cueCount: number; at: number }>) => {
+      const { layerId, cueCount, at } = action.payload;
+      enter(ensure(state, layerId, at), cueCount, at);
+    },
+
     stageResetAll: (state, action: PayloadAction<{ layerId: number; at: number }>) => {
       const { layerId, at } = action.payload;
       enter(ensure(state, layerId, at), 0, at);
@@ -123,6 +136,16 @@ export const stageSlice = createSlice({
         runtime.startedAt += at - runtime.pausedAt;
         delete runtime.pausedAt;
       }
+    },
+
+    /**
+     * Correct a running timer by `deltaMs`: positive gives a countdown more time and a count-up
+     * more elapsed. For the unplanned — a sermon that has to be shortened, a late start.
+     */
+    stageAdjust: (state, action: PayloadAction<{ layerId: number; deltaMs: number }>) => {
+      const runtime = state.layers[action.payload.layerId];
+      if (!runtime) return;
+      runtime.adjustMs = (runtime.adjustMs ?? 0) + action.payload.deltaMs;
     },
 
     stageSetHidden: (state, action: PayloadAction<{ layerId: number; hidden: boolean; at: number }>) => {
@@ -159,6 +182,8 @@ export const {
   stageSetCue,
   stageReset,
   stageResetAll,
+  stageStop,
+  stageAdjust,
   stagePause,
   stageResume,
   stageTogglePause,

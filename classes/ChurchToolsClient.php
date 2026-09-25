@@ -1,14 +1,50 @@
 <?php
 
+require_once(__DIR__ . '/OutboundHttp.php');
+require_once(__DIR__ . '/DB.php');
+require_once(__DIR__ . '/AccountSchema.php');
+
 /**
  * ChurchToolsClient — HTTP client for the ChurchTools REST API.
  *
  * URL and token are passed explicitly so that each account can have its own
  * ChurchTools instance configured in the database rather than in a global
  * config constant.
+ *
+ * The account enters the address itself (Settings), so every request goes through OutboundHttp:
+ * https only, public addresses only unless the admin allowed the account's private network,
+ * and each redirect checked again.
  */
 class ChurchToolsClient
 {
+    /**
+     * The account's ChurchTools config, or null when it is not set up.
+     * @return array{url:string,token:string,privateNetwork:bool}|null
+     */
+    public static function forAccount(int $account): ?array
+    {
+        if (!$account) {
+            return null;
+        }
+        $row = null;
+        $stmt = DB::prepare('SELECT `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
+        $stmt->bind_param('i', $account)->execute()->fetchOne($row)->close();
+        if (!$row || empty($row['church_tools_url']) || empty($row['church_tools_token'])) {
+            return null;
+        }
+        return [
+            'url' => $row['church_tools_url'],
+            'token' => $row['church_tools_token'],
+            'privateNetwork' => AccountSchema::privateNetworkAllowed($account),
+        ];
+    }
+
+    /** One guarded request; see OutboundHttp. */
+    private static function send(array $options, array $cfg): array
+    {
+        return OutboundHttp::exec($options, !empty($cfg['privateNetwork']));
+    }
+
     /** @param array{url:string,token:string} $cfg */
     public static function get(string $path, array $params = [], array $cfg = [])
     {
@@ -64,10 +100,9 @@ class ChurchToolsClient
      * GET helper that shares one cookie jar across the legacy login handshake.
      * Returns the decoded JSON (array), the raw body (string) for non-JSON, or null.
      */
-    private static function cookieGet(string $url, string $cookieFile)
+    private static function cookieGet(string $url, string $cookieFile, array $cfg = [])
     {
-        $ch = curl_init();
-        curl_setopt_array($ch, [
+        $response = self::send([
             CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_HTTPHEADER     => ['Accept: application/json'],
@@ -75,8 +110,7 @@ class ChurchToolsClient
             CURLOPT_COOKIEFILE     => $cookieFile, // and send cookies already captured
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT        => 8,
-        ]);
-        $response = curl_exec($ch);
+        ], $cfg)['body'];
 
         if ($response === false) {
             return null;
@@ -140,9 +174,9 @@ class ChurchToolsClient
         $cookieFile = tempnam(sys_get_temp_dir(), 'ct_sess_');
 
         // 1. Log in with the token to establish a session cookie (captured in $cookieFile).
-        $whoami = self::cookieGet($root . '/api/whoami?login_token=' . urlencode($token), $cookieFile);
+        $whoami = self::cookieGet($root . '/api/whoami?login_token=' . urlencode($token), $cookieFile, $cfg);
         // 2. CSRF token for THAT session — cookie only (login_token would spawn a fresh session).
-        $csrfResp = self::cookieGet($root . '/api/csrftoken', $cookieFile);
+        $csrfResp = self::cookieGet($root . '/api/csrftoken', $cookieFile, $cfg);
         $csrf = is_array($csrfResp) ? ($csrfResp['data'] ?? null) : null;
 
         $headers = [
@@ -155,8 +189,7 @@ class ChurchToolsClient
         }
 
         // 3. POST the legacy endpoint reusing the session cookie (no login_token here).
-        $ch = curl_init();
-        curl_setopt_array($ch, [
+        $answer = self::send([
             CURLOPT_URL            => $root . '/index.php?q=churchservice/ajax',
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_POST           => true,
@@ -166,10 +199,10 @@ class ChurchToolsClient
             CURLOPT_COOKIEJAR      => $cookieFile,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT        => 20,
-        ]);
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
+        ], $cfg);
+        $response = $answer['body'];
+        $httpCode = $answer['status'];
+        $curlError = $answer['error'];
 
         if (is_string($cookieFile)) {
             @unlink($cookieFile);
@@ -240,24 +273,23 @@ class ChurchToolsClient
     {
         require_once(__DIR__ . '/Logging.php');
         $cookieFile = null;
+        // Redirects (e.g. to a storage host) are followed by OutboundHttp, each one checked.
         $opts = [
             CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_FOLLOWLOCATION => true,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT        => 20,
         ];
         if ($useCookie) {
             $cookieFile = tempnam(sys_get_temp_dir(), 'ct_sess_');
-            self::cookieGet(self::instanceRoot($cfg) . '/api/whoami?login_token=' . urlencode($cfg['token'] ?? ''), $cookieFile);
+            self::cookieGet(self::instanceRoot($cfg) . '/api/whoami?login_token=' . urlencode($cfg['token'] ?? ''), $cookieFile, $cfg);
             $opts[CURLOPT_COOKIEFILE] = $cookieFile;
             $opts[CURLOPT_COOKIEJAR]  = $cookieFile;
         }
-        $ch = curl_init();
-        curl_setopt_array($ch, $opts);
-        $body     = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlErr  = curl_error($ch);
+        $answer   = self::send($opts, $cfg);
+        $body     = $answer['body'];
+        $httpCode = $answer['status'];
+        $curlErr  = $answer['error'];
 
         if (is_string($cookieFile)) {
             @unlink($cookieFile);
@@ -269,10 +301,19 @@ class ChurchToolsClient
         return is_string($body) && $body !== '' ? $body : null;
     }
 
+    /**
+     * Fetch a file URL (from a ChurchTools answer) through the guard, for streaming it on.
+     * @return array{body: string|false, status: int, error: string, contentType: string, url: string}
+     */
+    public static function fetchRaw(string $url, array $cfg): array
+    {
+        return self::send([CURLOPT_URL => $url, CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_TIMEOUT => 30], $cfg);
+    }
+
     /** @param array{url:string,token:string} $cfg */
     private static function request(string $method, string $path, array $params = [], array $data = [], array $cfg = [])
     {
-        $ch = curl_init();
+        $options = [];
 
         $baseUrl = rtrim($cfg['url'] ?? '', '/') . '/';
         $url = $baseUrl . $path;
@@ -288,19 +329,17 @@ class ChurchToolsClient
 
         if ($method === 'POST' || $method === 'PUT' || $method === 'PATCH') {
             $headers[] = 'Content-Type: application/json';
-            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            $options[CURLOPT_POSTFIELDS] = json_encode($data);
         }
 
-        curl_setopt_array($ch, [
+        $response = self::send($options + [
             CURLOPT_URL => $url,
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_CUSTOMREQUEST => $method,
             CURLOPT_HTTPHEADER => $headers,
-        ]);
-
-        $response = curl_exec($ch);
-
-        unset($ch);
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 30,
+        ], $cfg)['body'];
 
         if ($response === false) {
             return false;

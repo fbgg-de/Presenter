@@ -59,7 +59,7 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
   const currentShowRef = useRef(currentShow);
   currentShowRef.current = currentShow;
 
-  const { offlineMode } = useGetSettings();
+  const { offlineMode } = useGetSettings('offlineMode');
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
   const isAuthenticated = offlineMode || session?.isAuthenticated === true;
 
@@ -113,11 +113,7 @@ export const useShowUpdatePoller = ({ autoReload = false }: { autoReload?: boole
         if (!polledShow) return;
         const polledSig = normalizeOrderSig(polledShow);
         const snapshotSig = normalizeOrderSig(serverSnapshot ?? currentShow);
-        if (
-          polledSig === snapshotSig &&
-          JSON.stringify(polledShow.mediaCues ?? []) === JSON.stringify((serverSnapshot ?? currentShow)?.mediaCues ?? [])
-        )
-          return;
+        if (polledSig === snapshotSig) return;
         if (autoReloadRef.current) {
           // Auto mode — we already hold the server version, so apply it directly
           // instead of raising the banner and re-fetching on confirmation.

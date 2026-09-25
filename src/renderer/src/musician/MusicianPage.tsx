@@ -113,7 +113,10 @@ export const MusicianPage = () => {
   const { songs } = useGetSongs();
 
   // Operator's live position — read-only, never mutated by the musician
-  const { activeItemIndex: operatorItemIndex, activeBlockIndex: operatorActiveBlockIndex } = useGetPresentationSettings();
+  const { activeItemIndex: operatorItemIndex, activeBlockIndex: operatorActiveBlockIndex } = useGetPresentationSettings(
+    'activeItemIndex',
+    'activeBlockIndex',
+  );
 
   const updateMusicianSetting = useUpdateMusicianSetting();
 
@@ -139,7 +142,7 @@ export const MusicianPage = () => {
   const [orderEditorSaving, setOrderEditorSaving] = useState(false);
 
   // Fetch session to get the authenticated account number
-  const { offlineMode, deviceId } = useGetSettings();
+  const { offlineMode, deviceId } = useGetSettings('offlineMode', 'deviceId');
   const { data: sessionData } = useGetSessionQuery(undefined, { skip: offlineMode });
   const churchToolsEnabled = sessionData?.settings?.churchToolsEnabled ?? false;
   const [updateSongMutation] = useUpdateSongMutation();
@@ -884,7 +887,6 @@ export const MusicianPage = () => {
         title: currentShow.title,
         order: nextShowOrder,
         groups: currentShow.groups,
-        mediaCues: currentShow.mediaCues,
         styleId: currentShow.styleId ?? null,
       }).unwrap();
       dispatch(setDirty(false));

@@ -168,7 +168,7 @@ const BandRow = ({
 
 export const BandsSection = () => {
   const { LL } = useI18nContext();
-  const { offlineMode } = useGetSettings();
+  const { offlineMode } = useGetSettings('offlineMode');
   const { data: bands = [], isLoading } = useGetBandsQuery(undefined, { skip: offlineMode });
   const [createBand] = useCreateBandMutation();
   const [reorderBands] = useReorderBandsMutation();

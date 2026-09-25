@@ -17,7 +17,7 @@ import { useGetSessionQuery } from '@/api/session.api';
 loadAllLocales();
 
 const AdminApp = () => {
-  const { themeMode, uiLanguage, offlineMode } = useGetSettings();
+  const { themeMode, uiLanguage, offlineMode } = useGetSettings('themeMode', 'uiLanguage', 'offlineMode');
   const resolvedMode = resolveThemeMode(themeMode);
   const muiTheme = useMemo(() => getTheme(resolvedMode), [resolvedMode]);
 

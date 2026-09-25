@@ -36,8 +36,23 @@ export const DEFAULT_KEYBOARD_MAPPING: Record<string, { enabled: boolean; key: s
   toggle_black: { enabled: true, key: 'KeyB' },
   toggle_text_hidden: { enabled: true, key: 'Ctrl+KeyB' },
   close_drawer: { enabled: true, key: 'Escape' },
-  toggle_video_playback: { enabled: true, key: 'Space' },
-  toggle_video_visible: { enabled: true, key: 'Ctrl+Space' },
+  // Media follows the editing-suite keys (J back · K play/pause · L play); Space moves the slides on,
+  // as it does in every presentation program.
+  toggle_video_playback: { enabled: true, key: 'KeyK' },
+  // Beside B (black) and Ctrl+B (text): Alt+B hides the background.
+  toggle_video_visible: { enabled: true, key: 'Alt+KeyB' },
+  advance: { enabled: true, key: 'Space' },
+  // Letter keys sit in the same place on QWERTY and QWERTZ; BracketLeft is "Ü" on a German layout.
+  // Shift+L: plain L is Play in the J/K/L transport below.
+  toggle_set_list: { enabled: true, key: 'Shift+KeyL' },
+  toggle_inspector: { enabled: true, key: 'KeyI' },
+  // Only acts while a slide waits in the preview ("preview before live"); otherwise Enter is left alone.
+  send_preview_live: { enabled: true, key: 'Enter' },
+  // Go: the next image, video or slideshow of the active agenda group.
+  media_go: { enabled: true, key: 'KeyN' },
+  // J / L around K (play/pause, above): back 5 s and play — the open audio item or the running media.
+  media_back: { enabled: true, key: 'KeyJ' },
+  media_play: { enabled: true, key: 'KeyL' },
 };
 
 /** All configurable actions */
@@ -46,6 +61,7 @@ const ACTIONS = [
   'next_item',
   'prev_block',
   'next_block',
+  'advance',
   'prev_line',
   'next_line',
   'jump_to_start',
@@ -54,6 +70,12 @@ const ACTIONS = [
   'close_drawer',
   'toggle_video_playback',
   'toggle_video_visible',
+  'toggle_set_list',
+  'toggle_inspector',
+  'send_preview_live',
+  'media_go',
+  'media_back',
+  'media_play',
 ] as const;
 
 type ActionId = (typeof ACTIONS)[number];
@@ -72,6 +94,8 @@ const useActionLabel = (): ((action: ActionId) => string) => {
           return LL.KEYBOARD.ACTION_PREV_BLOCK();
         case 'next_block':
           return LL.KEYBOARD.ACTION_NEXT_BLOCK();
+        case 'advance':
+          return LL.KEYBOARD.ACTION_ADVANCE();
         case 'prev_line':
           return LL.KEYBOARD.ACTION_PREV_LINE();
         case 'next_line':
@@ -88,6 +112,18 @@ const useActionLabel = (): ((action: ActionId) => string) => {
           return LL.KEYBOARD.ACTION_TOGGLE_VIDEO();
         case 'toggle_video_visible':
           return LL.KEYBOARD.ACTION_TOGGLE_VIDEO_VISIBLE();
+        case 'toggle_set_list':
+          return LL.KEYBOARD.ACTION_TOGGLE_SET_LIST();
+        case 'toggle_inspector':
+          return LL.KEYBOARD.ACTION_TOGGLE_INSPECTOR();
+        case 'send_preview_live':
+          return LL.KEYBOARD.ACTION_SEND_PREVIEW_LIVE();
+        case 'media_go':
+          return LL.KEYBOARD.ACTION_MEDIA_GO();
+        case 'media_back':
+          return LL.KEYBOARD.ACTION_MEDIA_BACK();
+        case 'media_play':
+          return LL.KEYBOARD.ACTION_MEDIA_PLAY();
         default:
           return action;
       }
@@ -135,7 +171,7 @@ const comboToPending = (combo: string): Pending => {
 export const KeyboardMappingEditor = () => {
   const { LL } = useI18nContext();
 
-  const { keyboardMapping } = useGetSettings();
+  const { keyboardMapping } = useGetSettings('keyboardMapping');
   const updateSetting = useUpdateSetting();
 
   const getActionLabel = useActionLabel();

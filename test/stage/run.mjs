@@ -64,6 +64,7 @@ const bundle = async (entry, out) => {
 
 const S = await bundle('src/renderer/src/stage/types.ts', 'stage.js');
 const W = await bundle('src/renderer/src/store/windowSlice.ts', 'window.js');
+const G = await bundle('src/renderer/src/store/stageSlice.ts', 'stageSlice.js');
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -276,6 +277,31 @@ ok('clearing runtime ids keeps the configs', cfgs(state).length === 1 && cfgs(st
 
 // Every write reaches storage — a config that only lives in memory is gone at the next start.
 ok('state is persisted', JSON.parse(store.get('presenter_windows')).windowConfigs.length === 1);
+
+// ── Stage transport ───────────────────────────────────────────────────────────
+
+let stage = G.default(undefined, { type: '@@init' });
+stage = G.default(stage, G.stageGo({ layerId: 1, cueCount: 3, at: 10 }));
+eq('Go on a layer that never started starts its first cue', stage.layers[1].cueIndex, 0);
+stage = G.default(stage, G.stageGo({ layerId: 1, cueCount: 3, at: 20 }));
+eq('Go on a running layer steps on', stage.layers[1].cueIndex, 1);
+stage = G.default(stage, G.stageStop({ layerId: 1, cueCount: 3, at: 30 }));
+eq('Stop parks it past the last cue', stage.layers[1].cueIndex, 3);
+stage = G.default(stage, G.stageStart({ layerId: 1, at: 40 }));
+eq('Start picks it up at the first cue again', stage.layers[1].cueIndex, 0);
+
+// Adjusting a running timer: an offset carried in the runtime, cleared on the next cue.
+stage = G.default(stage, G.stageAdjust({ layerId: 1, deltaMs: 60_000 }));
+stage = G.default(stage, G.stageAdjust({ layerId: 1, deltaMs: -15_000 }));
+eq('adjustments add up', stage.layers[1].adjustMs, 45_000);
+const adjDown = { id: 'd', kind: 'countdown', source: 'duration', durationSec: 300, onZero: 'next', format: { preset: 'auto' } };
+const adjUp = { id: 'u', kind: 'countup', format: { preset: 'auto' } };
+const rt = { cueIndex: 0, startedAt: T0, hidden: false, adjustMs: 45_000 };
+eq('a countdown gets the time added to its zero point', S.resolveCue(adjDown, rt, 'en').anchor, T0 + 300_000 + 45_000);
+eq('a count-up gets it added to what has elapsed', S.resolveCue(adjUp, rt, 'en').anchor, T0 - 45_000);
+eq('the hand-over moves with it', S.cueEndsAt(adjDown, T0, 45_000), T0 + 345_000);
+stage = G.default(stage, G.stageGo({ layerId: 1, cueCount: 3, at: 50 }));
+eq('the next cue starts without the correction', stage.layers[1].adjustMs, undefined);
 
 console.log(failed ? `\n${failed} failing` : '\nall passing');
 process.exit(failed ? 1 : 0);

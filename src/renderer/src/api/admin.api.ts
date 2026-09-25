@@ -15,6 +15,10 @@ export type AdminAccount = {
   spotify_client_id?: string | null;
   /** True if client id and secret are both configured. The secret is never sent to the client. */
   spotify_enabled?: boolean;
+  /** The account's own Nextcloud, set by the account in Settings → Connections. */
+  nextcloud_url?: string | null;
+  /** Whether the server may reach the account's integrations inside its own network. Admin-only. */
+  integrations_private_network?: boolean;
   providers: Array<{
     provider_id: number;
     provider_name: string;
@@ -54,6 +58,8 @@ export type UpdateAccountRequest = {
   spotifyClientId?: string;
   /** Spotify app client secret. Omit to keep the stored one. */
   spotifyClientSecret?: string;
+  /** Let the server reach this account's integrations on private addresses. */
+  integrationsPrivateNetwork?: boolean;
 };
 
 export type CreateProviderRequest = {

@@ -1,9 +1,12 @@
 import {
   MusicNote as MusicNoteIcon,
+  Lyrics as SongIcon,
   Image as ImageIcon,
   MenuBook as MenuBookIcon,
   Videocam as VideocamIcon,
   Palette as PaletteIcon,
+  Audiotrack as AudioIcon,
+  Collections as SlideshowIcon,
 } from '@mui/icons-material';
 import type { SvgIconComponent } from '@mui/icons-material';
 import type { ShowItemType, MediaSubType } from '@/api/shows.api';
@@ -12,6 +15,7 @@ import { DEFAULT_BIBLE_ITEM_COLOR, DEFAULT_MEDIA_ITEM_COLOR, DEFAULT_SONG_ITEM_C
 /** Map of MUI icon name strings to components */
 const ICON_MAP: Record<string, SvgIconComponent> = {
   MusicNote: MusicNoteIcon,
+  Lyrics: SongIcon,
   Image: ImageIcon,
   MenuBook: MenuBookIcon,
   Videocam: VideocamIcon,
@@ -27,7 +31,8 @@ export const DEFAULT_ITEM_COLORS: Record<ShowItemType, string> = {
 
 /** Default icon names per show item type */
 export const DEFAULT_ITEM_ICONS: Record<ShowItemType, string> = {
-  song: 'MusicNote',
+  // Lyrics, so a song never looks like an audio entry (a note).
+  song: 'Lyrics',
   media: 'Image',
   bible_verse: 'MenuBook',
 };
@@ -50,11 +55,15 @@ export const getShowItemIcon = (type: ShowItemType, mediaSubType?: MediaSubType)
         return VideocamIcon;
       case 'color':
         return PaletteIcon;
+      case 'audio':
+        return AudioIcon;
+      case 'slideshow':
+        return SlideshowIcon;
       default:
         return ImageIcon;
     }
   }
-  const iconName = DEFAULT_ITEM_ICONS[type] ?? 'MusicNote';
+  const iconName = DEFAULT_ITEM_ICONS[type] ?? 'Lyrics';
   return getIconComponent(iconName);
 };
 

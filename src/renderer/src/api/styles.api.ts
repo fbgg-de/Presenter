@@ -112,6 +112,16 @@ export type StyleData = {
   backgroundVideoEaseIn?: { enabled: boolean; value: number };
   backgroundVideoEaseOut?: { enabled: boolean; value: number };
   css?: string;
+  /**
+   * The background this theme brings when nothing more specific is assigned — a `backgrounds`
+   * id. `null` explicitly means none; absent means the theme has no say.
+   */
+  defaultBackgroundId?: number | null;
+  /**
+   * Per-screen-group variants, keyed by screen group id. A variant holds only what differs
+   * from the base, and may carry its own `defaultBackgroundId`.
+   */
+  variants?: Record<string, StyleData>;
 };
 
 export type StyleEntity = {
@@ -119,7 +129,6 @@ export type StyleEntity = {
   name: string;
   enabled: boolean;
   data: StyleData;
-  windowOverrides?: { window_name: string; override_style_id: number }[];
   created_at?: string;
   updated_at?: string;
 };

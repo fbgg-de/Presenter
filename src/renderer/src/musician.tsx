@@ -24,7 +24,7 @@ loadAllLocales();
 
 /** Wrapper that reads the musician-specific theme from Redux */
 const MusicianApp = () => {
-  const { uiLanguage, offlineMode } = useGetSettings();
+  const { uiLanguage, offlineMode } = useGetSettings('uiLanguage', 'offlineMode');
   const { musicianTheme } = useGetMusicianSettings();
   const muiTheme = useMemo(() => getTheme(musicianTheme), [musicianTheme]);
   const [boundaryError, setBoundaryError] = useState<Error | null>(null);

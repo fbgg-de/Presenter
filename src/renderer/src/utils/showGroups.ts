@@ -1,3 +1,4 @@
+import { newId } from '@/utils/ids';
 import type { ShowGroup, ShowItem } from '@/api/shows.api';
 
 /** The always-present fallback group. Items without a (valid) groupId belong here. */
@@ -19,6 +20,9 @@ export const GROUP_COLOR_PRESETS = [
 ];
 
 export const genGroupId = (): string => `g_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+
+/** A new show item id; unique enough within one show. */
+export const genItemId = (): string => newId('i');
 
 export const makeDefaultGroup = (): ShowGroup => ({ id: DEFAULT_GROUP_ID, name: '', collapsed: false });
 

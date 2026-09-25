@@ -959,6 +959,324 @@ class AdminMigrations extends RestController
                     }
                 },
             ],
+            26 => [
+                'description' => 'Add screen_groups table (logical outputs that windows are assigned to)',
+                'up' => function (mysqli $db) use ($tableExists) {
+                    if ($tableExists('screen_groups')) {
+                        return;
+                    }
+                    // A group is account-wide; which window belongs to it stays on the device.
+                    // `data` holds the kind and the layers the group shows, read and written whole.
+                    $db->query("
+                        CREATE TABLE `screen_groups` (
+                            `id` INT AUTO_INCREMENT PRIMARY KEY,
+                            `account` INT NOT NULL,
+                            `name` VARCHAR(200) NOT NULL,
+                            `enabled` TINYINT(1) DEFAULT 1,
+                            `sort_order` INT NOT NULL DEFAULT 0,
+                            `data` JSON NOT NULL,
+                            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            UNIQUE KEY `uk_screen_groups_account_name` (`account`, `name`),
+                            CONSTRAINT `fk_screen_groups_account` FOREIGN KEY (`account`)
+                                REFERENCES `account` (`license`) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+                    ");
+                    echo "Created table: screen_groups\n";
+                },
+            ],
+            27 => [
+                'description' => 'Themes keep a colour only: pictures and videos behind the text become background entries in the agenda',
+                'up' => function (mysqli $db) use ($tableExists) {
+                    // The styles are rewritten below, so keep the untouched originals first.
+                    if (!$tableExists('styles_backup_27')) {
+                        $db->query('CREATE TABLE `styles_backup_27` AS SELECT * FROM `styles`');
+                        echo "Backed up styles to styles_backup_27\n";
+                    }
+                    // Everything about a picture or video behind the text. The colour stays.
+                    $retired = [
+                        'backgroundImage', 'backgroundSize', 'backgroundPosition', 'backgroundZoom', 'backgroundBlur',
+                        'backgroundVideo', 'backgroundVideoAutoplay', 'backgroundVideoLoop', 'backgroundVideoVolume', 'backgroundVideoSize',
+                        'backgroundVideoPosition', 'backgroundVideoZoom', 'backgroundVideoBlur', 'backgroundVideoEaseIn', 'backgroundVideoEaseOut',
+                        'suppressBackgroundImage', 'suppressBackgroundVideo', 'defaultBackgroundId',
+                    ];
+                    $strip = function (array $data) use ($retired): array {
+                        foreach ($retired as $key) {
+                            unset($data[$key]);
+                        }
+                        return $data;
+                    };
+
+                    $cleaned = 0;
+                    $result = $db->query('SELECT `id`, `data` FROM `styles`');
+                    while ($row = $result->fetch_assoc()) {
+                        $data = json_decode($row['data'], true);
+                        if (!is_array($data)) {
+                            continue;
+                        }
+                        $next = $strip($data);
+                        if (isset($next['variants']) && is_array($next['variants'])) {
+                            foreach ($next['variants'] as $groupKey => $variant) {
+                                if (is_array($variant)) {
+                                    $next['variants'][$groupKey] = $strip($variant);
+                                }
+                            }
+                        }
+                        if ($next === $data) {
+                            continue;
+                        }
+                        $json = json_encode($next);
+                        $id = (int)$row['id'];
+                        $update = $db->prepare('UPDATE `styles` SET `data` = ? WHERE `id` = ?');
+                        $update->bind_param('si', $json, $id);
+                        $update->execute();
+                        $update->close();
+                        $cleaned++;
+                    }
+                    echo "Removed pictures and videos from {$cleaned} theme(s)\n";
+                },
+            ],
+            28 => [
+                'description' => 'Media cues of shows become background entries in the agenda group of the song they played with',
+                'up' => function (mysqli $db) use ($tableExists, $columnExists) {
+                    if (!$columnExists('shows', 'media_cues')) {
+                        return;
+                    }
+                    if (!$tableExists('shows_backup_28')) {
+                        $db->query('CREATE TABLE `shows_backup_28` AS SELECT * FROM `shows`');
+                        echo "Backed up shows to shows_backup_28\n";
+                    }
+                    $newId = fn () => 'm' . bin2hex(random_bytes(8));
+
+                    $converted = 0;
+                    $result = $db->query("SELECT `account`, `title`, `order`, `media_cues` FROM `shows` WHERE `media_cues` IS NOT NULL");
+                    $rows = $result->fetch_all(MYSQLI_ASSOC);
+                    foreach ($rows as $row) {
+                        $order = json_decode($row['order'], true);
+                        $cues = json_decode($row['media_cues'], true);
+                        if (!is_array($order)) {
+                            continue;
+                        }
+                        $cuesById = [];
+                        foreach (is_array($cues) ? $cues : [] as $cue) {
+                            if (is_array($cue) && isset($cue['id'])) {
+                                $cuesById[$cue['id']] = $cue;
+                            }
+                        }
+
+                        $next = [];
+                        $placed = [];
+                        foreach ($order as $item) {
+                            if (is_array($item) && array_key_exists('mediaCue', $item)) {
+                                $binding = is_array($item['mediaCue']) ? $item['mediaCue'] : null;
+                                $cue = $binding ? ($cuesById[$binding['cueId'] ?? ''] ?? null) : null;
+                                unset($item['mediaCue']);
+                                if ($cue) {
+                                    $groupId = $item['groupId'] ?? 'default';
+                                    if (empty($item['id'])) {
+                                        $item['id'] = $newId();
+                                    }
+                                    $placedKey = $cue['id'] . '|' . $groupId;
+                                    if (!isset($placed[$placedKey])) {
+                                        // Screen groups stay; the free-text window roles of old become "all screens".
+                                        $assignments = [];
+                                        $all = false;
+                                        foreach ($cue['assignments'] ?? [] as $assignment) {
+                                            if (!is_array($assignment) || !isset($assignment['role'])) {
+                                                continue;
+                                            }
+                                            if (str_starts_with($assignment['role'], 'group:')) {
+                                                $assignments[] = $assignment;
+                                            } elseif (!$all) {
+                                                $assignment['role'] = 'all';
+                                                $assignments[] = $assignment;
+                                                $all = true;
+                                            }
+                                        }
+                                        $version = $cue;
+                                        $version['assignments'] = $assignments;
+                                        $version['lyrics'] = [
+                                            'songItemId' => $item['id'],
+                                            'arrangement' => $binding['arrangement'] ?? null,
+                                            'map' => (object)($binding['lyrics'] ?? []),
+                                            'followLyrics' => (bool)($binding['followLyrics'] ?? true),
+                                            'followVideo' => (bool)($binding['followVideo'] ?? true),
+                                        ];
+                                        $first = $cue['sources'][0] ?? [];
+                                        // It played behind the song's text, which is what a background entry does.
+                                        $next[] = [
+                                            'id' => $newId(),
+                                            'type' => 'media',
+                                            'mediaSubType' => ($first['type'] ?? 'video') === 'image' ? 'image' : 'video',
+                                            'mediaPath' => $first['path'] ?? '',
+                                            'label' => $cue['name'] ?? 'Video',
+                                            'groupId' => $groupId,
+                                            'media' => ['role' => 'background', 'versionId' => $cue['id'], 'versions' => [$version]],
+                                        ];
+                                        $placed[$placedKey] = true;
+                                        $converted++;
+                                    }
+                                }
+                            }
+                            $next[] = $item;
+                        }
+
+                        $json = json_encode($next);
+                        $account = (int)$row['account'];
+                        $title = $row['title'];
+                        $update = $db->prepare('UPDATE `shows` SET `order` = ?, `media_cues` = NULL WHERE `account` = ? AND `title` = ?');
+                        $update->bind_param('sis', $json, $account, $title);
+                        $update->execute();
+                        $update->close();
+                    }
+                    echo "Turned {$converted} media cue(s) into background entries\n";
+                },
+            ],
+            29 => [
+                'description' => 'Move theme stage elements onto their Stage screen groups as stage layouts',
+                'up' => function (mysqli $db) use ($tableExists) {
+                    if (!$tableExists('styles_backup_29')) {
+                        $db->query('CREATE TABLE `styles_backup_29` AS SELECT * FROM `styles`');
+                        echo "Backed up styles to styles_backup_29\n";
+                    }
+
+                    $groups = [];
+                    $result = $db->query('SELECT `id`, `data` FROM `screen_groups`');
+                    while ($row = $result->fetch_assoc()) {
+                        $groups[(int)$row['id']] = json_decode($row['data'], true) ?: [];
+                    }
+
+                    // The old header/progress/next switches, as a Band layout.
+                    $toLayout = function (array $stage): array {
+                        return [
+                            'layout' => 'band',
+                            'roadmap' => isset($stage['progress']) && $stage['progress'] !== 'off',
+                            'next' => !empty($stage['next']),
+                            'key' => !empty($stage['key']),
+                            'clock' => !empty($stage['clock']),
+                            'mirror' => false,
+                            'textSize' => 'large',
+                        ];
+                    };
+
+                    $movedGroups = 0;
+                    $cleaned = 0;
+                    $result = $db->query('SELECT `id`, `data` FROM `styles`');
+                    while ($row = $result->fetch_assoc()) {
+                        $data = json_decode($row['data'], true);
+                        if (!is_array($data)) {
+                            continue;
+                        }
+                        $changed = false;
+                        if (array_key_exists('stage', $data)) {
+                            unset($data['stage']);
+                            $changed = true;
+                        }
+                        foreach (($data['variants'] ?? []) as $groupKey => $variant) {
+                            if (!is_array($variant) || !array_key_exists('stage', $variant)) {
+                                continue;
+                            }
+                            $groupId = (int)$groupKey;
+                            $isStageGroup = isset($groups[$groupId]) && ($groups[$groupId]['kind'] ?? '') === 'stage';
+                            if ($isStageGroup && is_array($variant['stage']) && !isset($groups[$groupId]['stage'])) {
+                                $groups[$groupId]['stage'] = $toLayout($variant['stage']);
+                                $json = json_encode($groups[$groupId]);
+                                $update = $db->prepare('UPDATE `screen_groups` SET `data` = ? WHERE `id` = ?');
+                                $update->bind_param('si', $json, $groupId);
+                                $update->execute();
+                                $update->close();
+                                $movedGroups++;
+                            }
+                            unset($data['variants'][$groupKey]['stage']);
+                            $changed = true;
+                        }
+                        if ($changed) {
+                            $json = json_encode($data);
+                            $id = (int)$row['id'];
+                            $update = $db->prepare('UPDATE `styles` SET `data` = ? WHERE `id` = ?');
+                            $update->bind_param('si', $json, $id);
+                            $update->execute();
+                            $update->close();
+                            $cleaned++;
+                        }
+                    }
+
+                    echo "Stage layouts set on {$movedGroups} group(s); stage elements removed from {$cleaned} theme(s)\n";
+                },
+            ],
+            30 => [
+                'description' => 'Add screen_sets table (named shortcuts for several screen groups, e.g. LED wall = left + right)',
+                'up' => function (mysqli $db) use ($tableExists) {
+                    if ($tableExists('screen_sets')) {
+                        return;
+                    }
+                    $db->query("
+                        CREATE TABLE `screen_sets` (
+                            `id` INT AUTO_INCREMENT PRIMARY KEY,
+                            `account` INT NOT NULL,
+                            `name` VARCHAR(200) NOT NULL,
+                            `screen_group_ids` JSON NOT NULL,
+                            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            KEY `idx_screen_sets_account` (`account`),
+                            CONSTRAINT `fk_screen_sets_account` FOREIGN KEY (`account`)
+                                REFERENCES `account` (`license`) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+                    ");
+                    echo "Created table: screen_sets\n";
+                },
+            ],
+            31 => [
+                'description' => 'Add library_entries table (saved agenda groups and media entries to reuse in other shows)',
+                'up' => function (mysqli $db) use ($tableExists) {
+                    if ($tableExists('library_entries')) {
+                        return;
+                    }
+                    $db->query("
+                        CREATE TABLE `library_entries` (
+                            `id` INT AUTO_INCREMENT PRIMARY KEY,
+                            `account` INT NOT NULL,
+                            `kind` VARCHAR(20) NOT NULL,
+                            `name` VARCHAR(200) NOT NULL,
+                            `data` JSON NOT NULL,
+                            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            KEY `idx_library_entries_account` (`account`, `kind`),
+                            CONSTRAINT `fk_library_entries_account` FOREIGN KEY (`account`)
+                                REFERENCES `account` (`license`) ON DELETE CASCADE
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci
+                    ");
+                    echo "Created table: library_entries\n";
+                },
+            ],
+            32 => [
+                'description' => 'Add account.nextcloud_url and account.nextcloud_private_network (each account its own Nextcloud for the web version)',
+                'up' => function (mysqli $db) use ($columnExists) {
+                    if (!$columnExists('account', 'nextcloud_url')) {
+                        $db->query("ALTER TABLE `account` ADD COLUMN `nextcloud_url` VARCHAR(500) DEFAULT NULL");
+                        echo "Added column: account.nextcloud_url\n";
+                    }
+                    if (!$columnExists('account', 'nextcloud_private_network')) {
+                        $db->query("ALTER TABLE `account` ADD COLUMN `nextcloud_private_network` TINYINT(1) NOT NULL DEFAULT 0");
+                        echo "Added column: account.nextcloud_private_network\n";
+                    }
+                },
+            ],
+            33 => [
+                'description' => 'One private-network switch for all account integrations (Nextcloud, ChurchTools): rename account.nextcloud_private_network to integrations_private_network',
+                'up' => function (mysqli $db) use ($columnExists) {
+                    if ($columnExists('account', 'integrations_private_network')) {
+                        return;
+                    }
+                    if ($columnExists('account', 'nextcloud_private_network')) {
+                        $db->query("ALTER TABLE `account` CHANGE COLUMN `nextcloud_private_network` `integrations_private_network` TINYINT(1) NOT NULL DEFAULT 0");
+                        echo "Renamed column: account.nextcloud_private_network -> integrations_private_network\n";
+                    } else {
+                        $db->query("ALTER TABLE `account` ADD COLUMN `integrations_private_network` TINYINT(1) NOT NULL DEFAULT 0");
+                        echo "Added column: account.integrations_private_network\n";
+                    }
+                },
+            ],
         ];
     }
 }

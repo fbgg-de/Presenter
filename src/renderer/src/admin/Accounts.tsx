@@ -4,7 +4,6 @@ import {
   Button,
   Chip,
   IconButton,
-  Link,
   Paper,
   Stack,
   Table,
@@ -29,8 +28,7 @@ import {
   Delete as DeleteIcon,
   Link as LinkIcon,
   CheckCircle as CheckCircleIcon,
-  Church as ChurchIcon,
-  Album as SpotifyIcon,
+  LanOutlined as NetworkIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import {
@@ -60,8 +58,7 @@ export const Accounts = () => {
   const [accountDialog, setAccountDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
   const [assignDialog, setAssignDialog] = useState<{ open: boolean; license?: number }>({ open: false });
   const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; id?: number; name?: string }>({ open: false });
-  const [ctDialog, setCtDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
-  const [spotifyDialog, setSpotifyDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
+  const [networkDialog, setNetworkDialog] = useState<{ open: boolean; account?: AdminAccount }>({ open: false });
 
   const handleSaveAccount = async (data: CreateAccountRequest | UpdateAccountRequest) => {
     try {
@@ -76,31 +73,10 @@ export const Accounts = () => {
     }
   };
 
-  const handleSaveCtConfig = async (license: number, churchToolsUrl: string, churchToolsToken: string) => {
-    try {
-      await updateAccount({
-        license,
-        churchToolsUrl: churchToolsUrl || null,
-        churchToolsToken: churchToolsToken || null,
-      }).unwrap();
-      setCtDialog({ open: false });
-    } catch (e) {
-      console.error('Failed to save ChurchTools config:', e);
-    }
-  };
-
-  const handleSaveSpotifyConfig = async (license: number, clientId: string, clientSecret: string) => {
-    try {
-      await updateAccount({
-        license,
-        // Always sent: an empty id clears the integration. The secret only goes when typed.
-        spotifyClientId: clientId.trim(),
-        ...(clientSecret.trim() ? { spotifyClientSecret: clientSecret.trim() } : {}),
-      }).unwrap();
-      setSpotifyDialog({ open: false });
-    } catch (e) {
-      console.error('Failed to save Spotify config:', e);
-    }
+  // Throws on failure so the dialog can show the server's answer (an address it refused).
+  const handleSaveNetworkAccess = async (license: number, privateNetwork: boolean) => {
+    await updateAccount({ license, integrationsPrivateNetwork: privateNetwork }).unwrap();
+    setNetworkDialog({ open: false });
   };
 
   const handleDelete = async () => {
@@ -156,8 +132,7 @@ export const Accounts = () => {
                 <TableCell>{LL.COMMON.EMAIL()}</TableCell>
                 <TableCell>{LL.COMMON.STATUS()}</TableCell>
                 <TableCell>{LL.ADMIN.OIDC_PROVIDERS()}</TableCell>
-                <TableCell>{LL.ADMIN.CHURCH_TOOLS()}</TableCell>
-                <TableCell>{LL.ADMIN.SPOTIFY()}</TableCell>
+                <TableCell>{LL.ADMIN.NETWORK_ACCESS()}</TableCell>
                 <TableCell>{LL.COMMON.ACTIONS()}</TableCell>
               </TableRow>
             </TableHead>
@@ -195,27 +170,13 @@ export const Accounts = () => {
                   <TableCell>
                     <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
                       <Chip
-                        label={account.church_tools_enabled ? LL.COMMON.ENABLED() : LL.COMMON.DISABLED()}
-                        color={account.church_tools_enabled ? 'success' : 'default'}
+                        label={account.integrations_private_network ? LL.ADMIN.NETWORK_PRIVATE_ALLOWED() : LL.ADMIN.NETWORK_PUBLIC_ONLY()}
+                        color={account.integrations_private_network ? 'warning' : 'default'}
                         size="small"
                       />
-                      <Tooltip title={LL.ADMIN.CONFIGURE_CHURCH_TOOLS()}>
-                        <IconButton size="small" onClick={() => setCtDialog({ open: true, account })}>
-                          <ChurchIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
-                  </TableCell>
-                  <TableCell>
-                    <Stack direction="row" sx={{ alignItems: 'center', gap: 1 }}>
-                      <Chip
-                        label={account.spotify_enabled ? LL.COMMON.ENABLED() : LL.COMMON.DISABLED()}
-                        color={account.spotify_enabled ? 'success' : 'default'}
-                        size="small"
-                      />
-                      <Tooltip title={LL.ADMIN.CONFIGURE_SPOTIFY()}>
-                        <IconButton size="small" onClick={() => setSpotifyDialog({ open: true, account })}>
-                          <SpotifyIcon fontSize="small" />
+                      <Tooltip title={LL.ADMIN.CONFIGURE_NETWORK_ACCESS()}>
+                        <IconButton size="small" onClick={() => setNetworkDialog({ open: true, account })}>
+                          <NetworkIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     </Stack>
@@ -255,17 +216,11 @@ export const Accounts = () => {
         onClose={() => setAssignDialog({ open: false })}
         onAssign={handleAssignProvider}
       />
-      <ChurchToolsDialog
-        open={ctDialog.open}
-        account={ctDialog.account}
-        onClose={() => setCtDialog({ open: false })}
-        onSave={handleSaveCtConfig}
-      />
-      <SpotifyDialog
-        open={spotifyDialog.open}
-        account={spotifyDialog.account}
-        onClose={() => setSpotifyDialog({ open: false })}
-        onSave={handleSaveSpotifyConfig}
+      <NetworkAccessDialog
+        open={networkDialog.open}
+        account={networkDialog.account}
+        onClose={() => setNetworkDialog({ open: false })}
+        onSave={handleSaveNetworkAccess}
       />
       <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false })} maxWidth="sm" fullWidth>
         <DialogTitle>{LL.ADMIN.CONFIRM_DELETE()}</DialogTitle>
@@ -419,11 +374,11 @@ const AssignProviderDialog = ({
 };
 
 /**
- * Dialog for configuring the ChurchTools integration URL and API token per account.
- * The token is write-only: it is never returned by the API, so the field is always blank
- * on open. Leave it blank to keep the existing token unchanged.
+ * Whether an account's integrations (Nextcloud, ChurchTools) may be in a private network. The
+ * account sets its addresses itself in Settings → Connections; reaching a private address lets the
+ * server into its own network, so only the server admin allows it.
  */
-const ChurchToolsDialog = ({
+const NetworkAccessDialog = ({
   open,
   account,
   onClose,
@@ -432,113 +387,70 @@ const ChurchToolsDialog = ({
   open: boolean;
   account?: AdminAccount;
   onClose: () => void;
-  onSave: (license: number, url: string, token: string) => void;
+  onSave: (license: number, privateNetwork: boolean) => Promise<void>;
 }) => {
   const { LL } = useI18nContext();
-  const [url, setUrl] = useState('');
-  const [token, setToken] = useState('');
+  const [privateNetwork, setPrivateNetwork] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setUrl(account?.church_tools_url ?? '');
-      setToken(''); // token is write-only; never pre-filled
+      setPrivateNetwork(!!account?.integrations_private_network);
+      setError(null);
     }
   }, [open, account]);
 
+  const save = async () => {
+    if (!account) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave(account.license, privateNetwork);
+    } catch (e) {
+      setError((e as { data?: { message?: string } })?.data?.message ?? LL.ADMIN.NETWORK_SAVE_FAILED());
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addresses = [
+    ['Nextcloud', account?.nextcloud_url],
+    ['ChurchTools', account?.church_tools_url],
+  ] as const;
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{LL.ADMIN.CONFIGURE_CHURCH_TOOLS()}</DialogTitle>
+      <DialogTitle>{LL.ADMIN.CONFIGURE_NETWORK_ACCESS()}</DialogTitle>
       <DialogContent>
         <Stack sx={{ gap: 2, mt: 1 }}>
           <Typography variant="body2" color="text.secondary">
-            {LL.ADMIN.CHURCH_TOOLS_HELP()}
+            {LL.ADMIN.NETWORK_HELP()}
           </Typography>
-          <TextField
-            label={LL.ADMIN.CHURCH_TOOLS_URL()}
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="https://demo.church.tools/api/"
-            fullWidth
+          <Stack sx={{ gap: 0.5 }}>
+            {addresses.map(([service, url]) => (
+              <Typography key={service} variant="body2">
+                {service}: {url || LL.ADMIN.NETWORK_NOT_SET_UP()}
+              </Typography>
+            ))}
+          </Stack>
+          <FormControlLabel
+            control={<Switch checked={privateNetwork} onChange={(e) => setPrivateNetwork(e.target.checked)} />}
+            label={
+              <Stack>
+                <Typography variant="body2">{LL.ADMIN.NETWORK_PRIVATE()}</Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {LL.ADMIN.NETWORK_PRIVATE_HELP()}
+                </Typography>
+              </Stack>
+            }
           />
-          <TextField
-            label={LL.ADMIN.CHURCH_TOOLS_TOKEN()}
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            placeholder={account?.church_tools_enabled ? LL.ADMIN.CHURCH_TOOLS_TOKEN_PLACEHOLDER_SET() : ''}
-            helperText={LL.ADMIN.CHURCH_TOOLS_TOKEN_HELP()}
-            type="password"
-            fullWidth
-          />
-          {!url && account?.church_tools_enabled && <Alert severity="warning">{LL.ADMIN.CHURCH_TOOLS_CLEAR_WARNING()}</Alert>}
+          {error && <Alert severity="error">{error}</Alert>}
         </Stack>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
-        <Button onClick={() => account && onSave(account.license, url, token)} variant="contained">
-          {LL.COMMON.SAVE()}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-};
-
-/**
- * Dialog for an account's Spotify app credentials (Client Credentials flow — used for track search
- * on set list entries). The secret is write-only like the ChurchTools token: blank keeps the stored
- * one. Clearing the client id removes both.
- */
-const SpotifyDialog = ({
-  open,
-  account,
-  onClose,
-  onSave,
-}: {
-  open: boolean;
-  account?: AdminAccount;
-  onClose: () => void;
-  onSave: (license: number, clientId: string, clientSecret: string) => void;
-}) => {
-  const { LL } = useI18nContext();
-  const [clientId, setClientId] = useState('');
-  const [clientSecret, setClientSecret] = useState('');
-
-  useEffect(() => {
-    if (open) {
-      setClientId(account?.spotify_client_id ?? '');
-      setClientSecret(''); // write-only; never pre-filled
-    }
-  }, [open, account]);
-
-  // A first-time setup needs both halves; an existing one may keep its stored secret.
-  const missingSecret = !!clientId.trim() && !clientSecret.trim() && !account?.spotify_enabled;
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{LL.ADMIN.CONFIGURE_SPOTIFY()}</DialogTitle>
-      <DialogContent>
-        <Stack sx={{ gap: 2, mt: 1 }}>
-          <Typography variant="body2" color="text.secondary">
-            {LL.ADMIN.SPOTIFY_HELP()}{' '}
-            <Link href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener noreferrer">
-              developer.spotify.com/dashboard
-            </Link>
-          </Typography>
-          <TextField label={LL.ADMIN.SPOTIFY_CLIENT_ID()} value={clientId} onChange={(e) => setClientId(e.target.value)} fullWidth />
-          <TextField
-            label={LL.ADMIN.SPOTIFY_CLIENT_SECRET()}
-            value={clientSecret}
-            onChange={(e) => setClientSecret(e.target.value)}
-            placeholder={account?.spotify_enabled ? LL.ADMIN.SPOTIFY_SECRET_PLACEHOLDER_SET() : ''}
-            helperText={LL.ADMIN.SPOTIFY_SECRET_HELP()}
-            type="password"
-            fullWidth
-          />
-          {!clientId.trim() && account?.spotify_enabled && <Alert severity="warning">{LL.ADMIN.SPOTIFY_CLEAR_WARNING()}</Alert>}
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>{LL.COMMON.CANCEL()}</Button>
-        <Button onClick={() => account && onSave(account.license, clientId, clientSecret)} variant="contained" disabled={missingSecret}>
+        <Button onClick={() => void save()} variant="contained" disabled={saving}>
           {LL.COMMON.SAVE()}
         </Button>
       </DialogActions>

@@ -7,20 +7,12 @@
 
 export type DisplayMode = 'normal' | 'stream';
 
-export interface VideoMask {
-  x: number; // 0-100
-  y: number; // 0-100
-  width: number; // 0-100
-  height: number; // 0-100
-}
-
 /**
  * Configuration for creating a presentation window (§12.5).
  */
 export interface WindowConfig {
   name: string;
   displayMode: DisplayMode;
-  languages: string; // "all", "EN", "EN,DE", etc.
   positionX?: number;
   positionY?: number;
   width: number;
@@ -29,12 +21,9 @@ export interface WindowConfig {
   frameless: boolean;
   alwaysOnTop: boolean;
   hideMouse: boolean;
-  hideText: boolean;
-  hideBackground: boolean;
   frozen: boolean;
   streamLines?: number;
   streamTransparentBg?: boolean;
-  videoMask?: VideoMask | null;
 }
 
 /**

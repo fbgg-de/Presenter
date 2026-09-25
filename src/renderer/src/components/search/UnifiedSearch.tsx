@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Box,
+  Button,
   Chip,
   CircularProgress,
   ClickAwayListener,
@@ -17,6 +18,8 @@ import {
   Skeleton,
   Stack,
   Switch,
+  Tab,
+  Tabs,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -26,7 +29,7 @@ import {
 import {
   Search as SearchIcon,
   Close as CloseIcon,
-  MusicNote as MusicNoteIcon,
+  Lyrics as MusicNoteIcon,
   Image as ImageIcon,
   MenuBook as MenuBookIcon,
   SelectAll as AllIcon,
@@ -59,6 +62,11 @@ interface UnifiedSearchProps {
   churchToolsEnabled?: boolean;
   /** Callback when a CCLI SongSelect suggestion is selected — receives the CCLI number, title and known metadata */
   onSelectChurchToolsSong?: (ccliNumber: number, songName: string, meta?: { author?: string | null; copyright?: string | null }) => void;
+  /**
+   * `dropdown` (default): results float under the field and a click elsewhere closes the search.
+   * `panel`: results fill the space under the field — for the search drawer, which closes itself.
+   */
+  variant?: 'dropdown' | 'panel';
 }
 
 const TYPE_CHIPS: { type: SearchType; icon: typeof AllIcon; colorKey: string }[] = [
@@ -119,17 +127,25 @@ export const UnifiedSearch = ({
   onOpenMediaBrowser,
   churchToolsEnabled = false,
   onSelectChurchToolsSong,
+  variant = 'dropdown',
 }: UnifiedSearchProps) => {
+  const panel = variant === 'panel';
   const { LL } = useI18nContext();
   const [query, setQuery] = useState('');
-  const [activeType, setActiveType] = useState<SearchType>(songsOnly ? 'song' : '');
   const [deepSearch, setDeepSearch] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [mountKey, setMountKey] = useState(0);
 
   // Persisted "include CCLI SongSelect results" preference.
-  const { includeChurchToolsResults } = useGetSettings();
+  const { includeChurchToolsResults, lastSearchType } = useGetSettings('includeChurchToolsResults', 'lastSearchType');
   const updateSetting = useUpdateSetting();
+  // The type filter is remembered between searches; a songs-only search ignores it.
+  const [activeType, setActiveTypeState] = useState<SearchType>(songsOnly ? 'song' : (lastSearchType as SearchType));
+  const setActiveType = (next: SearchType) => {
+    setActiveTypeState(next);
+    if (!songsOnly) updateSetting('lastSearchType', next);
+  };
+
   const includeCt = churchToolsEnabled && includeChurchToolsResults;
 
   const debouncedQuery = useDebounce(query, 300);
@@ -175,7 +191,8 @@ export const UnifiedSearch = ({
   useEffect(() => {
     if (open) {
       setQuery('');
-      setActiveType(songsOnly ? 'song' : '');
+      // Opening keeps the remembered filter; only a songs-only search forces its own.
+      setActiveTypeState(songsOnly ? 'song' : (lastSearchType as SearchType));
       setDeepSearch(false);
       setMountKey((k) => k + 1);
       // Use multiple timeouts to ensure focus works reliably
@@ -237,8 +254,30 @@ export const UnifiedSearch = ({
     return undefined;
   }, [open, mountKey]);
 
+  const libraryAction =
+    !songsOnly && activeType === 'media' && onOpenMediaBrowser
+      ? {
+          label: LL.UNIFIED_SEARCH.OPEN_MEDIA_LIBRARY(),
+          icon: <ImageIcon fontSize="small" />,
+          onClick: () => {
+            onOpenMediaBrowser();
+            if (!panel) onClose();
+          },
+        }
+      : !songsOnly && (activeType === '' || activeType === 'song') && onOpenSongLibrary
+        ? {
+            label: LL.UNIFIED_SEARCH.OPEN_LIBRARY(),
+            icon: <LibraryIcon fontSize="small" />,
+            onClick: () => {
+              onOpenSongLibrary();
+              if (!panel) onClose();
+            },
+          }
+        : undefined;
+
   const showLibraryEntry =
     !songsOnly &&
+    !panel &&
     ((!!onOpenSongLibrary && (activeType === '' || activeType === 'song')) || (!!onOpenMediaBrowser && activeType === 'media'));
   const showDropdown = open && isReady && (isSearching || showLibraryEntry || (songsOnly && allSongs.length > 0));
 
@@ -247,11 +286,15 @@ export const UnifiedSearch = ({
   const dropdownContent = (
     <Paper
       variant="outlined"
-      sx={{
-        maxHeight: 'min(400px, calc(100vh - 200px))',
-        overflow: 'auto',
-        width: anchorRef.current?.offsetWidth ?? '100%',
-      }}
+      sx={
+        panel
+          ? { flex: 1, minHeight: 0, overflow: 'auto', border: 0, bgcolor: 'transparent' }
+          : {
+              maxHeight: 'min(400px, calc(100vh - 200px))',
+              overflow: 'auto',
+              width: anchorRef.current?.offsetWidth ?? '100%',
+            }
+      }
     >
       {isSearching ? (
         <>
@@ -397,125 +440,118 @@ export const UnifiedSearch = ({
     </Paper>
   );
 
-  return (
-    <ClickAwayListener onClickAway={onClose}>
+  const body = (
+    <Stack
+      ref={anchorRef}
+      sx={{
+        gap: 0.5,
+        width: '100%',
+        position: 'relative',
+        ...(panel && { height: '100%', minHeight: 0 }),
+      }}
+    >
+      {/* Search input */}
       <Stack
-        ref={anchorRef}
+        direction="row"
         sx={{
+          alignItems: 'center',
           gap: 0.5,
-          width: '100%',
-          position: 'relative',
         }}
       >
-        {/* Search input */}
-        <Stack
-          direction="row"
-          sx={{
-            alignItems: 'center',
-            gap: 0.5,
+        <TextField
+          key={mountKey}
+          inputRef={inputRef}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setDeepSearch(false);
           }}
-        >
-          <TextField
-            key={mountKey}
-            inputRef={inputRef}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setDeepSearch(false);
-            }}
-            placeholder={LL.UNIFIED_SEARCH.PLACEHOLDER()}
-            size="small"
-            fullWidth
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                onClose();
-              } else if (e.key === 'Enter' && query.trim().length >= 1) {
-                // Enter triggers deep search (searches within song lyrics/blocks)
-                setDeepSearch(true);
-              }
-            }}
-            slotProps={{
-              input: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-                endAdornment: searchFetching ? (
-                  <InputAdornment position="end">
-                    <CircularProgress size={18} />
-                  </InputAdornment>
-                ) : undefined,
-              },
-            }}
-          />
+          placeholder={LL.UNIFIED_SEARCH.PLACEHOLDER()}
+          size="small"
+          fullWidth
+          autoFocus
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              onClose();
+            } else if (e.key === 'Enter' && query.trim().length >= 1) {
+              // Enter triggers deep search (searches within song lyrics/blocks)
+              setDeepSearch(true);
+            }
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+              endAdornment: searchFetching ? (
+                <InputAdornment position="end">
+                  <CircularProgress size={18} />
+                </InputAdornment>
+              ) : undefined,
+            },
+          }}
+        />
+        {!panel && (
           <IconButton size="small" onClick={onClose}>
             <CloseIcon fontSize="small" />
           </IconButton>
-        </Stack>
-
-        {/* Filter bar: a clean segmented type selector + (for song searches) a CCLI switch */}
-        {!songsOnly && (
-          <Stack direction="row" sx={{ px: 0.5, alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={activeType}
-              onChange={(_, value: SearchType | null) => value !== null && setActiveType(value)}
-              sx={{
-                '& .MuiToggleButton-root': {
-                  textTransform: 'none',
-                  fontSize: '0.72rem',
-                  py: 0.25,
-                  px: 1,
-                  gap: 0.5,
-                  border: 'none',
-                  borderRadius: 1.5,
-                },
-                gap: 0.25,
-              }}
-            >
-              {TYPE_CHIPS.map(({ type, icon: Icon, colorKey }) => (
-                <ToggleButton key={type || 'all'} value={type}>
-                  <Icon sx={{ fontSize: '1rem', color: activeType === type ? 'inherit' : colorKey }} />
-                  {getTypeLabel(type, LL)}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-
-            {churchToolsEnabled && (activeType === '' || activeType === 'song') && (
-              <Tooltip title={LL.UNIFIED_SEARCH.INCLUDE_CHURCHTOOLS_HINT()}>
-                <Stack
-                  direction="row"
-                  onClick={() => updateSetting('includeChurchToolsResults', !includeChurchToolsResults)}
-                  sx={{
-                    alignItems: 'center',
-                    gap: 0.25,
-                    pl: 1,
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    color: includeChurchToolsResults ? CT_CHIP.colorKey : 'text.secondary',
-                  }}
-                >
-                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                    {LL.UNIFIED_SEARCH.CCLI()}
-                  </Typography>
-                  <Switch
-                    size="small"
-                    checked={includeChurchToolsResults}
-                    onChange={(e) => updateSetting('includeChurchToolsResults', e.target.checked)}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                </Stack>
-              </Tooltip>
-            )}
-          </Stack>
         )}
-        {/* CCLI switch for songs-only mode (e.g. musician view), which has no type filter bar. */}
-        {songsOnly && churchToolsEnabled && (
-          <Stack direction="row" sx={{ px: 0.5, justifyContent: 'flex-end' }}>
+      </Stack>
+
+      {/* The types as tabs in the drawer: the same shape as the other drawers' sections. */}
+      {!songsOnly && panel && (
+        <Tabs
+          value={activeType}
+          onChange={(_, value: SearchType) => setActiveType(value)}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{ borderBottom: 1, borderColor: 'divider', minHeight: 40 }}
+        >
+          {TYPE_CHIPS.map(({ type, icon: Icon, colorKey }) => (
+            <Tab
+              key={type || 'all'}
+              value={type}
+              icon={<Icon sx={{ fontSize: '1.05rem', color: activeType === type ? 'inherit' : colorKey }} />}
+              iconPosition="start"
+              label={getTypeLabel(type, LL)}
+              sx={{ minHeight: 40, minWidth: 0, px: 1.5, gap: 0.5 }}
+            />
+          ))}
+        </Tabs>
+      )}
+
+      {/* Filter bar: a clean segmented type selector + (for song searches) a CCLI switch */}
+      {!songsOnly && !panel && (
+        <Stack direction="row" sx={{ px: 0.5, alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+          <ToggleButtonGroup
+            size="small"
+            exclusive
+            value={activeType}
+            onChange={(_, value: SearchType | null) => value !== null && setActiveType(value)}
+            sx={{
+              '& .MuiToggleButton-root': {
+                textTransform: 'none',
+                fontSize: '0.72rem',
+                py: 0.25,
+                px: 1,
+                gap: 0.5,
+                border: 'none',
+                borderRadius: 1.5,
+              },
+              gap: 0.25,
+            }}
+          >
+            {TYPE_CHIPS.map(({ type, icon: Icon, colorKey }) => (
+              <ToggleButton key={type || 'all'} value={type}>
+                <Icon sx={{ fontSize: '1rem', color: activeType === type ? 'inherit' : colorKey }} />
+                {getTypeLabel(type, LL)}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+
+          {!panel && churchToolsEnabled && (activeType === '' || activeType === 'song') && (
             <Tooltip title={LL.UNIFIED_SEARCH.INCLUDE_CHURCHTOOLS_HINT()}>
               <Stack
                 direction="row"
@@ -525,6 +561,84 @@ export const UnifiedSearch = ({
                   gap: 0.25,
                   pl: 1,
                   borderRadius: 4,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  color: includeChurchToolsResults ? CT_CHIP.colorKey : 'text.secondary',
+                }}
+              >
+                <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                  {LL.UNIFIED_SEARCH.CCLI()}
+                </Typography>
+                <Switch
+                  size="small"
+                  checked={includeChurchToolsResults}
+                  onChange={(e) => updateSetting('includeChurchToolsResults', e.target.checked)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </Stack>
+            </Tooltip>
+          )}
+        </Stack>
+      )}
+      {/* CCLI switch for songs-only mode (e.g. musician view), which has no type filter bar. */}
+      {songsOnly && churchToolsEnabled && (
+        <Stack direction="row" sx={{ px: 0.5, justifyContent: 'flex-end' }}>
+          <Tooltip title={LL.UNIFIED_SEARCH.INCLUDE_CHURCHTOOLS_HINT()}>
+            <Stack
+              direction="row"
+              onClick={() => updateSetting('includeChurchToolsResults', !includeChurchToolsResults)}
+              sx={{
+                alignItems: 'center',
+                gap: 0.25,
+                pl: 1,
+                borderRadius: 4,
+                cursor: 'pointer',
+                color: includeChurchToolsResults ? CT_CHIP.colorKey : 'text.secondary',
+              }}
+            >
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                {LL.UNIFIED_SEARCH.CCLI()}
+              </Typography>
+              <Switch
+                size="small"
+                checked={includeChurchToolsResults}
+                onChange={(e) => updateSetting('includeChurchToolsResults', e.target.checked)}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Stack>
+          </Tooltip>
+        </Stack>
+      )}
+      {/* Deep search indicator */}
+      {deepSearch && isSearching && (
+        <Stack direction="row" spacing={0.5} sx={{ px: 0.5 }}>
+          <Chip
+            label={LL.UNIFIED_SEARCH.DEEP()}
+            size="small"
+            color="info"
+            variant="outlined"
+            onDelete={() => setDeepSearch(false)}
+            sx={{ fontSize: '0.7rem', height: 22 }}
+          />
+        </Stack>
+      )}
+
+      {panel && (
+        <Stack direction="row" sx={{ alignItems: 'center', gap: 1, pt: 0.5, borderTop: 1, borderColor: 'divider', flexWrap: 'wrap' }}>
+          {libraryAction && (
+            <Button size="small" startIcon={libraryAction.icon} onClick={libraryAction.onClick} sx={{ textTransform: 'none' }}>
+              {libraryAction.label}
+            </Button>
+          )}
+          <Box sx={{ flexGrow: 1 }} />
+          {churchToolsEnabled && (activeType === '' || activeType === 'song') && (
+            <Tooltip title={LL.UNIFIED_SEARCH.INCLUDE_CHURCHTOOLS_HINT()}>
+              <Stack
+                direction="row"
+                onClick={() => updateSetting('includeChurchToolsResults', !includeChurchToolsResults)}
+                sx={{
+                  alignItems: 'center',
+                  gap: 0.25,
                   cursor: 'pointer',
                   color: includeChurchToolsResults ? CT_CHIP.colorKey : 'text.secondary',
                 }}
@@ -540,35 +654,25 @@ export const UnifiedSearch = ({
                 />
               </Stack>
             </Tooltip>
-          </Stack>
-        )}
-        {/* Deep search indicator */}
-        {deepSearch && isSearching && (
-          <Stack direction="row" spacing={0.5} sx={{ px: 0.5 }}>
-            <Chip
-              label={LL.UNIFIED_SEARCH.DEEP()}
-              size="small"
-              color="info"
-              variant="outlined"
-              onDelete={() => setDeepSearch(false)}
-              sx={{ fontSize: '0.7rem', height: 22 }}
-            />
-          </Stack>
-        )}
+          )}
+        </Stack>
+      )}
 
-        {/* Results — autocomplete-style dropdown overlay */}
-        {showDropdown && (
-          <Popper
-            open
-            anchorEl={anchorRef.current}
-            placement="bottom-start"
-            style={{ zIndex: 1300, width: anchorRef.current?.offsetWidth ?? undefined }}
-            modifiers={[{ name: 'offset', options: { offset: [0, 4] } }]}
-          >
-            {dropdownContent}
-          </Popper>
-        )}
-      </Stack>
-    </ClickAwayListener>
+      {/* Results — in the panel under the field, or an autocomplete-style dropdown overlay */}
+      {panel && showDropdown && dropdownContent}
+      {!panel && showDropdown && (
+        <Popper
+          open
+          anchorEl={anchorRef.current}
+          placement="bottom-start"
+          style={{ zIndex: 1300, width: anchorRef.current?.offsetWidth ?? undefined }}
+          modifiers={[{ name: 'offset', options: { offset: [0, 4] } }]}
+        >
+          {dropdownContent}
+        </Popper>
+      )}
+    </Stack>
   );
+
+  return panel ? body : <ClickAwayListener onClickAway={onClose}>{body}</ClickAwayListener>;
 };

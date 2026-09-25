@@ -50,7 +50,7 @@ function buildViewerUrl(token: string, viewerUrl?: string | null): string {
 
 export const ViewerTokenSection = () => {
   const { LL } = useI18nContext();
-  const { offlineMode } = useGetSettings();
+  const { offlineMode } = useGetSettings('offlineMode');
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
   const isAuthenticated = !offlineMode && session?.isAuthenticated === true;
   const viewerUrl = session?.settings?.viewerUrl;

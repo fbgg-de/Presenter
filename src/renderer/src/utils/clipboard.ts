@@ -32,3 +32,25 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Copy text together with an HTML version, so a mail client pastes real formatting (lists,
+ * bold) while messengers and plain editors get the text. Falls back to text only where the
+ * rich clipboard API is missing — the plain-HTTP LAN case above.
+ */
+export async function copyRichToClipboard(text: string, html: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.write && typeof ClipboardItem !== 'undefined') {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          'text/plain': new Blob([text], { type: 'text/plain' }),
+          'text/html': new Blob([html], { type: 'text/html' }),
+        }),
+      ]);
+      return true;
+    }
+  } catch {
+    // Denied or unsupported — the text alone still helps.
+  }
+  return copyTextToClipboard(text);
+}

@@ -44,7 +44,7 @@ export const useSongUpdatePoller = ({ autoReload = false }: { autoReload?: boole
   const { currentShow, isShowSelectorOpen } = useGetShow();
   const { songs } = useGetSongs();
 
-  const { offlineMode } = useGetSettings();
+  const { offlineMode } = useGetSettings('offlineMode');
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
   const isAuthenticated = !offlineMode && session?.isAuthenticated === true;
 

@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@types/archiver": "^8.0.0",
-    "@types/node": "^26.3.0",
+    "@types/node": "^26.5.1",
     "@types/ws": "^8.18.1",
     "archiver": "^8.0.0",
     "esbuild": "^0.28.2",

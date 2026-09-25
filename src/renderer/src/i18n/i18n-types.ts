@@ -292,6 +292,27 @@ type RootTranslation = {
 		 */
 		SESSION_EXPIRED: string
 		/**
+		 * Y​o​u​r​ ​s​i​g​n​-​i​n​ ​e​n​d​s​ ​i​n​ ​{​m​i​n​u​t​e​s​}​ ​m​i​n​.​ ​R​e​n​e​w​ ​i​t​ ​n​o​w​ ​s​o​ ​n​o​t​h​i​n​g​ ​s​t​o​p​s​ ​d​u​r​i​n​g​ ​t​h​e​ ​s​e​r​v​i​c​e​.
+		 * @param {number} minutes
+		 */
+		SESSION_EXPIRING: RequiredParams<'minutes'>
+		/**
+		 * R​e​n​e​w
+		 */
+		RENEW_SESSION: string
+		/**
+		 * S​i​g​n​i​n​g​ ​i​n​ ​a​g​a​i​n​ ​i​n​ ​t​h​e​ ​s​m​a​l​l​ ​w​i​n​d​o​w​…
+		 */
+		RELOGIN_WAITING: string
+		/**
+		 * S​i​g​n​e​d​ ​i​n​ ​a​g​a​i​n​.​ ​T​h​i​s​ ​w​i​n​d​o​w​ ​c​l​o​s​e​s​ ​b​y​ ​i​t​s​e​l​f​.
+		 */
+		RELOGIN_DONE: string
+		/**
+		 * T​h​e​ ​s​i​g​n​-​i​n​ ​w​i​n​d​o​w​ ​w​a​s​ ​b​l​o​c​k​e​d​;​ ​s​i​g​n​i​n​g​ ​i​n​ ​o​n​ ​t​h​i​s​ ​p​a​g​e​ ​i​n​s​t​e​a​d​.
+		 */
+		RELOGIN_POPUP_BLOCKED: string
+		/**
 		 * T​h​e​ ​s​e​r​v​e​r​ ​d​i​d​ ​n​o​t​ ​a​c​c​e​p​t​ ​t​h​e​ ​s​i​g​n​-​i​n
 		 */
 		LOGIN_REJECTED: string
@@ -335,6 +356,15 @@ type RootTranslation = {
 		 * P​l​e​a​s​e​ ​t​r​y​ ​l​o​g​g​i​n​g​ ​i​n​ ​a​g​a​i​n​.
 		 */
 		PLEASE_TRY_AGAIN: string
+		/**
+		 * R​e​f​e​r​e​n​c​e​ ​{​r​e​f​}​ ​—​ ​m​e​n​t​i​o​n​ ​i​t​ ​w​h​e​n​ ​y​o​u​ ​r​e​p​o​r​t​ ​t​h​i​s​.
+		 * @param {string} ref
+		 */
+		ERROR_REFERENCE: RequiredParams<'ref'>
+		/**
+		 * S​i​g​n​ ​i​n​ ​a​g​a​i​n
+		 */
+		TRY_AGAIN: string
 		/**
 		 * S​a​v​e​d​ ​C​r​e​d​e​n​t​i​a​l​s
 		 */
@@ -518,6 +548,38 @@ type RootTranslation = {
 		 * A​u​t​h​e​n​t​i​c​a​t​i​o​n​ ​F​a​i​l​e​d
 		 */
 		AUTHENTICATION_FAILED: string
+		/**
+		 * S​i​g​n​-​i​n​ ​i​n​t​e​r​r​u​p​t​e​d
+		 */
+		SESSION_LOST: string
+		/**
+		 * Y​o​u​r​ ​b​r​o​w​s​e​r​ ​c​a​m​e​ ​b​a​c​k​ ​f​r​o​m​ ​t​h​e​ ​s​i​g​n​-​i​n​ ​w​i​t​h​o​u​t​ ​t​h​e​ ​p​r​e​s​e​n​t​e​r​’​s​ ​s​e​s​s​i​o​n​.​ ​T​h​i​s​ ​h​a​p​p​e​n​s​ ​w​h​e​n​ ​c​o​o​k​i​e​s​ ​a​r​e​ ​b​l​o​c​k​e​d​ ​f​o​r​ ​t​h​i​s​ ​s​i​t​e​,​ ​w​h​e​n​ ​t​h​e​ ​p​a​g​e​ ​w​a​s​ ​o​p​e​n​e​d​ ​u​n​d​e​r​ ​a​n​o​t​h​e​r​ ​a​d​d​r​e​s​s​,​ ​o​r​ ​w​h​e​n​ ​t​h​e​ ​s​i​g​n​-​i​n​ ​p​a​g​e​ ​w​a​s​ ​l​e​f​t​ ​o​p​e​n​ ​f​o​r​ ​a​ ​l​o​n​g​ ​t​i​m​e​.​ ​S​i​g​n​i​n​g​ ​i​n​ ​a​g​a​i​n​ ​u​s​u​a​l​l​y​ ​w​o​r​k​s​ ​s​t​r​a​i​g​h​t​ ​a​w​a​y​.
+		 */
+		SESSION_LOST_MESSAGE: string
+		/**
+		 * S​i​g​n​-​i​n​ ​s​e​r​v​i​c​e​ ​n​o​t​ ​r​e​a​c​h​a​b​l​e
+		 */
+		PROVIDER_UNREACHABLE: string
+		/**
+		 * T​h​e​ ​p​r​e​s​e​n​t​e​r​ ​c​o​u​l​d​ ​n​o​t​ ​r​e​a​c​h​ ​y​o​u​r​ ​o​r​g​a​n​i​s​a​t​i​o​n​’​s​ ​s​i​g​n​-​i​n​ ​s​e​r​v​i​c​e​.​ ​I​t​ ​m​a​y​ ​b​e​ ​b​r​i​e​f​l​y​ ​u​n​a​v​a​i​l​a​b​l​e​.​ ​T​r​y​ ​a​g​a​i​n​ ​i​n​ ​a​ ​m​o​m​e​n​t​;​ ​i​f​ ​i​t​ ​k​e​e​p​s​ ​h​a​p​p​e​n​i​n​g​,​ ​t​e​l​l​ ​y​o​u​r​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​.
+		 */
+		PROVIDER_UNREACHABLE_MESSAGE: string
+		/**
+		 * S​i​g​n​-​i​n​ ​t​o​o​k​ ​t​o​o​ ​l​o​n​g
+		 */
+		LOGIN_EXPIRED: string
+		/**
+		 * T​h​i​s​ ​s​i​g​n​-​i​n​ ​w​a​s​ ​s​t​a​r​t​e​d​ ​m​o​r​e​ ​t​h​a​n​ ​t​e​n​ ​m​i​n​u​t​e​s​ ​a​g​o​ ​o​r​ ​h​a​s​ ​a​l​r​e​a​d​y​ ​b​e​e​n​ ​u​s​e​d​.​ ​S​t​a​r​t​ ​i​t​ ​a​g​a​i​n​.
+		 */
+		LOGIN_EXPIRED_MESSAGE: string
+		/**
+		 * G​r​o​u​p​ ​m​e​m​b​e​r​s​h​i​p​ ​u​n​r​e​a​d​a​b​l​e
+		 */
+		GROUPS_CLAIM_INVALID: string
+		/**
+		 * T​h​e​ ​s​i​g​n​-​i​n​ ​s​e​r​v​i​c​e​ ​s​e​n​t​ ​y​o​u​r​ ​g​r​o​u​p​ ​m​e​m​b​e​r​s​h​i​p​s​ ​i​n​ ​a​ ​f​o​r​m​ ​t​h​e​ ​p​r​e​s​e​n​t​e​r​ ​c​a​n​n​o​t​ ​r​e​a​d​,​ ​a​n​d​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​r​e​q​u​i​r​e​s​ ​a​ ​g​r​o​u​p​.​ ​A​n​ ​a​d​m​i​n​i​s​t​r​a​t​o​r​ ​n​e​e​d​s​ ​t​o​ ​c​h​e​c​k​ ​t​h​e​ ​g​r​o​u​p​s​ ​m​a​p​p​i​n​g​ ​a​t​ ​t​h​e​ ​i​d​e​n​t​i​t​y​ ​p​r​o​v​i​d​e​r​.
+		 */
+		GROUPS_CLAIM_INVALID_MESSAGE: string
 		/**
 		 * A​u​t​h​e​n​t​i​c​a​t​i​o​n​ ​w​i​t​h​ ​t​h​e​ ​i​d​e​n​t​i​t​y​ ​p​r​o​v​i​d​e​r​ ​f​a​i​l​e​d​.​ ​T​h​i​s​ ​c​o​u​l​d​ ​b​e​ ​a​ ​t​e​m​p​o​r​a​r​y​ ​i​s​s​u​e​.
 		 */
@@ -889,69 +951,41 @@ type RootTranslation = {
 		 */
 		WS_HOST_NOT_CONFIGURED: string
 		/**
-		 * C​h​u​r​c​h​T​o​o​l​s
+		 * N​e​t​w​o​r​k​ ​a​c​c​e​s​s
 		 */
-		CHURCH_TOOLS: string
+		NETWORK_ACCESS: string
 		/**
-		 * C​o​n​f​i​g​u​r​e​ ​C​h​u​r​c​h​T​o​o​l​s
+		 * N​e​t​w​o​r​k​ ​a​c​c​e​s​s​ ​o​f​ ​i​n​t​e​g​r​a​t​i​o​n​s
 		 */
-		CONFIGURE_CHURCH_TOOLS: string
+		CONFIGURE_NETWORK_ACCESS: string
 		/**
-		 * C​o​n​n​e​c​t​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​t​o​ ​a​ ​C​h​u​r​c​h​T​o​o​l​s​ ​i​n​s​t​a​n​c​e​ ​t​o​ ​e​n​a​b​l​e​ ​C​C​L​I​ ​S​o​n​g​S​e​l​e​c​t​ ​s​e​a​r​c​h​ ​a​n​d​ ​a​r​r​a​n​g​e​m​e​n​t​ ​d​o​w​n​l​o​a​d​s​ ​f​o​r​ ​m​u​s​i​c​i​a​n​s​.
+		 * T​h​e​ ​a​c​c​o​u​n​t​ ​s​e​t​s​ ​u​p​ ​N​e​x​t​c​l​o​u​d​ ​a​n​d​ ​C​h​u​r​c​h​T​o​o​l​s​ ​i​t​s​e​l​f​ ​i​n​ ​S​e​t​t​i​n​g​s​ ​→​ ​C​o​n​n​e​c​t​i​o​n​s​.​ ​T​h​e​ ​s​e​r​v​e​r​ ​o​n​l​y​ ​r​e​a​c​h​e​s​ ​t​h​e​m​ ​a​t​ ​p​u​b​l​i​c​ ​h​t​t​p​s​ ​a​d​d​r​e​s​s​e​s​,​ ​u​n​l​e​s​s​ ​y​o​u​ ​a​l​l​o​w​ ​a​ ​p​r​i​v​a​t​e​ ​n​e​t​w​o​r​k​ ​h​e​r​e​.
 		 */
-		CHURCH_TOOLS_HELP: string
+		NETWORK_HELP: string
 		/**
-		 * C​h​u​r​c​h​T​o​o​l​s​ ​A​P​I​ ​U​R​L
+		 * n​o​t​ ​s​e​t​ ​u​p
 		 */
-		CHURCH_TOOLS_URL: string
+		NETWORK_NOT_SET_UP: string
 		/**
-		 * A​P​I​ ​L​o​g​i​n​ ​T​o​k​e​n
+		 * I​n​t​e​g​r​a​t​i​o​n​s​ ​m​a​y​ ​b​e​ ​i​n​ ​a​ ​p​r​i​v​a​t​e​ ​n​e​t​w​o​r​k
 		 */
-		CHURCH_TOOLS_TOKEN: string
+		NETWORK_PRIVATE: string
 		/**
-		 * L​e​a​v​e​ ​b​l​a​n​k​ ​t​o​ ​k​e​e​p​ ​t​h​e​ ​e​x​i​s​t​i​n​g​ ​t​o​k​e​n​.​ ​E​n​t​e​r​ ​a​ ​n​e​w​ ​v​a​l​u​e​ ​t​o​ ​u​p​d​a​t​e​ ​i​t​.
+		 * O​n​l​y​ ​w​h​e​n​ ​t​h​e​s​e​ ​s​e​r​v​i​c​e​s​ ​a​r​e​ ​r​e​a​c​h​a​b​l​e​ ​f​r​o​m​ ​t​h​e​ ​p​r​e​s​e​n​t​e​r​ ​s​e​r​v​e​r​ ​b​y​ ​a​n​ ​i​n​t​e​r​n​a​l​ ​a​d​d​r​e​s​s​.​ ​I​t​ ​l​e​t​s​ ​r​e​q​u​e​s​t​s​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​r​e​a​c​h​ ​t​h​e​ ​s​e​r​v​e​r​’​s​ ​o​w​n​ ​n​e​t​w​o​r​k​.
 		 */
-		CHURCH_TOOLS_TOKEN_HELP: string
+		NETWORK_PRIVATE_HELP: string
 		/**
-		 * (​t​o​k​e​n​ ​a​l​r​e​a​d​y​ ​s​e​t​)
+		 * P​r​i​v​a​t​e​ ​n​e​t​w​o​r​k
 		 */
-		CHURCH_TOOLS_TOKEN_PLACEHOLDER_SET: string
+		NETWORK_PRIVATE_ALLOWED: string
 		/**
-		 * C​l​e​a​r​i​n​g​ ​t​h​e​ ​U​R​L​ ​w​i​l​l​ ​d​i​s​a​b​l​e​ ​t​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​i​n​t​e​g​r​a​t​i​o​n​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 * P​u​b​l​i​c​ ​o​n​l​y
 		 */
-		CHURCH_TOOLS_CLEAR_WARNING: string
+		NETWORK_PUBLIC_ONLY: string
 		/**
-		 * S​p​o​t​i​f​y
+		 * T​h​e​ ​s​e​t​t​i​n​g​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.
 		 */
-		SPOTIFY: string
-		/**
-		 * C​o​n​f​i​g​u​r​e​ ​S​p​o​t​i​f​y
-		 */
-		CONFIGURE_SPOTIFY: string
-		/**
-		 * L​e​t​s​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​l​i​n​k​ ​s​e​t​ ​l​i​s​t​ ​s​o​n​g​s​ ​t​o​ ​S​p​o​t​i​f​y​ ​t​r​a​c​k​s​.​ ​C​r​e​a​t​e​ ​a​n​ ​a​p​p​ ​i​n​ ​t​h​e​ ​S​p​o​t​i​f​y​ ​d​e​v​e​l​o​p​e​r​ ​d​a​s​h​b​o​a​r​d​ ​a​n​d​ ​c​o​p​y​ ​i​t​s​ ​C​l​i​e​n​t​ ​I​D​ ​a​n​d​ ​C​l​i​e​n​t​ ​S​e​c​r​e​t​:
-		 */
-		SPOTIFY_HELP: string
-		/**
-		 * C​l​i​e​n​t​ ​I​D
-		 */
-		SPOTIFY_CLIENT_ID: string
-		/**
-		 * C​l​i​e​n​t​ ​S​e​c​r​e​t
-		 */
-		SPOTIFY_CLIENT_SECRET: string
-		/**
-		 * L​e​a​v​e​ ​b​l​a​n​k​ ​t​o​ ​k​e​e​p​ ​t​h​e​ ​e​x​i​s​t​i​n​g​ ​s​e​c​r​e​t​.​ ​E​n​t​e​r​ ​a​ ​n​e​w​ ​v​a​l​u​e​ ​t​o​ ​u​p​d​a​t​e​ ​i​t​.
-		 */
-		SPOTIFY_SECRET_HELP: string
-		/**
-		 * (​s​e​c​r​e​t​ ​a​l​r​e​a​d​y​ ​s​e​t​)
-		 */
-		SPOTIFY_SECRET_PLACEHOLDER_SET: string
-		/**
-		 * C​l​e​a​r​i​n​g​ ​t​h​e​ ​C​l​i​e​n​t​ ​I​D​ ​r​e​m​o​v​e​s​ ​t​h​e​ ​S​p​o​t​i​f​y​ ​c​r​e​d​e​n​t​i​a​l​s​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
-		 */
-		SPOTIFY_CLEAR_WARNING: string
+		NETWORK_SAVE_FAILED: string
 	}
 	ADMIN_LOGS: {
 		/**
@@ -1487,6 +1521,23 @@ type RootTranslation = {
 		 */
 		DELETE_BLOCK: string
 		/**
+		 * T​o​o​ ​l​o​n​g​ ​f​o​r​ ​o​n​e​ ​r​o​w​ ​o​n​ ​s​c​r​e​e​n​ ​—​ ​i​t​ ​w​i​l​l​ ​w​r​a​p​.
+		 */
+		LINE_TOO_LONG: string
+		/**
+		 * A​ ​p​a​g​e​ ​h​o​l​d​s​ ​a​b​o​u​t​ ​{​l​i​n​e​s​}​ ​l​i​n​e​s​ ​i​n​ ​t​h​i​s​ ​t​h​e​m​e​;​ ​a​d​d​ ​a​ ​p​a​g​e​ ​b​r​e​a​k​ ​w​h​e​r​e​ ​i​t​ ​g​e​t​s​ ​l​o​n​g​e​r​.
+		 * @param {number} lines
+		 */
+		PAGE_TOO_LONG: RequiredParams<'lines'>
+		/**
+		 * S​h​o​w​ ​h​o​w​ ​t​h​e​ ​b​l​o​c​k​ ​l​o​o​k​s​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		SHOW_PREVIEW: string
+		/**
+		 * H​i​d​e​ ​t​h​e​ ​s​c​r​e​e​n​ ​p​r​e​v​i​e​w
+		 */
+		HIDE_PREVIEW: string
+		/**
 		 * L​a​n​g​u​a​g​e​s
 		 */
 		LANGUAGES: string
@@ -1634,6 +1685,124 @@ type RootTranslation = {
 		 * @param {unknown} name
 		 */
 		DELETE_ORDER_MESSAGE: RequiredParams<'name'>
+		/**
+		 * T​e​x​t
+		 */
+		TEXT_TAB: string
+		/**
+		 * E​d​i​t​ ​t​h​e​ ​w​h​o​l​e​ ​s​o​n​g​ ​a​s​ ​t​e​x​t
+		 */
+		TEXT_TAB_HINT: string
+		/**
+		 * I​n​s​e​r​t​:
+		 */
+		TEXT_INSERT: string
+		/**
+		 * B​l​o​c​k
+		 */
+		TEXT_INSERT_BLOCK: string
+		/**
+		 * H​o​w​ ​i​t​ ​w​o​r​k​s
+		 */
+		TEXT_HELP_TITLE: string
+		/**
+		 * S​t​a​r​t​s​ ​a​ ​b​l​o​c​k​.​ ​E​v​e​r​y​t​h​i​n​g​ ​b​e​l​o​w​ ​b​e​l​o​n​g​s​ ​t​o​ ​i​t​ ​u​n​t​i​l​ ​t​h​e​ ​n​e​x​t​ ​h​e​a​d​i​n​g​.
+		 */
+		TEXT_HELP_BLOCK: string
+		/**
+		 * S​t​a​r​t​s​ ​a​ ​n​e​w​ ​s​l​i​d​e​ ​i​n​s​i​d​e​ ​t​h​e​ ​b​l​o​c​k​.
+		 */
+		TEXT_HELP_PAGE: string
+		/**
+		 * T​r​a​n​s​l​a​t​i​o​n​ ​o​f​ ​t​h​e​ ​l​i​n​e​ ​a​b​o​v​e​,​ ​h​e​r​e​ ​i​n​ ​{​l​a​n​g​u​a​g​e​}​.
+		 * @param {unknown} language
+		 */
+		TEXT_HELP_TRANSLATION: RequiredParams<'language'>
+		/**
+		 * T​r​a​n​s​l​a​t​i​o​n​ ​o​f​ ​t​h​e​ ​l​i​n​e​ ​a​b​o​v​e​.​ ​A​d​d​ ​l​a​n​g​u​a​g​e​s​ ​i​n​ ​t​h​e​ ​i​n​f​o​ ​t​a​b​ ​f​i​r​s​t​.
+		 */
+		TEXT_HELP_NO_TRANSLATION: string
+		/**
+		 * e​m​p​t​y​ ​l​i​n​e
+		 */
+		TEXT_HELP_EMPTY_LINE: string
+		/**
+		 * B​e​t​w​e​e​n​ ​b​l​o​c​k​s​ ​i​t​ ​i​s​ ​o​n​l​y​ ​s​p​a​c​i​n​g​;​ ​i​n​s​i​d​e​ ​a​ ​b​l​o​c​k​ ​i​t​ ​s​h​o​w​s​ ​a​s​ ​a​n​ ​e​m​p​t​y​ ​l​i​n​e​.
+		 */
+		TEXT_HELP_EMPTY: string
+		/**
+		 * G​o​o​d​ ​t​o​ ​k​n​o​w
+		 */
+		TEXT_NOTES_TITLE: string
+		/**
+		 * C​h​a​n​g​e​s​ ​a​r​e​ ​a​p​p​l​i​e​d​ ​w​h​e​n​ ​y​o​u​ ​l​e​a​v​e​ ​t​h​e​ ​t​e​x​t​ ​f​i​e​l​d​.
+		 */
+		TEXT_NOTE_APPLY: string
+		/**
+		 * R​e​n​a​m​i​n​g​ ​a​ ​h​e​a​d​i​n​g​ ​r​e​n​a​m​e​s​ ​t​h​e​ ​b​l​o​c​k​ ​i​n​ ​e​v​e​r​y​ ​a​r​r​a​n​g​e​m​e​n​t​.
+		 */
+		TEXT_NOTE_RENAME: string
+		/**
+		 * R​e​m​o​v​i​n​g​ ​a​ ​h​e​a​d​i​n​g​ ​a​s​k​s​ ​f​i​r​s​t​ ​w​h​e​n​ ​a​n​ ​a​r​r​a​n​g​e​m​e​n​t​ ​u​s​e​s​ ​t​h​e​ ​b​l​o​c​k​.
+		 */
+		TEXT_NOTE_REMOVE: string
+		/**
+		 * A​r​r​a​n​g​e​m​e​n​t​s​ ​a​r​e​ ​e​d​i​t​e​d​ ​b​e​l​o​w​,​ ​n​o​t​ ​i​n​ ​t​h​e​ ​t​e​x​t​.
+		 */
+		TEXT_NOTE_ORDER: string
+		/**
+		 * {​c​o​u​n​t​}​ ​b​l​o​c​k​{​{​s​}​}
+		 * @param {number} count
+		 */
+		TEXT_STATUS_BLOCKS: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​s​l​i​d​e​{​{​s​}​}
+		 * @param {number} count
+		 */
+		TEXT_STATUS_SLIDES: RequiredParams<'count'>
+		/**
+		 * L​i​n​e​ ​{​l​i​n​e​}​:​ ​“​{​n​a​m​e​}​”​ ​a​p​p​e​a​r​s​ ​t​w​i​c​e
+		 * @param {number} line
+		 * @param {string} name
+		 */
+		TEXT_PROBLEM_DUPLICATE: RequiredParams<'line' | 'name'>
+		/**
+		 * L​i​n​e​ ​{​l​i​n​e​}​:​ ​t​h​e​ ​b​l​o​c​k​ ​n​a​m​e​ ​a​f​t​e​r​ ​#​ ​i​s​ ​m​i​s​s​i​n​g
+		 * @param {number} line
+		 */
+		TEXT_PROBLEM_EMPTY_NAME: RequiredParams<'line'>
+		/**
+		 * L​i​n​e​ ​{​l​i​n​e​}​:​ ​[​{​c​o​d​e​}​]​ ​i​s​ ​n​o​t​ ​a​ ​l​a​n​g​u​a​g​e​ ​o​f​ ​t​h​i​s​ ​s​o​n​g
+		 * @param {string} code
+		 * @param {number} line
+		 */
+		TEXT_PROBLEM_LANGUAGE: RequiredParams<'code' | 'line'>
+		/**
+		 * {​c​o​u​n​t​}​ ​m​o​r​e
+		 * @param {number} count
+		 */
+		TEXT_MORE_PROBLEMS: RequiredParams<'count'>
+		/**
+		 * N​o​t​ ​a​p​p​l​i​e​d​ ​u​n​t​i​l​ ​f​i​x​e​d
+		 */
+		TEXT_NOT_APPLIED: string
+		/**
+		 * R​e​m​o​v​e​ ​b​l​o​c​k​s​?
+		 */
+		TEXT_REMOVE_TITLE: string
+		/**
+		 * T​h​e​s​e​ ​b​l​o​c​k​s​ ​a​r​e​ ​n​o​ ​l​o​n​g​e​r​ ​i​n​ ​t​h​e​ ​t​e​x​t​ ​b​u​t​ ​a​r​r​a​n​g​e​m​e​n​t​s​ ​u​s​e​ ​t​h​e​m​.​ ​R​e​m​o​v​i​n​g​ ​t​h​e​m​ ​a​l​s​o​ ​t​a​k​e​s​ ​t​h​e​m​ ​o​u​t​ ​o​f​ ​t​h​o​s​e​ ​a​r​r​a​n​g​e​m​e​n​t​s​.
+		 */
+		TEXT_REMOVE_MESSAGE: string
+		/**
+		 * u​s​e​d​ ​i​n​ ​{​o​r​d​e​r​s​}
+		 * @param {string} orders
+		 */
+		TEXT_REMOVE_USED_IN: RequiredParams<'orders'>
+		/**
+		 * R​e​m​o​v​e​ ​b​l​o​c​k​s
+		 */
+		TEXT_REMOVE_CONFIRM: string
 	}
 	SONG_LANGUAGE_REVIEW: {
 		/**
@@ -1746,6 +1915,18 @@ type RootTranslation = {
 		 * S​h​o​w​s
 		 */
 		TITLE: string
+		/**
+		 * C​o​p​y​ ​a​g​e​n​d​a​ ​—​ ​f​o​r​ ​a​ ​m​e​s​s​e​n​g​e​r​ ​o​r​ ​e​-​m​a​i​l
+		 */
+		COPY_AGENDA: string
+		/**
+		 * A​g​e​n​d​a​ ​c​o​p​i​e​d​ ​—​ ​p​a​s​t​e​ ​i​t​ ​i​n​t​o​ ​a​ ​m​e​s​s​a​g​e​ ​o​r​ ​a​n​ ​e​-​m​a​i​l
+		 */
+		AGENDA_COPIED: string
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​c​o​p​y​ ​t​h​e​ ​a​g​e​n​d​a
+		 */
+		AGENDA_COPY_FAILED: string
 		/**
 		 * N​e​w​ ​S​h​o​w
 		 */
@@ -1929,6 +2110,93 @@ type RootTranslation = {
 		 * M​o​v​e​ ​t​o​ ​g​r​o​u​p
 		 */
 		MOVE_ITEM_TO: string
+		/**
+		 * T​h​e​ ​t​h​e​m​e​ ​e​v​e​r​y​ ​i​t​e​m​ ​i​n​ ​t​h​i​s​ ​g​r​o​u​p​ ​i​s​ ​s​h​o​w​n​ ​i​n
+		 */
+		THEME_HINT: string
+		/**
+		 * T​h​e​m​e
+		 */
+		THEME: string
+		/**
+		 * G​r​o​u​p​ ​s​e​t​t​i​n​g​s
+		 */
+		SETTINGS: string
+		/**
+		 * A​d​d​ ​i​t​e​m
+		 */
+		ADD_ITEM: string
+		/**
+		 * G​r​o​u​p​ ​s​e​t​t​i​n​g​s​ ​·​ ​{​g​r​o​u​p​}
+		 * @param {string} group
+		 */
+		SETTINGS_TITLE: RequiredParams<'group'>
+		/**
+		 * G​e​n​e​r​a​l
+		 */
+		TAB_GENERAL: string
+		/**
+		 * W​i​t​h​o​u​t​ ​a​ ​n​a​m​e​ ​t​h​i​s​ ​i​s​ ​t​h​e​ ​D​e​f​a​u​l​t​ ​g​r​o​u​p​.​ ​G​i​v​e​ ​i​t​ ​a​ ​n​a​m​e​ ​t​o​ ​k​e​e​p​ ​i​t​ ​i​n​ ​t​h​e​ ​l​i​b​r​a​r​y​.
+		 */
+		DEFAULT_NAME_HINT: string
+		/**
+		 * O​n​l​y​ ​a​ ​n​a​m​e​d​ ​g​r​o​u​p​ ​w​i​t​h​ ​e​n​t​r​i​e​s​ ​c​a​n​ ​b​e​ ​k​e​p​t​ ​i​n​ ​t​h​e​ ​l​i​b​r​a​r​y​.
+		 */
+		KEEP_NEEDS_NAME: string
+		/**
+		 * S​h​o​w​ ​t​h​e​m​e
+		 */
+		THEME_FROM_SHOW: string
+		/**
+		 * U​s​e​ ​t​h​e​ ​s​h​o​w​ ​t​h​e​m​e
+		 */
+		THEME_FOLLOW_SHOW: string
+		/**
+		 * N​e​w​ ​t​h​e​m​e
+		 */
+		NEW_THEME: string
+		/**
+		 * A​ ​c​o​p​y​ ​o​f​ ​t​h​e​ ​c​h​o​s​e​n​ ​t​h​e​m​e​,​ ​n​a​m​e​d​ ​a​f​t​e​r​ ​t​h​i​s​ ​g​r​o​u​p​,​ ​t​o​ ​c​h​a​n​g​e​ ​w​i​t​h​o​u​t​ ​t​o​u​c​h​i​n​g​ ​t​h​e​ ​o​t​h​e​r​s
+		 */
+		NEW_THEME_HINT: string
+		/**
+		 * {​g​r​o​u​p​}​ ​t​h​e​m​e
+		 * @param {string} group
+		 */
+		NEW_THEME_NAME: RequiredParams<'group'>
+		/**
+		 * E​d​i​t​ ​t​h​i​s​ ​t​h​e​m​e
+		 */
+		EDIT_THEME: string
+		/**
+		 * S​a​v​e​s​ ​t​h​e​ ​g​r​o​u​p​ ​a​n​d​ ​o​p​e​n​s​ ​t​h​e​ ​t​h​e​m​e​ ​i​n​ ​t​h​e​ ​t​h​e​m​e​ ​e​d​i​t​o​r
+		 */
+		EDIT_THEME_HINT: string
+		/**
+		 * N​a​m​e​ ​a​n​d​ ​c​o​l​o​u​r​ ​i​n​ ​t​h​e​ ​a​g​e​n​d​a
+		 */
+		TAB_GENERAL_DESC: string
+		/**
+		 * H​o​w​ ​i​t​s​ ​s​l​i​d​e​s​ ​l​o​o​k
+		 */
+		TAB_THEME_DESC: string
+		/**
+		 * H​o​w​ ​i​t​s​ ​m​e​d​i​a​ ​p​l​a​y​ ​t​o​g​e​t​h​e​r
+		 */
+		TAB_PLAYBACK_DESC: string
+		/**
+		 * {​c​o​u​n​t​}​ ​e​n​t​r​i​e​s
+		 * @param {number} count
+		 */
+		SUMMARY_ENTRIES: RequiredParams<'count'>
+		/**
+		 * I​n​ ​t​h​e​ ​a​g​e​n​d​a
+		 */
+		SUMMARY_PREVIEW: string
+		/**
+		 * T​h​e​ ​c​o​l​o​u​r​ ​m​a​r​k​s​ ​t​h​e​ ​g​r​o​u​p​ ​i​n​ ​t​h​e​ ​a​g​e​n​d​a​ ​a​n​d​ ​o​n​ ​i​t​s​ ​e​n​t​r​i​e​s​.
+		 */
+		COLOR_HINT: string
 	}
 	SHOW_ITEMS: {
 		/**
@@ -1951,6 +2219,50 @@ type RootTranslation = {
 		 * A​d​d​ ​M​e​d​i​a
 		 */
 		ADD_MEDIA: string
+		/**
+		 * I​m​a​g​e​,​ ​v​i​d​e​o​ ​o​r​ ​a​u​d​i​o​ ​—​ ​o​r​ ​d​r​o​p​ ​f​i​l​e​s​ ​o​n​t​o​ ​t​h​e​ ​a​g​e​n​d​a
+		 */
+		ADD_MEDIA_HINT: string
+		/**
+		 * A​d​d​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		ADD_BACKGROUND: string
+		/**
+		 * I​m​a​g​e​ ​o​r​ ​v​i​d​e​o​ ​b​e​h​i​n​d​ ​t​h​e​ ​t​e​x​t​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p
+		 */
+		ADD_BACKGROUND_HINT: string
+		/**
+		 * A​d​d​ ​s​l​i​d​e​s​h​o​w
+		 */
+		ADD_SLIDESHOW: string
+		/**
+		 * I​m​a​g​e​s​ ​o​n​e​ ​a​f​t​e​r​ ​a​n​o​t​h​e​r​,​ ​e​.​g​.​ ​a​n​n​o​u​n​c​e​m​e​n​t​s
+		 */
+		ADD_SLIDESHOW_HINT: string
+		/**
+		 * S​l​i​d​e​s​h​o​w
+		 */
+		SLIDESHOW: string
+		/**
+		 * S​e​a​r​c​h​ ​s​o​n​g​s​,​ ​m​e​d​i​a​ ​a​n​d​ ​v​e​r​s​e​s
+		 */
+		ADD_FROM_SEARCH: string
+		/**
+		 * A​d​d​i​n​g​ ​t​o​:​ ​{​g​r​o​u​p​}
+		 * @param {string} group
+		 */
+		ADDING_TO: RequiredParams<'group'>
+		/**
+		 * A​d​d​e​d​ ​{​n​a​m​e​}
+		 * @param {string} name
+		 */
+		ADDED: RequiredParams<'name'>
+		/**
+		 * A​d​d​e​d​ ​{​n​a​m​e​}​ ​t​o​ ​{​g​r​o​u​p​}
+		 * @param {string} group
+		 * @param {string} name
+		 */
+		ADDED_TO_GROUP: RequiredParams<'group' | 'name'>
 		/**
 		 * A​d​d​ ​B​i​b​l​e​ ​V​e​r​s​e
 		 */
@@ -1976,7 +2288,7 @@ type RootTranslation = {
 		 */
 		EMPTY_HINT_ADD: string
 		/**
-		 * o​r​ ​d​r​a​g​ ​&​ ​d​r​o​p​ ​C​C​L​I​ ​(​.​t​x​t​)​ ​o​r​ ​S​o​n​g​B​e​a​m​e​r​ ​(​.​s​n​g​)​ ​s​o​n​g​ ​f​i​l​e​s​ ​h​e​r​e​ ​t​o​ ​g​e​t​ ​s​t​a​r​t​e​d​.
+		 * —​ ​o​r​ ​u​s​e​ ​t​h​e​ ​d​r​o​p​ ​a​r​e​a​ ​b​e​l​o​w​.
 		 */
 		EMPTY_HINT_CCLI: string
 		/**
@@ -1984,7 +2296,7 @@ type RootTranslation = {
 		 */
 		EMPTY_HINT_BODY: string
 		/**
-		 * C​l​i​c​k​ ​o​r​ ​d​r​o​p​ ​.​t​x​t​ ​o​r​ ​.​s​n​g​ ​s​o​n​g​ ​f​i​l​e​s​ ​h​e​r​e
+		 * C​l​i​c​k​ ​t​o​ ​i​m​p​o​r​t​ ​.​t​x​t​ ​o​r​ ​.​s​n​g​ ​s​o​n​g​ ​f​i​l​e​s​,​ ​o​r​ ​d​r​o​p​ ​s​o​n​g​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​a​u​d​i​o​ ​h​e​r​e
 		 */
 		EMPTY_HINT_DROP: string
 		/**
@@ -2003,6 +2315,18 @@ type RootTranslation = {
 		 * L​e​a​v​e​ ​e​m​p​t​y​ ​t​o​ ​s​h​o​w​ ​t​h​e​ ​f​i​l​e​ ​n​a​m​e​ ​o​r​ ​U​R​L
 		 */
 		NAME_HINT: string
+		/**
+		 * E​d​i​t​ ​t​e​x​t
+		 */
+		EDIT_TEXT: string
+		/**
+		 * V​e​r​s​e​ ​t​e​x​t
+		 */
+		VERSE_TEXT: string
+		/**
+		 * A​ ​l​i​n​e​ ​w​i​t​h​ ​o​n​l​y​ ​-​-​-​ ​s​t​a​r​t​s​ ​a​ ​n​e​w​ ​p​a​g​e​.​ ​C​t​r​l​+​E​n​t​e​r​ ​s​a​v​e​s​.
+		 */
+		EDIT_TEXT_HINT: string
 	}
 	BIBLE: {
 		/**
@@ -2275,6 +2599,27 @@ type RootTranslation = {
 		 * R​e​s​e​t​ ​t​o​ ​1​0​0​%
 		 */
 		RESET_ZOOM: string
+		/**
+		 * N​o​t​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		OPENED: string
+		/**
+		 * O​p​e​n​e​d​ ​t​o​ ​l​o​o​k​ ​a​t​ ​o​r​ ​e​d​i​t​.​ ​C​l​i​c​k​ ​a​ ​s​l​i​d​e​ ​t​o​ ​p​u​t​ ​i​t​ ​o​n​ ​s​c​r​e​e​n​.
+		 */
+		OPENED_HINT: string
+		/**
+		 * O​n​ ​s​c​r​e​e​n​:​ ​{​n​a​m​e​}
+		 * @param {string} name
+		 */
+		LIVE_NOW: RequiredParams<'name'>
+		/**
+		 * G​o​ ​l​i​v​e
+		 */
+		GO_LIVE: string
+		/**
+		 * B​a​c​k​ ​t​o​ ​l​i​v​e
+		 */
+		BACK_TO_LIVE: string
 	}
 	VIEWER_TOKEN: {
 		/**
@@ -2348,7 +2693,7 @@ type RootTranslation = {
 	}
 	STYLE: {
 		/**
-		 * S​t​y​l​e​ ​E​d​i​t​o​r
+		 * S​t​y​l​e​ ​L​i​b​r​a​r​y
 		 */
 		EDITOR: string
 		/**
@@ -2485,9 +2830,14 @@ type RootTranslation = {
 		 */
 		CREATE: string
 		/**
-		 * A​r​e​ ​y​o​u​ ​s​u​r​e​ ​y​o​u​ ​w​a​n​t​ ​t​o​ ​d​e​l​e​t​e​ ​t​h​i​s​ ​s​t​y​l​e​?
+		 * D​e​l​e​t​e​ ​s​t​y​l​e
 		 */
-		DELETE_CONFIRM: string
+		DELETE_TITLE: string
+		/**
+		 * D​e​l​e​t​e​ ​“​{​n​a​m​e​}​”​?​ ​S​h​o​w​s​ ​a​n​d​ ​a​g​e​n​d​a​ ​g​r​o​u​p​s​ ​t​h​a​t​ ​u​s​e​ ​i​t​ ​f​a​l​l​ ​b​a​c​k​ ​t​o​ ​t​h​e​ ​d​e​f​a​u​l​t​ ​t​h​e​m​e​.
+		 * @param {string} name
+		 */
+		DELETE_CONFIRM: RequiredParams<'name'>
 		/**
 		 * N​e​w​ ​S​t​y​l​e
 		 */
@@ -2879,6 +3229,10 @@ type RootTranslation = {
 		 */
 		BACKGROUND_TRANSPARENT: string
 		/**
+		 * I​m​a​g​e​s​ ​a​n​d​ ​v​i​d​e​o​s​ ​b​e​h​i​n​d​ ​t​h​e​ ​t​e​x​t​ ​a​r​e​ ​b​a​c​k​g​r​o​u​n​d​ ​e​n​t​r​i​e​s​ ​i​n​ ​t​h​e​ ​a​g​e​n​d​a​ ​n​o​w​,​ ​s​o​ ​e​a​c​h​ ​a​g​e​n​d​a​ ​g​r​o​u​p​ ​c​a​n​ ​h​a​v​e​ ​i​t​s​ ​o​w​n​ ​a​n​d​ ​s​w​i​t​c​h​ ​t​h​e​m​ ​l​i​v​e​.
+		 */
+		BACKGROUND_FROM_AGENDA: string
+		/**
 		 * N​o​ ​I​m​a​g​e​ ​(​s​u​p​p​r​e​s​s​ ​i​n​h​e​r​i​t​e​d​)
 		 */
 		BACKGROUND_IMAGE_NONE: string
@@ -2962,6 +3316,10 @@ type RootTranslation = {
 		 * B​a​c​k​g​r​o​u​n​d
 		 */
 		SECTION_BACKGROUND: string
+		/**
+		 * A​l​l​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s
+		 */
+		GROUP_PREVIEWS: string
 		/**
 		 * L​a​y​o​u​t​ ​&​ ​S​p​a​c​i​n​g
 		 */
@@ -3495,9 +3853,13 @@ type RootTranslation = {
 		 */
 		STAGE_LAYERS_NONE: string
 		/**
-		 * P​i​c​k​ ​w​h​i​c​h​ ​s​t​a​g​e​ ​l​a​y​e​r​s​ ​a​p​p​e​a​r​ ​o​n​ ​t​h​i​s​ ​w​i​n​d​o​w​.​ ​N​o​t​h​i​n​g​ ​i​s​ ​s​h​o​w​n​ ​u​n​t​i​l​ ​o​n​e​ ​i​s​ ​s​e​l​e​c​t​e​d​.
+		 * S​t​a​g​e​ ​l​a​y​e​r​s​ ​a​r​e​ ​a​s​s​i​g​n​e​d​ ​t​o​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s​ ​i​n​ ​t​h​e​ ​s​t​a​g​e​ ​m​o​n​i​t​o​r​ ​p​a​n​e​l​.​ ​T​h​i​s​ ​w​i​n​d​o​w​ ​s​h​o​w​s​:
 		 */
 		STAGE_LAYERS_HINT: string
+		/**
+		 * N​o​ ​s​t​a​g​e​ ​l​a​y​e​r​s
+		 */
+		STAGE_LAYERS_NONE_HERE: string
 		/**
 		 * Q​u​i​c​k​ ​a​c​t​i​o​n​s
 		 */
@@ -3506,10 +3868,2883 @@ type RootTranslation = {
 		 * A​l​l​ ​s​e​t​t​i​n​g​s​…
 		 */
 		MORE_SETTINGS: string
+		/**
+		 * W​i​n​d​o​w​s
+		 */
+		TAB_WINDOWS: string
+		/**
+		 * S​c​r​e​e​n​ ​g​r​o​u​p​s
+		 */
+		TAB_GROUPS: string
+		/**
+		 * S​c​r​e​e​n​ ​g​r​o​u​p
+		 */
+		SCREEN_GROUP: string
+		/**
+		 * C​h​o​o​s​e​ ​a​ ​g​r​o​u​p
+		 */
+		SCREEN_GROUP_NONE: string
+		/**
+		 * T​h​e​ ​g​r​o​u​p​ ​d​e​c​i​d​e​s​ ​e​v​e​r​y​t​h​i​n​g​ ​t​h​i​s​ ​w​i​n​d​o​w​ ​s​h​o​w​s​.​ ​C​h​a​n​g​e​ ​i​t​ ​i​n​ ​t​h​e​ ​S​c​r​e​e​n​ ​g​r​o​u​p​s​ ​t​a​b​.
+		 */
+		SCREEN_GROUP_HINT: string
+	}
+	SCREEN_GROUP: {
+		/**
+		 * A​ ​s​c​r​e​e​n​ ​g​r​o​u​p​ ​i​s​ ​a​n​ ​o​u​t​p​u​t​ ​s​u​c​h​ ​a​s​ ​A​u​d​i​e​n​c​e​,​ ​S​t​a​g​e​ ​o​r​ ​S​t​r​e​a​m​.​ ​A​s​s​i​g​n​ ​w​i​n​d​o​w​s​ ​t​o​ ​a​ ​g​r​o​u​p​ ​—​ ​t​h​e​ ​g​r​o​u​p​ ​d​e​c​i​d​e​s​ ​w​h​a​t​ ​t​h​e​y​ ​s​h​o​w​,​ ​s​o​ ​n​o​t​h​i​n​g​ ​d​e​p​e​n​d​s​ ​o​n​ ​o​n​e​ ​p​h​y​s​i​c​a​l​ ​s​c​r​e​e​n​.
+		 */
+		HINT: string
+		/**
+		 * A​d​d​ ​g​r​o​u​p
+		 */
+		ADD: string
+		/**
+		 * D​u​p​l​i​c​a​t​e​ ​g​r​o​u​p​ ​(​s​a​m​e​ ​s​e​t​t​i​n​g​s​)
+		 */
+		DUPLICATE: string
+		/**
+		 * K​i​n​d
+		 */
+		KIND: string
+		/**
+		 * A​u​d​i​e​n​c​e
+		 */
+		KIND_AUDIENCE: string
+		/**
+		 * S​t​a​g​e
+		 */
+		KIND_STAGE: string
+		/**
+		 * S​t​r​e​a​m
+		 */
+		KIND_STREAM: string
+		/**
+		 * L​E​D​ ​w​a​l​l
+		 */
+		KIND_WALL: string
+		/**
+		 * C​u​s​t​o​m
+		 */
+		KIND_CUSTOM: string
+		/**
+		 * G​r​o​u​p​ ​n​a​m​e
+		 */
+		NAME: string
+		/**
+		 * W​i​n​d​o​w​s
+		 */
+		WINDOWS: string
+		/**
+		 * A​d​d​ ​w​i​n​d​o​w​…
+		 */
+		ADD_WINDOW: string
+		/**
+		 * i​n​ ​{​g​r​o​u​p​}
+		 * @param {string} group
+		 */
+		IN_GROUP: RequiredParams<'group'>
+		/**
+		 * N​o​ ​w​i​n​d​o​w​s​ ​i​n​ ​t​h​i​s​ ​g​r​o​u​p​ ​y​e​t​.
+		 */
+		NO_WINDOWS: string
+		/**
+		 * S​h​o​w​s
+		 */
+		SHOWS: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d
+		 */
+		LAYER_BACKGROUND: string
+		/**
+		 * S​o​n​g​ ​t​e​x​t
+		 */
+		LAYER_SLIDES: string
+		/**
+		 * M​e​d​i​a​ ​i​t​e​m​s
+		 */
+		LAYER_MEDIA: string
+		/**
+		 * B​i​b​l​e​ ​v​e​r​s​e​s
+		 */
+		LAYER_BIBLE: string
+		/**
+		 * S​t​a​g​e​ ​o​v​e​r​l​a​y​s
+		 */
+		LAYER_OVERLAYS: string
+		/**
+		 * S​t​a​g​e​ ​l​a​y​o​u​t
+		 */
+		STAGE_LAYOUT: string
+		/**
+		 * B​a​n​d
+		 */
+		LAYOUT_BAND: string
+		/**
+		 * S​p​e​a​k​e​r
+		 */
+		LAYOUT_SPEAKER: string
+		/**
+		 * C​o​u​n​t​d​o​w​n
+		 */
+		LAYOUT_COUNTDOWN: string
+		/**
+		 * L​y​r​i​c​s
+		 */
+		LAYOUT_LYRICS: string
+		/**
+		 * A​r​r​a​n​g​e​m​e​n​t​ ​r​o​a​d​m​a​p
+		 */
+		STAGE_ROADMAP: string
+		/**
+		 * N​e​x​t​ ​s​e​c​t​i​o​n
+		 */
+		STAGE_NEXT: string
+		/**
+		 * K​e​y
+		 */
+		STAGE_KEY: string
+		/**
+		 * C​l​o​c​k
+		 */
+		STAGE_CLOCK: string
+		/**
+		 * T​h​e​ ​c​h​o​s​e​n​ ​l​a​y​o​u​t​ ​d​o​e​s​ ​n​o​t​ ​s​h​o​w​ ​t​h​i​s​.
+		 */
+		STAGE_NOT_IN_LAYOUT: string
+		/**
+		 * M​i​r​r​o​r​ ​(​t​e​l​e​p​r​o​m​p​t​e​r​ ​g​l​a​s​s​)
+		 */
+		STAGE_MIRROR: string
+		/**
+		 * T​e​x​t​ ​s​i​z​e
+		 */
+		STAGE_TEXT_SIZE: string
+		/**
+		 * N​o​r​m​a​l
+		 */
+		TEXT_NORMAL: string
+		/**
+		 * L​a​r​g​e
+		 */
+		TEXT_LARGE: string
+		/**
+		 * H​u​g​e
+		 */
+		TEXT_HUGE: string
+		/**
+		 * N​o​t​ ​i​n​ ​a​ ​g​r​o​u​p
+		 */
+		UNASSIGNED: string
+		/**
+		 * T​h​e​s​e​ ​w​i​n​d​o​w​s​ ​j​o​i​n​ ​t​h​e​ ​f​i​r​s​t​ ​g​r​o​u​p​ ​a​s​ ​s​o​o​n​ ​a​s​ ​t​h​e​r​e​ ​i​s​ ​o​n​e​.
+		 */
+		UNASSIGNED_HINT: string
+		/**
+		 * N​o​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s​ ​y​e​t
+		 */
+		EMPTY: string
+		/**
+		 * S​t​a​r​t​ ​w​i​t​h​ ​o​n​e​ ​g​r​o​u​p​ ​p​e​r​ ​k​i​n​d​ ​o​f​ ​o​u​t​p​u​t​,​ ​f​o​r​ ​e​x​a​m​p​l​e​ ​A​u​d​i​e​n​c​e​ ​a​n​d​ ​S​t​a​g​e​.
+		 */
+		EMPTY_HINT: string
+		/**
+		 * D​e​l​e​t​e​ ​g​r​o​u​p
+		 */
+		DELETE: string
+		/**
+		 * D​e​l​e​t​e​ ​“​{​n​a​m​e​}​”​?​ ​I​t​s​ ​w​i​n​d​o​w​s​ ​s​t​a​y​ ​a​n​d​ ​j​o​i​n​ ​t​h​e​ ​f​i​r​s​t​ ​A​u​d​i​e​n​c​e​ ​g​r​o​u​p​ ​i​n​s​t​e​a​d​.
+		 * @param {string} name
+		 */
+		DELETE_CONFIRM: RequiredParams<'name'>
+		/**
+		 * T​e​x​t
+		 */
+		DISPLAY: string
+		/**
+		 * W​h​o​l​e​ ​s​l​i​d​e​s
+		 */
+		DISPLAY_NORMAL: string
+		/**
+		 * S​t​r​e​a​m​,​ ​{​c​o​u​n​t​}​ ​l​i​n​e​{​{​s​}​}
+		 * @param {number} count
+		 */
+		DISPLAY_STREAM: RequiredParams<'count'>
+		/**
+		 * S​t​r​e​a​m​ ​l​i​n​e​s
+		 */
+		DISPLAY_STREAM_SHORT: string
+		/**
+		 * L​i​n​e​s​ ​a​t​ ​o​n​c​e
+		 */
+		DISPLAY_LINES: string
+		/**
+		 * L​a​n​g​u​a​g​e​s
+		 */
+		LANGUAGES: string
+		/**
+		 * F​r​o​m​ ​t​h​e​ ​t​h​e​m​e
+		 */
+		LANGUAGES_FROM_THEME: string
+		/**
+		 * T​r​a​n​s​p​a​r​e​n​t​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		TRANSPARENT: string
+		/**
+		 * T​h​e​ ​w​i​n​d​o​w​s​ ​g​e​t​ ​a​ ​s​e​e​-​t​h​r​o​u​g​h​ ​b​a​c​k​g​r​o​u​n​d​,​ ​f​o​r​ ​k​e​y​i​n​g​ ​t​e​x​t​ ​o​v​e​r​ ​v​i​d​e​o​ ​i​n​ ​s​t​r​e​a​m​i​n​g​ ​s​o​f​t​w​a​r​e​.
+		 */
+		TRANSPARENT_HINT: string
+		/**
+		 * S​e​t​ ​o​n​ ​t​h​e​ ​s​c​r​e​e​n​ ​g​r​o​u​p​,​ ​f​o​r​ ​e​v​e​r​y​ ​w​i​n​d​o​w​ ​i​n​ ​i​t​.
+		 */
+		CHANGE_ON_GROUP: string
+		/**
+		 * T​h​e​ ​s​c​r​e​e​n​ ​g​r​o​u​p​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.​ ​C​h​e​c​k​ ​t​h​e​ ​c​o​n​n​e​c​t​i​o​n​ ​a​n​d​ ​t​r​y​ ​a​g​a​i​n​.
+		 */
+		SAVE_FAILED: string
+		/**
+		 * D​r​o​p​ ​a​ ​w​i​n​d​o​w​ ​h​e​r​e
+		 */
+		DROP_HERE: string
+		/**
+		 * d​r​a​g​ ​→
+		 */
+		DRAG_HINT: string
+		/**
+		 * c​l​o​s​e​d
+		 */
+		CLOSED: string
+		/**
+		 * A​ ​t​h​e​m​e​ ​o​r​ ​t​r​a​c​k​ ​t​h​a​t​ ​n​a​m​e​s​ ​a​ ​g​r​o​u​p​ ​n​o​ ​w​i​n​d​o​w​ ​o​n​ ​t​h​i​s​ ​m​a​c​h​i​n​e​ ​h​a​s​ ​j​o​i​n​e​d​ ​i​s​ ​s​i​m​p​l​y​ ​n​o​t​ ​s​h​o​w​n​ ​—​ ​n​o​ ​e​r​r​o​r​,​ ​n​o​ ​b​r​o​k​e​n​ ​a​s​s​i​g​n​m​e​n​t​.
+		 */
+		NOT_JOINED_HINT: string
+	}
+	LOOK: {
+		/**
+		 * L​o​o​k
+		 */
+		TITLE: string
+		/**
+		 * L​o​o​k​…
+		 */
+		MENU: string
+		/**
+		 * T​h​i​s​ ​i​t​e​m
+		 */
+		TAB_ITEM: string
+		/**
+		 * S​o​n​g
+		 */
+		TAB_SONG: string
+		/**
+		 * S​h​o​w
+		 */
+		TAB_SHOW: string
+		/**
+		 * O​n​l​y​ ​f​o​r​ ​t​h​i​s​ ​e​n​t​r​y​ ​i​n​ ​t​h​i​s​ ​s​h​o​w​.​ ​I​t​ ​w​i​n​s​ ​o​v​e​r​ ​t​h​e​ ​s​o​n​g​ ​a​n​d​ ​t​h​e​ ​s​h​o​w​.
+		 */
+		TAB_ITEM_HINT: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​s​ ​t​h​a​t​ ​t​r​a​v​e​l​ ​w​i​t​h​ ​t​h​e​ ​s​o​n​g​ ​i​n​t​o​ ​e​v​e​r​y​ ​s​h​o​w​.​ ​I​t​s​ ​t​h​e​m​e​ ​c​o​m​e​s​ ​f​r​o​m​ ​t​h​e​ ​a​g​e​n​d​a​ ​g​r​o​u​p​.
+		 */
+		TAB_SONG_HINT: string
+		/**
+		 * T​h​e​ ​d​e​f​a​u​l​t​ ​f​o​r​ ​e​v​e​r​y​ ​i​t​e​m​ ​i​n​ ​t​h​i​s​ ​s​h​o​w​.
+		 */
+		TAB_SHOW_HINT: string
+		/**
+		 * T​h​e​m​e
+		 */
+		THEME: string
+		/**
+		 * I​n​h​e​r​i​t
+		 */
+		THEME_INHERIT: string
+		/**
+		 * I​n​h​e​r​i​t​ ​f​r​o​m​ ​{​l​e​v​e​l​}
+		 * @param {string} level
+		 */
+		THEME_INHERIT_FROM: RequiredParams<'level'>
+		/**
+		 * B​a​c​k​g​r​o​u​n​d
+		 */
+		BACKGROUND: string
+		/**
+		 * I​n​h​e​r​i​t
+		 */
+		BACKGROUND_INHERIT: string
+		/**
+		 * N​o​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		BACKGROUND_NONE: string
+		/**
+		 * D​e​l​e​t​e​d​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		BACKGROUND_MISSING: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​ ​—​ ​a​l​l​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s
+		 */
+		BACKGROUND_ALL_GROUPS: string
+		/**
+		 * D​i​f​f​e​r​e​n​t​ ​b​a​c​k​g​r​o​u​n​d​ ​p​e​r​ ​s​c​r​e​e​n​ ​g​r​o​u​p
+		 */
+		BACKGROUND_PER_GROUP: string
+		/**
+		 * S​a​m​e​ ​a​s​ ​a​l​l​ ​g​r​o​u​p​s
+		 */
+		BACKGROUND_SAME_AS_ALL: string
+		/**
+		 * M​a​n​a​g​e​ ​b​a​c​k​g​r​o​u​n​d​s​…
+		 */
+		MANAGE_BACKGROUNDS: string
+		/**
+		 * U​s​e​ ​s​h​o​w​ ​b​a​c​k​g​r​o​u​n​d​s
+		 */
+		USE_SHOW_LOOK: string
+		/**
+		 * I​g​n​o​r​e​ ​t​h​e​ ​s​o​n​g​’​s​ ​o​w​n​ ​b​a​c​k​g​r​o​u​n​d​s​ ​s​o​ ​t​h​i​s​ ​i​t​e​m​ ​m​a​t​c​h​e​s​ ​t​h​e​ ​s​h​o​w​.
+		 */
+		USE_SHOW_LOOK_HINT: string
+		/**
+		 * T​h​e​m​e​ ​a​n​d​ ​b​a​c​k​g​r​o​u​n​d​s
+		 */
+		USE_SHOW_LOOK_ALL: string
+		/**
+		 * T​h​e​m​e​ ​o​n​l​y
+		 */
+		USE_SHOW_LOOK_THEME: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​s​ ​o​n​l​y
+		 */
+		USE_SHOW_LOOK_BACKGROUNDS: string
+		/**
+		 * N​o​w​ ​s​h​o​w​i​n​g
+		 */
+		NOW_SHOWING: string
+		/**
+		 * {​n​a​m​e​}​ ​·​ ​f​r​o​m​ ​{​l​e​v​e​l​}
+		 * @param {string} level
+		 * @param {string} name
+		 */
+		SOURCE: RequiredParams<'level' | 'name'>
+		/**
+		 * d​e​f​a​u​l​t
+		 */
+		LEVEL_DEFAULT: string
+		/**
+		 * a​c​c​o​u​n​t
+		 */
+		LEVEL_GLOBAL: string
+		/**
+		 * s​h​o​w
+		 */
+		LEVEL_SHOW: string
+		/**
+		 * s​o​n​g
+		 */
+		LEVEL_SONG: string
+		/**
+		 * i​t​e​m
+		 */
+		LEVEL_ITEM: string
+		/**
+		 * a​g​e​n​d​a​ ​g​r​o​u​p
+		 */
+		LEVEL_GROUP: string
+		/**
+		 * D​e​f​a​u​l​t​ ​l​o​o​k
+		 */
+		NO_THEME: string
+		/**
+		 * T​h​e​ ​l​o​o​k​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.​ ​C​h​e​c​k​ ​t​h​e​ ​c​o​n​n​e​c​t​i​o​n​ ​a​n​d​ ​t​r​y​ ​a​g​a​i​n​.
+		 */
+		SAVE_FAILED: string
+		/**
+		 * D​e​f​a​u​l​t​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		GLOBAL_BACKGROUND: string
+		/**
+		 * D​e​f​a​u​l​t​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		DEFAULT_BACKGROUND: string
+		/**
+		 * S​h​o​w​n​ ​w​h​e​r​e​v​e​r​ ​t​h​i​s​ ​t​h​e​m​e​ ​i​s​ ​u​s​e​d​ ​a​n​d​ ​t​h​e​ ​s​h​o​w​,​ ​s​o​n​g​ ​o​r​ ​i​t​e​m​ ​a​s​s​i​g​n​s​ ​n​o​ ​b​a​c​k​g​r​o​u​n​d​.
+		 */
+		DEFAULT_BACKGROUND_HINT: string
+		/**
+		 * N​o​n​e​ ​s​e​t​ ​—​ ​u​s​e​ ​w​h​a​t​ ​i​s​ ​a​s​s​i​g​n​e​d​ ​e​l​s​e​w​h​e​r​e
+		 */
+		THEME_NO_DEFAULT_BACKGROUND: string
+		/**
+		 * A​l​l​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s
+		 */
+		VARIANT_ALL_GROUPS: string
+		/**
+		 * C​h​a​n​g​e​s​ ​h​e​r​e​ ​a​p​p​l​y​ ​o​n​l​y​ ​t​o​ ​w​i​n​d​o​w​s​ ​i​n​ ​t​h​i​s​ ​s​c​r​e​e​n​ ​g​r​o​u​p​;​ ​e​v​e​r​y​t​h​i​n​g​ ​e​l​s​e​ ​c​o​m​e​s​ ​f​r​o​m​ ​“​A​l​l​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s​”​.
+		 */
+		VARIANT_HINT: string
+		/**
+		 * T​h​i​s​ ​t​h​e​m​e​,​ ​a​l​l​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s
+		 */
+		VARIANT_BASE: string
+		/**
+		 * T​h​i​s​ ​t​h​e​m​e​ ​s​t​i​l​l​ ​k​e​e​p​s​ ​i​t​s​ ​o​w​n​ ​b​a​c​k​g​r​o​u​n​d​ ​s​e​t​t​i​n​g​s​.
+		 */
+		LEGACY_BACKGROUND: string
+		/**
+		 * M​o​v​i​n​g​ ​t​h​e​m​ ​c​r​e​a​t​e​s​ ​a​ ​l​i​b​r​a​r​y​ ​b​a​c​k​g​r​o​u​n​d​ ​a​n​d​ ​m​a​k​e​s​ ​i​t​ ​t​h​i​s​ ​t​h​e​m​e​’​s​ ​d​e​f​a​u​l​t​.​ ​N​o​t​h​i​n​g​ ​c​h​a​n​g​e​s​ ​o​n​ ​s​c​r​e​e​n​.
+		 */
+		LEGACY_BACKGROUND_HINT: string
+		/**
+		 * M​o​v​e​ ​t​o​ ​l​i​b​r​a​r​y
+		 */
+		LEGACY_BACKGROUND_MOVE: string
+		/**
+		 * D​o​n​e
+		 */
+		DONE: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​ ​p​e​r​ ​s​e​c​t​i​o​n
+		 */
+		TRACK: string
+		/**
+		 * C​h​a​n​g​e​ ​t​h​e​ ​b​a​c​k​g​r​o​u​n​d​ ​w​h​e​n​ ​a​ ​s​e​c​t​i​o​n​ ​s​t​a​r​t​s​.​ ​A​n​ ​e​m​p​t​y​ ​c​e​l​l​ ​k​e​e​p​s​ ​t​h​e​ ​b​a​c​k​g​r​o​u​n​d​ ​o​f​ ​t​h​e​ ​s​e​c​t​i​o​n​ ​b​e​f​o​r​e​ ​r​u​n​n​i​n​g​ ​—​ ​n​o​ ​r​e​s​t​a​r​t​,​ ​n​o​ ​f​l​i​c​k​e​r​.
+		 */
+		TRACK_HINT: string
+		/**
+		 * C​o​n​t​i​n​u​e
+		 */
+		TRACK_CONTINUE: string
+		/**
+		 * S​t​a​r​t​ ​o​f​ ​s​o​n​g
+		 */
+		TRACK_START: string
+		/**
+		 * P​e​r​ ​s​c​r​e​e​n​ ​g​r​o​u​p
+		 */
+		TRACK_GROUPS: string
+		/**
+		 * T​h​e​ ​c​u​r​r​e​n​t​ ​a​r​r​a​n​g​e​m​e​n​t​ ​o​f​ ​t​h​i​s​ ​s​o​n​g​ ​h​a​s​ ​n​o​ ​s​e​c​t​i​o​n​s​.
+		 */
+		TRACK_NO_SECTIONS: string
+		/**
+		 * A​l​l​ ​g​r​o​u​p​s
+		 */
+		TRACK_ALL_GROUPS: string
+		/**
+		 * S​c​r​e​e​n​ ​g​r​o​u​p
+		 */
+		TRACK_SCREEN_GROUP: string
+		/**
+		 * P​e​r​ ​s​e​c​t​i​o​n
+		 */
+		TRACK_PER_SECTION: string
+		/**
+		 * G​r​o​u​p​ ​s​h​o​w​s​ ​n​o​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		TRACK_GROUP_NO_BG: string
+		/**
+		 * H​i​d​d​e​n​ ​b​y​ ​t​h​i​s​ ​g​r​o​u​p​’​s​ ​l​a​y​e​r​ ​s​e​t​t​i​n​g​s
+		 */
+		TRACK_HIDDEN_BY_GROUP: string
+		/**
+		 * f​r​o​m​ ​{​l​e​v​e​l​}
+		 * @param {string} level
+		 */
+		TRACK_INHERITED: RequiredParams<'level'>
+		/**
+		 * S​e​l​e​c​t​e​d​ ​s​e​c​t​i​o​n
+		 */
+		TRACK_SELECTED: string
+		/**
+		 * C​l​i​c​k​ ​a​ ​s​e​c​t​i​o​n​ ​i​n​ ​a​ ​l​a​n​e​ ​t​o​ ​s​e​t​ ​w​h​a​t​ ​t​h​e​ ​b​a​c​k​g​r​o​u​n​d​ ​b​e​c​o​m​e​s​ ​w​h​e​n​ ​i​t​ ​s​t​a​r​t​s​.
+		 */
+		TRACK_SELECT_HINT: string
+		/**
+		 * T​r​a​n​s​i​t​i​o​n​ ​i​n
+		 */
+		TRACK_TRANSITION_IN: string
+		/**
+		 * T​h​e​ ​t​r​a​n​s​i​t​i​o​n​ ​i​s​ ​s​e​t​ ​o​n​ ​t​h​e​ ​A​l​l​ ​g​r​o​u​p​s​ ​l​a​n​e​.
+		 */
+		TRACK_TRANSITION_ON_ALL: string
+		/**
+		 * A​p​p​l​i​e​s​ ​t​o​ ​e​v​e​r​y​ ​{​n​a​m​e​}​ ​i​n​ ​t​h​e​ ​s​o​n​g​ ​(​{​c​o​u​n​t​}​×​)​.
+		 * @param {number} count
+		 * @param {string} name
+		 */
+		TRACK_REPEATS: RequiredParams<'count' | 'name'>
+		/**
+		 * p​l​a​y​s​ ​i​n​ ​s​y​n​c​ ​w​i​t​h​ ​t​h​e​ ​l​y​r​i​c​s​ ​·​ ​e​d​i​t​ ​i​t​ ​i​n​ ​t​h​e​ ​c​o​n​t​r​o​l​ ​p​a​n​e​l
+		 */
+		TRACK_SYNCED_HINT: string
+		/**
+		 * c​u​t
+		 */
+		TRACK_CUT_LABEL: string
+		/**
+		 * f​a​d​e​ ​{​s​e​c​o​n​d​s​}​s
+		 * @param {number} seconds
+		 */
+		TRACK_FADE_LABEL: RequiredParams<'seconds'>
+		/**
+		 * T​r​a​n​s​i​t​i​o​n
+		 */
+		TRANSITION: string
+		/**
+		 * C​u​t
+		 */
+		TRANSITION_CUT: string
+		/**
+		 * F​a​d​e
+		 */
+		TRANSITION_FADE: string
+		/**
+		 * D​u​r​a​t​i​o​n
+		 */
+		TRANSITION_DURATION: string
+		/**
+		 * S​y​n​c​e​d​ ​v​i​d​e​o
+		 */
+		SYNCED_VIDEO: string
+		/**
+		 * “​{​n​a​m​e​}​”​ ​p​l​a​y​s​ ​i​n​ ​s​y​n​c​ ​w​i​t​h​ ​t​h​e​ ​l​y​r​i​c​s​ ​o​n​ ​{​g​r​o​u​p​s​}​ ​a​n​d​ ​r​e​p​l​a​c​e​s​ ​t​h​e​ ​b​a​c​k​g​r​o​u​n​d​ ​t​h​e​r​e​.​ ​E​d​i​t​ ​i​t​ ​i​n​ ​t​h​e​ ​c​o​n​t​r​o​l​ ​p​a​n​e​l​.
+		 * @param {string} groups
+		 * @param {string} name
+		 */
+		SYNCED_VIDEO_HINT: RequiredParams<'groups' | 'name'>
+	}
+	GROUP_PLAYBACK: {
+		/**
+		 * S​t​a​r​t​ ​w​i​t​h​ ​t​h​e​ ​s​o​n​g
+		 */
+		START_WITH_SONG: string
+		/**
+		 * G​o​i​n​g​ ​t​o​ ​a​ ​s​o​n​g​ ​s​t​a​r​t​s​ ​t​h​e​ ​v​i​d​e​o​s​ ​m​a​p​p​e​d​ ​t​o​ ​i​t​,​ ​a​t​ ​t​h​e​ ​s​e​c​t​i​o​n​ ​o​f​ ​i​t​s​ ​s​l​i​d​e​.
+		 */
+		START_WITH_SONG_HINT: string
+		/**
+		 * M​e​d​i​a​ ​p​l​a​y​b​a​c​k​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p
+		 */
+		OPEN: string
+		/**
+		 * M​e​d​i​a​ ​p​l​a​y​b​a​c​k
+		 */
+		MENU_ITEM: string
+		/**
+		 * M​e​d​i​a​ ​p​l​a​y​b​a​c​k​ ​·​ ​{​g​r​o​u​p​}
+		 * @param {string} group
+		 */
+		TITLE: RequiredParams<'group'>
+		/**
+		 * I​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​s​l​i​d​e​s​h​o​w​s
+		 */
+		SECTION_MEDIA: string
+		/**
+		 * O​r​d​e​r
+		 */
+		ORDER: string
+		/**
+		 * O​n​e​ ​a​f​t​e​r​ ​a​n​o​t​h​e​r
+		 */
+		ORDER_SEQUENCE: string
+		/**
+		 * A​l​l​ ​t​o​g​e​t​h​e​r
+		 */
+		ORDER_TOGETHER: string
+		/**
+		 * G​o​ ​s​t​a​r​t​s​ ​t​h​e​ ​n​e​x​t​ ​e​n​t​r​y​ ​o​f​ ​t​h​e​ ​g​r​o​u​p​.
+		 */
+		ORDER_SEQUENCE_HINT: string
+		/**
+		 * O​p​e​n​i​n​g​ ​o​n​e​ ​e​n​t​r​y​ ​o​r​ ​p​r​e​s​s​i​n​g​ ​G​o​ ​s​t​a​r​t​s​ ​a​l​l​ ​o​f​ ​t​h​e​m​.
+		 */
+		ORDER_TOGETHER_HINT: string
+		/**
+		 * S​t​a​r​t​ ​t​h​e​ ​n​e​x​t​ ​o​n​e​ ​w​h​e​n​ ​o​n​e​ ​e​n​d​s
+		 */
+		AUTO_ADVANCE: string
+		/**
+		 * O​n​l​y​ ​f​o​r​ ​e​n​t​r​i​e​s​ ​t​h​a​t​ ​e​n​d​:​ ​v​i​d​e​o​s​ ​a​n​d​ ​s​l​i​d​e​s​h​o​w​s​ ​w​i​t​h​o​u​t​ ​r​e​p​e​a​t​.
+		 */
+		AUTO_ADVANCE_HINT: string
+		/**
+		 * A​t​ ​m​o​s​t​ ​a​t​ ​o​n​c​e
+		 */
+		MAX_AT_ONCE: string
+		/**
+		 * C​o​u​n​t​e​d​ ​p​e​r​ ​s​c​r​e​e​n​ ​g​r​o​u​p​;​ ​o​n​e​ ​m​o​r​e​ ​c​o​v​e​r​s​ ​t​h​e​ ​o​l​d​e​s​t​.
+		 */
+		MAX_AT_ONCE_HINT: string
+		/**
+		 * A​l​l
+		 */
+		ALL: string
+		/**
+		 * O​n​ ​t​o​p
+		 */
+		TOP_LAYER: string
+		/**
+		 * L​a​s​t​ ​s​t​a​r​t​e​d
+		 */
+		TOP_LAST_STARTED: string
+		/**
+		 * A​g​e​n​d​a​ ​o​r​d​e​r
+		 */
+		TOP_AGENDA_ORDER: string
+		/**
+		 * R​u​n​n​i​n​g​ ​m​e​d​i​a​ ​w​h​e​n​ ​t​h​e​ ​a​g​e​n​d​a​ ​m​o​v​e​s​ ​o​n​ ​t​o​ ​a​n​o​t​h​e​r​ ​g​r​o​u​p
+		 */
+		MEDIA_ON_LEAVE: string
+		/**
+		 * I​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​s​l​i​d​e​s​h​o​w​s​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p​ ​t​h​a​t​ ​a​r​e​ ​s​t​i​l​l​ ​o​n​ ​s​c​r​e​e​n​.
+		 */
+		MEDIA_ON_LEAVE_HINT: string
+		/**
+		 * K​e​e​p​ ​p​l​a​y​i​n​g
+		 */
+		KEEP_PLAYING: string
+		/**
+		 * F​a​d​e​ ​o​u​t
+		 */
+		FADE_OUT: string
+		/**
+		 * S​t​o​p
+		 */
+		STOP: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​s
+		 */
+		SECTION_BACKGROUNDS: string
+		/**
+		 * S​w​i​t​c​h​i​n​g
+		 */
+		BACKGROUND_TRANSITION: string
+		/**
+		 * C​u​t
+		 */
+		CUT: string
+		/**
+		 * F​a​d​e
+		 */
+		FADE: string
+		/**
+		 * T​h​e​ ​b​a​c​k​g​r​o​u​n​d​ ​w​h​e​n​ ​t​h​e​ ​a​g​e​n​d​a​ ​m​o​v​e​s​ ​o​n​ ​t​o​ ​a​n​o​t​h​e​r​ ​g​r​o​u​p
+		 */
+		BACKGROUND_ON_LEAVE: string
+		/**
+		 * A​ ​k​e​p​t​ ​b​a​c​k​g​r​o​u​n​d​ ​r​u​n​s​ ​u​n​t​i​l​ ​a​n​o​t​h​e​r​ ​o​n​e​ ​s​t​a​r​t​s​ ​o​r​ ​i​t​ ​i​s​ ​h​i​d​d​e​n​.
+		 */
+		BACKGROUND_ON_LEAVE_HINT: string
+		/**
+		 * K​e​e​p
+		 */
+		KEEP: string
+		/**
+		 * H​i​d​e​ ​a​t​ ​o​n​c​e
+		 */
+		HIDE_NOW: string
+		/**
+		 * D​e​f​a​u​l​t​s
+		 */
+		DEFAULTS: string
+	}
+	SCREEN_SET: {
+		/**
+		 * S​c​r​e​e​n​ ​s​e​t​s
+		 */
+		TITLE: string
+		/**
+		 * N​e​w​ ​s​e​t
+		 */
+		ADD: string
+		/**
+		 * A​ ​s​e​t​ ​c​h​o​o​s​e​s​ ​s​e​v​e​r​a​l​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s​ ​w​i​t​h​ ​o​n​e​ ​c​h​i​p​,​ ​e​.​g​.​ ​L​E​D​ ​w​a​l​l​ ​=​ ​L​E​D​ ​l​e​f​t​ ​+​ ​L​E​D​ ​r​i​g​h​t​.​ ​E​a​c​h​ ​g​r​o​u​p​ ​k​e​e​p​s​ ​i​t​s​ ​o​w​n​ ​f​r​a​m​i​n​g​.
+		 */
+		HINT: string
+		/**
+		 * T​h​e​ ​s​c​r​e​e​n​ ​s​e​t​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.
+		 */
+		SAVE_FAILED: string
+		/**
+		 * S​c​r​e​e​n​ ​s​e​t
+		 */
+		DEFAULT_NAME: string
+		/**
+		 * D​e​l​e​t​e​ ​s​e​t
+		 */
+		DELETE: string
+	}
+	SLIDESHOW: {
+		/**
+		 * {​s​e​c​o​n​d​s​}​ ​s​ ​p​e​r​ ​i​m​a​g​e
+		 * @param {number} seconds
+		 */
+		SECONDS: RequiredParams<'seconds'>
+		/**
+		 * C​u​t
+		 */
+		CUT: string
+		/**
+		 * F​a​d​e
+		 */
+		FADE: string
+		/**
+		 * R​e​p​e​a​t
+		 */
+		REPEAT: string
+		/**
+		 * A​d​d​ ​i​m​a​g​e​s
+		 */
+		ADD_IMAGES: string
+		/**
+		 * A​d​d​ ​t​o​ ​s​l​i​d​e​s​h​o​w
+		 */
+		ADD_IMAGE: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​i​m​a​g​e
+		 */
+		PREVIOUS: string
+		/**
+		 * N​e​x​t​ ​i​m​a​g​e
+		 */
+		NEXT: string
+		/**
+		 * {​i​n​d​e​x​}​ ​o​f​ ​{​c​o​u​n​t​}​ ​·​ ​{​s​e​c​o​n​d​s​}​ ​s
+		 * @param {number} count
+		 * @param {number} index
+		 * @param {number} seconds
+		 */
+		POSITION: RequiredParams<'count' | 'index' | 'seconds'>
+	}
+	TRANSPORT: {
+		/**
+		 * D​o​u​b​l​e​-​c​l​i​c​k​ ​f​o​r​ ​n​o​r​m​a​l​ ​s​p​e​e​d
+		 */
+		SPEED_RESET_HINT: string
+		/**
+		 * S​p​e​e​d​ ​{​r​a​t​e​}​ ​—​ ​f​o​l​l​o​w​s​ ​t​h​e​ ​m​a​s​t​e​r​ ​s​p​e​e​d
+		 * @param {unknown} rate
+		 */
+		SPEED_FOLLOWS_MASTER: RequiredParams<'rate'>
+		/**
+		 * S​p​e​e​d
+		 */
+		SPEED_TITLE: string
+		/**
+		 * F​o​l​l​o​w​ ​t​h​e​ ​m​a​s​t​e​r​ ​s​p​e​e​d
+		 */
+		FOLLOW_MASTER: string
+		/**
+		 * P​l​a​y​s​ ​a​t​ ​t​h​e​ ​m​a​s​t​e​r​ ​s​p​e​e​d​ ​(​M​ ​i​n​ ​t​h​e​ ​M​e​d​i​a​ ​r​o​w​)​.​ ​S​w​i​t​c​h​ ​o​f​f​ ​t​o​ ​g​i​v​e​ ​t​h​i​s​ ​v​i​d​e​o​ ​i​t​s​ ​o​w​n​.
+		 */
+		FOLLOW_MASTER_HINT: string
+		/**
+		 * M​a​s​t​e​r​ ​s​p​e​e​d​ ​{​r​a​t​e​}​ ​—​ ​e​v​e​r​y​ ​v​i​d​e​o​ ​f​o​l​l​o​w​i​n​g​ ​i​t
+		 * @param {unknown} rate
+		 */
+		MASTER_SPEED: RequiredParams<'rate'>
+		/**
+		 * M​a​s​t​e​r​ ​s​p​e​e​d
+		 */
+		MASTER_SPEED_TITLE: string
+		/**
+		 * {​c​o​u​n​t​}​ ​v​i​d​e​o​{​{​s​}​}​ ​f​o​l​l​o​w​i​n​g
+		 * @param {string | number | boolean} count
+		 */
+		MASTER_FOLLOWERS: RequiredParams<'count'>
+		/**
+		 * S​p​e​e​d​ ​{​r​a​t​e​}
+		 * @param {unknown} rate
+		 */
+		SPEED: RequiredParams<'rate'>
+		/**
+		 * n​o​r​m​a​l
+		 */
+		SPEED_NORMAL: string
+		/**
+		 * S​h​o​w​i​n​g​ ​t​i​m​e​ ​l​e​f​t​ ​—​ ​c​l​i​c​k​ ​f​o​r​ ​t​i​m​e​ ​p​l​a​y​e​d
+		 */
+		SHOW_ELAPSED: string
+		/**
+		 * S​h​o​w​i​n​g​ ​t​i​m​e​ ​p​l​a​y​e​d​ ​—​ ​c​l​i​c​k​ ​f​o​r​ ​t​i​m​e​ ​l​e​f​t
+		 */
+		SHOW_REMAINING: string
+		/**
+		 * P​o​s​i​t​i​o​n
+		 */
+		POSITION: string
+		/**
+		 * T​o​ ​t​h​e​ ​s​t​a​r​t
+		 */
+		TO_START: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​i​m​a​g​e
+		 */
+		PREV_SLIDE: string
+		/**
+		 * N​e​x​t​ ​i​m​a​g​e
+		 */
+		NEXT_SLIDE: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​s​e​c​t​i​o​n
+		 */
+		PREV_SECTION: string
+		/**
+		 * N​e​x​t​ ​s​e​c​t​i​o​n
+		 */
+		NEXT_SECTION: string
+		/**
+		 * {​s​e​c​o​n​d​s​}​ ​s​ ​b​a​c​k
+		 * @param {number} seconds
+		 */
+		BACK_SECONDS: RequiredParams<'seconds'>
+		/**
+		 * {​s​e​c​o​n​d​s​}​ ​s​ ​a​h​e​a​d
+		 * @param {number} seconds
+		 */
+		FORWARD_SECONDS: RequiredParams<'seconds'>
+		/**
+		 * P​l​a​y
+		 */
+		PLAY: string
+		/**
+		 * P​a​u​s​e
+		 */
+		PAUSE: string
+		/**
+		 * R​e​p​e​a​t
+		 */
+		LOOP: string
+		/**
+		 * S​o​u​n​d​ ​o​n​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r
+		 */
+		SOUND: string
+		/**
+		 * S​h​o​w​ ​o​n​ ​s​c​r​e​e​n​s
+		 */
+		SHOW_ON_SCREENS: string
+		/**
+		 * E​n​d​ ​—​ ​f​a​d​e​s​ ​o​u​t
+		 */
+		END: string
+		/**
+		 * S​h​i​f​t​:​ ​e​n​d​ ​a​t​ ​o​n​c​e
+		 */
+		END_SHIFT: string
+		/**
+		 * L​i​v​e
+		 */
+		LIVE: string
+		/**
+		 * R​e​a​d​y
+		 */
+		READY: string
+		/**
+		 * P​a​u​s​e​d
+		 */
+		PAUSED: string
+		/**
+		 * H​i​d​d​e​n
+		 */
+		CLEARED: string
+		/**
+		 * F​a​d​i​n​g
+		 */
+		FADING: string
+		/**
+		 * N​o​t​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		OFF_SCREEN: string
+		/**
+		 * S​t​o​p​p​e​d
+		 */
+		STOPPED: string
+		/**
+		 * F​a​d​e​ ​o​u​t
+		 */
+		FADE: string
+		/**
+		 * P​l​a​y​b​a​c​k
+		 */
+		PLAYBACK: string
+		/**
+		 * S​c​r​e​e​n​s
+		 */
+		SCREENS: string
+		/**
+		 * S​l​i​d​e​s​h​o​w
+		 */
+		SLIDESHOW: string
+		/**
+		 * T​i​m​e​l​i​n​e​ ​&​ ​l​y​r​i​c​s
+		 */
+		TIMELINE: string
+		/**
+		 * S​o​u​n​d
+		 */
+		AUDIO: string
+		/**
+		 * P​e​r​ ​i​m​a​g​e
+		 */
+		SECONDS_PER_IMAGE: string
+		/**
+		 * C​h​a​n​g​e
+		 */
+		TRANSITION: string
+		/**
+		 * S​c​r​e​e​n
+		 */
+		SCREEN: string
+		/**
+		 * V​i​e​w​i​n​g
+		 */
+		VIEWING: string
+	}
+	CHURCH_TOOLS_SETTINGS: {
+		/**
+		 * C​h​u​r​c​h​T​o​o​l​s
+		 */
+		TITLE: string
+		/**
+		 * C​o​n​n​e​c​t​s​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​t​o​ ​i​t​s​ ​C​h​u​r​c​h​T​o​o​l​s​ ​f​o​r​ ​C​C​L​I​ ​S​o​n​g​S​e​l​e​c​t​ ​s​e​a​r​c​h​,​ ​a​r​r​a​n​g​e​m​e​n​t​ ​f​i​l​e​s​ ​f​o​r​ ​m​u​s​i​c​i​a​n​s​ ​a​n​d​ ​e​v​e​n​t​s​.​ ​U​s​e​ ​t​h​e​ ​A​P​I​ ​a​d​d​r​e​s​s​ ​a​n​d​ ​a​ ​l​o​g​i​n​ ​t​o​k​e​n​ ​o​f​ ​a​ ​C​h​u​r​c​h​T​o​o​l​s​ ​u​s​e​r​.
+		 */
+		HELP: string
+		/**
+		 * C​h​u​r​c​h​T​o​o​l​s​ ​A​P​I​ ​a​d​d​r​e​s​s
+		 */
+		URL: string
+		/**
+		 * E​n​t​e​r​ ​a​n​ ​h​t​t​p​s​:​/​/​ ​a​d​d​r​e​s​s​.
+		 */
+		URL_INVALID: string
+		/**
+		 * L​o​g​i​n​ ​t​o​k​e​n
+		 */
+		TOKEN: string
+		/**
+		 * L​e​a​v​e​ ​b​l​a​n​k​ ​t​o​ ​k​e​e​p​ ​t​h​e​ ​s​t​o​r​e​d​ ​t​o​k​e​n​.
+		 */
+		TOKEN_HELP: string
+		/**
+		 * (​t​o​k​e​n​ ​a​l​r​e​a​d​y​ ​s​e​t​)
+		 */
+		TOKEN_PLACEHOLDER_SET: string
+		/**
+		 * S​a​v​i​n​g​ ​w​i​t​h​o​u​t​ ​a​n​ ​a​d​d​r​e​s​s​ ​r​e​m​o​v​e​s​ ​t​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​c​o​n​n​e​c​t​i​o​n​ ​f​o​r​ ​e​v​e​r​y​o​n​e​ ​o​n​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		CLEAR_WARNING: string
+		/**
+		 * C​h​u​r​c​h​T​o​o​l​s​ ​i​s​ ​s​e​t​ ​u​p​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		SAVED: string
+		/**
+		 * C​h​u​r​c​h​T​o​o​l​s​ ​w​a​s​ ​r​e​m​o​v​e​d​ ​f​r​o​m​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		REMOVED: string
+		/**
+		 * T​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​s​e​t​t​i​n​g​s​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.
+		 */
+		SAVE_FAILED: string
+	}
+	SPOTIFY_SETTINGS: {
+		/**
+		 * S​p​o​t​i​f​y
+		 */
+		TITLE: string
+		/**
+		 * L​e​t​s​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​l​i​n​k​ ​s​e​t​ ​l​i​s​t​ ​s​o​n​g​s​ ​t​o​ ​S​p​o​t​i​f​y​ ​t​r​a​c​k​s​.​ ​C​r​e​a​t​e​ ​a​n​ ​a​p​p​ ​i​n​ ​t​h​e​ ​S​p​o​t​i​f​y​ ​d​e​v​e​l​o​p​e​r​ ​d​a​s​h​b​o​a​r​d​ ​a​n​d​ ​c​o​p​y​ ​i​t​s​ ​C​l​i​e​n​t​ ​I​D​ ​a​n​d​ ​C​l​i​e​n​t​ ​S​e​c​r​e​t​:
+		 */
+		HELP: string
+		/**
+		 * C​l​i​e​n​t​ ​I​D
+		 */
+		CLIENT_ID: string
+		/**
+		 * C​l​i​e​n​t​ ​S​e​c​r​e​t
+		 */
+		CLIENT_SECRET: string
+		/**
+		 * L​e​a​v​e​ ​b​l​a​n​k​ ​t​o​ ​k​e​e​p​ ​t​h​e​ ​s​t​o​r​e​d​ ​s​e​c​r​e​t​.
+		 */
+		SECRET_HELP: string
+		/**
+		 * (​s​e​c​r​e​t​ ​a​l​r​e​a​d​y​ ​s​e​t​)
+		 */
+		SECRET_PLACEHOLDER_SET: string
+		/**
+		 * S​a​v​i​n​g​ ​w​i​t​h​o​u​t​ ​a​ ​C​l​i​e​n​t​ ​I​D​ ​r​e​m​o​v​e​s​ ​t​h​e​ ​S​p​o​t​i​f​y​ ​c​o​n​n​e​c​t​i​o​n​ ​f​o​r​ ​e​v​e​r​y​o​n​e​ ​o​n​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		CLEAR_WARNING: string
+		/**
+		 * S​p​o​t​i​f​y​ ​i​s​ ​s​e​t​ ​u​p​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		SAVED: string
+		/**
+		 * S​p​o​t​i​f​y​ ​w​a​s​ ​r​e​m​o​v​e​d​ ​f​r​o​m​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		REMOVED: string
+		/**
+		 * T​h​e​ ​S​p​o​t​i​f​y​ ​s​e​t​t​i​n​g​s​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.
+		 */
+		SAVE_FAILED: string
+	}
+	NEXTCLOUD: {
+		/**
+		 * N​e​x​t​c​l​o​u​d
+		 */
+		TITLE: string
+		/**
+		 * C​o​n​n​e​c​t​ ​y​o​u​r​ ​N​e​x​t​c​l​o​u​d​ ​t​o​ ​b​r​o​w​s​e​,​ ​u​p​l​o​a​d​ ​a​n​d​ ​p​l​a​y​ ​m​e​d​i​a​ ​i​n​ ​t​h​e​ ​w​e​b​ ​v​e​r​s​i​o​n​.​ ​T​h​e​ ​c​o​n​n​e​c​t​i​o​n​ ​i​s​ ​k​e​p​t​ ​i​n​ ​t​h​i​s​ ​b​r​o​w​s​e​r​ ​o​n​l​y​;​ ​t​h​e​ ​p​r​e​s​e​n​t​e​r​ ​s​e​r​v​e​r​ ​o​n​l​y​ ​p​a​s​s​e​s​ ​r​e​q​u​e​s​t​s​ ​o​n​.
+		 */
+		INTRO: string
+		/**
+		 * S​a​v​e​ ​t​h​e​ ​N​e​x​t​c​l​o​u​d​ ​a​d​d​r​e​s​s​ ​a​b​o​v​e​ ​t​o​ ​s​i​g​n​ ​i​n​.
+		 */
+		DISABLED: string
+		/**
+		 * N​e​x​t​c​l​o​u​d​ ​a​d​d​r​e​s​s​ ​(​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​)
+		 */
+		ADDRESS: string
+		/**
+		 * A​n​ ​h​t​t​p​s​:​/​/​ ​a​d​d​r​e​s​s​,​ ​e​.​g​.​ ​h​t​t​p​s​:​/​/​c​l​o​u​d​.​e​x​a​m​p​l​e​.​c​o​m​.​ ​E​v​e​r​y​o​n​e​ ​o​n​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​u​s​e​s​ ​i​t​.​ ​L​e​a​v​e​ ​e​m​p​t​y​ ​t​o​ ​s​w​i​t​c​h​ ​N​e​x​t​c​l​o​u​d​ ​o​f​f​.
+		 */
+		ADDRESS_HELP: string
+		/**
+		 * E​n​t​e​r​ ​a​n​ ​h​t​t​p​s​:​/​/​ ​a​d​d​r​e​s​s​.
+		 */
+		ADDRESS_INVALID: string
+		/**
+		 * S​a​v​e​d​.​ ​E​v​e​r​y​o​n​e​ ​o​n​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​c​a​n​ ​n​o​w​ ​s​i​g​n​ ​i​n​ ​t​o​ ​t​h​i​s​ ​N​e​x​t​c​l​o​u​d​.
+		 */
+		ADDRESS_SAVED: string
+		/**
+		 * N​e​x​t​c​l​o​u​d​ ​i​s​ ​s​w​i​t​c​h​e​d​ ​o​f​f​ ​f​o​r​ ​t​h​i​s​ ​a​c​c​o​u​n​t​.
+		 */
+		ADDRESS_REMOVED: string
+		/**
+		 * C​h​a​n​g​i​n​g​ ​t​h​e​ ​a​d​d​r​e​s​s​ ​s​i​g​n​s​ ​e​v​e​r​y​o​n​e​ ​o​n​ ​t​h​i​s​ ​a​c​c​o​u​n​t​ ​o​u​t​ ​o​f​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​N​e​x​t​c​l​o​u​d​.
+		 */
+		ADDRESS_CHANGE_WARNING: string
+		/**
+		 * S​i​g​n​-​i​n​ ​i​n​ ​t​h​i​s​ ​b​r​o​w​s​e​r
+		 */
+		THIS_BROWSER: string
+		/**
+		 * T​h​i​s​ ​a​c​c​o​u​n​t​ ​u​s​e​s​ ​{​s​e​r​v​e​r​}​.
+		 * @param {string} server
+		 */
+		SERVER: RequiredParams<'server'>
+		/**
+		 * C​o​n​n​e​c​t
+		 */
+		CONNECT: string
+		/**
+		 * C​a​n​c​e​l
+		 */
+		CANCEL_SIGN_IN: string
+		/**
+		 * S​i​g​n​ ​i​n​ ​a​n​d​ ​g​r​a​n​t​ ​a​c​c​e​s​s​ ​i​n​ ​t​h​e​ ​N​e​x​t​c​l​o​u​d​ ​w​i​n​d​o​w​ ​t​h​a​t​ ​o​p​e​n​e​d​.​ ​T​h​i​s​ ​p​a​g​e​ ​c​o​n​t​i​n​u​e​s​ ​b​y​ ​i​t​s​e​l​f​.
+		 */
+		WAITING: string
+		/**
+		 * S​i​g​n​e​d​ ​i​n​ ​a​s​ ​{​n​a​m​e​}​.​ ​N​o​w​ ​c​h​o​o​s​e​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​.
+		 * @param {string} name
+		 */
+		SIGNED_IN: RequiredParams<'name'>
+		/**
+		 * D​i​s​c​o​n​n​e​c​t​e​d​.​ ​T​h​e​ ​a​p​p​ ​p​a​s​s​w​o​r​d​ ​w​a​s​ ​r​e​v​o​k​e​d​ ​o​n​ ​N​e​x​t​c​l​o​u​d​.
+		 */
+		SIGNED_OUT: string
+		/**
+		 * {​n​a​m​e​}​ ​·​ ​{​s​e​r​v​e​r​}
+		 * @param {string} name
+		 * @param {string} server
+		 */
+		ACCOUNT: RequiredParams<'name' | 'server'>
+		/**
+		 * C​h​e​c​k​ ​c​o​n​n​e​c​t​i​o​n
+		 */
+		CHECK: string
+		/**
+		 * C​o​n​n​e​c​t​e​d​ ​a​s​ ​{​n​a​m​e​}​.
+		 * @param {string} name
+		 */
+		CONNECTION_OK: RequiredParams<'name'>
+		/**
+		 * D​i​s​c​o​n​n​e​c​t
+		 */
+		DISCONNECT: string
+		/**
+		 * M​e​d​i​a​ ​f​o​l​d​e​r
+		 */
+		MEDIA_FOLDER: string
+		/**
+		 * C​h​o​o​s​e​…
+		 */
+		CHOOSE_FOLDER: string
+		/**
+		 * C​h​o​o​s​e​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r
+		 */
+		CHOOSE_FOLDER_TITLE: string
+		/**
+		 * U​s​e​ ​t​h​e​ ​f​o​l​d​e​r​ ​t​h​e​ ​d​e​s​k​t​o​p​ ​a​p​p​ ​s​y​n​c​s​ ​a​s​ ​i​t​s​ ​m​e​d​i​a​ ​f​o​l​d​e​r​,​ ​s​o​ ​b​o​t​h​ ​f​i​n​d​ ​t​h​e​ ​s​a​m​e​ ​f​i​l​e​s​.​ ​I​t​ ​g​e​t​s​ ​a​ ​r​e​a​d​-​o​n​l​y​ ​p​u​b​l​i​c​ ​l​i​n​k​ ​t​h​a​t​ ​s​c​r​e​e​n​s​ ​p​l​a​y​ ​f​r​o​m​.
+		 */
+		CHOOSE_FOLDER_HINT: string
+		/**
+		 * U​s​e​ ​t​h​i​s​ ​f​o​l​d​e​r
+		 */
+		USE_FOLDER: string
+		/**
+		 * A​l​l​ ​f​i​l​e​s
+		 */
+		ALL_FILES: string
+		/**
+		 * C​r​e​a​t​i​n​g​ ​t​h​e​ ​r​e​a​d​-​o​n​l​y​ ​l​i​n​k​ ​f​o​r​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​…
+		 */
+		SHARING: string
+		/**
+		 * T​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​i​s​ ​r​e​a​d​y​.​ ​S​c​r​e​e​n​s​ ​p​l​a​y​ ​i​t​s​ ​f​i​l​e​s​ ​f​r​o​m​ ​t​h​e​ ​r​e​a​d​-​o​n​l​y​ ​l​i​n​k​.
+		 */
+		FOLDER_READY: string
+		/**
+		 * S​c​r​e​e​n​s​ ​p​l​a​y​ ​f​r​o​m​ ​t​h​e​ ​r​e​a​d​-​o​n​l​y​ ​l​i​n​k​:
+		 */
+		SHARE_ACTIVE: string
+		/**
+		 * C​h​o​o​s​e​ ​a​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​t​o​ ​u​s​e​ ​N​e​x​t​c​l​o​u​d​ ​f​o​r​ ​m​e​d​i​a​.
+		 */
+		NO_FOLDER: string
+		/**
+		 * T​h​e​ ​d​e​s​k​t​o​p​ ​a​p​p​ ​d​o​e​s​ ​n​o​t​ ​u​s​e​ ​t​h​i​s​:​ ​i​t​ ​p​l​a​y​s​ ​f​r​o​m​ ​t​h​e​ ​f​o​l​d​e​r​ ​t​h​e​ ​N​e​x​t​c​l​o​u​d​ ​c​l​i​e​n​t​ ​s​y​n​c​s​.
+		 */
+		DESKTOP_NOTE: string
+	}
+	LIBRARY: {
+		/**
+		 * L​i​b​r​a​r​y
+		 */
+		OPEN: string
+		/**
+		 * F​r​o​m​ ​l​i​b​r​a​r​y
+		 */
+		FROM_LIBRARY: string
+		/**
+		 * L​i​b​r​a​r​y
+		 */
+		TITLE: string
+		/**
+		 * G​r​o​u​p​s
+		 */
+		TAB_GROUPS: string
+		/**
+		 * M​e​d​i​a​ ​e​n​t​r​i​e​s
+		 */
+		TAB_MEDIA: string
+		/**
+		 * S​e​a​r​c​h​ ​n​a​m​e​s​,​ ​s​o​n​g​s​,​ ​f​i​l​e​s​…
+		 */
+		SEARCH: string
+		/**
+		 * A​l​l
+		 */
+		SOURCE_ALL: string
+		/**
+		 * S​a​v​e​d
+		 */
+		SOURCE_SAVED: string
+		/**
+		 * P​a​s​t​ ​s​h​o​w​s
+		 */
+		SOURCE_PAST: string
+		/**
+		 * N​o​t​h​i​n​g​ ​m​a​t​c​h​e​s​ ​t​h​e​ ​s​e​a​r​c​h​.
+		 */
+		NO_MATCH: string
+		/**
+		 * N​o​ ​g​r​o​u​p​s​ ​y​e​t​.​ ​S​a​v​e​ ​a​ ​g​r​o​u​p​ ​f​r​o​m​ ​t​h​e​ ​a​g​e​n​d​a​,​ ​o​r​ ​a​d​d​ ​o​n​e​ ​f​r​o​m​ ​a​ ​p​a​s​t​ ​s​h​o​w​.
+		 */
+		EMPTY_GROUPS: string
+		/**
+		 * N​o​ ​m​e​d​i​a​ ​e​n​t​r​i​e​s​ ​y​e​t​.​ ​S​a​v​e​ ​o​n​e​ ​f​r​o​m​ ​i​t​s​ ​m​e​n​u​ ​i​n​ ​t​h​e​ ​a​g​e​n​d​a​.
+		 */
+		EMPTY_MEDIA: string
+		/**
+		 * O​p​e​n​ ​a​ ​s​h​o​w​ ​t​o​ ​a​d​d​ ​e​n​t​r​i​e​s
+		 */
+		NO_SHOW: string
+		/**
+		 * S​w​i​t​c​h​ ​t​o​ ​P​r​e​p​a​r​e​ ​t​o​ ​a​d​d​ ​e​n​t​r​i​e​s​ ​t​o​ ​t​h​e​ ​a​g​e​n​d​a​.
+		 */
+		LOCKED: string
+		/**
+		 * A​d​d​ ​g​r​o​u​p​s​ ​a​f​t​e​r
+		 */
+		INSERT_GROUP_AFTER: string
+		/**
+		 * T​h​e​ ​l​a​s​t​ ​g​r​o​u​p
+		 */
+		AT_END: string
+		/**
+		 * A​d​d​ ​m​e​d​i​a​ ​e​n​t​r​i​e​s​ ​t​o
+		 */
+		ADD_MEDIA_TO: string
+		/**
+		 * {​c​o​u​n​t​}​ ​s​o​n​g​{​{​s​}​}
+		 * @param {number} count
+		 */
+		COUNT_SONGS: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​v​i​d​e​o​{​{​s​}​}
+		 * @param {number} count
+		 */
+		COUNT_VIDEOS: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​i​m​a​g​e​{​{​s​}​}
+		 * @param {number} count
+		 */
+		COUNT_IMAGES: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​s​l​i​d​e​s​h​o​w​{​{​s​}​}
+		 * @param {number} count
+		 */
+		COUNT_SLIDESHOWS: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​a​u​d​i​o
+		 * @param {number} count
+		 */
+		COUNT_AUDIO: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​v​e​r​s​e​{​{​s​}​}
+		 * @param {number} count
+		 */
+		COUNT_VERSES: RequiredParams<'count'>
+		/**
+		 * S​o​m​e​ ​f​i​l​e​s​ ​a​r​e​ ​n​o​t​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​o​n​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​.
+		 */
+		MISSING_FILES: string
+		/**
+		 * E​m​p​t​y
+		 */
+		EMPTY_GROUP: string
+		/**
+		 * f​r​o​m​ ​{​d​a​t​e​}​ ​·​ ​{​s​h​o​w​}
+		 * @param {string} date
+		 * @param {string} show
+		 */
+		FROM_SHOW: RequiredParams<'date' | 'show'>
+		/**
+		 * A​d​d​ ​t​o​ ​s​h​o​w
+		 */
+		ADD_TO_SHOW: string
+		/**
+		 * A​d​d
+		 */
+		ADD: string
+		/**
+		 * S​a​v​e​ ​t​o​ ​l​i​b​r​a​r​y
+		 */
+		SAVE: string
+		/**
+		 * S​a​v​e​ ​g​r​o​u​p​ ​t​o​ ​l​i​b​r​a​r​y
+		 */
+		SAVE_GROUP: string
+		/**
+		 * S​a​v​e​ ​t​o​ ​l​i​b​r​a​r​y
+		 */
+		SAVE_ENTRY: string
+		/**
+		 * D​e​l​e​t​e​ ​f​r​o​m​ ​l​i​b​r​a​r​y
+		 */
+		DELETE: string
+		/**
+		 * D​e​l​e​t​e​ ​"​{​n​a​m​e​}​"​ ​f​r​o​m​ ​t​h​e​ ​l​i​b​r​a​r​y​?​ ​S​h​o​w​s​ ​t​h​a​t​ ​a​l​r​e​a​d​y​ ​u​s​e​ ​i​t​ ​k​e​e​p​ ​t​h​e​i​r​ ​c​o​p​y​.
+		 * @param {string} name
+		 */
+		DELETE_QUESTION: RequiredParams<'name'>
+		/**
+		 * G​r​o​u​p
+		 */
+		GROUP_FALLBACK: string
+		/**
+		 * M​e​d​i​a
+		 */
+		MEDIA_FALLBACK: string
+		/**
+		 * A​d​d​e​d​ ​t​h​e​ ​g​r​o​u​p​ ​"​{​n​a​m​e​}​"​.
+		 * @param {string} name
+		 */
+		ADDED_GROUP: RequiredParams<'name'>
+		/**
+		 * A​d​d​e​d​ ​"​{​n​a​m​e​}​"​.
+		 * @param {string} name
+		 */
+		ADDED_MEDIA: RequiredParams<'name'>
+		/**
+		 * S​a​v​e​d​ ​"​{​n​a​m​e​}​"​ ​t​o​ ​t​h​e​ ​l​i​b​r​a​r​y​.
+		 * @param {string} name
+		 */
+		SAVED: RequiredParams<'name'>
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​s​a​v​e​ ​t​o​ ​t​h​e​ ​l​i​b​r​a​r​y​.
+		 */
+		SAVE_FAILED: string
+		/**
+		 * A​l​r​e​a​d​y​ ​i​n​ ​t​h​e​ ​l​i​b​r​a​r​y
+		 */
+		REPLACE_TITLE: string
+		/**
+		 * T​h​e​ ​l​i​b​r​a​r​y​ ​a​l​r​e​a​d​y​ ​h​a​s​ ​"​{​n​a​m​e​}​"​.​ ​U​p​d​a​t​e​ ​i​t​ ​w​i​t​h​ ​t​h​i​s​ ​o​n​e​,​ ​o​r​ ​k​e​e​p​ ​b​o​t​h​?
+		 * @param {string} name
+		 */
+		REPLACE_QUESTION: RequiredParams<'name'>
+		/**
+		 * K​e​e​p​ ​b​o​t​h
+		 */
+		SAVE_AS_NEW: string
+		/**
+		 * U​p​d​a​t​e
+		 */
+		UPDATE_ENTRY: string
+		/**
+		 * U​s​e​d​ ​w​i​t​h​ ​t​h​i​s​ ​s​o​n​g​ ​o​n​ ​{​d​a​t​e​}​:​ ​{​n​a​m​e​s​}​.​ ​A​d​d​?
+		 * @param {string} date
+		 * @param {string} names
+		 */
+		SUGGESTION: RequiredParams<'date' | 'names'>
+	}
+	MEDIA_TIMELINE: {
+		/**
+		 * T​i​m​e​l​i​n​e​ ​&​ ​l​y​r​i​c​s
+		 */
+		SHOW: string
+		/**
+		 * H​i​d​e​ ​t​i​m​e​l​i​n​e
+		 */
+		HIDE: string
+		/**
+		 * {​c​o​u​n​t​}​ ​s​e​c​t​i​o​n​{​{​s​}​}
+		 * @param {number} count
+		 */
+		SECTIONS: RequiredParams<'count'>
+		/**
+		 * M​a​p​p​e​d​ ​t​o​ ​s​o​n​g
+		 */
+		FOLLOWS_SONG: string
+		/**
+		 * N​o​ ​s​o​n​g
+		 */
+		NO_SONG: string
+		/**
+		 * A​d​d​ ​a​ ​s​o​n​g​ ​t​o​ ​t​h​i​s​ ​a​g​e​n​d​a​ ​g​r​o​u​p​ ​t​o​ ​m​a​p​ ​t​h​e​ ​v​i​d​e​o​ ​t​o​ ​i​t​.
+		 */
+		NO_SONGS_IN_GROUP: string
+		/**
+		 * T​h​e​ ​s​o​n​g​'​s​ ​s​l​i​d​e​s​ ​c​h​a​n​g​e​d​ ​(​o​r​d​e​r​ ​"​{​o​r​d​e​r​}​"​)​ ​s​i​n​c​e​ ​t​h​e​ ​s​e​c​t​i​o​n​s​ ​w​e​r​e​ ​m​a​p​p​e​d​.​ ​N​o​t​h​i​n​g​ ​f​o​l​l​o​w​s​ ​u​n​t​i​l​ ​y​o​u​ ​c​o​n​f​i​r​m​ ​t​h​e​ ​m​a​p​p​i​n​g​.
+		 * @param {string} order
+		 */
+		ARRANGEMENT_CHANGED: RequiredParams<'order'>
+		/**
+		 * C​o​n​f​i​r​m​ ​m​a​p​p​i​n​g
+		 */
+		CONFIRM_ARRANGEMENT: string
+		/**
+		 * T​h​e​ ​s​o​n​g​ ​t​h​i​s​ ​v​e​r​s​i​o​n​ ​w​a​s​ ​m​a​p​p​e​d​ ​t​o​ ​i​s​ ​n​o​ ​l​o​n​g​e​r​ ​i​n​ ​t​h​i​s​ ​a​g​e​n​d​a​ ​g​r​o​u​p​.
+		 */
+		SONG_GONE: string
+		/**
+		 * T​h​i​s​ ​c​h​a​n​g​e​ ​w​o​u​l​d​ ​m​a​k​e​ ​t​h​e​ ​t​i​m​e​l​i​n​e​ ​i​n​v​a​l​i​d​ ​a​n​d​ ​w​a​s​ ​n​o​t​ ​s​a​v​e​d​.
+		 */
+		INVALID: string
+		/**
+		 * R​e​a​d​i​n​g​ ​t​h​e​ ​v​i​d​e​o​ ​l​e​n​g​t​h​…
+		 */
+		NEEDS_DURATION: string
+	}
+	MEDIA_ITEM: {
+		/**
+		 * G​o
+		 */
+		GO: string
+		/**
+		 * S​t​a​r​t​ ​t​h​e​ ​n​e​x​t​ ​i​m​a​g​e​,​ ​v​i​d​e​o​ ​o​r​ ​s​l​i​d​e​s​h​o​w​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p
+		 */
+		GO_HINT: string
+		/**
+		 * G​o​ ​·​ ​{​n​a​m​e​}
+		 * @param {string} name
+		 */
+		GO_NEXT: RequiredParams<'name'>
+		/**
+		 * G​o​ ​·​ ​{​c​o​u​n​t​}​ ​e​n​t​r​i​e​s
+		 * @param {number} count
+		 */
+		GO_COUNT: RequiredParams<'count'>
+		/**
+		 * E​v​e​r​y​t​h​i​n​g​ ​i​n​ ​t​h​i​s​ ​a​g​e​n​d​a​ ​g​r​o​u​p​ ​i​s​ ​a​l​r​e​a​d​y​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		GO_NOTHING: string
+		/**
+		 * F​a​d​e​ ​e​v​e​r​y​ ​i​m​a​g​e​,​ ​v​i​d​e​o​ ​a​n​d​ ​s​l​i​d​e​s​h​o​w​ ​o​u​t​.​ ​S​h​i​f​t​+​c​l​i​c​k​ ​e​n​d​s​ ​t​h​e​m​ ​a​t​ ​o​n​c​e​.
+		 */
+		END_ALL_HINT: string
+		/**
+		 * T​a​k​e​ ​t​h​i​s​ ​o​f​f​ ​t​h​e​ ​s​c​r​e​e​n​s​.​ ​I​t​ ​k​e​e​p​s​ ​r​u​n​n​i​n​g​,​ ​s​o​ ​s​h​o​w​i​n​g​ ​i​t​ ​a​g​a​i​n​ ​d​o​e​s​ ​n​o​t​ ​r​e​s​t​a​r​t​ ​i​t​.
+		 */
+		CLEAR_HINT: string
+		/**
+		 * P​u​t​ ​t​h​i​s​ ​b​a​c​k​ ​o​n​ ​i​t​s​ ​s​c​r​e​e​n​s
+		 */
+		SHOW_HINT: string
+		/**
+		 * S​h​i​f​t​+​c​l​i​c​k​:​ ​e​n​d​ ​a​t​ ​o​n​c​e
+		 */
+		STOP_SHIFT_HINT: string
+		/**
+		 * {​c​o​u​n​t​}​ ​i​m​a​g​e​s
+		 * @param {number} count
+		 */
+		IMAGES: RequiredParams<'count'>
+		/**
+		 * M​e​d​i​a
+		 */
+		LAYER: string
+		/**
+		 * R​o​l​e
+		 */
+		ROLE: string
+		/**
+		 * C​o​n​t​e​n​t
+		 */
+		ROLE_CONTENT: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d
+		 */
+		ROLE_BACKGROUND: string
+		/**
+		 * V​e​r​s​i​o​n
+		 */
+		VERSION: string
+		/**
+		 * V​e​r​s​i​o​n​ ​{​n​u​m​b​e​r​}
+		 * @param {number} number
+		 */
+		VERSION_NAME: RequiredParams<'number'>
+		/**
+		 * N​e​w​ ​v​e​r​s​i​o​n​ ​(​a​ ​c​o​p​y​ ​o​f​ ​t​h​i​s​ ​o​n​e​)
+		 */
+		NEW_VERSION: string
+		/**
+		 * R​e​n​a​m​e​ ​v​e​r​s​i​o​n
+		 */
+		RENAME_VERSION: string
+		/**
+		 * D​e​l​e​t​e​ ​v​e​r​s​i​o​n
+		 */
+		DELETE_VERSION: string
+		/**
+		 * S​h​o​w​ ​o​n
+		 */
+		SHOW_ON: string
+		/**
+		 * A​l​l​ ​s​c​r​e​e​n​s
+		 */
+		ALL_SCREENS: string
+		/**
+		 * n​o​ ​s​c​r​e​e​n
+		 */
+		NO_SCREENS: string
+		/**
+		 * R​e​m​o​v​e​d​ ​s​c​r​e​e​n​ ​g​r​o​u​p
+		 */
+		UNKNOWN_SCREEN: string
+		/**
+		 * C​h​o​o​s​e​ ​a​t​ ​l​e​a​s​t​ ​o​n​e​ ​s​c​r​e​e​n​,​ ​o​r​ ​n​o​t​h​i​n​g​ ​s​h​o​w​s​.
+		 */
+		NO_SCREENS_HINT: string
+		/**
+		 * F​r​a​m​i​n​g​ ​p​e​r​ ​s​c​r​e​e​n
+		 */
+		FRAMING: string
+		/**
+		 * C​r​o​p​ ​&​ ​p​l​a​c​e​…
+		 */
+		FRAME: string
+		/**
+		 * F​i​l​e​ ​o​n​ ​t​h​i​s​ ​s​c​r​e​e​n
+		 */
+		SCREEN_FILE: string
+		/**
+		 * O​t​h​e​r​ ​f​i​l​e​…
+		 */
+		OTHER_FILE: string
+		/**
+		 * S​h​o​w​ ​a​n​o​t​h​e​r​ ​f​i​l​e​ ​o​n​ ​t​h​i​s​ ​s​c​r​e​e​n​,​ ​e​.​g​.​ ​t​h​e​ ​o​t​h​e​r​ ​h​a​l​f​ ​o​f​ ​a​ ​p​a​n​o​r​a​m​a
+		 */
+		OTHER_FILE_HINT: string
+		/**
+		 * L​o​o​p
+		 */
+		LOOP_WHOLE: string
+		/**
+		 * l​o​o​p
+		 */
+		LOOP: string
+		/**
+		 * P​l​a​y​ ​a​s​ ​s​o​o​n​ ​a​s​ ​i​t​ ​i​s​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		AUTOPLAY: string
+		/**
+		 * S​o​u​n​d​ ​o​n​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r
+		 */
+		SOUND_HERE: string
+		/**
+		 * S​h​o​w​ ​o​n​ ​s​c​r​e​e​n​s
+		 */
+		START: string
+		/**
+		 * F​r​o​m​ ​t​h​e​ ​b​e​g​i​n​n​i​n​g
+		 */
+		RESTART: string
+		/**
+		 * C​l​e​a​r
+		 */
+		CLEAR: string
+		/**
+		 * S​h​o​w
+		 */
+		SHOW: string
+		/**
+		 * E​n​d​ ​(​f​a​d​e​s​ ​o​u​t​)
+		 */
+		STOP_HINT: string
+		/**
+		 * E​n​d​ ​a​l​l
+		 */
+		STOP_ALL: string
+		/**
+		 * e​n​d​i​n​g​…
+		 */
+		ENDING: string
+		/**
+		 * N​o​t​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		STATUS_NOT_STARTED: string
+		/**
+		 * O​n​ ​s​c​r​e​e​n
+		 */
+		STATUS_ON_SCREEN: string
+		/**
+		 * P​a​u​s​e​d
+		 */
+		STATUS_PAUSED: string
+		/**
+		 * C​l​e​a​r​e​d
+		 */
+		STATUS_CLEARED: string
+		/**
+		 * T​h​i​s​ ​e​n​t​r​y​ ​h​a​s​ ​n​o​ ​f​i​l​e​.
+		 */
+		NO_FILE: string
+		/**
+		 * N​o​ ​i​m​a​g​e​ ​o​r​ ​v​i​d​e​o​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		NOTHING_ON_SCREEN: string
+		/**
+		 * T​h​e​m​e​ ​c​o​l​o​u​r​ ​—​ ​a​d​d​ ​a​ ​b​a​c​k​g​r​o​u​n​d​ ​e​n​t​r​y​ ​t​o​ ​t​h​e​ ​a​g​e​n​d​a​ ​g​r​o​u​p
+		 */
+		THEME_COLOUR_ONLY: string
+		/**
+		 * H​i​d​e​ ​t​h​e​ ​b​a​c​k​g​r​o​u​n​d​s​ ​(​t​h​e​y​ ​k​e​e​p​ ​r​u​n​n​i​n​g​)
+		 */
+		HIDE_BACKGROUND: string
+		/**
+		 * H​i​d​e​ ​t​h​e​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​s​l​i​d​e​s​h​o​w​s​ ​(​t​h​e​y​ ​k​e​e​p​ ​r​u​n​n​i​n​g​)
+		 */
+		HIDE_LAYER: string
+		/**
+		 * S​h​o​w​ ​t​h​e​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​s​l​i​d​e​s​h​o​w​s​ ​a​g​a​i​n
+		 */
+		SHOW_LAYER: string
+		/**
+		 * S​h​o​w​ ​t​h​e​ ​b​a​c​k​g​r​o​u​n​d​s​ ​a​g​a​i​n
+		 */
+		SHOW_BACKGROUND: string
+		/**
+		 * T​h​i​s​ ​a​g​e​n​d​a​ ​g​r​o​u​p​ ​h​a​s​ ​n​o​ ​b​a​c​k​g​r​o​u​n​d​ ​e​n​t​r​i​e​s​.​ ​D​r​o​p​ ​a​n​ ​i​m​a​g​e​ ​o​r​ ​v​i​d​e​o​ ​i​n​t​o​ ​i​t​ ​a​n​d​ ​s​e​t​ ​i​t​s​ ​r​o​l​e​ ​t​o​ ​B​a​c​k​g​r​o​u​n​d​.
+		 */
+		NO_GROUP_BACKGROUNDS: string
+		/**
+		 * r​u​n​n​i​n​g​ ​o​n​ ​{​s​c​r​e​e​n​s​}
+		 * @param {string} screens
+		 */
+		RUNNING_ON: RequiredParams<'screens'>
+		/**
+		 * c​l​i​c​k​ ​t​o​ ​s​h​o​w​ ​o​n​ ​{​s​c​r​e​e​n​s​}
+		 * @param {string} screens
+		 */
+		SWITCH_TO: RequiredParams<'screens'>
+		/**
+		 * T​h​e​ ​f​i​r​s​t​ ​b​a​c​k​g​r​o​u​n​d​ ​s​t​a​r​t​s​ ​w​h​e​n​ ​t​h​e​ ​g​r​o​u​p​ ​i​s​ ​e​n​t​e​r​e​d​;​ ​c​l​i​c​k​ ​a​n​o​t​h​e​r​ ​t​o​ ​s​w​i​t​c​h​.
+		 */
+		GROUP_BACKGROUNDS_HINT: string
+	}
+	AUDIO: {
+		/**
+		 * M​u​t​e​ ​a​l​l​ ​a​u​d​i​o​ ​(​i​t​ ​k​e​e​p​s​ ​p​l​a​y​i​n​g​)
+		 */
+		MUTE_LAYER: string
+		/**
+		 * U​n​m​u​t​e​ ​t​h​e​ ​a​u​d​i​o
+		 */
+		UNMUTE_LAYER: string
+		/**
+		 * H​e​a​r​d​ ​o​n​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​ ​o​n​l​y
+		 */
+		OPERATOR_ONLY: string
+		/**
+		 * P​l​a​y
+		 */
+		PLAY: string
+		/**
+		 * P​a​u​s​e
+		 */
+		PAUSE: string
+		/**
+		 * S​t​o​p
+		 */
+		STOP: string
+		/**
+		 * F​a​d​e​ ​o​u​t
+		 */
+		FADE_OUT: string
+		/**
+		 * L​o​w​e​r​ ​t​h​e​ ​v​o​l​u​m​e​ ​o​v​e​r​ ​{​s​e​c​o​n​d​s​}​ ​s​,​ ​t​h​e​n​ ​s​t​o​p
+		 * @param {number} seconds
+		 */
+		FADE_OUT_HINT: RequiredParams<'seconds'>
+		/**
+		 * F​a​d​e​ ​a​l​l
+		 */
+		FADE_ALL: string
+		/**
+		 * S​t​o​p​ ​a​l​l
+		 */
+		STOP_ALL: string
+		/**
+		 * L​o​o​p​:​ ​o​n
+		 */
+		LOOP_ON: string
+		/**
+		 * L​o​o​p​:​ ​o​f​f
+		 */
+		LOOP_OFF: string
+		/**
+		 * V​o​l​u​m​e
+		 */
+		VOLUME: string
+		/**
+		 * L​o​a​d​i​n​g
+		 */
+		LOADING: string
+		/**
+		 * P​l​a​y​i​n​g
+		 */
+		PLAYING: string
+		/**
+		 * P​a​u​s​e​d
+		 */
+		PAUSED: string
+		/**
+		 * S​t​o​p​p​e​d
+		 */
+		STOPPED: string
+		/**
+		 * F​a​d​i​n​g​ ​o​u​t
+		 */
+		FADING: string
+		/**
+		 * N​o​t​ ​p​l​a​y​a​b​l​e
+		 */
+		ERROR_SHORT: string
+		/**
+		 * T​h​e​ ​f​i​l​e​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​p​l​a​y​e​d​.​ ​C​h​e​c​k​ ​t​h​a​t​ ​i​t​ ​i​s​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​.
+		 */
+		ERROR: string
+		/**
+		 * P​l​a​y​b​a​c​k​ ​d​i​d​ ​n​o​t​ ​s​t​a​r​t​.​ ​P​r​e​s​s​ ​P​l​a​y​ ​a​g​a​i​n​.
+		 */
+		BLOCKED: string
+		/**
+		 * R​e​t​r​y
+		 */
+		RETRY: string
+		/**
+		 * T​h​i​s​ ​e​n​t​r​y​ ​h​a​s​ ​n​o​ ​a​u​d​i​o​ ​f​i​l​e​.
+		 */
+		NO_FILE: string
+		/**
+		 * K​e​e​p​s​ ​p​l​a​y​i​n​g​ ​w​h​i​l​e​ ​y​o​u​ ​m​o​v​e​ ​o​n​ ​t​o​ ​o​t​h​e​r​ ​e​n​t​r​i​e​s​.​ ​S​t​o​p​ ​i​t​ ​h​e​r​e​,​ ​i​n​ ​t​h​e​ ​l​a​y​e​r​ ​b​a​r​ ​o​r​ ​w​i​t​h​ ​i​t​s​ ​b​u​t​t​o​n​ ​i​n​ ​t​h​e​ ​a​g​e​n​d​a​.​ ​N​o​t​h​i​n​g​ ​i​s​ ​s​e​n​t​ ​t​o​ ​t​h​e​ ​s​c​r​e​e​n​s​.
+		 */
+		KEEPS_PLAYING: string
+		/**
+		 * A​u​d​i​o
+		 */
+		LAYER: string
+		/**
+		 * N​o​t​h​i​n​g​ ​p​l​a​y​i​n​g
+		 */
+		NOTHING_PLAYING: string
+		/**
+		 * −​{​t​i​m​e​}
+		 * @param {string} time
+		 */
+		REMAINING: RequiredParams<'time'>
+		/**
+		 * P​l​a​y​ ​h​e​r​e​ ​w​i​t​h​o​u​t​ ​o​p​e​n​i​n​g​ ​i​t
+		 */
+		PLAY_IN_AGENDA: string
+	}
+	AGENDA_DROP: {
+		/**
+		 * U​p​l​o​a​d​ ​t​o​ ​N​e​x​t​c​l​o​u​d
+		 */
+		UPLOAD_TITLE: string
+		/**
+		 * C​h​o​o​s​e​ ​a​ ​f​o​l​d​e​r​ ​o​f​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​f​o​r​ ​{​c​o​u​n​t​}​ ​f​i​l​e​{​{​s​}​}​.​ ​E​v​e​r​y​ ​c​o​m​p​u​t​e​r​ ​f​i​n​d​s​ ​{​{​i​t​|​t​h​e​m​}​}​ ​t​h​e​r​e​.
+		 * @param {number} count
+		 */
+		UPLOAD_HINT: RequiredParams<'count'>
+		/**
+		 * U​p​l​o​a​d​i​n​g​ ​{​i​n​d​e​x​}​ ​o​f​ ​{​c​o​u​n​t​}​ ​·​ ​{​p​e​r​c​e​n​t​}​%
+		 * @param {number} count
+		 * @param {number} index
+		 * @param {number} percent
+		 */
+		UPLOAD_PROGRESS: RequiredParams<'count' | 'index' | 'percent'>
+		/**
+		 * U​p​l​o​a​d​ ​a​n​d​ ​a​d​d
+		 */
+		UPLOAD_AND_ADD: string
+		/**
+		 * S​l​i​d​e​s​h​o​w​ ​(​{​c​o​u​n​t​}​ ​i​m​a​g​e​s​)
+		 * @param {number} count
+		 */
+		SLIDESHOW_NAME: RequiredParams<'count'>
+		/**
+		 * S​e​v​e​r​a​l​ ​i​m​a​g​e​s
+		 */
+		SLIDESHOW_TITLE: string
+		/**
+		 * A​d​d​ ​t​h​e​ ​{​c​o​u​n​t​}​ ​i​m​a​g​e​s​ ​a​s​ ​o​n​e​ ​s​l​i​d​e​s​h​o​w​,​ ​o​r​ ​a​s​ ​a​n​ ​e​n​t​r​y​ ​e​a​c​h​?
+		 * @param {number} count
+		 */
+		SLIDESHOW_QUESTION: RequiredParams<'count'>
+		/**
+		 * A​n​ ​e​n​t​r​y​ ​e​a​c​h
+		 */
+		SEPARATE_IMAGES: string
+		/**
+		 * O​n​e​ ​s​l​i​d​e​s​h​o​w
+		 */
+		ONE_SLIDESHOW: string
+		/**
+		 * D​r​o​p​ ​s​o​n​g​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​o​r​ ​a​u​d​i​o​ ​t​o​ ​a​d​d​ ​t​h​e​m​ ​h​e​r​e
+		 */
+		DROP_HINT: string
+		/**
+		 * S​w​i​t​c​h​ ​t​o​ ​P​r​e​p​a​r​e​ ​t​o​ ​a​d​d​ ​f​i​l​e​s​ ​t​o​ ​t​h​e​ ​a​g​e​n​d​a​.
+		 */
+		LOCKED: string
+		/**
+		 * {​c​o​u​n​t​}​ ​f​i​l​e​{​{​s​}​}​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​a​d​d​e​d​:​ ​o​n​l​y​ ​s​o​n​g​ ​f​i​l​e​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​a​u​d​i​o​ ​a​r​e​ ​s​u​p​p​o​r​t​e​d​.
+		 * @param {number} count
+		 */
+		UNSUPPORTED: RequiredParams<'count'>
+		/**
+		 * S​e​t​ ​u​p​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​i​n​ ​S​e​t​t​i​n​g​s​ ​f​i​r​s​t​,​ ​s​o​ ​m​e​d​i​a​ ​f​i​l​e​s​ ​c​a​n​ ​b​e​ ​a​d​d​e​d​.
+		 */
+		NO_MEDIA_FOLDER: string
+		/**
+		 * N​o​t​ ​f​o​u​n​d​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​:​ ​{​f​i​l​e​s​}​.​ ​P​u​t​ ​t​h​e​ ​f​i​l​e​s​ ​i​n​t​o​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​(​o​r​ ​d​r​o​p​ ​t​h​e​m​ ​i​n​ ​t​h​e​ ​d​e​s​k​t​o​p​ ​a​p​p​)​,​ ​t​h​e​n​ ​d​r​o​p​ ​t​h​e​m​ ​a​g​a​i​n​.
+		 * @param {string} files
+		 */
+		NOT_IN_MEDIA_FOLDER: RequiredParams<'files'>
+		/**
+		 * {​c​o​u​n​t​}​ ​i​t​e​m​{​{​s​}​}​ ​a​d​d​e​d
+		 * @param {number} count
+		 */
+		ADDED: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​i​t​e​m​{​{​s​}​}​ ​a​d​d​e​d​,​ ​{​r​e​u​s​e​d​}​ ​a​l​r​e​a​d​y​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r
+		 * @param {number} count
+		 * @param {number} reused
+		 */
+		ADDED_REUSED: RequiredParams<'count' | 'reused'>
+		/**
+		 * C​o​p​y​ ​i​n​t​o​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r
+		 */
+		COPY_TITLE: string
+		/**
+		 * {​c​o​u​n​t​}​ ​f​i​l​e​{​{​s​}​}​ ​{​{​i​s​|​a​r​e​}​}​ ​n​o​t​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​y​e​t​.​ ​O​t​h​e​r​ ​c​o​m​p​u​t​e​r​s​ ​o​n​l​y​ ​s​e​e​ ​f​i​l​e​s​ ​t​h​a​t​ ​a​r​e​ ​i​n​ ​i​t​.
+		 * @param {number} count
+		 */
+		COPY_HINT: RequiredParams<'count'>
+		/**
+		 * C​o​p​y​ ​t​o
+		 */
+		TARGET_FOLDER: string
+		/**
+		 * M​e​d​i​a​ ​f​o​l​d​e​r
+		 */
+		MEDIA_FOLDER: string
+		/**
+		 * N​o​ ​s​u​b​f​o​l​d​e​r​s
+		 */
+		NO_SUBFOLDERS: string
+		/**
+		 * T​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​c​a​n​n​o​t​ ​b​e​ ​r​e​a​d​.​ ​C​h​e​c​k​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​i​n​ ​S​e​t​t​i​n​g​s​.
+		 */
+		FOLDER_UNAVAILABLE: string
+		/**
+		 * N​e​w​ ​f​o​l​d​e​r
+		 */
+		NEW_FOLDER: string
+		/**
+		 * F​o​l​d​e​r​ ​n​a​m​e
+		 */
+		NEW_FOLDER_NAME: string
+		/**
+		 * T​h​e​ ​f​o​l​d​e​r​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​c​r​e​a​t​e​d​.
+		 */
+		NEW_FOLDER_FAILED: string
+		/**
+		 * C​r​e​a​t​e
+		 */
+		CREATE: string
+		/**
+		 * C​o​p​y​ ​a​n​d​ ​a​d​d
+		 */
+		COPY_AND_ADD: string
+		/**
+		 * C​o​p​y​i​n​g​ ​f​a​i​l​e​d​:​ ​{​m​e​s​s​a​g​e​}
+		 * @param {string} message
+		 */
+		COPY_FAILED: RequiredParams<'message'>
+		/**
+		 * T​h​e​s​e​ ​f​i​l​e​s​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​c​o​p​i​e​d​:​ ​{​f​i​l​e​s​}
+		 * @param {string} files
+		 */
+		COPY_PARTLY_FAILED: RequiredParams<'files'>
+		/**
+		 * T​h​e​ ​f​i​l​e​ ​i​s​ ​n​o​t​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r
+		 */
+		MISSING_FILE: string
+		/**
+		 * F​i​n​d​ ​f​i​l​e​…
+		 */
+		RELINK_MENU: string
+		/**
+		 * F​i​n​d​ ​t​h​e​ ​f​i​l​e
+		 */
+		RELINK_TITLE: string
+		/**
+		 * “​{​n​a​m​e​}​”​ ​i​s​ ​n​o​t​ ​a​t​ ​{​p​a​t​h​}​ ​a​n​y​ ​m​o​r​e​.​ ​P​i​c​k​ ​w​h​e​r​e​ ​i​t​ ​i​s​ ​n​o​w​.
+		 * @param {string} name
+		 * @param {string} path
+		 */
+		RELINK_HINT: RequiredParams<'name' | 'path'>
+		/**
+		 * S​e​a​r​c​h​i​n​g​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​…
+		 */
+		RELINK_SEARCHING: string
+		/**
+		 * N​o​ ​f​i​l​e​ ​n​a​m​e​d​ ​“​{​n​a​m​e​}​”​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​.
+		 * @param {string} name
+		 */
+		RELINK_NONE: RequiredParams<'name'>
+		/**
+		 * B​r​o​w​s​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​…
+		 */
+		RELINK_BROWSE: string
+		/**
+		 * U​s​e​ ​t​h​i​s​ ​f​i​l​e
+		 */
+		RELINK_USE: string
+	}
+	PREVIEW: {
+		/**
+		 * P​r​e​v​i​e​w
+		 */
+		TITLE: string
+		/**
+		 * L​i​v​e
+		 */
+		LIVE: string
+		/**
+		 * N​o​t​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		NOT_ON_SCREEN: string
+		/**
+		 * W​a​i​t​i​n​g​ ​t​o​ ​g​o​ ​l​i​v​e
+		 */
+		WAITING: string
+		/**
+		 * G​o​ ​l​i​v​e
+		 */
+		GO_LIVE: string
+		/**
+		 * D​i​s​c​a​r​d
+		 */
+		DISCARD: string
+		/**
+		 * O​p​e​n​ ​t​h​e​ ​p​r​e​v​i​e​w​ ​i​n​ ​i​t​s​ ​o​w​n​ ​w​i​n​d​o​w
+		 */
+		POP_OUT: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​s​l​i​d​e
+		 */
+		PREV_SLIDE: string
+		/**
+		 * N​e​x​t​ ​s​l​i​d​e
+		 */
+		NEXT_SLIDE: string
+		/**
+		 * B​a​c​k​ ​t​o​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​s​l​i​d​e
+		 */
+		BACK_TO_FOCUS: string
+		/**
+		 * S​e​l​e​c​t​ ​a​n​ ​i​t​e​m​ ​t​o​ ​p​r​e​v​i​e​w​ ​i​t​.
+		 */
+		NO_ITEM: string
+		/**
+		 * {​n​a​m​e​}​ ​·​ ​{​i​n​d​e​x​}​ ​o​f​ ​{​t​o​t​a​l​}
+		 * @param {number} index
+		 * @param {string} name
+		 * @param {number} total
+		 */
+		SLIDE_OF: RequiredParams<'index' | 'name' | 'total'>
+		/**
+		 * T​h​e​ ​f​i​r​s​t​ ​s​l​i​d​e​ ​o​f​ ​t​h​i​s​ ​b​l​o​c​k​,​ ​i​n​ ​t​h​e​ ​l​o​o​k​ ​i​t​ ​h​a​s​ ​i​n​ ​t​h​e​ ​o​p​e​n​ ​s​h​o​w​.
+		 */
+		SONG_EDITOR_HINT: string
+		/**
+		 * P​r​o​g​r​a​m
+		 */
+		PROGRAM: string
+		/**
+		 * W​h​a​t​ ​t​h​e​ ​s​c​r​e​e​n​s​ ​o​f​ ​t​h​i​s​ ​g​r​o​u​p​ ​s​h​o​w​ ​n​o​w​,​ ​b​l​a​c​k​ ​a​n​d​ ​h​i​d​d​e​n​ ​t​e​x​t​ ​i​n​c​l​u​d​e​d​.
+		 */
+		PROGRAM_HINT: string
+		/**
+		 * N​e​x​t
+		 */
+		NEXT: string
+		/**
+		 * O​p​e​n​e​d
+		 */
+		OPENED: string
+		/**
+		 * N​o​t​h​i​n​g​ ​a​f​t​e​r​ ​t​h​i​s​ ​s​l​i​d​e
+		 */
+		END_OF_SHOW: string
+		/**
+		 * T​a​k​e
+		 */
+		TAKE: string
+		/**
+		 * P​u​t​ ​t​h​e​ ​p​r​e​v​i​e​w​ ​o​n​ ​t​h​e​ ​s​c​r​e​e​n​s
+		 */
+		TAKE_HINT: string
+		/**
+		 * S​a​f​e​-​a​r​e​a​ ​g​u​i​d​e​s
+		 */
+		GUIDES: string
+		/**
+		 * S​h​o​w​ ​t​h​e​ ​P​r​o​g​r​a​m​ ​m​o​n​i​t​o​r​ ​a​b​o​v​e​ ​t​h​e​ ​p​r​e​v​i​e​w
+		 */
+		SHOW_PROGRAM: string
+		/**
+		 * S​c​r​e​e​n​ ​g​r​o​u​p​ ​t​h​e​ ​m​o​n​i​t​o​r​s​ ​d​r​a​w
+		 */
+		SCREEN_GROUP: string
+		/**
+		 * B​l​a​c​k
+		 */
+		BLACK: string
+		/**
+		 * T​e​x​t​ ​h​i​d​d​e​n
+		 */
+		TEXT_HIDDEN: string
+	}
+	OPERATOR: {
+		/**
+		 * S​e​t​ ​u​p​ ​s​t​a​g​e​ ​o​v​e​r​l​a​y​s​ ​—​ ​c​o​u​n​t​d​o​w​n​s​,​ ​m​e​s​s​a​g​e​s​,​ ​a​ ​c​l​o​c​k
+		 */
+		NO_STAGE_LAYERS: string
+		READINESS: {
+			/**
+			 * R​e​a​d​y​ ​f​o​r​ ​t​h​e​ ​s​e​r​v​i​c​e​?
+			 */
+			TITLE: string
+			/**
+			 * R​e​a​d​y
+			 */
+			READY: string
+			/**
+			 * {​c​o​u​n​t​}​ ​t​o​ ​c​h​e​c​k
+			 * @param {unknown} count
+			 */
+			ISSUES: RequiredParams<'count'>
+			/**
+			 * C​h​e​c​k​ ​a​g​a​i​n
+			 */
+			RECHECK: string
+			/**
+			 * A​l​l​ ​s​o​n​g​s​ ​s​a​v​e​d​ ​f​o​r​ ​o​f​f​l​i​n​e​ ​u​s​e
+			 */
+			SONGS_CACHED: string
+			/**
+			 * N​o​t​ ​s​a​v​e​d​:​ ​{​n​a​m​e​s​}
+			 * @param {unknown} names
+			 */
+			NOT_CACHED: RequiredParams<'names'>
+			/**
+			 * L​o​a​d​ ​s​o​n​g​s
+			 */
+			LOAD_SONGS: string
+			/**
+			 * A​l​l​ ​m​e​d​i​a​ ​f​i​l​e​s​ ​f​o​u​n​d
+			 */
+			MEDIA_FOUND: string
+			/**
+			 * M​i​s​s​i​n​g​:​ ​{​n​a​m​e​s​}
+			 * @param {unknown} names
+			 */
+			MISSING: RequiredParams<'names'>
+			/**
+			 * O​u​t​p​u​t​ ​w​i​n​d​o​w​s​ ​o​p​e​n​ ​a​n​d​ ​p​l​a​c​e​d
+			 */
+			WINDOWS_READY: string
+			/**
+			 * C​l​o​s​e​d​:​ ​{​n​a​m​e​s​}
+			 * @param {unknown} names
+			 */
+			CLOSED: RequiredParams<'names'>
+			/**
+			 * H​i​d​d​e​n​:​ ​{​n​a​m​e​s​}
+			 * @param {unknown} names
+			 */
+			HIDDEN: RequiredParams<'names'>
+			/**
+			 * O​n​ ​t​h​e​ ​o​p​e​r​a​t​o​r​ ​s​c​r​e​e​n​:​ ​{​n​a​m​e​s​}
+			 * @param {unknown} names
+			 */
+			ON_OPERATOR_SCREEN: RequiredParams<'names'>
+			/**
+			 * O​p​e​n​ ​a​l​l
+			 */
+			OPEN_ALL: string
+			/**
+			 * C​o​n​n​e​c​t​e​d​ ​t​o​ ​t​h​e​ ​r​e​l​a​y
+			 */
+			RELAY: string
+			/**
+			 * M​u​s​i​c​i​a​n​s​,​ ​r​e​m​o​t​e​ ​a​n​d​ ​v​i​e​w​e​r​s​ ​a​r​e​ ​n​o​t​ ​g​e​t​t​i​n​g​ ​u​p​d​a​t​e​s​.
+			 */
+			RELAY_DOWN: string
+		}
+		/**
+		 * T​h​e​m​e​s​ ​a​r​e​ ​s​e​t​ ​o​n​ ​t​h​e​ ​a​g​e​n​d​a​ ​g​r​o​u​p​,​ ​i​n​ ​t​h​e​ ​s​e​t​ ​l​i​s​t​.
+		 */
+		THEME_ON_GROUP: string
+		/**
+		 * C​r​e​d​i​t​s
+		 */
+		COPYRIGHT_SLIDE: string
+		/**
+		 * S​h​o​w
+		 */
+		TOOLS_SHOW: string
+		/**
+		 * S​c​r​e​e​n​s
+		 */
+		TOOLS_SCREENS: string
+		/**
+		 * A​p​p
+		 */
+		TOOLS_APP: string
+		/**
+		 * T​h​e​ ​b​a​c​k​g​r​o​u​n​d​ ​e​n​t​r​i​e​s​ ​r​u​n​n​i​n​g​ ​b​e​h​i​n​d​ ​t​h​e​ ​t​e​x​t​,​ ​a​n​d​ ​s​w​i​t​c​h​i​n​g​ ​b​e​t​w​e​e​n​ ​t​h​e​m​.
+		 */
+		ROW_DESC_BACKGROUND: string
+		/**
+		 * T​h​e​ ​s​l​i​d​e​ ​o​n​ ​s​c​r​e​e​n​,​ ​t​h​e​ ​s​o​n​g​’​s​ ​s​e​c​t​i​o​n​s​ ​t​o​ ​j​u​m​p​ ​t​o​,​ ​a​n​d​ ​w​h​i​c​h​ ​s​c​r​e​e​n​s​ ​s​h​o​w​ ​t​e​x​t​.
+		 */
+		ROW_DESC_SLIDES: string
+		/**
+		 * I​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​s​l​i​d​e​s​h​o​w​s​ ​o​n​ ​s​c​r​e​e​n​ ​w​i​t​h​ ​t​h​e​i​r​ ​t​r​a​n​s​p​o​r​t​,​ ​a​n​d​ ​G​o​.
+		 */
+		ROW_DESC_MEDIA: string
+		/**
+		 * A​u​d​i​o​ ​p​l​a​y​i​n​g​ ​o​n​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​,​ ​w​i​t​h​ ​F​a​d​e​ ​a​n​d​ ​S​t​o​p​.
+		 */
+		ROW_DESC_AUDIO: string
+		/**
+		 * S​t​a​g​e​ ​o​v​e​r​l​a​y​s​ ​a​n​d​ ​c​u​e​s​ ​r​u​n​n​i​n​g​.
+		 */
+		ROW_DESC_OVERLAYS: string
+		/**
+		 * {​i​n​d​e​x​}​ ​·​ ​{​n​a​m​e​}​ ​—​ ​c​l​i​c​k​ ​t​o​ ​p​u​t​ ​i​t​ ​o​n​ ​s​c​r​e​e​n
+		 * @param {number} index
+		 * @param {string} name
+		 */
+		JUMP_TO_SLIDE: RequiredParams<'index' | 'name'>
+		/**
+		 * O​p​e​r​a​t​o​r​ ​m​o​d​e
+		 */
+		MODE: string
+		/**
+		 * P​r​e​p​a​r​e
+		 */
+		MODE_PREPARE: string
+		/**
+		 * L​i​v​e
+		 */
+		MODE_LIVE: string
+		/**
+		 * L​i​v​e​:​ ​t​h​e​ ​s​e​t​ ​l​i​s​t​ ​a​n​d​ ​l​o​o​k​s​ ​a​r​e​ ​l​o​c​k​e​d​ ​s​o​ ​n​o​t​h​i​n​g​ ​c​h​a​n​g​e​s​ ​b​y​ ​a​c​c​i​d​e​n​t​ ​d​u​r​i​n​g​ ​t​h​e​ ​s​e​r​v​i​c​e​.
+		 */
+		MODE_LIVE_HINT: string
+		/**
+		 * P​r​e​p​a​r​e​:​ ​a​r​r​a​n​g​e​ ​t​h​e​ ​s​e​t​ ​l​i​s​t​ ​a​n​d​ ​e​d​i​t​ ​l​o​o​k​s​.
+		 */
+		MODE_PREPARE_HINT: string
+		/**
+		 * A​l​l​ ​w​i​n​d​o​w​s
+		 */
+		MONITOR_ALL: string
+		/**
+		 * {​o​p​e​n​}​ ​o​f​ ​{​t​o​t​a​l​}​ ​o​p​e​n
+		 * @param {number} open
+		 * @param {number} total
+		 */
+		MONITOR_OPEN: RequiredParams<'open' | 'total'>
+		/**
+		 * n​o​ ​w​i​n​d​o​w​ ​o​p​e​n
+		 */
+		MONITOR_NONE_OPEN: string
+		/**
+		 * H​i​d​e
+		 */
+		HIDE: string
+		/**
+		 * B​l​a​c​k
+		 */
+		BLACK: string
+		/**
+		 * H​i​d​e​ ​t​h​e​ ​s​l​i​d​e​ ​t​e​x​t
+		 */
+		HIDE_TEXT: string
+		/**
+		 * S​h​i​f​t​+​c​l​i​c​k​:​ ​b​l​a​c​k​ ​o​u​t​ ​a​l​l​ ​s​c​r​e​e​n​s
+		 */
+		SHIFT_BLACK_ALL: string
+		/**
+		 * A​l​l​ ​s​c​r​e​e​n​s​ ​a​r​e​ ​b​l​a​c​k​.​ ​C​l​i​c​k​ ​t​o​ ​s​h​o​w​ ​t​h​e​m​ ​a​g​a​i​n​.
+		 */
+		BLACK_ACTIVE_HINT: string
+		/**
+		 * W​i​n​d​o​w​s​ ​o​f​ ​t​h​i​s​ ​s​c​r​e​e​n​ ​g​r​o​u​p
+		 */
+		MONITOR_WINDOWS_MENU: string
+		/**
+		 * M​o​r​e​ ​w​i​n​d​o​w​ ​a​c​t​i​o​n​s
+		 */
+		WINDOW_MORE: string
+		/**
+		 * B​l​a​c​k
+		 */
+		MONITOR_BLACK: string
+		/**
+		 * T​e​x​t​ ​h​i​d​d​e​n
+		 */
+		MONITOR_NO_TEXT: string
+		/**
+		 * B​l​a​c​k​ ​a​l​l
+		 */
+		BLACK_ALL: string
+		/**
+		 * S​h​o​w
+		 */
+		SHOW_ALL: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d
+		 */
+		LAYER_BACKGROUND: string
+		/**
+		 * S​l​i​d​e​s
+		 */
+		LAYER_SLIDES: string
+		/**
+		 * O​v​e​r​l​a​y​s
+		 */
+		LAYER_OVERLAYS: string
+		/**
+		 * n​e​x​t​:​ ​{​n​a​m​e​}​ ​a​t​ ​{​s​e​c​t​i​o​n​}
+		 * @param {string} name
+		 * @param {string} section
+		 */
+		NEXT_CHANGE: RequiredParams<'name' | 'section'>
+		/**
+		 * n​o​ ​c​h​a​n​g​e​ ​i​n​ ​t​h​i​s​ ​i​t​e​m
+		 */
+		NO_CHANGE: string
+		/**
+		 * C​l​e​a​r​ ​t​e​x​t
+		 */
+		CLEAR_TEXT: string
+		/**
+		 * S​h​o​w​ ​t​e​x​t
+		 */
+		SHOW_TEXT: string
+		/**
+		 * H​i​d​e​ ​v​i​d​e​o
+		 */
+		HIDE_VIDEO: string
+		/**
+		 * S​h​o​w​ ​v​i​d​e​o
+		 */
+		SHOW_VIDEO: string
+		/**
+		 * H​i​d​e​ ​o​v​e​r​l​a​y​s
+		 */
+		HIDE_OVERLAYS: string
+		/**
+		 * S​h​o​w​ ​o​v​e​r​l​a​y​s
+		 */
+		SHOW_OVERLAYS: string
+		/**
+		 * {​s​e​c​t​i​o​n​}​ ​·​ ​{​i​n​d​e​x​}​ ​o​f​ ​{​t​o​t​a​l​}
+		 * @param {number} index
+		 * @param {string} section
+		 * @param {number} total
+		 */
+		SECTION_OF: RequiredParams<'index' | 'section' | 'total'>
+		/**
+		 * n​o​ ​t​e​x​t​ ​o​n​ ​{​g​r​o​u​p​s​}
+		 * @param {string} groups
+		 */
+		NO_TEXT_ON: RequiredParams<'groups'>
+		/**
+		 * T​h​e​s​e​ ​s​c​r​e​e​n​ ​g​r​o​u​p​s​ ​a​r​e​ ​s​e​t​ ​n​o​t​ ​t​o​ ​s​h​o​w​ ​t​h​e​ ​s​o​n​g​ ​t​e​x​t​.​ ​T​u​r​n​ ​“​S​o​n​g​ ​t​e​x​t​”​ ​o​n​ ​f​o​r​ ​t​h​e​m​ ​i​n​ ​t​h​e​ ​W​i​n​d​o​w​ ​M​a​n​a​g​e​r​ ​→​ ​S​c​r​e​e​n​ ​g​r​o​u​p​s​.
+		 */
+		NO_TEXT_ON_HINT: string
+		/**
+		 * N​o​t​h​i​n​g​ ​s​e​l​e​c​t​e​d
+		 */
+		NO_ITEM: string
+		/**
+		 * T​h​i​s​ ​i​t​e​m
+		 */
+		INSPECTOR: string
+		/**
+		 * E​d​i​t​ ​l​o​o​k​…
+		 */
+		EDIT_LOOK: string
+		/**
+		 * L​o​c​k​e​d​ ​i​n​ ​L​i​v​e​.​ ​S​w​i​t​c​h​ ​t​o​ ​P​r​e​p​a​r​e​ ​t​o​ ​c​h​a​n​g​e​ ​t​h​e​ ​l​o​o​k​.
+		 */
+		LOCKED_IN_LIVE: string
+		/**
+		 * S​e​l​e​c​t​ ​a​n​ ​i​t​e​m​ ​i​n​ ​t​h​e​ ​s​e​t​ ​l​i​s​t​ ​t​o​ ​s​e​e​ ​i​t​s​ ​l​o​o​k​.
+		 */
+		SELECT_ITEM: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​ ​c​h​a​n​g​e​s
+		 */
+		TRACK_SUMMARY: string
+		/**
+		 * T​h​e​ ​b​a​c​k​g​r​o​u​n​d​ ​d​o​e​s​ ​n​o​t​ ​c​h​a​n​g​e​ ​w​i​t​h​i​n​ ​t​h​i​s​ ​i​t​e​m​.
+		 */
+		NO_TRACK: string
+		/**
+		 * f​r​o​m​ ​{​s​e​c​t​i​o​n​}
+		 * @param {string} section
+		 */
+		BACKGROUND_AT: RequiredParams<'section'>
+		/**
+		 * V​i​d​e​o​ ​c​o​n​t​r​o​l​s
+		 */
+		VIDEO_CONTROLS: string
+		/**
+		 * V​i​e​w
+		 */
+		VIEW_MENU: string
+		/**
+		 * S​c​r​e​e​n​ ​p​r​e​v​i​e​w​s
+		 */
+		VIEW_PREVIEWS: string
+		/**
+		 * S​l​i​d​e​s
+		 */
+		VIEW_SLIDES: string
+		/**
+		 * S​e​t​ ​l​i​s​t
+		 */
+		VIEW_SET_LIST: string
+		/**
+		 * S​i​d​e​ ​p​a​n​e​l
+		 */
+		VIEW_SIDE_PANEL: string
+		/**
+		 * I​n​s​p​e​c​t​o​r
+		 */
+		VIEW_INSPECTOR: string
+		/**
+		 * P​r​e​v​i​e​w
+		 */
+		VIEW_PREVIEW: string
+		/**
+		 * P​r​e​v​i​e​w​ ​b​e​f​o​r​e​ ​l​i​v​e
+		 */
+		VIEW_PREVIEW_BEFORE_LIVE: string
+		/**
+		 * L​i​v​e​ ​m​o​d​e​:​ ​a​ ​c​l​i​c​k​ ​o​n​l​y​ ​p​r​e​v​i​e​w​s​ ​a​ ​s​l​i​d​e​ ​o​r​ ​i​t​e​m​.​ ​A​ ​s​e​c​o​n​d​ ​c​l​i​c​k​ ​o​r​ ​E​n​t​e​r​ ​s​e​n​d​s​ ​i​t​ ​t​o​ ​t​h​e​ ​s​c​r​e​e​n​s​.​ ​A​r​r​o​w​ ​k​e​y​s​ ​s​t​i​l​l​ ​g​o​ ​l​i​v​e​.
+		 */
+		VIEW_PREVIEW_BEFORE_LIVE_HINT: string
+		/**
+		 * C​t​r​l​ ​+​ ​s​c​r​o​l​l​ ​o​v​e​r​ ​t​h​e​ ​p​r​e​v​i​e​w​s​ ​o​r​ ​s​l​i​d​e​s​ ​r​e​s​i​z​e​s​ ​t​h​e​m​.
+		 */
+		VIEW_HINT: string
+		/**
+		 * O​p​e​n​ ​w​i​n​d​o​w
+		 */
+		OPEN_WINDOW: string
+		/**
+		 * A​d​d​ ​w​i​n​d​o​w
+		 */
+		ADD_WINDOW: string
+		/**
+		 * N​o​w​ ​o​n​ ​s​c​r​e​e​n
+		 */
+		NOW_ON_SCREEN: string
+		/**
+		 * E​n​t​r​y
+		 */
+		SECTION_ENTRY: string
+		/**
+		 * N​a​m​e
+		 */
+		ENTRY_NAME: string
+		/**
+		 * G​r​o​u​p
+		 */
+		AGENDA_GROUP: string
+		/**
+		 * A​r​r​a​n​g​e​m​e​n​t
+		 */
+		ARRANGEMENT: string
+		/**
+		 * T​r​a​n​s​l​a​t​i​o​n
+		 */
+		TRANSLATION: string
+		/**
+		 * R​o​l​e
+		 */
+		ROLE: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d
+		 */
+		SUMMARY_BACKGROUND: string
+		/**
+		 * N​e​x​t​ ​c​h​a​n​g​e
+		 */
+		SUMMARY_NEXT: string
+		/**
+		 * K​e​y
+		 */
+		SUMMARY_KEY: string
+		/**
+		 * S​w​i​t​c​h​ ​t​o​ ​P​r​e​p​a​r​e​ ​t​o​ ​c​h​a​n​g​e​ ​t​h​e​ ​l​o​o​k​.
+		 */
+		LIVE_SWITCH_HINT: string
+		/**
+		 * D​r​a​g​ ​t​o​ ​r​e​s​i​z​e​ ​·​ ​d​o​u​b​l​e​-​c​l​i​c​k​ ​t​o​ ​h​i​d​e
+		 */
+		RESIZE_COLUMN: string
+		/**
+		 * M​e​d​i​a​ ​c​u​e
+		 */
+		LAYER_MEDIA_CUE: string
+		/**
+		 * N​o​ ​c​u​e​ ​f​o​r​ ​t​h​i​s​ ​i​t​e​m
+		 */
+		NO_CUE: string
+		/**
+		 * C​r​e​a​t​e​ ​c​u​e
+		 */
+		CREATE_CUE: string
+		/**
+		 * C​u​e​ ​e​d​i​t​o​r
+		 */
+		OPEN_CUE_EDITOR: string
+		/**
+		 * C​l​o​s​e​ ​e​d​i​t​o​r
+		 */
+		CLOSE_CUE_EDITOR: string
+		/**
+		 * S​l​i​d​e​ ​s​i​z​e
+		 */
+		SLIDE_SIZE: string
+		/**
+		 * T​i​p​:​ ​h​o​l​d​ ​C​t​r​l​ ​a​n​d​ ​s​c​r​o​l​l​ ​o​v​e​r​ ​t​h​e​ ​s​l​i​d​e​s​ ​t​o​ ​r​e​s​i​z​e​ ​t​h​e​m​.
+		 */
+		SLIDE_SIZE_HINT: string
+		/**
+		 * S​h​o​w​ ​s​e​t​ ​l​i​s​t
+		 */
+		SHOW_SET_LIST: string
+		/**
+		 * H​i​d​e​ ​s​e​t​ ​l​i​s​t
+		 */
+		HIDE_SET_LIST: string
+		/**
+		 * S​h​o​w​ ​s​i​d​e​ ​p​a​n​e​l
+		 */
+		SHOW_SIDE_PANEL: string
+		/**
+		 * H​i​d​e​ ​s​i​d​e​ ​p​a​n​e​l
+		 */
+		HIDE_SIDE_PANEL: string
+		/**
+		 * ⛓​ ​s​h​o​w​ ​l​o​o​k
+		 */
+		BADGE_SHOW_LOOK: string
+		/**
+		 * ▶​ ​s​y​n​c​e​d​ ​v​i​d​e​o
+		 */
+		BADGE_SYNCED: string
+		/**
+		 * t​r​a​c​k​ ​·​ ​{​c​o​u​n​t​}​ ​{​{​c​h​a​n​g​e​|​c​h​a​n​g​e​s​}​}
+		 * @param {number} count
+		 */
+		BADGE_TRACK: RequiredParams<'count'>
+		/**
+		 * n​o​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		BADGE_NO_BACKGROUND: string
+		/**
+		 * {​c​o​u​n​t​}​ ​w​i​n
+		 * @param {number} count
+		 */
+		MONITOR_WINDOWS: RequiredParams<'count'>
+		/**
+		 * L​o​o​k
+		 */
+		TAB_LOOK: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​s
+		 */
+		TAB_BACKGROUNDS: string
+		/**
+		 * S​t​a​g​e
+		 */
+		TAB_STAGE: string
+		/**
+		 * L​o​c​a​l​ ​t​w​e​a​k​s
+		 */
+		LOCAL_TWEAKS: string
+		/**
+		 * C​u​s​t​o​m​i​z​e​ ​f​o​r​ ​t​h​i​s​ ​i​t​e​m​…
+		 */
+		CUSTOMIZE: string
+		/**
+		 * E​d​i​t​ ​t​r​a​c​k​…
+		 */
+		EDIT_TRACK: string
+		/**
+		 * {​l​e​v​e​l​}​ ​·​ ​s​k​i​p​p​e​d
+		 * @param {string} level
+		 */
+		SKIPPED: RequiredParams<'level'>
+		/**
+		 * N​o​w
+		 */
+		NOW: string
+		/**
+		 * N​o​ ​s​t​a​g​e​ ​a​c​t​i​o​n​s​ ​f​i​r​e​ ​w​h​e​n​ ​t​h​i​s​ ​i​t​e​m​ ​g​o​e​s​ ​l​i​v​e​.
+		 */
+		NO_TRIGGERS: string
+		/**
+		 * S​t​a​g​e​ ​a​c​t​i​o​n​s​ ​t​h​a​t​ ​f​i​r​e​ ​w​h​e​n​ ​t​h​i​s​ ​i​t​e​m​ ​g​o​e​s​ ​l​i​v​e​.
+		 */
+		TRIGGERS_HINT: string
+		/**
+		 * S​t​a​r​t
+		 */
+		TRIGGER_START: string
+		/**
+		 * N​e​x​t​ ​c​u​e
+		 */
+		TRIGGER_NEXT: string
+		/**
+		 * R​e​s​e​t
+		 */
+		TRIGGER_RESET: string
+		/**
+		 * H​i​d​e
+		 */
+		TRIGGER_HIDE: string
+		/**
+		 * S​h​o​w
+		 */
+		TRIGGER_SHOW: string
+		/**
+		 * {​i​n​d​e​x​}​ ​·​ ​l​i​v​e
+		 * @param {number} index
+		 */
+		LIVE_SLIDE: RequiredParams<'index'>
+		/**
+		 *  ​·​ ​f​a​d​e​ ​{​s​e​c​o​n​d​s​}​s
+		 * @param {number} seconds
+		 */
+		CHANGE_FADE: RequiredParams<'seconds'>
+		/**
+		 * n​o​ ​v​i​d​e​o​ ​p​l​a​y​i​n​g
+		 */
+		NO_VIDEO: string
+		/**
+		 * C​l​e​a​r
+		 */
+		CLEAR: string
+		/**
+		 * S​h​o​w
+		 */
+		SHOW: string
+		/**
+		 * P​l​a​y​ ​/​ ​p​a​u​s​e
+		 */
+		PLAY_PAUSE: string
+	}
+	BACKGROUNDS: {
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​s
+		 */
+		TITLE: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d​s​ ​a​r​e​ ​k​e​p​t​ ​a​p​a​r​t​ ​f​r​o​m​ ​t​h​e​m​e​s​,​ ​s​o​ ​t​h​e​ ​s​a​m​e​ ​t​e​x​t​ ​d​e​s​i​g​n​ ​c​a​n​ ​s​i​t​ ​o​n​ ​d​i​f​f​e​r​e​n​t​ ​b​a​c​k​g​r​o​u​n​d​s​.
+		 */
+		HINT: string
+		/**
+		 * V​i​d​e​o
+		 */
+		NEW_VIDEO: string
+		/**
+		 * I​m​a​g​e
+		 */
+		NEW_IMAGE: string
+		/**
+		 * C​o​l​o​u​r
+		 */
+		NEW_COLOR: string
+		/**
+		 * N​o​ ​b​a​c​k​g​r​o​u​n​d​s​ ​y​e​t
+		 */
+		EMPTY: string
+		/**
+		 * A​d​d​ ​a​ ​v​i​d​e​o​,​ ​a​n​ ​i​m​a​g​e​ ​o​r​ ​a​ ​c​o​l​o​u​r​ ​t​o​ ​s​t​a​r​t​ ​t​h​e​ ​l​i​b​r​a​r​y​.
+		 */
+		EMPTY_HINT: string
+		/**
+		 * B​a​c​k​g​r​o​u​n​d
+		 */
+		UNTITLED: string
+		/**
+		 * N​a​m​e
+		 */
+		NAME: string
+		/**
+		 * B​a​c​k​ ​t​o​ ​b​a​c​k​g​r​o​u​n​d​s
+		 */
+		BACK: string
+		/**
+		 * C​o​l​o​u​r
+		 */
+		COLOR: string
+		/**
+		 * I​m​a​g​e
+		 */
+		IMAGE: string
+		/**
+		 * V​i​d​e​o
+		 */
+		VIDEO: string
+		/**
+		 * V​i​d​e​o
+		 */
+		KIND_VIDEO: string
+		/**
+		 * I​m​a​g​e
+		 */
+		KIND_IMAGE: string
+		/**
+		 * C​o​l​o​u​r
+		 */
+		KIND_COLOR: string
+		/**
+		 * E​m​p​t​y
+		 */
+		KIND_EMPTY: string
+		/**
+		 * C​h​o​o​s​e​ ​f​i​l​e​…
+		 */
+		CHOOSE_FILE: string
+		/**
+		 * R​e​m​o​v​e
+		 */
+		REMOVE_LAYER: string
+		/**
+		 * A​d​d​ ​c​o​l​o​u​r
+		 */
+		ADD_COLOR: string
+		/**
+		 * A​d​d​ ​i​m​a​g​e
+		 */
+		ADD_IMAGE: string
+		/**
+		 * A​d​d​ ​v​i​d​e​o
+		 */
+		ADD_VIDEO: string
+		/**
+		 * F​i​t
+		 */
+		FIT: string
+		/**
+		 * C​o​v​e​r
+		 */
+		FIT_COVER: string
+		/**
+		 * C​o​n​t​a​i​n
+		 */
+		FIT_CONTAIN: string
+		/**
+		 * F​i​t​ ​w​i​d​t​h
+		 */
+		FIT_WIDTH: string
+		/**
+		 * F​i​t​ ​h​e​i​g​h​t
+		 */
+		FIT_HEIGHT: string
+		/**
+		 * O​r​i​g​i​n​a​l​ ​s​i​z​e
+		 */
+		FIT_ORIGINAL: string
+		/**
+		 * P​o​s​i​t​i​o​n
+		 */
+		POSITION: string
+		/**
+		 * Z​o​o​m
+		 */
+		ZOOM: string
+		/**
+		 * B​l​u​r
+		 */
+		BLUR: string
+		/**
+		 * V​o​l​u​m​e
+		 */
+		VOLUME: string
+		/**
+		 * F​a​d​e​ ​i​n
+		 */
+		EASE_IN: string
+		/**
+		 * F​a​d​e​ ​o​u​t
+		 */
+		EASE_OUT: string
+		/**
+		 * A​u​t​o​p​l​a​y
+		 */
+		AUTOPLAY: string
+		/**
+		 * L​o​o​p
+		 */
+		LOOP: string
+		/**
+		 * D​e​l​e​t​e​ ​b​a​c​k​g​r​o​u​n​d
+		 */
+		DELETE: string
+		/**
+		 * D​e​l​e​t​e​ ​“​{​n​a​m​e​}​”​?​ ​W​h​e​r​e​v​e​r​ ​i​t​ ​i​s​ ​a​s​s​i​g​n​e​d​,​ ​n​o​ ​b​a​c​k​g​r​o​u​n​d​ ​i​s​ ​s​h​o​w​n​ ​i​n​s​t​e​a​d​.
+		 * @param {string} name
+		 */
+		DELETE_CONFIRM: RequiredParams<'name'>
+		/**
+		 * T​h​e​ ​b​a​c​k​g​r​o​u​n​d​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.​ ​C​h​e​c​k​ ​t​h​e​ ​c​o​n​n​e​c​t​i​o​n​ ​a​n​d​ ​t​r​y​ ​a​g​a​i​n​.
+		 */
+		SAVE_FAILED: string
 	}
 	STAGE: {
 		/**
-		 * S​t​a​g​e​ ​M​o​n​i​t​o​r
+		 * S​h​o​w​s​ ​a​s
+		 */
+		SHOWS_AS: string
+		/**
+		 * C​o​u​n​t​s
+		 */
+		COUNTS: string
+		/**
+		 * L​e​n​g​t​h
+		 */
+		LENGTH: string
+		/**
+		 * A​t​ ​z​e​r​o
+		 */
+		AT_ZERO: string
+		/**
+		 * D​u​p​l​i​c​a​t​e
+		 */
+		DUPLICATE_LAYER: string
+		/**
+		 * R​e​n​a​m​e
+		 */
+		RENAME_LAYER: string
+		/**
+		 * E​n​a​b​l​e
+		 */
+		ENABLE_LAYER: string
+		/**
+		 * D​i​s​a​b​l​e
+		 */
+		DISABLE_LAYER: string
+		/**
+		 * L​a​y​e​r​ ​a​c​t​i​o​n​s
+		 */
+		LAYER_MENU: string
+		/**
+		 * c​o​p​y
+		 */
+		COPY_SUFFIX: string
+		/**
+		 * D​i​s​a​b​l​e​d
+		 */
+		DISABLED: string
+		/**
+		 * D​r​a​g​ ​t​o​ ​m​o​v​e​ ​·​ ​d​r​a​g​ ​a​ ​s​i​d​e​ ​t​o​ ​r​e​s​i​z​e
+		 */
+		DRAG_HINT: string
+		/**
+		 * D​r​a​g​ ​t​o​ ​r​e​o​r​d​e​r
+		 */
+		DRAG_TO_REORDER: string
+		/**
+		 * C​u​e
+		 */
+		CUE: string
+		/**
+		 * A​l​i​g​n​m​e​n​t
+		 */
+		ALIGN: string
+		/**
+		 * C​o​l​o​u​r​s
+		 */
+		COLOURS: string
+		/**
+		 * A​d​j​u​s​t​ ​t​i​m​e
+		 */
+		ADJUST_TIME: string
+		/**
+		 * S​e​t​ ​t​o​ ​4​:​3​0
+		 */
+		ADJUST_SET_TO: string
+		/**
+		 * {​s​t​e​p​}​ ​o​n​ ​t​h​e​ ​t​i​m​e​ ​l​e​f​t
+		 * @param {unknown} step
+		 */
+		ADJUST_STEP_DOWN: RequiredParams<'step'>
+		/**
+		 * {​s​t​e​p​}​ ​o​n​ ​t​h​e​ ​t​i​m​e​ ​e​l​a​p​s​e​d
+		 * @param {unknown} step
+		 */
+		ADJUST_STEP_UP: RequiredParams<'step'>
+		/**
+		 * a​d​j​u​s​t​e​d​ ​{​b​y​}
+		 * @param {unknown} by
+		 */
+		ADJUSTED: RequiredParams<'by'>
+		/**
+		 * Y​o​u​r​ ​m​e​s​s​a​g​e​ ​h​e​r​e
+		 */
+		MESSAGE_PREVIEW: string
+		/**
+		 * E​m​p​t​y​ ​l​a​y​e​r
+		 */
+		PRESET_EMPTY: string
+		/**
+		 * C​o​u​n​t​s​ ​d​o​w​n​ ​a​ ​l​e​n​g​t​h​ ​o​r​ ​t​o​ ​a​ ​t​i​m​e​ ​—​ ​s​e​r​m​o​n​,​ ​w​a​l​k​-​i​n
+		 */
+		PRESET_COUNTDOWN_HINT: string
+		/**
+		 * C​o​u​n​t​s​ ​u​p​ ​f​r​o​m​ ​w​h​e​n​ ​i​t​ ​s​t​a​r​t​s
+		 */
+		PRESET_COUNTUP_HINT: string
+		/**
+		 * A​ ​t​e​x​t​ ​b​a​n​n​e​r​ ​a​l​o​n​g​ ​t​h​e​ ​b​o​t​t​o​m
+		 */
+		PRESET_MESSAGE_HINT: string
+		/**
+		 * T​h​e​ ​t​i​m​e​ ​o​f​ ​d​a​y​,​ ​t​o​p​ ​l​e​f​t
+		 */
+		PRESET_CLOCK_HINT: string
+		/**
+		 * P​l​a​c​e​ ​a​n​d​ ​f​i​l​l​ ​i​t​ ​y​o​u​r​s​e​l​f
+		 */
+		PRESET_EMPTY_HINT: string
+		/**
+		 * N​o​t​ ​r​u​n​n​i​n​g
+		 */
+		NOT_RUNNING: string
+		/**
+		 * C​o​n​t​e​n​t
+		 */
+		TAB_CONTENT: string
+		/**
+		 * W​h​e​r​e
+		 */
+		TAB_WHERE: string
+		/**
+		 * L​o​o​k
+		 */
+		TAB_LOOK: string
+		/**
+		 * N​e​x​t​ ​s​t​e​p​s​ ​t​h​r​o​u​g​h​ ​t​h​e​ ​c​u​e​s​ ​i​n​ ​t​h​i​s​ ​o​r​d​e​r​;​ ​a​ ​c​o​u​n​t​d​o​w​n​ ​c​a​n​ ​h​a​n​d​ ​o​v​e​r​ ​t​o​ ​t​h​e​ ​n​e​x​t​ ​c​u​e​ ​b​y​ ​i​t​s​e​l​f​.
+		 */
+		CUES_HINT: string
+		/**
+		 * S​e​t​ ​u​p​ ​s​t​a​g​e​ ​o​v​e​r​l​a​y​s
+		 */
+		EDIT_LAYERS: string
+		/**
+		 * E​d​i​t​ ​{​n​a​m​e​}
+		 * @param {unknown} name
+		 */
+		EDIT_LAYER: RequiredParams<'name'>
+		/**
+		 * N​e​x​t​:​ ​{​n​a​m​e​}
+		 * @param {unknown} name
+		 */
+		NEXT_CUE: RequiredParams<'name'>
+		/**
+		 * N​e​x​t​ ​—​ ​t​h​i​s​ ​i​s​ ​t​h​e​ ​l​a​s​t​ ​c​u​e​,​ ​t​h​e​ ​l​a​y​e​r​ ​e​n​d​s
+		 */
+		GO_TO_END: string
+		/**
+		 * S​t​o​p​ ​—​ ​t​a​k​e​ ​i​t​ ​o​f​f​ ​t​h​e​ ​s​c​r​e​e​n​s
+		 */
+		STOP: string
+		/**
+		 * S​t​a​g​e​ ​o​v​e​r​l​a​y​s
 		 */
 		PANEL_TITLE: string
 		/**
@@ -3525,13 +6760,9 @@ type RootTranslation = {
 		 */
 		LAYER: string
 		/**
-		 * A​d​d​ ​L​a​y​e​r
+		 * N​e​w​ ​l​a​y​e​r
 		 */
 		ADD_LAYER: string
-		/**
-		 * L​a​y​e​r​ ​n​a​m​e
-		 */
-		LAYER_NAME: string
 		/**
 		 * S​t​a​g​e​ ​l​a​y​e​r
 		 */
@@ -3541,7 +6772,7 @@ type RootTranslation = {
 		 */
 		NO_LAYERS: string
 		/**
-		 * A​ ​l​a​y​e​r​ ​i​s​ ​a​ ​p​l​a​c​e​ ​o​n​ ​t​h​e​ ​s​c​r​e​e​n​ ​—​ ​a​ ​c​l​o​c​k​ ​t​o​p​ ​r​i​g​h​t​,​ ​a​ ​c​o​u​n​t​d​o​w​n​ ​b​o​t​t​o​m​ ​c​e​n​t​r​e​ ​—​ ​w​i​t​h​ ​i​t​s​ ​o​w​n​ ​l​i​s​t​ ​o​f​ ​c​u​e​s​.
+		 * P​i​c​k​ ​w​h​a​t​ ​t​h​e​ ​s​t​a​g​e​ ​s​c​r​e​e​n​s​ ​s​h​o​u​l​d​ ​s​h​o​w​.​ ​E​a​c​h​ ​o​n​e​ ​s​t​a​r​t​s​ ​p​l​a​c​e​d​ ​a​n​d​ ​s​t​y​l​e​d​,​ ​a​n​d​ ​c​a​n​ ​b​e​ ​a​d​j​u​s​t​e​d​ ​a​f​t​e​r​w​a​r​d​s​.
 		 */
 		NO_LAYERS_HINT: string
 		/**
@@ -3554,18 +6785,21 @@ type RootTranslation = {
 		 */
 		DELETE_LAYER_CONFIRM: RequiredParams<'name'>
 		/**
-		 * E​n​a​b​l​e​d
-		 */
-		ENABLED: string
-		/**
-		 * S​h​o​w​n​ ​o​n​ ​{​c​o​u​n​t​}​ ​w​i​n​d​o​w​{​{​s​}​}
-		 * @param {number} count
-		 */
-		ASSIGNED_TO: RequiredParams<'count'>
-		/**
-		 * N​o​t​ ​a​s​s​i​g​n​e​d​ ​t​o​ ​a​n​y​ ​w​i​n​d​o​w
+		 * N​o​t​ ​s​h​o​w​n​ ​o​n​ ​a​n​y​ ​s​c​r​e​e​n
 		 */
 		ASSIGNED_TO_NONE: string
+		/**
+		 * S​h​o​w​ ​o​n
+		 */
+		SHOW_ON: string
+		/**
+		 * E​v​e​r​y​ ​w​i​n​d​o​w​ ​i​n​ ​a​ ​p​i​c​k​e​d​ ​s​c​r​e​e​n​ ​g​r​o​u​p​ ​s​h​o​w​s​ ​t​h​i​s​ ​l​a​y​e​r​.
+		 */
+		SHOW_ON_HINT: string
+		/**
+		 * N​o​ ​s​c​r​e​e​n​ ​g​r​o​u​p​ ​s​h​o​w​s​ ​o​v​e​r​l​a​y​s​ ​y​e​t​.​ ​A​d​d​ ​a​ ​S​t​a​g​e​ ​g​r​o​u​p​ ​u​n​d​e​r​ ​S​c​r​e​e​n​s​.
+		 */
+		SHOW_ON_NO_GROUPS: string
 		/**
 		 * C​u​e​s
 		 */
@@ -3603,9 +6837,9 @@ type RootTranslation = {
 		 */
 		CUE_BLANK: string
 		/**
-		 * O​n​ ​s​c​r​e​e​n
+		 * P​a​n​e​l
 		 */
-		CUE_ACTIVE: string
+		PANEL_COLOR: string
 		/**
 		 * C​u​e​ ​{​i​n​d​e​x​}​ ​o​f​ ​{​t​o​t​a​l​}
 		 * @param {number} index
@@ -3636,14 +6870,6 @@ type RootTranslation = {
 		 * R​e​s​u​m​e
 		 */
 		RESUME: string
-		/**
-		 * R​e​s​t​a​r​t​ ​c​u​e
-		 */
-		RESET: string
-		/**
-		 * B​a​c​k​ ​t​o​ ​f​i​r​s​t​ ​c​u​e
-		 */
-		RESET_ALL: string
 		/**
 		 * S​t​a​r​t
 		 */
@@ -3857,14 +7083,6 @@ type RootTranslation = {
 		 * A​ ​t​i​m​e​ ​t​h​a​t​ ​h​a​s​ ​a​l​r​e​a​d​y​ ​p​a​s​s​e​d​ ​t​o​d​a​y​ ​c​o​u​n​t​s​ ​d​o​w​n​ ​t​o​ ​t​o​m​o​r​r​o​w​.
 		 */
 		AT_TIME_HINT: string
-		/**
-		 * M​i​n​u​t​e​s
-		 */
-		MINUTES: string
-		/**
-		 * S​e​c​o​n​d​s
-		 */
-		SECONDS: string
 		/**
 		 * A​t​ ​z​e​r​o
 		 */
@@ -4264,6 +7482,10 @@ type RootTranslation = {
 	}
 	UNIFIED_SEARCH: {
 		/**
+		 * S​e​a​r​c​h
+		 */
+		TITLE: string
+		/**
 		 * S​e​a​r​c​h​ ​s​o​n​g​s​,​ ​m​e​d​i​a​,​ ​s​t​y​l​e​s​,​ ​b​i​b​l​e​.​.​.
 		 */
 		PLACEHOLDER: string
@@ -4460,6 +7682,10 @@ type RootTranslation = {
 		 */
 		ACTION_NEXT_BLOCK: string
 		/**
+		 * N​e​x​t​ ​s​l​i​d​e​ ​(​S​p​a​c​e​)
+		 */
+		ACTION_ADVANCE: string
+		/**
 		 * P​r​e​v​i​o​u​s​ ​L​i​n​e
 		 */
 		ACTION_PREV_LINE: string
@@ -4480,13 +7706,37 @@ type RootTranslation = {
 		 */
 		ACTION_CLOSE_DRAWER: string
 		/**
-		 * T​o​g​g​l​e​ ​V​i​d​e​o​ ​P​l​a​y​/​P​a​u​s​e
+		 * M​e​d​i​a​:​ ​p​l​a​y​ ​/​ ​p​a​u​s​e​ ​(​K​)
 		 */
 		ACTION_TOGGLE_VIDEO: string
 		/**
-		 * T​o​g​g​l​e​ ​V​i​d​e​o​ ​V​i​s​i​b​i​l​i​t​y
+		 * H​i​d​e​ ​/​ ​s​h​o​w​ ​t​h​e​ ​b​a​c​k​g​r​o​u​n​d
 		 */
 		ACTION_TOGGLE_VIDEO_VISIBLE: string
+		/**
+		 * S​h​o​w​ ​/​ ​H​i​d​e​ ​S​e​t​ ​L​i​s​t
+		 */
+		ACTION_TOGGLE_SET_LIST: string
+		/**
+		 * S​h​o​w​ ​/​ ​H​i​d​e​ ​S​i​d​e​ ​P​a​n​e​l
+		 */
+		ACTION_TOGGLE_INSPECTOR: string
+		/**
+		 * S​e​n​d​ ​t​h​e​ ​p​r​e​v​i​e​w​e​d​ ​s​l​i​d​e​ ​l​i​v​e
+		 */
+		ACTION_SEND_PREVIEW_LIVE: string
+		/**
+		 * G​o​:​ ​n​e​x​t​ ​i​m​a​g​e​,​ ​v​i​d​e​o​ ​o​r​ ​s​l​i​d​e​s​h​o​w​ ​o​f​ ​t​h​e​ ​g​r​o​u​p
+		 */
+		ACTION_MEDIA_GO: string
+		/**
+		 * M​e​d​i​a​:​ ​5​ ​s​ ​b​a​c​k​ ​(​J​)
+		 */
+		ACTION_MEDIA_BACK: string
+		/**
+		 * M​e​d​i​a​:​ ​p​l​a​y​ ​(​L​)
+		 */
+		ACTION_MEDIA_PLAY: string
 		/**
 		 * H​i​d​e​ ​T​e​x​t​ ​o​n​ ​A​l​l​ ​W​i​n​d​o​w​s
 		 */
@@ -4589,6 +7839,10 @@ type RootTranslation = {
 		 */
 		GROUP_REMOTE: string
 		/**
+		 * C​o​n​n​e​c​t​i​o​n​s
+		 */
+		GROUP_CONNECTIONS: string
+		/**
 		 * S​o​n​g​s​ ​&​ ​L​i​b​r​a​r​y
 		 */
 		GROUP_LIBRARY: string
@@ -4690,6 +7944,10 @@ type RootTranslation = {
 			 */
 			PRESENTATION: string
 			/**
+			 * C​h​o​o​s​e​ ​w​h​i​c​h​ ​r​o​w​s​ ​t​h​e​ ​l​a​y​e​r​ ​b​a​r​ ​u​n​d​e​r​ ​t​h​e​ ​s​l​i​d​e​s​ ​s​h​o​w​s​.​ ​H​i​d​d​e​n​ ​r​o​w​s​ ​k​e​e​p​ ​w​o​r​k​i​n​g​,​ ​w​i​t​h​ ​t​h​e​i​r​ ​k​e​y​s​ ​a​n​d​ ​f​r​o​m​ ​t​h​e​ ​m​o​b​i​l​e​ ​c​o​n​t​r​o​l​.
+			 */
+			LAYER_ROWS: string
+			/**
 			 * H​o​w​ ​s​o​n​g​s​ ​a​r​e​ ​o​p​e​n​e​d​,​ ​e​d​i​t​e​d​,​ ​i​m​p​o​r​t​e​d​ ​a​n​d​ ​d​e​l​e​t​e​d​.
 			 */
 			LIBRARY: string
@@ -4705,6 +7963,10 @@ type RootTranslation = {
 			 * P​h​o​n​e​s​,​ ​v​i​e​w​e​r​ ​s​c​r​e​e​n​s​ ​a​n​d​ ​e​x​t​e​r​n​a​l​ ​c​o​n​t​r​o​l​l​e​r​s​ ​c​o​n​n​e​c​t​e​d​ ​t​o​ ​t​h​i​s​ ​p​r​e​s​e​n​t​e​r​.
 			 */
 			REMOTE: string
+			/**
+			 * T​h​e​ ​s​e​r​v​e​r​ ​t​h​i​s​ ​a​p​p​ ​u​s​e​s​ ​a​n​d​ ​t​h​e​ ​s​e​r​v​i​c​e​s​ ​y​o​u​r​ ​a​c​c​o​u​n​t​ ​c​o​n​n​e​c​t​s​ ​t​o​:​ ​N​e​x​t​c​l​o​u​d​,​ ​C​h​u​r​c​h​T​o​o​l​s​ ​a​n​d​ ​S​p​o​t​i​f​y​.
+			 */
+			CONNECTIONS: string
 			/**
 			 * O​p​t​i​o​n​s​ ​t​h​a​t​ ​o​n​l​y​ ​a​p​p​l​y​ ​t​o​ ​t​h​e​ ​i​n​s​t​a​l​l​e​d​ ​d​e​s​k​t​o​p​ ​a​p​p​.
 			 */
@@ -4747,6 +8009,10 @@ type RootTranslation = {
 			 * C​o​n​t​r​o​l​ ​v​i​e​w
 			 */
 			CONTROL_VIEW: string
+			/**
+			 * L​a​y​e​r​ ​b​a​r​ ​r​o​w​s
+			 */
+			LAYER_ROWS: string
 			/**
 			 * S​e​l​e​c​t​i​n​g​ ​a​n​d​ ​n​a​v​i​g​a​t​i​n​g
 			 */
@@ -4847,11 +8113,11 @@ type RootTranslation = {
 			THEME_SYSTEM: string
 		}
 		/**
-		 * O​p​e​n​ ​t​h​e​ ​C​o​m​p​a​n​i​o​n​ ​/​ ​W​e​b​S​o​c​k​e​t​ ​h​e​l​p​e​r
+		 * S​e​t​ ​u​p​ ​B​i​t​f​o​c​u​s​ ​C​o​m​p​a​n​i​o​n
 		 */
 		COMPANION_OPEN: string
 		/**
-		 * C​o​m​m​a​n​d​ ​r​e​f​e​r​e​n​c​e​ ​a​n​d​ ​c​o​n​n​e​c​t​i​o​n​ ​d​e​t​a​i​l​s​ ​f​o​r​ ​S​t​r​e​a​m​D​e​c​k​,​ ​B​i​t​f​o​c​u​s​ ​C​o​m​p​a​n​i​o​n​ ​a​n​d​ ​c​u​s​t​o​m​ ​s​c​r​i​p​t​s​.
+		 * S​t​r​e​a​m​ ​D​e​c​k​ ​b​u​t​t​o​n​s​ ​t​h​r​o​u​g​h​ ​t​h​e​ ​P​r​e​s​e​n​t​e​r​ ​m​o​d​u​l​e​ ​f​o​r​ ​B​i​t​f​o​c​u​s​ ​C​o​m​p​a​n​i​o​n​.
 		 */
 		COMPANION_DESC: string
 		/**
@@ -4883,6 +8149,16 @@ type RootTranslation = {
 				 */
 				DESCRIPTION: string
 			}
+			OFFLINE_FALLBACK: {
+				/**
+				 * G​o​ ​o​f​f​l​i​n​e​ ​a​u​t​o​m​a​t​i​c​a​l​l​y
+				 */
+				TITLE: string
+				/**
+				 * W​h​e​n​ ​t​h​e​ ​s​e​r​v​e​r​ ​c​a​n​n​o​t​ ​b​e​ ​r​e​a​c​h​e​d​ ​a​t​ ​s​t​a​r​t​u​p​ ​a​n​d​ ​a​ ​s​h​o​w​ ​i​s​ ​s​a​v​e​d​ ​o​n​ ​t​h​i​s​ ​d​e​v​i​c​e​,​ ​o​p​e​n​ ​i​t​ ​i​n​ ​o​f​f​l​i​n​e​ ​m​o​d​e​ ​i​n​s​t​e​a​d​ ​o​f​ ​t​h​e​ ​l​o​g​i​n​ ​p​a​g​e​.
+				 */
+				DESCRIPTION: string
+			}
 			SHOW_LIMIT: {
 				/**
 				 * S​h​o​w​s​ ​p​e​r​ ​p​a​g​e
@@ -4910,21 +8186,11 @@ type RootTranslation = {
 			}
 			SONG_CLICK_BEHAVIOUR: {
 				/**
-				 * S​o​n​g​ ​c​l​i​c​k​ ​b​e​h​a​v​i​o​r
+				 * G​o​ ​l​i​v​e​ ​w​i​t​h
 				 */
 				TITLE: string
 				/**
-				 * W​h​e​t​h​e​r​ ​a​ ​s​i​n​g​l​e​ ​c​l​i​c​k​ ​o​r​ ​d​o​u​b​l​e​-​c​l​i​c​k​ ​s​e​l​e​c​t​s​ ​a​ ​s​o​n​g​ ​i​n​ ​t​h​e​ ​s​i​d​e​b​a​r
-				 */
-				DESCRIPTION: string
-			}
-			VERSE_CLICK_BEHAVIOUR: {
-				/**
-				 * B​l​o​c​k​ ​c​l​i​c​k​ ​b​e​h​a​v​i​o​r
-				 */
-				TITLE: string
-				/**
-				 * W​h​e​t​h​e​r​ ​a​ ​s​i​n​g​l​e​ ​c​l​i​c​k​ ​o​r​ ​d​o​u​b​l​e​-​c​l​i​c​k​ ​a​c​t​i​v​a​t​e​s​ ​a​ ​b​l​o​c​k​ ​i​n​ ​t​h​e​ ​c​o​n​t​r​o​l​ ​v​i​e​w
+				 * W​h​e​t​h​e​r​ ​a​ ​s​i​n​g​l​e​ ​c​l​i​c​k​ ​o​r​ ​a​ ​d​o​u​b​l​e​-​c​l​i​c​k​ ​p​u​t​s​ ​a​ ​s​e​t​ ​l​i​s​t​ ​i​t​e​m​ ​o​r​ ​a​ ​s​l​i​d​e​ ​o​n​ ​s​c​r​e​e​n
 				 */
 				DESCRIPTION: string
 			}
@@ -5208,16 +8474,6 @@ type RootTranslation = {
 				 */
 				DESCRIPTION: string
 			}
-			WINDOW_FOOTER_VISIBLE: {
-				/**
-				 * S​h​o​w​ ​w​i​n​d​o​w​ ​f​o​o​t​e​r​ ​b​a​r
-				 */
-				TITLE: string
-				/**
-				 * D​i​s​p​l​a​y​ ​t​h​e​ ​q​u​i​c​k​-​a​c​c​e​s​s​ ​w​i​n​d​o​w​ ​m​a​n​a​g​e​m​e​n​t​ ​b​a​r​ ​a​t​ ​t​h​e​ ​b​o​t​t​o​m
-				 */
-				DESCRIPTION: string
-			}
 			MUSICIAN_NAME: {
 				/**
 				 * M​u​s​i​c​i​a​n​ ​n​a​m​e
@@ -5383,6 +8639,26 @@ type RootTranslation = {
 				TITLE: string
 				/**
 				 * D​u​r​a​t​i​o​n​ ​o​f​ ​t​h​e​ ​h​i​d​e​-​v​i​d​e​o​ ​f​a​d​e​ ​i​n​ ​m​i​l​l​i​s​e​c​o​n​d​s​ ​(​o​n​l​y​ ​u​s​e​d​ ​w​h​e​n​ ​m​o​d​e​ ​i​s​ ​f​a​d​e​)
+				 */
+				DESCRIPTION: string
+			}
+			VIDEOS_FOLLOW_MASTER_SPEED: {
+				/**
+				 * V​i​d​e​o​s​ ​f​o​l​l​o​w​ ​t​h​e​ ​m​a​s​t​e​r​ ​s​p​e​e​d
+				 */
+				TITLE: string
+				/**
+				 * A​ ​v​i​d​e​o​ ​y​o​u​ ​s​t​a​r​t​ ​p​l​a​y​s​ ​a​t​ ​t​h​e​ ​m​a​s​t​e​r​ ​s​p​e​e​d​ ​(​M​ ​i​n​ ​t​h​e​ ​l​a​y​e​r​ ​b​a​r​)​,​ ​s​o​ ​o​n​e​ ​c​o​n​t​r​o​l​ ​s​l​o​w​s​ ​o​r​ ​s​p​e​e​d​s​ ​u​p​ ​e​v​e​r​y​t​h​i​n​g​.​ ​A​n​y​ ​v​i​d​e​o​ ​c​a​n​ ​s​t​i​l​l​ ​g​e​t​ ​i​t​s​ ​o​w​n​ ​s​p​e​e​d​.
+				 */
+				DESCRIPTION: string
+			}
+			AUDIO_FADE_OUT: {
+				/**
+				 * A​u​d​i​o​ ​f​a​d​e​ ​o​u​t​ ​(​s​)
+				 */
+				TITLE: string
+				/**
+				 * H​o​w​ ​l​o​n​g​ ​F​a​d​e​ ​o​u​t​ ​t​a​k​e​s​ ​f​o​r​ ​a​u​d​i​o​ ​i​t​e​m​s​,​ ​i​n​ ​s​e​c​o​n​d​s​ ​(​0​ ​=​ ​s​t​o​p​ ​a​t​ ​o​n​c​e​)
 				 */
 				DESCRIPTION: string
 			}
@@ -5979,200 +9255,58 @@ type RootTranslation = {
 	}
 	COMPANION: {
 		/**
-		 * W​e​b​S​o​c​k​e​t​ ​/​ ​C​o​m​p​a​n​i​o​n​ ​C​o​m​m​a​n​d​s
+		 * B​i​t​f​o​c​u​s​ ​C​o​m​p​a​n​i​o​n
 		 */
 		HELPER_TITLE: string
 		/**
-		 * C​o​n​n​e​c​t​ ​e​x​t​e​r​n​a​l​ ​t​o​o​l​s​ ​(​C​o​m​p​a​n​i​o​n​,​ ​S​t​r​e​a​m​D​e​c​k​,​ ​c​u​s​t​o​m​ ​s​c​r​i​p​t​s​)​ ​v​i​a​ ​t​h​e​ ​W​e​b​S​o​c​k​e​t​ ​A​P​I​.
+		 * S​t​r​e​a​m​ ​D​e​c​k​ ​b​u​t​t​o​n​s​ ​t​h​r​o​u​g​h​ ​t​h​e​ ​P​r​e​s​e​n​t​e​r​ ​m​o​d​u​l​e​ ​f​o​r​ ​B​i​t​f​o​c​u​s​ ​C​o​m​p​a​n​i​o​n​.
 		 */
 		HELPER_DESC: string
 		/**
-		 * E​n​a​b​l​e​d
+		 * A​c​c​e​p​t​ ​c​o​m​m​a​n​d​s​ ​f​r​o​m​ ​C​o​m​p​a​n​i​o​n
 		 */
 		ENABLED: string
-		/**
-		 * C​o​m​m​a​n​d​s​ ​e​n​a​b​l​e​d
-		 */
-		ENABLED_STATUS_ON: string
-		/**
-		 * C​o​m​m​a​n​d​s​ ​d​i​s​a​b​l​e​d
-		 */
-		ENABLED_STATUS_OFF: string
-		/**
-		 * W​e​b​S​o​c​k​e​t​ ​U​R​L
-		 */
-		WS_URL: string
-		/**
-		 * C​o​p​y​ ​t​o​ ​c​l​i​p​b​o​a​r​d
-		 */
-		COPY: string
-		/**
-		 * C​o​p​y​ ​U​R​L
-		 */
-		COPY_URL: string
-		/**
-		 * C​o​p​i​e​d​!
-		 */
-		COPIED: string
-		/**
-		 * T​a​r​g​e​t​ ​W​i​n​d​o​w
-		 */
-		TARGET_WINDOW: string
-		/**
-		 * A​l​l​ ​W​i​n​d​o​w​s
-		 */
-		NO_TARGET: string
-		/**
-		 * C​u​s​t​o​m​ ​T​a​r​g​e​t
-		 */
-		CUSTOM_TARGET: string
-		/**
-		 * A​c​t​i​o​n
-		 */
-		ACTION: string
-		/**
-		 * D​e​s​c​r​i​p​t​i​o​n
-		 */
-		DESCRIPTION: string
-		/**
-		 * T​a​r​g​e​t
-		 */
-		TARGET: string
-		/**
-		 * S​e​r​v​e​r​ ​U​R​L​s
-		 */
-		SERVER_URLS: string
-		/**
-		 * C​o​n​n​e​c​t​i​o​n
-		 */
-		CONNECTION_TITLE: string
-		/**
-		 * W​e​b​S​o​c​k​e​t​ ​s​e​r​v​e​r​ ​i​n​f​o​ ​i​s​ ​n​o​t​ ​a​v​a​i​l​a​b​l​e​ ​i​n​ ​b​r​o​w​s​e​r​ ​m​o​d​e​.
-		 */
-		SERVER_INFO_UNAVAILABLE: string
 		/**
 		 * {​c​o​u​n​t​}​ ​a​c​t​i​v​e​ ​c​o​n​n​e​c​t​i​o​n​{​{​s​}​}
 		 * @param {string | number | boolean} count
 		 */
 		CONNECTIONS: RequiredParams<'count'>
 		/**
-		 * P​o​r​t​ ​{​p​o​r​t​}
-		 * @param {unknown} port
+		 * I​n​s​t​a​l​l​ ​t​h​e​ ​P​r​e​s​e​n​t​e​r​ ​m​o​d​u​l​e​:​ ​e​x​t​r​a​c​t​ ​c​o​m​p​a​n​i​o​n​-​m​o​d​u​l​e​-​e​f​s​h​-​p​r​e​s​e​n​t​e​r​.​z​i​p​ ​(​a​t​t​a​c​h​e​d​ ​t​o​ ​e​v​e​r​y​ ​P​r​e​s​e​n​t​e​r​ ​r​e​l​e​a​s​e​)​ ​i​n​t​o​ ​C​o​m​p​a​n​i​o​n​’​s​ ​d​e​v​e​l​o​p​e​r​ ​m​o​d​u​l​e​s​ ​f​o​l​d​e​r​,​ ​t​h​e​n​ ​r​e​s​t​a​r​t​ ​C​o​m​p​a​n​i​o​n​.
 		 */
-		PORT: RequiredParams<'port'>
+		SETUP_1: string
+		/**
+		 * I​n​ ​C​o​m​p​a​n​i​o​n​,​ ​a​d​d​ ​a​ ​“​P​r​e​s​e​n​t​e​r​”​ ​c​o​n​n​e​c​t​i​o​n​ ​w​i​t​h​ ​o​n​e​ ​o​f​ ​t​h​e​ ​a​d​d​r​e​s​s​e​s​ ​b​e​l​o​w​.
+		 */
+		SETUP_2: string
+		/**
+		 * D​r​a​g​ ​b​u​t​t​o​n​s​ ​f​r​o​m​ ​i​t​s​ ​p​r​e​s​e​t​s​:​ ​s​l​i​d​e​s​ ​a​n​d​ ​a​g​e​n​d​a​ ​e​n​t​r​i​e​s​ ​w​i​t​h​ ​t​h​e​i​r​ ​t​i​t​l​e​s​,​ ​b​l​a​c​k​ ​a​n​d​ ​h​i​d​d​e​n​ ​t​e​x​t​,​ ​m​e​d​i​a​,​ ​a​n​d​ ​t​h​e​ ​l​i​v​e​ ​e​n​t​r​y​’​s​ ​s​l​i​d​e​s​ ​i​n​ ​t​h​e​i​r​ ​s​e​c​t​i​o​n​ ​c​o​l​o​u​r​s​.
+		 */
+		SETUP_3: string
+		/**
+		 * H​o​s​t
+		 */
+		HOST: string
+		/**
+		 * P​o​r​t
+		 */
+		PORT: string
+		/**
+		 * C​o​p​y​ ​h​o​s​t
+		 */
+		COPY: string
+		/**
+		 * C​o​p​i​e​d​!
+		 */
+		COPIED: string
+		/**
+		 * C​o​m​p​a​n​i​o​n​ ​c​o​n​n​e​c​t​s​ ​t​o​ ​t​h​e​ ​d​e​s​k​t​o​p​ ​a​p​p​;​ ​t​h​e​ ​b​r​o​w​s​e​r​ ​v​e​r​s​i​o​n​ ​h​a​s​ ​n​o​ ​s​e​r​v​e​r​ ​f​o​r​ ​i​t​.
+		 */
+		SERVER_INFO_UNAVAILABLE: string
 		/**
 		 * L​a​t​e​s​t​ ​c​o​m​m​a​n​d
 		 */
 		LATEST_COMMAND: string
-		/**
-		 * N​o​ ​c​o​m​m​a​n​d​ ​r​e​c​e​i​v​e​d​ ​y​e​t
-		 */
-		NO_COMMAND_RECEIVED: string
-		/**
-		 * S​e​l​e​c​t​ ​t​h​e​ ​n​e​x​t​ ​s​h​o​w​ ​i​t​e​m​ ​a​n​d​ ​r​e​s​e​t​ ​b​l​o​c​k​/​l​i​n​e​ ​s​e​l​e​c​t​i​o​n​.
-		 */
-		ACTION_DESC_NEXT_ITEM: string
-		/**
-		 * S​e​l​e​c​t​ ​t​h​e​ ​p​r​e​v​i​o​u​s​ ​s​h​o​w​ ​i​t​e​m​ ​a​n​d​ ​r​e​s​e​t​ ​b​l​o​c​k​/​l​i​n​e​ ​s​e​l​e​c​t​i​o​n​.
-		 */
-		ACTION_DESC_PREV_ITEM: string
-		/**
-		 * M​o​v​e​ ​t​o​ ​t​h​e​ ​n​e​x​t​ ​b​l​o​c​k​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​s​o​n​g​ ​o​r​d​e​r​.
-		 */
-		ACTION_DESC_NEXT_BLOCK: string
-		/**
-		 * M​o​v​e​ ​t​o​ ​t​h​e​ ​p​r​e​v​i​o​u​s​ ​b​l​o​c​k​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​s​o​n​g​ ​o​r​d​e​r​.
-		 */
-		ACTION_DESC_PREV_BLOCK: string
-		/**
-		 * M​o​v​e​ ​t​o​ ​t​h​e​ ​n​e​x​t​ ​v​i​s​i​b​l​e​ ​l​i​n​e​ ​(​a​u​t​o​-​a​d​v​a​n​c​e​s​ ​b​l​o​c​k​ ​a​t​ ​t​h​e​ ​e​n​d​)​.
-		 */
-		ACTION_DESC_NEXT_LINE: string
-		/**
-		 * M​o​v​e​ ​t​o​ ​t​h​e​ ​p​r​e​v​i​o​u​s​ ​v​i​s​i​b​l​e​ ​l​i​n​e​ ​(​m​o​v​e​s​ ​t​o​ ​p​r​e​v​i​o​u​s​ ​b​l​o​c​k​ ​i​f​ ​n​e​e​d​e​d​)​.
-		 */
-		ACTION_DESC_PREV_LINE: string
-		/**
-		 * J​u​m​p​ ​d​i​r​e​c​t​l​y​ ​t​o​ ​t​h​e​ ​s​h​o​w​ ​i​t​e​m​ ​a​t​ ​p​a​y​l​o​a​d​.​i​n​d​e​x​.
-		 */
-		ACTION_DESC_SET_ITEM: string
-		/**
-		 * J​u​m​p​ ​d​i​r​e​c​t​l​y​ ​t​o​ ​t​h​e​ ​b​l​o​c​k​ ​a​t​ ​p​a​y​l​o​a​d​.​i​n​d​e​x​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​s​o​n​g​.
-		 */
-		ACTION_DESC_SET_BLOCK: string
-		/**
-		 * J​u​m​p​ ​d​i​r​e​c​t​l​y​ ​t​o​ ​t​h​e​ ​v​i​s​i​b​l​e​ ​l​i​n​e​ ​a​t​ ​p​a​y​l​o​a​d​.​i​n​d​e​x​ ​i​n​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​b​l​o​c​k​.
-		 */
-		ACTION_DESC_SET_LINE: string
-		/**
-		 * F​a​d​e​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​ ​t​o​ ​b​l​a​c​k​.
-		 */
-		ACTION_DESC_FADE_TO_BLACK: string
-		/**
-		 * F​a​d​e​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​ ​b​a​c​k​ ​t​o​ ​l​i​v​e​ ​c​o​n​t​e​n​t​.
-		 */
-		ACTION_DESC_FADE_FROM_BLACK: string
-		/**
-		 * T​o​g​g​l​e​ ​b​l​a​c​k​-​s​c​r​e​e​n​ ​m​o​d​e​ ​f​o​r​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
-		 */
-		ACTION_DESC_TOGGLE_BLACK: string
-		/**
-		 * F​r​e​e​z​e​ ​a​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​ ​s​o​ ​i​t​ ​i​g​n​o​r​e​s​ ​f​u​r​t​h​e​r​ ​c​o​n​t​e​n​t​ ​u​p​d​a​t​e​s​.
-		 */
-		ACTION_DESC_FREEZE_WINDOW: string
-		/**
-		 * U​n​f​r​e​e​z​e​ ​a​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​ ​a​n​d​ ​r​e​s​u​m​e​ ​l​i​v​e​ ​u​p​d​a​t​e​s​.
-		 */
-		ACTION_DESC_UNFREEZE_WINDOW: string
-		/**
-		 * S​h​o​w​ ​a​ ​t​e​m​p​o​r​a​r​y​ ​i​d​e​n​t​i​f​y​ ​o​v​e​r​l​a​y​ ​o​n​ ​a​l​l​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s​.
-		 */
-		ACTION_DESC_IDENTIFY_WINDOWS: string
-		/**
-		 * S​e​t​ ​d​i​s​p​l​a​y​ ​m​o​d​e​ ​(​`​n​o​r​m​a​l​`​ ​o​r​ ​`​s​t​r​e​a​m​`​)​ ​f​o​r​ ​m​a​t​c​h​i​n​g​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​s​.
-		 */
-		ACTION_DESC_SET_DISPLAY_MODE: string
-		/**
-		 * S​t​a​r​t​ ​v​i​d​e​o​ ​p​l​a​y​b​a​c​k​ ​o​n​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
-		 */
-		ACTION_DESC_VIDEO_PLAY: string
-		/**
-		 * P​a​u​s​e​ ​v​i​d​e​o​ ​p​l​a​y​b​a​c​k​ ​o​n​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
-		 */
-		ACTION_DESC_VIDEO_PAUSE: string
-		/**
-		 * S​t​o​p​ ​v​i​d​e​o​ ​p​l​a​y​b​a​c​k​ ​o​n​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
-		 */
-		ACTION_DESC_VIDEO_STOP: string
-		/**
-		 * S​e​e​k​ ​v​i​d​e​o​ ​p​l​a​y​b​a​c​k​ ​t​o​ ​p​a​y​l​o​a​d​.​p​o​s​i​t​i​o​n​ ​s​e​c​o​n​d​s​ ​o​n​ ​t​h​e​ ​t​a​r​g​e​t​ ​w​i​n​d​o​w​(​s​)​.
-		 */
-		ACTION_DESC_VIDEO_SEEK: string
-		/**
-		 * R​e​q​u​e​s​t​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​c​o​n​t​r​o​l​l​e​r​ ​s​t​a​t​e​ ​f​r​o​m​ ​t​h​e​ ​o​p​e​r​a​t​o​r​ ​a​p​p​.
-		 */
-		ACTION_DESC_GET_STATE: string
-		/**
-		 * R​e​t​u​r​n​ ​c​u​r​r​e​n​t​ ​p​r​e​s​e​n​t​a​t​i​o​n​ ​w​i​n​d​o​w​s​ ​a​n​d​ ​r​u​n​t​i​m​e​ ​s​t​a​t​u​s​.
-		 */
-		ACTION_DESC_GET_WINDOWS: string
-		/**
-		 * S​c​a​n​ ​N​e​t​w​o​r​k
-		 */
-		SCAN_NETWORK: string
-		/**
-		 * S​c​a​n​n​i​n​g​.​.​.
-		 */
-		SCAN_RUNNING: string
-		/**
-		 * N​o​ ​W​e​b​S​o​c​k​e​t​ ​s​e​r​v​e​r​s​ ​f​o​u​n​d​ ​o​n​ ​t​h​e​ ​l​o​c​a​l​ ​n​e​t​w​o​r​k​.
-		 */
-		SCAN_NO_RESULTS: string
-		/**
-		 * F​o​u​n​d​ ​{​c​o​u​n​t​}​ ​h​o​s​t​(​s​)​ ​o​n​ ​p​o​r​t​:
-		 * @param {unknown} count
-		 */
-		SCAN_FOUND: RequiredParams<'count'>
 	}
 	MUSICIAN: {
 		/**
@@ -7411,6 +10545,10 @@ type RootTranslation = {
 		 */
 		CMD_TOGGLE_VIDEO_PLAYBACK: string
 		/**
+		 * M​a​s​t​e​r​ ​v​i​d​e​o​ ​s​p​e​e​d
+		 */
+		CMD_MASTER_SPEED: string
+		/**
 		 * B​l​a​c​k​ ​s​c​r​e​e​n
 		 */
 		CMD_TOGGLE_BLACK: string
@@ -7485,6 +10623,10 @@ type RootTranslation = {
 		 * B​a​c​k​e​n​d​ ​i​s​ ​n​o​t​ ​r​e​a​c​h​a​b​l​e
 		 */
 		SNACK_MESSAGE: string
+		/**
+		 * S​e​r​v​e​r​ ​n​o​t​ ​r​e​a​c​h​a​b​l​e​ ​—​ ​s​w​i​t​c​h​e​d​ ​t​o​ ​o​f​f​l​i​n​e​ ​m​o​d​e​ ​w​i​t​h​ ​t​h​e​ ​s​a​v​e​d​ ​s​h​o​w
+		 */
+		SNACK_OFFLINE_FALLBACK: string
 		/**
 		 * C​h​a​n​g​e​ ​b​a​c​k​e​n​d​ ​s​e​t​t​i​n​g​s
 		 */
@@ -8056,6 +11198,26 @@ export type TranslationFunctions = {
 		 */
 		SESSION_EXPIRED: () => LocalizedString
 		/**
+		 * Your sign-in ends in {minutes} min. Renew it now so nothing stops during the service.
+		 */
+		SESSION_EXPIRING: (arg: { minutes: number }) => LocalizedString
+		/**
+		 * Renew
+		 */
+		RENEW_SESSION: () => LocalizedString
+		/**
+		 * Signing in again in the small window…
+		 */
+		RELOGIN_WAITING: () => LocalizedString
+		/**
+		 * Signed in again. This window closes by itself.
+		 */
+		RELOGIN_DONE: () => LocalizedString
+		/**
+		 * The sign-in window was blocked; signing in on this page instead.
+		 */
+		RELOGIN_POPUP_BLOCKED: () => LocalizedString
+		/**
 		 * The server did not accept the sign-in
 		 */
 		LOGIN_REJECTED: () => LocalizedString
@@ -8099,6 +11261,14 @@ export type TranslationFunctions = {
 		 * Please try logging in again.
 		 */
 		PLEASE_TRY_AGAIN: () => LocalizedString
+		/**
+		 * Reference {ref} — mention it when you report this.
+		 */
+		ERROR_REFERENCE: (arg: { ref: string }) => LocalizedString
+		/**
+		 * Sign in again
+		 */
+		TRY_AGAIN: () => LocalizedString
 		/**
 		 * Saved Credentials
 		 */
@@ -8281,6 +11451,38 @@ export type TranslationFunctions = {
 		 * Authentication Failed
 		 */
 		AUTHENTICATION_FAILED: () => LocalizedString
+		/**
+		 * Sign-in interrupted
+		 */
+		SESSION_LOST: () => LocalizedString
+		/**
+		 * Your browser came back from the sign-in without the presenter’s session. This happens when cookies are blocked for this site, when the page was opened under another address, or when the sign-in page was left open for a long time. Signing in again usually works straight away.
+		 */
+		SESSION_LOST_MESSAGE: () => LocalizedString
+		/**
+		 * Sign-in service not reachable
+		 */
+		PROVIDER_UNREACHABLE: () => LocalizedString
+		/**
+		 * The presenter could not reach your organisation’s sign-in service. It may be briefly unavailable. Try again in a moment; if it keeps happening, tell your administrator.
+		 */
+		PROVIDER_UNREACHABLE_MESSAGE: () => LocalizedString
+		/**
+		 * Sign-in took too long
+		 */
+		LOGIN_EXPIRED: () => LocalizedString
+		/**
+		 * This sign-in was started more than ten minutes ago or has already been used. Start it again.
+		 */
+		LOGIN_EXPIRED_MESSAGE: () => LocalizedString
+		/**
+		 * Group membership unreadable
+		 */
+		GROUPS_CLAIM_INVALID: () => LocalizedString
+		/**
+		 * The sign-in service sent your group memberships in a form the presenter cannot read, and this account requires a group. An administrator needs to check the groups mapping at the identity provider.
+		 */
+		GROUPS_CLAIM_INVALID_MESSAGE: () => LocalizedString
 		/**
 		 * Authentication with the identity provider failed. This could be a temporary issue.
 		 */
@@ -8624,69 +11826,41 @@ export type TranslationFunctions = {
 		 */
 		WS_HOST_NOT_CONFIGURED: () => LocalizedString
 		/**
-		 * ChurchTools
+		 * Network access
 		 */
-		CHURCH_TOOLS: () => LocalizedString
+		NETWORK_ACCESS: () => LocalizedString
 		/**
-		 * Configure ChurchTools
+		 * Network access of integrations
 		 */
-		CONFIGURE_CHURCH_TOOLS: () => LocalizedString
+		CONFIGURE_NETWORK_ACCESS: () => LocalizedString
 		/**
-		 * Connect this account to a ChurchTools instance to enable CCLI SongSelect search and arrangement downloads for musicians.
+		 * The account sets up Nextcloud and ChurchTools itself in Settings → Connections. The server only reaches them at public https addresses, unless you allow a private network here.
 		 */
-		CHURCH_TOOLS_HELP: () => LocalizedString
+		NETWORK_HELP: () => LocalizedString
 		/**
-		 * ChurchTools API URL
+		 * not set up
 		 */
-		CHURCH_TOOLS_URL: () => LocalizedString
+		NETWORK_NOT_SET_UP: () => LocalizedString
 		/**
-		 * API Login Token
+		 * Integrations may be in a private network
 		 */
-		CHURCH_TOOLS_TOKEN: () => LocalizedString
+		NETWORK_PRIVATE: () => LocalizedString
 		/**
-		 * Leave blank to keep the existing token. Enter a new value to update it.
+		 * Only when these services are reachable from the presenter server by an internal address. It lets requests for this account reach the server’s own network.
 		 */
-		CHURCH_TOOLS_TOKEN_HELP: () => LocalizedString
+		NETWORK_PRIVATE_HELP: () => LocalizedString
 		/**
-		 * (token already set)
+		 * Private network
 		 */
-		CHURCH_TOOLS_TOKEN_PLACEHOLDER_SET: () => LocalizedString
+		NETWORK_PRIVATE_ALLOWED: () => LocalizedString
 		/**
-		 * Clearing the URL will disable the ChurchTools integration for this account.
+		 * Public only
 		 */
-		CHURCH_TOOLS_CLEAR_WARNING: () => LocalizedString
+		NETWORK_PUBLIC_ONLY: () => LocalizedString
 		/**
-		 * Spotify
+		 * The setting could not be saved.
 		 */
-		SPOTIFY: () => LocalizedString
-		/**
-		 * Configure Spotify
-		 */
-		CONFIGURE_SPOTIFY: () => LocalizedString
-		/**
-		 * Lets this account link set list songs to Spotify tracks. Create an app in the Spotify developer dashboard and copy its Client ID and Client Secret:
-		 */
-		SPOTIFY_HELP: () => LocalizedString
-		/**
-		 * Client ID
-		 */
-		SPOTIFY_CLIENT_ID: () => LocalizedString
-		/**
-		 * Client Secret
-		 */
-		SPOTIFY_CLIENT_SECRET: () => LocalizedString
-		/**
-		 * Leave blank to keep the existing secret. Enter a new value to update it.
-		 */
-		SPOTIFY_SECRET_HELP: () => LocalizedString
-		/**
-		 * (secret already set)
-		 */
-		SPOTIFY_SECRET_PLACEHOLDER_SET: () => LocalizedString
-		/**
-		 * Clearing the Client ID removes the Spotify credentials for this account.
-		 */
-		SPOTIFY_CLEAR_WARNING: () => LocalizedString
+		NETWORK_SAVE_FAILED: () => LocalizedString
 	}
 	ADMIN_LOGS: {
 		/**
@@ -9186,6 +12360,22 @@ export type TranslationFunctions = {
 		 */
 		DELETE_BLOCK: () => LocalizedString
 		/**
+		 * Too long for one row on screen — it will wrap.
+		 */
+		LINE_TOO_LONG: () => LocalizedString
+		/**
+		 * A page holds about {lines} lines in this theme; add a page break where it gets longer.
+		 */
+		PAGE_TOO_LONG: (arg: { lines: number }) => LocalizedString
+		/**
+		 * Show how the block looks on screen
+		 */
+		SHOW_PREVIEW: () => LocalizedString
+		/**
+		 * Hide the screen preview
+		 */
+		HIDE_PREVIEW: () => LocalizedString
+		/**
 		 * Languages
 		 */
 		LANGUAGES: () => LocalizedString
@@ -9321,6 +12511,114 @@ export type TranslationFunctions = {
 		 * Are you sure you want to delete the order "{name}"? This action cannot be undone.
 		 */
 		DELETE_ORDER_MESSAGE: (arg: { name: unknown }) => LocalizedString
+		/**
+		 * Text
+		 */
+		TEXT_TAB: () => LocalizedString
+		/**
+		 * Edit the whole song as text
+		 */
+		TEXT_TAB_HINT: () => LocalizedString
+		/**
+		 * Insert:
+		 */
+		TEXT_INSERT: () => LocalizedString
+		/**
+		 * Block
+		 */
+		TEXT_INSERT_BLOCK: () => LocalizedString
+		/**
+		 * How it works
+		 */
+		TEXT_HELP_TITLE: () => LocalizedString
+		/**
+		 * Starts a block. Everything below belongs to it until the next heading.
+		 */
+		TEXT_HELP_BLOCK: () => LocalizedString
+		/**
+		 * Starts a new slide inside the block.
+		 */
+		TEXT_HELP_PAGE: () => LocalizedString
+		/**
+		 * Translation of the line above, here in {language}.
+		 */
+		TEXT_HELP_TRANSLATION: (arg: { language: unknown }) => LocalizedString
+		/**
+		 * Translation of the line above. Add languages in the info tab first.
+		 */
+		TEXT_HELP_NO_TRANSLATION: () => LocalizedString
+		/**
+		 * empty line
+		 */
+		TEXT_HELP_EMPTY_LINE: () => LocalizedString
+		/**
+		 * Between blocks it is only spacing; inside a block it shows as an empty line.
+		 */
+		TEXT_HELP_EMPTY: () => LocalizedString
+		/**
+		 * Good to know
+		 */
+		TEXT_NOTES_TITLE: () => LocalizedString
+		/**
+		 * Changes are applied when you leave the text field.
+		 */
+		TEXT_NOTE_APPLY: () => LocalizedString
+		/**
+		 * Renaming a heading renames the block in every arrangement.
+		 */
+		TEXT_NOTE_RENAME: () => LocalizedString
+		/**
+		 * Removing a heading asks first when an arrangement uses the block.
+		 */
+		TEXT_NOTE_REMOVE: () => LocalizedString
+		/**
+		 * Arrangements are edited below, not in the text.
+		 */
+		TEXT_NOTE_ORDER: () => LocalizedString
+		/**
+		 * {count} block{{s}}
+		 */
+		TEXT_STATUS_BLOCKS: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} slide{{s}}
+		 */
+		TEXT_STATUS_SLIDES: (arg: { count: number }) => LocalizedString
+		/**
+		 * Line {line}: “{name}” appears twice
+		 */
+		TEXT_PROBLEM_DUPLICATE: (arg: { line: number, name: string }) => LocalizedString
+		/**
+		 * Line {line}: the block name after # is missing
+		 */
+		TEXT_PROBLEM_EMPTY_NAME: (arg: { line: number }) => LocalizedString
+		/**
+		 * Line {line}: [{code}] is not a language of this song
+		 */
+		TEXT_PROBLEM_LANGUAGE: (arg: { code: string, line: number }) => LocalizedString
+		/**
+		 * {count} more
+		 */
+		TEXT_MORE_PROBLEMS: (arg: { count: number }) => LocalizedString
+		/**
+		 * Not applied until fixed
+		 */
+		TEXT_NOT_APPLIED: () => LocalizedString
+		/**
+		 * Remove blocks?
+		 */
+		TEXT_REMOVE_TITLE: () => LocalizedString
+		/**
+		 * These blocks are no longer in the text but arrangements use them. Removing them also takes them out of those arrangements.
+		 */
+		TEXT_REMOVE_MESSAGE: () => LocalizedString
+		/**
+		 * used in {orders}
+		 */
+		TEXT_REMOVE_USED_IN: (arg: { orders: string }) => LocalizedString
+		/**
+		 * Remove blocks
+		 */
+		TEXT_REMOVE_CONFIRM: () => LocalizedString
 	}
 	SONG_LANGUAGE_REVIEW: {
 		/**
@@ -9423,6 +12721,18 @@ export type TranslationFunctions = {
 		 * Shows
 		 */
 		TITLE: () => LocalizedString
+		/**
+		 * Copy agenda — for a messenger or e-mail
+		 */
+		COPY_AGENDA: () => LocalizedString
+		/**
+		 * Agenda copied — paste it into a message or an e-mail
+		 */
+		AGENDA_COPIED: () => LocalizedString
+		/**
+		 * Could not copy the agenda
+		 */
+		AGENDA_COPY_FAILED: () => LocalizedString
 		/**
 		 * New Show
 		 */
@@ -9605,6 +12915,90 @@ export type TranslationFunctions = {
 		 * Move to group
 		 */
 		MOVE_ITEM_TO: () => LocalizedString
+		/**
+		 * The theme every item in this group is shown in
+		 */
+		THEME_HINT: () => LocalizedString
+		/**
+		 * Theme
+		 */
+		THEME: () => LocalizedString
+		/**
+		 * Group settings
+		 */
+		SETTINGS: () => LocalizedString
+		/**
+		 * Add item
+		 */
+		ADD_ITEM: () => LocalizedString
+		/**
+		 * Group settings · {group}
+		 */
+		SETTINGS_TITLE: (arg: { group: string }) => LocalizedString
+		/**
+		 * General
+		 */
+		TAB_GENERAL: () => LocalizedString
+		/**
+		 * Without a name this is the Default group. Give it a name to keep it in the library.
+		 */
+		DEFAULT_NAME_HINT: () => LocalizedString
+		/**
+		 * Only a named group with entries can be kept in the library.
+		 */
+		KEEP_NEEDS_NAME: () => LocalizedString
+		/**
+		 * Show theme
+		 */
+		THEME_FROM_SHOW: () => LocalizedString
+		/**
+		 * Use the show theme
+		 */
+		THEME_FOLLOW_SHOW: () => LocalizedString
+		/**
+		 * New theme
+		 */
+		NEW_THEME: () => LocalizedString
+		/**
+		 * A copy of the chosen theme, named after this group, to change without touching the others
+		 */
+		NEW_THEME_HINT: () => LocalizedString
+		/**
+		 * {group} theme
+		 */
+		NEW_THEME_NAME: (arg: { group: string }) => LocalizedString
+		/**
+		 * Edit this theme
+		 */
+		EDIT_THEME: () => LocalizedString
+		/**
+		 * Saves the group and opens the theme in the theme editor
+		 */
+		EDIT_THEME_HINT: () => LocalizedString
+		/**
+		 * Name and colour in the agenda
+		 */
+		TAB_GENERAL_DESC: () => LocalizedString
+		/**
+		 * How its slides look
+		 */
+		TAB_THEME_DESC: () => LocalizedString
+		/**
+		 * How its media play together
+		 */
+		TAB_PLAYBACK_DESC: () => LocalizedString
+		/**
+		 * {count} entries
+		 */
+		SUMMARY_ENTRIES: (arg: { count: number }) => LocalizedString
+		/**
+		 * In the agenda
+		 */
+		SUMMARY_PREVIEW: () => LocalizedString
+		/**
+		 * The colour marks the group in the agenda and on its entries.
+		 */
+		COLOR_HINT: () => LocalizedString
 	}
 	SHOW_ITEMS: {
 		/**
@@ -9627,6 +13021,46 @@ export type TranslationFunctions = {
 		 * Add Media
 		 */
 		ADD_MEDIA: () => LocalizedString
+		/**
+		 * Image, video or audio — or drop files onto the agenda
+		 */
+		ADD_MEDIA_HINT: () => LocalizedString
+		/**
+		 * Add background
+		 */
+		ADD_BACKGROUND: () => LocalizedString
+		/**
+		 * Image or video behind the text of this group
+		 */
+		ADD_BACKGROUND_HINT: () => LocalizedString
+		/**
+		 * Add slideshow
+		 */
+		ADD_SLIDESHOW: () => LocalizedString
+		/**
+		 * Images one after another, e.g. announcements
+		 */
+		ADD_SLIDESHOW_HINT: () => LocalizedString
+		/**
+		 * Slideshow
+		 */
+		SLIDESHOW: () => LocalizedString
+		/**
+		 * Search songs, media and verses
+		 */
+		ADD_FROM_SEARCH: () => LocalizedString
+		/**
+		 * Adding to: {group}
+		 */
+		ADDING_TO: (arg: { group: string }) => LocalizedString
+		/**
+		 * Added {name}
+		 */
+		ADDED: (arg: { name: string }) => LocalizedString
+		/**
+		 * Added {name} to {group}
+		 */
+		ADDED_TO_GROUP: (arg: { group: string, name: string }) => LocalizedString
 		/**
 		 * Add Bible Verse
 		 */
@@ -9652,7 +13086,7 @@ export type TranslationFunctions = {
 		 */
 		EMPTY_HINT_ADD: () => LocalizedString
 		/**
-		 * or drag & drop CCLI (.txt) or SongBeamer (.sng) song files here to get started.
+		 * — or use the drop area below.
 		 */
 		EMPTY_HINT_CCLI: () => LocalizedString
 		/**
@@ -9660,7 +13094,7 @@ export type TranslationFunctions = {
 		 */
 		EMPTY_HINT_BODY: () => LocalizedString
 		/**
-		 * Click or drop .txt or .sng song files here
+		 * Click to import .txt or .sng song files, or drop songs, images, videos and audio here
 		 */
 		EMPTY_HINT_DROP: () => LocalizedString
 		/**
@@ -9679,6 +13113,18 @@ export type TranslationFunctions = {
 		 * Leave empty to show the file name or URL
 		 */
 		NAME_HINT: () => LocalizedString
+		/**
+		 * Edit text
+		 */
+		EDIT_TEXT: () => LocalizedString
+		/**
+		 * Verse text
+		 */
+		VERSE_TEXT: () => LocalizedString
+		/**
+		 * A line with only --- starts a new page. Ctrl+Enter saves.
+		 */
+		EDIT_TEXT_HINT: () => LocalizedString
 	}
 	BIBLE: {
 		/**
@@ -9945,6 +13391,26 @@ export type TranslationFunctions = {
 		 * Reset to 100%
 		 */
 		RESET_ZOOM: () => LocalizedString
+		/**
+		 * Not on screen
+		 */
+		OPENED: () => LocalizedString
+		/**
+		 * Opened to look at or edit. Click a slide to put it on screen.
+		 */
+		OPENED_HINT: () => LocalizedString
+		/**
+		 * On screen: {name}
+		 */
+		LIVE_NOW: (arg: { name: string }) => LocalizedString
+		/**
+		 * Go live
+		 */
+		GO_LIVE: () => LocalizedString
+		/**
+		 * Back to live
+		 */
+		BACK_TO_LIVE: () => LocalizedString
 	}
 	VIEWER_TOKEN: {
 		/**
@@ -10018,7 +13484,7 @@ export type TranslationFunctions = {
 	}
 	STYLE: {
 		/**
-		 * Style Editor
+		 * Style Library
 		 */
 		EDITOR: () => LocalizedString
 		/**
@@ -10154,9 +13620,13 @@ export type TranslationFunctions = {
 		 */
 		CREATE: () => LocalizedString
 		/**
-		 * Are you sure you want to delete this style?
+		 * Delete style
 		 */
-		DELETE_CONFIRM: () => LocalizedString
+		DELETE_TITLE: () => LocalizedString
+		/**
+		 * Delete “{name}”? Shows and agenda groups that use it fall back to the default theme.
+		 */
+		DELETE_CONFIRM: (arg: { name: string }) => LocalizedString
 		/**
 		 * New Style
 		 */
@@ -10548,6 +14018,10 @@ export type TranslationFunctions = {
 		 */
 		BACKGROUND_TRANSPARENT: () => LocalizedString
 		/**
+		 * Images and videos behind the text are background entries in the agenda now, so each agenda group can have its own and switch them live.
+		 */
+		BACKGROUND_FROM_AGENDA: () => LocalizedString
+		/**
 		 * No Image (suppress inherited)
 		 */
 		BACKGROUND_IMAGE_NONE: () => LocalizedString
@@ -10631,6 +14105,10 @@ export type TranslationFunctions = {
 		 * Background
 		 */
 		SECTION_BACKGROUND: () => LocalizedString
+		/**
+		 * All screen groups
+		 */
+		GROUP_PREVIEWS: () => LocalizedString
 		/**
 		 * Layout & Spacing
 		 */
@@ -11158,9 +14636,13 @@ export type TranslationFunctions = {
 		 */
 		STAGE_LAYERS_NONE: () => LocalizedString
 		/**
-		 * Pick which stage layers appear on this window. Nothing is shown until one is selected.
+		 * Stage layers are assigned to screen groups in the stage monitor panel. This window shows:
 		 */
 		STAGE_LAYERS_HINT: () => LocalizedString
+		/**
+		 * No stage layers
+		 */
+		STAGE_LAYERS_NONE_HERE: () => LocalizedString
 		/**
 		 * Quick actions
 		 */
@@ -11169,10 +14651,2782 @@ export type TranslationFunctions = {
 		 * All settings…
 		 */
 		MORE_SETTINGS: () => LocalizedString
+		/**
+		 * Windows
+		 */
+		TAB_WINDOWS: () => LocalizedString
+		/**
+		 * Screen groups
+		 */
+		TAB_GROUPS: () => LocalizedString
+		/**
+		 * Screen group
+		 */
+		SCREEN_GROUP: () => LocalizedString
+		/**
+		 * Choose a group
+		 */
+		SCREEN_GROUP_NONE: () => LocalizedString
+		/**
+		 * The group decides everything this window shows. Change it in the Screen groups tab.
+		 */
+		SCREEN_GROUP_HINT: () => LocalizedString
+	}
+	SCREEN_GROUP: {
+		/**
+		 * A screen group is an output such as Audience, Stage or Stream. Assign windows to a group — the group decides what they show, so nothing depends on one physical screen.
+		 */
+		HINT: () => LocalizedString
+		/**
+		 * Add group
+		 */
+		ADD: () => LocalizedString
+		/**
+		 * Duplicate group (same settings)
+		 */
+		DUPLICATE: () => LocalizedString
+		/**
+		 * Kind
+		 */
+		KIND: () => LocalizedString
+		/**
+		 * Audience
+		 */
+		KIND_AUDIENCE: () => LocalizedString
+		/**
+		 * Stage
+		 */
+		KIND_STAGE: () => LocalizedString
+		/**
+		 * Stream
+		 */
+		KIND_STREAM: () => LocalizedString
+		/**
+		 * LED wall
+		 */
+		KIND_WALL: () => LocalizedString
+		/**
+		 * Custom
+		 */
+		KIND_CUSTOM: () => LocalizedString
+		/**
+		 * Group name
+		 */
+		NAME: () => LocalizedString
+		/**
+		 * Windows
+		 */
+		WINDOWS: () => LocalizedString
+		/**
+		 * Add window…
+		 */
+		ADD_WINDOW: () => LocalizedString
+		/**
+		 * in {group}
+		 */
+		IN_GROUP: (arg: { group: string }) => LocalizedString
+		/**
+		 * No windows in this group yet.
+		 */
+		NO_WINDOWS: () => LocalizedString
+		/**
+		 * Shows
+		 */
+		SHOWS: () => LocalizedString
+		/**
+		 * Background
+		 */
+		LAYER_BACKGROUND: () => LocalizedString
+		/**
+		 * Song text
+		 */
+		LAYER_SLIDES: () => LocalizedString
+		/**
+		 * Media items
+		 */
+		LAYER_MEDIA: () => LocalizedString
+		/**
+		 * Bible verses
+		 */
+		LAYER_BIBLE: () => LocalizedString
+		/**
+		 * Stage overlays
+		 */
+		LAYER_OVERLAYS: () => LocalizedString
+		/**
+		 * Stage layout
+		 */
+		STAGE_LAYOUT: () => LocalizedString
+		/**
+		 * Band
+		 */
+		LAYOUT_BAND: () => LocalizedString
+		/**
+		 * Speaker
+		 */
+		LAYOUT_SPEAKER: () => LocalizedString
+		/**
+		 * Countdown
+		 */
+		LAYOUT_COUNTDOWN: () => LocalizedString
+		/**
+		 * Lyrics
+		 */
+		LAYOUT_LYRICS: () => LocalizedString
+		/**
+		 * Arrangement roadmap
+		 */
+		STAGE_ROADMAP: () => LocalizedString
+		/**
+		 * Next section
+		 */
+		STAGE_NEXT: () => LocalizedString
+		/**
+		 * Key
+		 */
+		STAGE_KEY: () => LocalizedString
+		/**
+		 * Clock
+		 */
+		STAGE_CLOCK: () => LocalizedString
+		/**
+		 * The chosen layout does not show this.
+		 */
+		STAGE_NOT_IN_LAYOUT: () => LocalizedString
+		/**
+		 * Mirror (teleprompter glass)
+		 */
+		STAGE_MIRROR: () => LocalizedString
+		/**
+		 * Text size
+		 */
+		STAGE_TEXT_SIZE: () => LocalizedString
+		/**
+		 * Normal
+		 */
+		TEXT_NORMAL: () => LocalizedString
+		/**
+		 * Large
+		 */
+		TEXT_LARGE: () => LocalizedString
+		/**
+		 * Huge
+		 */
+		TEXT_HUGE: () => LocalizedString
+		/**
+		 * Not in a group
+		 */
+		UNASSIGNED: () => LocalizedString
+		/**
+		 * These windows join the first group as soon as there is one.
+		 */
+		UNASSIGNED_HINT: () => LocalizedString
+		/**
+		 * No screen groups yet
+		 */
+		EMPTY: () => LocalizedString
+		/**
+		 * Start with one group per kind of output, for example Audience and Stage.
+		 */
+		EMPTY_HINT: () => LocalizedString
+		/**
+		 * Delete group
+		 */
+		DELETE: () => LocalizedString
+		/**
+		 * Delete “{name}”? Its windows stay and join the first Audience group instead.
+		 */
+		DELETE_CONFIRM: (arg: { name: string }) => LocalizedString
+		/**
+		 * Text
+		 */
+		DISPLAY: () => LocalizedString
+		/**
+		 * Whole slides
+		 */
+		DISPLAY_NORMAL: () => LocalizedString
+		/**
+		 * Stream, {count} line{{s}}
+		 */
+		DISPLAY_STREAM: (arg: { count: number }) => LocalizedString
+		/**
+		 * Stream lines
+		 */
+		DISPLAY_STREAM_SHORT: () => LocalizedString
+		/**
+		 * Lines at once
+		 */
+		DISPLAY_LINES: () => LocalizedString
+		/**
+		 * Languages
+		 */
+		LANGUAGES: () => LocalizedString
+		/**
+		 * From the theme
+		 */
+		LANGUAGES_FROM_THEME: () => LocalizedString
+		/**
+		 * Transparent background
+		 */
+		TRANSPARENT: () => LocalizedString
+		/**
+		 * The windows get a see-through background, for keying text over video in streaming software.
+		 */
+		TRANSPARENT_HINT: () => LocalizedString
+		/**
+		 * Set on the screen group, for every window in it.
+		 */
+		CHANGE_ON_GROUP: () => LocalizedString
+		/**
+		 * The screen group could not be saved. Check the connection and try again.
+		 */
+		SAVE_FAILED: () => LocalizedString
+		/**
+		 * Drop a window here
+		 */
+		DROP_HERE: () => LocalizedString
+		/**
+		 * drag →
+		 */
+		DRAG_HINT: () => LocalizedString
+		/**
+		 * closed
+		 */
+		CLOSED: () => LocalizedString
+		/**
+		 * A theme or track that names a group no window on this machine has joined is simply not shown — no error, no broken assignment.
+		 */
+		NOT_JOINED_HINT: () => LocalizedString
+	}
+	LOOK: {
+		/**
+		 * Look
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Look…
+		 */
+		MENU: () => LocalizedString
+		/**
+		 * This item
+		 */
+		TAB_ITEM: () => LocalizedString
+		/**
+		 * Song
+		 */
+		TAB_SONG: () => LocalizedString
+		/**
+		 * Show
+		 */
+		TAB_SHOW: () => LocalizedString
+		/**
+		 * Only for this entry in this show. It wins over the song and the show.
+		 */
+		TAB_ITEM_HINT: () => LocalizedString
+		/**
+		 * Backgrounds that travel with the song into every show. Its theme comes from the agenda group.
+		 */
+		TAB_SONG_HINT: () => LocalizedString
+		/**
+		 * The default for every item in this show.
+		 */
+		TAB_SHOW_HINT: () => LocalizedString
+		/**
+		 * Theme
+		 */
+		THEME: () => LocalizedString
+		/**
+		 * Inherit
+		 */
+		THEME_INHERIT: () => LocalizedString
+		/**
+		 * Inherit from {level}
+		 */
+		THEME_INHERIT_FROM: (arg: { level: string }) => LocalizedString
+		/**
+		 * Background
+		 */
+		BACKGROUND: () => LocalizedString
+		/**
+		 * Inherit
+		 */
+		BACKGROUND_INHERIT: () => LocalizedString
+		/**
+		 * No background
+		 */
+		BACKGROUND_NONE: () => LocalizedString
+		/**
+		 * Deleted background
+		 */
+		BACKGROUND_MISSING: () => LocalizedString
+		/**
+		 * Background — all screen groups
+		 */
+		BACKGROUND_ALL_GROUPS: () => LocalizedString
+		/**
+		 * Different background per screen group
+		 */
+		BACKGROUND_PER_GROUP: () => LocalizedString
+		/**
+		 * Same as all groups
+		 */
+		BACKGROUND_SAME_AS_ALL: () => LocalizedString
+		/**
+		 * Manage backgrounds…
+		 */
+		MANAGE_BACKGROUNDS: () => LocalizedString
+		/**
+		 * Use show backgrounds
+		 */
+		USE_SHOW_LOOK: () => LocalizedString
+		/**
+		 * Ignore the song’s own backgrounds so this item matches the show.
+		 */
+		USE_SHOW_LOOK_HINT: () => LocalizedString
+		/**
+		 * Theme and backgrounds
+		 */
+		USE_SHOW_LOOK_ALL: () => LocalizedString
+		/**
+		 * Theme only
+		 */
+		USE_SHOW_LOOK_THEME: () => LocalizedString
+		/**
+		 * Backgrounds only
+		 */
+		USE_SHOW_LOOK_BACKGROUNDS: () => LocalizedString
+		/**
+		 * Now showing
+		 */
+		NOW_SHOWING: () => LocalizedString
+		/**
+		 * {name} · from {level}
+		 */
+		SOURCE: (arg: { level: string, name: string }) => LocalizedString
+		/**
+		 * default
+		 */
+		LEVEL_DEFAULT: () => LocalizedString
+		/**
+		 * account
+		 */
+		LEVEL_GLOBAL: () => LocalizedString
+		/**
+		 * show
+		 */
+		LEVEL_SHOW: () => LocalizedString
+		/**
+		 * song
+		 */
+		LEVEL_SONG: () => LocalizedString
+		/**
+		 * item
+		 */
+		LEVEL_ITEM: () => LocalizedString
+		/**
+		 * agenda group
+		 */
+		LEVEL_GROUP: () => LocalizedString
+		/**
+		 * Default look
+		 */
+		NO_THEME: () => LocalizedString
+		/**
+		 * The look could not be saved. Check the connection and try again.
+		 */
+		SAVE_FAILED: () => LocalizedString
+		/**
+		 * Default background
+		 */
+		GLOBAL_BACKGROUND: () => LocalizedString
+		/**
+		 * Default background
+		 */
+		DEFAULT_BACKGROUND: () => LocalizedString
+		/**
+		 * Shown wherever this theme is used and the show, song or item assigns no background.
+		 */
+		DEFAULT_BACKGROUND_HINT: () => LocalizedString
+		/**
+		 * None set — use what is assigned elsewhere
+		 */
+		THEME_NO_DEFAULT_BACKGROUND: () => LocalizedString
+		/**
+		 * All screen groups
+		 */
+		VARIANT_ALL_GROUPS: () => LocalizedString
+		/**
+		 * Changes here apply only to windows in this screen group; everything else comes from “All screen groups”.
+		 */
+		VARIANT_HINT: () => LocalizedString
+		/**
+		 * This theme, all screen groups
+		 */
+		VARIANT_BASE: () => LocalizedString
+		/**
+		 * This theme still keeps its own background settings.
+		 */
+		LEGACY_BACKGROUND: () => LocalizedString
+		/**
+		 * Moving them creates a library background and makes it this theme’s default. Nothing changes on screen.
+		 */
+		LEGACY_BACKGROUND_HINT: () => LocalizedString
+		/**
+		 * Move to library
+		 */
+		LEGACY_BACKGROUND_MOVE: () => LocalizedString
+		/**
+		 * Done
+		 */
+		DONE: () => LocalizedString
+		/**
+		 * Background per section
+		 */
+		TRACK: () => LocalizedString
+		/**
+		 * Change the background when a section starts. An empty cell keeps the background of the section before running — no restart, no flicker.
+		 */
+		TRACK_HINT: () => LocalizedString
+		/**
+		 * Continue
+		 */
+		TRACK_CONTINUE: () => LocalizedString
+		/**
+		 * Start of song
+		 */
+		TRACK_START: () => LocalizedString
+		/**
+		 * Per screen group
+		 */
+		TRACK_GROUPS: () => LocalizedString
+		/**
+		 * The current arrangement of this song has no sections.
+		 */
+		TRACK_NO_SECTIONS: () => LocalizedString
+		/**
+		 * All groups
+		 */
+		TRACK_ALL_GROUPS: () => LocalizedString
+		/**
+		 * Screen group
+		 */
+		TRACK_SCREEN_GROUP: () => LocalizedString
+		/**
+		 * Per section
+		 */
+		TRACK_PER_SECTION: () => LocalizedString
+		/**
+		 * Group shows no background
+		 */
+		TRACK_GROUP_NO_BG: () => LocalizedString
+		/**
+		 * Hidden by this group’s layer settings
+		 */
+		TRACK_HIDDEN_BY_GROUP: () => LocalizedString
+		/**
+		 * from {level}
+		 */
+		TRACK_INHERITED: (arg: { level: string }) => LocalizedString
+		/**
+		 * Selected section
+		 */
+		TRACK_SELECTED: () => LocalizedString
+		/**
+		 * Click a section in a lane to set what the background becomes when it starts.
+		 */
+		TRACK_SELECT_HINT: () => LocalizedString
+		/**
+		 * Transition in
+		 */
+		TRACK_TRANSITION_IN: () => LocalizedString
+		/**
+		 * The transition is set on the All groups lane.
+		 */
+		TRACK_TRANSITION_ON_ALL: () => LocalizedString
+		/**
+		 * Applies to every {name} in the song ({count}×).
+		 */
+		TRACK_REPEATS: (arg: { count: number, name: string }) => LocalizedString
+		/**
+		 * plays in sync with the lyrics · edit it in the control panel
+		 */
+		TRACK_SYNCED_HINT: () => LocalizedString
+		/**
+		 * cut
+		 */
+		TRACK_CUT_LABEL: () => LocalizedString
+		/**
+		 * fade {seconds}s
+		 */
+		TRACK_FADE_LABEL: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * Transition
+		 */
+		TRANSITION: () => LocalizedString
+		/**
+		 * Cut
+		 */
+		TRANSITION_CUT: () => LocalizedString
+		/**
+		 * Fade
+		 */
+		TRANSITION_FADE: () => LocalizedString
+		/**
+		 * Duration
+		 */
+		TRANSITION_DURATION: () => LocalizedString
+		/**
+		 * Synced video
+		 */
+		SYNCED_VIDEO: () => LocalizedString
+		/**
+		 * “{name}” plays in sync with the lyrics on {groups} and replaces the background there. Edit it in the control panel.
+		 */
+		SYNCED_VIDEO_HINT: (arg: { groups: string, name: string }) => LocalizedString
+	}
+	GROUP_PLAYBACK: {
+		/**
+		 * Start with the song
+		 */
+		START_WITH_SONG: () => LocalizedString
+		/**
+		 * Going to a song starts the videos mapped to it, at the section of its slide.
+		 */
+		START_WITH_SONG_HINT: () => LocalizedString
+		/**
+		 * Media playback of this group
+		 */
+		OPEN: () => LocalizedString
+		/**
+		 * Media playback
+		 */
+		MENU_ITEM: () => LocalizedString
+		/**
+		 * Media playback · {group}
+		 */
+		TITLE: (arg: { group: string }) => LocalizedString
+		/**
+		 * Images, videos and slideshows
+		 */
+		SECTION_MEDIA: () => LocalizedString
+		/**
+		 * Order
+		 */
+		ORDER: () => LocalizedString
+		/**
+		 * One after another
+		 */
+		ORDER_SEQUENCE: () => LocalizedString
+		/**
+		 * All together
+		 */
+		ORDER_TOGETHER: () => LocalizedString
+		/**
+		 * Go starts the next entry of the group.
+		 */
+		ORDER_SEQUENCE_HINT: () => LocalizedString
+		/**
+		 * Opening one entry or pressing Go starts all of them.
+		 */
+		ORDER_TOGETHER_HINT: () => LocalizedString
+		/**
+		 * Start the next one when one ends
+		 */
+		AUTO_ADVANCE: () => LocalizedString
+		/**
+		 * Only for entries that end: videos and slideshows without repeat.
+		 */
+		AUTO_ADVANCE_HINT: () => LocalizedString
+		/**
+		 * At most at once
+		 */
+		MAX_AT_ONCE: () => LocalizedString
+		/**
+		 * Counted per screen group; one more covers the oldest.
+		 */
+		MAX_AT_ONCE_HINT: () => LocalizedString
+		/**
+		 * All
+		 */
+		ALL: () => LocalizedString
+		/**
+		 * On top
+		 */
+		TOP_LAYER: () => LocalizedString
+		/**
+		 * Last started
+		 */
+		TOP_LAST_STARTED: () => LocalizedString
+		/**
+		 * Agenda order
+		 */
+		TOP_AGENDA_ORDER: () => LocalizedString
+		/**
+		 * Running media when the agenda moves on to another group
+		 */
+		MEDIA_ON_LEAVE: () => LocalizedString
+		/**
+		 * Images, videos and slideshows of this group that are still on screen.
+		 */
+		MEDIA_ON_LEAVE_HINT: () => LocalizedString
+		/**
+		 * Keep playing
+		 */
+		KEEP_PLAYING: () => LocalizedString
+		/**
+		 * Fade out
+		 */
+		FADE_OUT: () => LocalizedString
+		/**
+		 * Stop
+		 */
+		STOP: () => LocalizedString
+		/**
+		 * Backgrounds
+		 */
+		SECTION_BACKGROUNDS: () => LocalizedString
+		/**
+		 * Switching
+		 */
+		BACKGROUND_TRANSITION: () => LocalizedString
+		/**
+		 * Cut
+		 */
+		CUT: () => LocalizedString
+		/**
+		 * Fade
+		 */
+		FADE: () => LocalizedString
+		/**
+		 * The background when the agenda moves on to another group
+		 */
+		BACKGROUND_ON_LEAVE: () => LocalizedString
+		/**
+		 * A kept background runs until another one starts or it is hidden.
+		 */
+		BACKGROUND_ON_LEAVE_HINT: () => LocalizedString
+		/**
+		 * Keep
+		 */
+		KEEP: () => LocalizedString
+		/**
+		 * Hide at once
+		 */
+		HIDE_NOW: () => LocalizedString
+		/**
+		 * Defaults
+		 */
+		DEFAULTS: () => LocalizedString
+	}
+	SCREEN_SET: {
+		/**
+		 * Screen sets
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * New set
+		 */
+		ADD: () => LocalizedString
+		/**
+		 * A set chooses several screen groups with one chip, e.g. LED wall = LED left + LED right. Each group keeps its own framing.
+		 */
+		HINT: () => LocalizedString
+		/**
+		 * The screen set could not be saved.
+		 */
+		SAVE_FAILED: () => LocalizedString
+		/**
+		 * Screen set
+		 */
+		DEFAULT_NAME: () => LocalizedString
+		/**
+		 * Delete set
+		 */
+		DELETE: () => LocalizedString
+	}
+	SLIDESHOW: {
+		/**
+		 * {seconds} s per image
+		 */
+		SECONDS: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * Cut
+		 */
+		CUT: () => LocalizedString
+		/**
+		 * Fade
+		 */
+		FADE: () => LocalizedString
+		/**
+		 * Repeat
+		 */
+		REPEAT: () => LocalizedString
+		/**
+		 * Add images
+		 */
+		ADD_IMAGES: () => LocalizedString
+		/**
+		 * Add to slideshow
+		 */
+		ADD_IMAGE: () => LocalizedString
+		/**
+		 * Previous image
+		 */
+		PREVIOUS: () => LocalizedString
+		/**
+		 * Next image
+		 */
+		NEXT: () => LocalizedString
+		/**
+		 * {index} of {count} · {seconds} s
+		 */
+		POSITION: (arg: { count: number, index: number, seconds: number }) => LocalizedString
+	}
+	TRANSPORT: {
+		/**
+		 * Double-click for normal speed
+		 */
+		SPEED_RESET_HINT: () => LocalizedString
+		/**
+		 * Speed {rate} — follows the master speed
+		 */
+		SPEED_FOLLOWS_MASTER: (arg: { rate: unknown }) => LocalizedString
+		/**
+		 * Speed
+		 */
+		SPEED_TITLE: () => LocalizedString
+		/**
+		 * Follow the master speed
+		 */
+		FOLLOW_MASTER: () => LocalizedString
+		/**
+		 * Plays at the master speed (M in the Media row). Switch off to give this video its own.
+		 */
+		FOLLOW_MASTER_HINT: () => LocalizedString
+		/**
+		 * Master speed {rate} — every video following it
+		 */
+		MASTER_SPEED: (arg: { rate: unknown }) => LocalizedString
+		/**
+		 * Master speed
+		 */
+		MASTER_SPEED_TITLE: () => LocalizedString
+		/**
+		 * {count} video{{s}} following
+		 */
+		MASTER_FOLLOWERS: (arg: { count: string | number | boolean }) => LocalizedString
+		/**
+		 * Speed {rate}
+		 */
+		SPEED: (arg: { rate: unknown }) => LocalizedString
+		/**
+		 * normal
+		 */
+		SPEED_NORMAL: () => LocalizedString
+		/**
+		 * Showing time left — click for time played
+		 */
+		SHOW_ELAPSED: () => LocalizedString
+		/**
+		 * Showing time played — click for time left
+		 */
+		SHOW_REMAINING: () => LocalizedString
+		/**
+		 * Position
+		 */
+		POSITION: () => LocalizedString
+		/**
+		 * To the start
+		 */
+		TO_START: () => LocalizedString
+		/**
+		 * Previous image
+		 */
+		PREV_SLIDE: () => LocalizedString
+		/**
+		 * Next image
+		 */
+		NEXT_SLIDE: () => LocalizedString
+		/**
+		 * Previous section
+		 */
+		PREV_SECTION: () => LocalizedString
+		/**
+		 * Next section
+		 */
+		NEXT_SECTION: () => LocalizedString
+		/**
+		 * {seconds} s back
+		 */
+		BACK_SECONDS: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * {seconds} s ahead
+		 */
+		FORWARD_SECONDS: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * Play
+		 */
+		PLAY: () => LocalizedString
+		/**
+		 * Pause
+		 */
+		PAUSE: () => LocalizedString
+		/**
+		 * Repeat
+		 */
+		LOOP: () => LocalizedString
+		/**
+		 * Sound on this computer
+		 */
+		SOUND: () => LocalizedString
+		/**
+		 * Show on screens
+		 */
+		SHOW_ON_SCREENS: () => LocalizedString
+		/**
+		 * End — fades out
+		 */
+		END: () => LocalizedString
+		/**
+		 * Shift: end at once
+		 */
+		END_SHIFT: () => LocalizedString
+		/**
+		 * Live
+		 */
+		LIVE: () => LocalizedString
+		/**
+		 * Ready
+		 */
+		READY: () => LocalizedString
+		/**
+		 * Paused
+		 */
+		PAUSED: () => LocalizedString
+		/**
+		 * Hidden
+		 */
+		CLEARED: () => LocalizedString
+		/**
+		 * Fading
+		 */
+		FADING: () => LocalizedString
+		/**
+		 * Not on screen
+		 */
+		OFF_SCREEN: () => LocalizedString
+		/**
+		 * Stopped
+		 */
+		STOPPED: () => LocalizedString
+		/**
+		 * Fade out
+		 */
+		FADE: () => LocalizedString
+		/**
+		 * Playback
+		 */
+		PLAYBACK: () => LocalizedString
+		/**
+		 * Screens
+		 */
+		SCREENS: () => LocalizedString
+		/**
+		 * Slideshow
+		 */
+		SLIDESHOW: () => LocalizedString
+		/**
+		 * Timeline & lyrics
+		 */
+		TIMELINE: () => LocalizedString
+		/**
+		 * Sound
+		 */
+		AUDIO: () => LocalizedString
+		/**
+		 * Per image
+		 */
+		SECONDS_PER_IMAGE: () => LocalizedString
+		/**
+		 * Change
+		 */
+		TRANSITION: () => LocalizedString
+		/**
+		 * Screen
+		 */
+		SCREEN: () => LocalizedString
+		/**
+		 * Viewing
+		 */
+		VIEWING: () => LocalizedString
+	}
+	CHURCH_TOOLS_SETTINGS: {
+		/**
+		 * ChurchTools
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Connects this account to its ChurchTools for CCLI SongSelect search, arrangement files for musicians and events. Use the API address and a login token of a ChurchTools user.
+		 */
+		HELP: () => LocalizedString
+		/**
+		 * ChurchTools API address
+		 */
+		URL: () => LocalizedString
+		/**
+		 * Enter an https:// address.
+		 */
+		URL_INVALID: () => LocalizedString
+		/**
+		 * Login token
+		 */
+		TOKEN: () => LocalizedString
+		/**
+		 * Leave blank to keep the stored token.
+		 */
+		TOKEN_HELP: () => LocalizedString
+		/**
+		 * (token already set)
+		 */
+		TOKEN_PLACEHOLDER_SET: () => LocalizedString
+		/**
+		 * Saving without an address removes the ChurchTools connection for everyone on this account.
+		 */
+		CLEAR_WARNING: () => LocalizedString
+		/**
+		 * ChurchTools is set up for this account.
+		 */
+		SAVED: () => LocalizedString
+		/**
+		 * ChurchTools was removed from this account.
+		 */
+		REMOVED: () => LocalizedString
+		/**
+		 * The ChurchTools settings could not be saved.
+		 */
+		SAVE_FAILED: () => LocalizedString
+	}
+	SPOTIFY_SETTINGS: {
+		/**
+		 * Spotify
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Lets this account link set list songs to Spotify tracks. Create an app in the Spotify developer dashboard and copy its Client ID and Client Secret:
+		 */
+		HELP: () => LocalizedString
+		/**
+		 * Client ID
+		 */
+		CLIENT_ID: () => LocalizedString
+		/**
+		 * Client Secret
+		 */
+		CLIENT_SECRET: () => LocalizedString
+		/**
+		 * Leave blank to keep the stored secret.
+		 */
+		SECRET_HELP: () => LocalizedString
+		/**
+		 * (secret already set)
+		 */
+		SECRET_PLACEHOLDER_SET: () => LocalizedString
+		/**
+		 * Saving without a Client ID removes the Spotify connection for everyone on this account.
+		 */
+		CLEAR_WARNING: () => LocalizedString
+		/**
+		 * Spotify is set up for this account.
+		 */
+		SAVED: () => LocalizedString
+		/**
+		 * Spotify was removed from this account.
+		 */
+		REMOVED: () => LocalizedString
+		/**
+		 * The Spotify settings could not be saved.
+		 */
+		SAVE_FAILED: () => LocalizedString
+	}
+	NEXTCLOUD: {
+		/**
+		 * Nextcloud
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Connect your Nextcloud to browse, upload and play media in the web version. The connection is kept in this browser only; the presenter server only passes requests on.
+		 */
+		INTRO: () => LocalizedString
+		/**
+		 * Save the Nextcloud address above to sign in.
+		 */
+		DISABLED: () => LocalizedString
+		/**
+		 * Nextcloud address (for this account)
+		 */
+		ADDRESS: () => LocalizedString
+		/**
+		 * An https:// address, e.g. https://cloud.example.com. Everyone on this account uses it. Leave empty to switch Nextcloud off.
+		 */
+		ADDRESS_HELP: () => LocalizedString
+		/**
+		 * Enter an https:// address.
+		 */
+		ADDRESS_INVALID: () => LocalizedString
+		/**
+		 * Saved. Everyone on this account can now sign in to this Nextcloud.
+		 */
+		ADDRESS_SAVED: () => LocalizedString
+		/**
+		 * Nextcloud is switched off for this account.
+		 */
+		ADDRESS_REMOVED: () => LocalizedString
+		/**
+		 * Changing the address signs everyone on this account out of the current Nextcloud.
+		 */
+		ADDRESS_CHANGE_WARNING: () => LocalizedString
+		/**
+		 * Sign-in in this browser
+		 */
+		THIS_BROWSER: () => LocalizedString
+		/**
+		 * This account uses {server}.
+		 */
+		SERVER: (arg: { server: string }) => LocalizedString
+		/**
+		 * Connect
+		 */
+		CONNECT: () => LocalizedString
+		/**
+		 * Cancel
+		 */
+		CANCEL_SIGN_IN: () => LocalizedString
+		/**
+		 * Sign in and grant access in the Nextcloud window that opened. This page continues by itself.
+		 */
+		WAITING: () => LocalizedString
+		/**
+		 * Signed in as {name}. Now choose the media folder.
+		 */
+		SIGNED_IN: (arg: { name: string }) => LocalizedString
+		/**
+		 * Disconnected. The app password was revoked on Nextcloud.
+		 */
+		SIGNED_OUT: () => LocalizedString
+		/**
+		 * {name} · {server}
+		 */
+		ACCOUNT: (arg: { name: string, server: string }) => LocalizedString
+		/**
+		 * Check connection
+		 */
+		CHECK: () => LocalizedString
+		/**
+		 * Connected as {name}.
+		 */
+		CONNECTION_OK: (arg: { name: string }) => LocalizedString
+		/**
+		 * Disconnect
+		 */
+		DISCONNECT: () => LocalizedString
+		/**
+		 * Media folder
+		 */
+		MEDIA_FOLDER: () => LocalizedString
+		/**
+		 * Choose…
+		 */
+		CHOOSE_FOLDER: () => LocalizedString
+		/**
+		 * Choose the media folder
+		 */
+		CHOOSE_FOLDER_TITLE: () => LocalizedString
+		/**
+		 * Use the folder the desktop app syncs as its media folder, so both find the same files. It gets a read-only public link that screens play from.
+		 */
+		CHOOSE_FOLDER_HINT: () => LocalizedString
+		/**
+		 * Use this folder
+		 */
+		USE_FOLDER: () => LocalizedString
+		/**
+		 * All files
+		 */
+		ALL_FILES: () => LocalizedString
+		/**
+		 * Creating the read-only link for the media folder…
+		 */
+		SHARING: () => LocalizedString
+		/**
+		 * The media folder is ready. Screens play its files from the read-only link.
+		 */
+		FOLDER_READY: () => LocalizedString
+		/**
+		 * Screens play from the read-only link:
+		 */
+		SHARE_ACTIVE: () => LocalizedString
+		/**
+		 * Choose a media folder to use Nextcloud for media.
+		 */
+		NO_FOLDER: () => LocalizedString
+		/**
+		 * The desktop app does not use this: it plays from the folder the Nextcloud client syncs.
+		 */
+		DESKTOP_NOTE: () => LocalizedString
+	}
+	LIBRARY: {
+		/**
+		 * Library
+		 */
+		OPEN: () => LocalizedString
+		/**
+		 * From library
+		 */
+		FROM_LIBRARY: () => LocalizedString
+		/**
+		 * Library
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Groups
+		 */
+		TAB_GROUPS: () => LocalizedString
+		/**
+		 * Media entries
+		 */
+		TAB_MEDIA: () => LocalizedString
+		/**
+		 * Search names, songs, files…
+		 */
+		SEARCH: () => LocalizedString
+		/**
+		 * All
+		 */
+		SOURCE_ALL: () => LocalizedString
+		/**
+		 * Saved
+		 */
+		SOURCE_SAVED: () => LocalizedString
+		/**
+		 * Past shows
+		 */
+		SOURCE_PAST: () => LocalizedString
+		/**
+		 * Nothing matches the search.
+		 */
+		NO_MATCH: () => LocalizedString
+		/**
+		 * No groups yet. Save a group from the agenda, or add one from a past show.
+		 */
+		EMPTY_GROUPS: () => LocalizedString
+		/**
+		 * No media entries yet. Save one from its menu in the agenda.
+		 */
+		EMPTY_MEDIA: () => LocalizedString
+		/**
+		 * Open a show to add entries
+		 */
+		NO_SHOW: () => LocalizedString
+		/**
+		 * Switch to Prepare to add entries to the agenda.
+		 */
+		LOCKED: () => LocalizedString
+		/**
+		 * Add groups after
+		 */
+		INSERT_GROUP_AFTER: () => LocalizedString
+		/**
+		 * The last group
+		 */
+		AT_END: () => LocalizedString
+		/**
+		 * Add media entries to
+		 */
+		ADD_MEDIA_TO: () => LocalizedString
+		/**
+		 * {count} song{{s}}
+		 */
+		COUNT_SONGS: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} video{{s}}
+		 */
+		COUNT_VIDEOS: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} image{{s}}
+		 */
+		COUNT_IMAGES: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} slideshow{{s}}
+		 */
+		COUNT_SLIDESHOWS: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} audio
+		 */
+		COUNT_AUDIO: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} verse{{s}}
+		 */
+		COUNT_VERSES: (arg: { count: number }) => LocalizedString
+		/**
+		 * Some files are not in the media folder on this computer.
+		 */
+		MISSING_FILES: () => LocalizedString
+		/**
+		 * Empty
+		 */
+		EMPTY_GROUP: () => LocalizedString
+		/**
+		 * from {date} · {show}
+		 */
+		FROM_SHOW: (arg: { date: string, show: string }) => LocalizedString
+		/**
+		 * Add to show
+		 */
+		ADD_TO_SHOW: () => LocalizedString
+		/**
+		 * Add
+		 */
+		ADD: () => LocalizedString
+		/**
+		 * Save to library
+		 */
+		SAVE: () => LocalizedString
+		/**
+		 * Save group to library
+		 */
+		SAVE_GROUP: () => LocalizedString
+		/**
+		 * Save to library
+		 */
+		SAVE_ENTRY: () => LocalizedString
+		/**
+		 * Delete from library
+		 */
+		DELETE: () => LocalizedString
+		/**
+		 * Delete "{name}" from the library? Shows that already use it keep their copy.
+		 */
+		DELETE_QUESTION: (arg: { name: string }) => LocalizedString
+		/**
+		 * Group
+		 */
+		GROUP_FALLBACK: () => LocalizedString
+		/**
+		 * Media
+		 */
+		MEDIA_FALLBACK: () => LocalizedString
+		/**
+		 * Added the group "{name}".
+		 */
+		ADDED_GROUP: (arg: { name: string }) => LocalizedString
+		/**
+		 * Added "{name}".
+		 */
+		ADDED_MEDIA: (arg: { name: string }) => LocalizedString
+		/**
+		 * Saved "{name}" to the library.
+		 */
+		SAVED: (arg: { name: string }) => LocalizedString
+		/**
+		 * Could not save to the library.
+		 */
+		SAVE_FAILED: () => LocalizedString
+		/**
+		 * Already in the library
+		 */
+		REPLACE_TITLE: () => LocalizedString
+		/**
+		 * The library already has "{name}". Update it with this one, or keep both?
+		 */
+		REPLACE_QUESTION: (arg: { name: string }) => LocalizedString
+		/**
+		 * Keep both
+		 */
+		SAVE_AS_NEW: () => LocalizedString
+		/**
+		 * Update
+		 */
+		UPDATE_ENTRY: () => LocalizedString
+		/**
+		 * Used with this song on {date}: {names}. Add?
+		 */
+		SUGGESTION: (arg: { date: string, names: string }) => LocalizedString
+	}
+	MEDIA_TIMELINE: {
+		/**
+		 * Timeline & lyrics
+		 */
+		SHOW: () => LocalizedString
+		/**
+		 * Hide timeline
+		 */
+		HIDE: () => LocalizedString
+		/**
+		 * {count} section{{s}}
+		 */
+		SECTIONS: (arg: { count: number }) => LocalizedString
+		/**
+		 * Mapped to song
+		 */
+		FOLLOWS_SONG: () => LocalizedString
+		/**
+		 * No song
+		 */
+		NO_SONG: () => LocalizedString
+		/**
+		 * Add a song to this agenda group to map the video to it.
+		 */
+		NO_SONGS_IN_GROUP: () => LocalizedString
+		/**
+		 * The song's slides changed (order "{order}") since the sections were mapped. Nothing follows until you confirm the mapping.
+		 */
+		ARRANGEMENT_CHANGED: (arg: { order: string }) => LocalizedString
+		/**
+		 * Confirm mapping
+		 */
+		CONFIRM_ARRANGEMENT: () => LocalizedString
+		/**
+		 * The song this version was mapped to is no longer in this agenda group.
+		 */
+		SONG_GONE: () => LocalizedString
+		/**
+		 * This change would make the timeline invalid and was not saved.
+		 */
+		INVALID: () => LocalizedString
+		/**
+		 * Reading the video length…
+		 */
+		NEEDS_DURATION: () => LocalizedString
+	}
+	MEDIA_ITEM: {
+		/**
+		 * Go
+		 */
+		GO: () => LocalizedString
+		/**
+		 * Start the next image, video or slideshow of this group
+		 */
+		GO_HINT: () => LocalizedString
+		/**
+		 * Go · {name}
+		 */
+		GO_NEXT: (arg: { name: string }) => LocalizedString
+		/**
+		 * Go · {count} entries
+		 */
+		GO_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Everything in this agenda group is already on screen
+		 */
+		GO_NOTHING: () => LocalizedString
+		/**
+		 * Fade every image, video and slideshow out. Shift+click ends them at once.
+		 */
+		END_ALL_HINT: () => LocalizedString
+		/**
+		 * Take this off the screens. It keeps running, so showing it again does not restart it.
+		 */
+		CLEAR_HINT: () => LocalizedString
+		/**
+		 * Put this back on its screens
+		 */
+		SHOW_HINT: () => LocalizedString
+		/**
+		 * Shift+click: end at once
+		 */
+		STOP_SHIFT_HINT: () => LocalizedString
+		/**
+		 * {count} images
+		 */
+		IMAGES: (arg: { count: number }) => LocalizedString
+		/**
+		 * Media
+		 */
+		LAYER: () => LocalizedString
+		/**
+		 * Role
+		 */
+		ROLE: () => LocalizedString
+		/**
+		 * Content
+		 */
+		ROLE_CONTENT: () => LocalizedString
+		/**
+		 * Background
+		 */
+		ROLE_BACKGROUND: () => LocalizedString
+		/**
+		 * Version
+		 */
+		VERSION: () => LocalizedString
+		/**
+		 * Version {number}
+		 */
+		VERSION_NAME: (arg: { number: number }) => LocalizedString
+		/**
+		 * New version (a copy of this one)
+		 */
+		NEW_VERSION: () => LocalizedString
+		/**
+		 * Rename version
+		 */
+		RENAME_VERSION: () => LocalizedString
+		/**
+		 * Delete version
+		 */
+		DELETE_VERSION: () => LocalizedString
+		/**
+		 * Show on
+		 */
+		SHOW_ON: () => LocalizedString
+		/**
+		 * All screens
+		 */
+		ALL_SCREENS: () => LocalizedString
+		/**
+		 * no screen
+		 */
+		NO_SCREENS: () => LocalizedString
+		/**
+		 * Removed screen group
+		 */
+		UNKNOWN_SCREEN: () => LocalizedString
+		/**
+		 * Choose at least one screen, or nothing shows.
+		 */
+		NO_SCREENS_HINT: () => LocalizedString
+		/**
+		 * Framing per screen
+		 */
+		FRAMING: () => LocalizedString
+		/**
+		 * Crop & place…
+		 */
+		FRAME: () => LocalizedString
+		/**
+		 * File on this screen
+		 */
+		SCREEN_FILE: () => LocalizedString
+		/**
+		 * Other file…
+		 */
+		OTHER_FILE: () => LocalizedString
+		/**
+		 * Show another file on this screen, e.g. the other half of a panorama
+		 */
+		OTHER_FILE_HINT: () => LocalizedString
+		/**
+		 * Loop
+		 */
+		LOOP_WHOLE: () => LocalizedString
+		/**
+		 * loop
+		 */
+		LOOP: () => LocalizedString
+		/**
+		 * Play as soon as it is on screen
+		 */
+		AUTOPLAY: () => LocalizedString
+		/**
+		 * Sound on this computer
+		 */
+		SOUND_HERE: () => LocalizedString
+		/**
+		 * Show on screens
+		 */
+		START: () => LocalizedString
+		/**
+		 * From the beginning
+		 */
+		RESTART: () => LocalizedString
+		/**
+		 * Clear
+		 */
+		CLEAR: () => LocalizedString
+		/**
+		 * Show
+		 */
+		SHOW: () => LocalizedString
+		/**
+		 * End (fades out)
+		 */
+		STOP_HINT: () => LocalizedString
+		/**
+		 * End all
+		 */
+		STOP_ALL: () => LocalizedString
+		/**
+		 * ending…
+		 */
+		ENDING: () => LocalizedString
+		/**
+		 * Not on screen
+		 */
+		STATUS_NOT_STARTED: () => LocalizedString
+		/**
+		 * On screen
+		 */
+		STATUS_ON_SCREEN: () => LocalizedString
+		/**
+		 * Paused
+		 */
+		STATUS_PAUSED: () => LocalizedString
+		/**
+		 * Cleared
+		 */
+		STATUS_CLEARED: () => LocalizedString
+		/**
+		 * This entry has no file.
+		 */
+		NO_FILE: () => LocalizedString
+		/**
+		 * No image or video on screen
+		 */
+		NOTHING_ON_SCREEN: () => LocalizedString
+		/**
+		 * Theme colour — add a background entry to the agenda group
+		 */
+		THEME_COLOUR_ONLY: () => LocalizedString
+		/**
+		 * Hide the backgrounds (they keep running)
+		 */
+		HIDE_BACKGROUND: () => LocalizedString
+		/**
+		 * Hide the images, videos and slideshows (they keep running)
+		 */
+		HIDE_LAYER: () => LocalizedString
+		/**
+		 * Show the images, videos and slideshows again
+		 */
+		SHOW_LAYER: () => LocalizedString
+		/**
+		 * Show the backgrounds again
+		 */
+		SHOW_BACKGROUND: () => LocalizedString
+		/**
+		 * This agenda group has no background entries. Drop an image or video into it and set its role to Background.
+		 */
+		NO_GROUP_BACKGROUNDS: () => LocalizedString
+		/**
+		 * running on {screens}
+		 */
+		RUNNING_ON: (arg: { screens: string }) => LocalizedString
+		/**
+		 * click to show on {screens}
+		 */
+		SWITCH_TO: (arg: { screens: string }) => LocalizedString
+		/**
+		 * The first background starts when the group is entered; click another to switch.
+		 */
+		GROUP_BACKGROUNDS_HINT: () => LocalizedString
+	}
+	AUDIO: {
+		/**
+		 * Mute all audio (it keeps playing)
+		 */
+		MUTE_LAYER: () => LocalizedString
+		/**
+		 * Unmute the audio
+		 */
+		UNMUTE_LAYER: () => LocalizedString
+		/**
+		 * Heard on this computer only
+		 */
+		OPERATOR_ONLY: () => LocalizedString
+		/**
+		 * Play
+		 */
+		PLAY: () => LocalizedString
+		/**
+		 * Pause
+		 */
+		PAUSE: () => LocalizedString
+		/**
+		 * Stop
+		 */
+		STOP: () => LocalizedString
+		/**
+		 * Fade out
+		 */
+		FADE_OUT: () => LocalizedString
+		/**
+		 * Lower the volume over {seconds} s, then stop
+		 */
+		FADE_OUT_HINT: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * Fade all
+		 */
+		FADE_ALL: () => LocalizedString
+		/**
+		 * Stop all
+		 */
+		STOP_ALL: () => LocalizedString
+		/**
+		 * Loop: on
+		 */
+		LOOP_ON: () => LocalizedString
+		/**
+		 * Loop: off
+		 */
+		LOOP_OFF: () => LocalizedString
+		/**
+		 * Volume
+		 */
+		VOLUME: () => LocalizedString
+		/**
+		 * Loading
+		 */
+		LOADING: () => LocalizedString
+		/**
+		 * Playing
+		 */
+		PLAYING: () => LocalizedString
+		/**
+		 * Paused
+		 */
+		PAUSED: () => LocalizedString
+		/**
+		 * Stopped
+		 */
+		STOPPED: () => LocalizedString
+		/**
+		 * Fading out
+		 */
+		FADING: () => LocalizedString
+		/**
+		 * Not playable
+		 */
+		ERROR_SHORT: () => LocalizedString
+		/**
+		 * The file could not be played. Check that it is in the media folder.
+		 */
+		ERROR: () => LocalizedString
+		/**
+		 * Playback did not start. Press Play again.
+		 */
+		BLOCKED: () => LocalizedString
+		/**
+		 * Retry
+		 */
+		RETRY: () => LocalizedString
+		/**
+		 * This entry has no audio file.
+		 */
+		NO_FILE: () => LocalizedString
+		/**
+		 * Keeps playing while you move on to other entries. Stop it here, in the layer bar or with its button in the agenda. Nothing is sent to the screens.
+		 */
+		KEEPS_PLAYING: () => LocalizedString
+		/**
+		 * Audio
+		 */
+		LAYER: () => LocalizedString
+		/**
+		 * Nothing playing
+		 */
+		NOTHING_PLAYING: () => LocalizedString
+		/**
+		 * −{time}
+		 */
+		REMAINING: (arg: { time: string }) => LocalizedString
+		/**
+		 * Play here without opening it
+		 */
+		PLAY_IN_AGENDA: () => LocalizedString
+	}
+	AGENDA_DROP: {
+		/**
+		 * Upload to Nextcloud
+		 */
+		UPLOAD_TITLE: () => LocalizedString
+		/**
+		 * Choose a folder of the media folder for {count} file{{s}}. Every computer finds {{it|them}} there.
+		 */
+		UPLOAD_HINT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Uploading {index} of {count} · {percent}%
+		 */
+		UPLOAD_PROGRESS: (arg: { count: number, index: number, percent: number }) => LocalizedString
+		/**
+		 * Upload and add
+		 */
+		UPLOAD_AND_ADD: () => LocalizedString
+		/**
+		 * Slideshow ({count} images)
+		 */
+		SLIDESHOW_NAME: (arg: { count: number }) => LocalizedString
+		/**
+		 * Several images
+		 */
+		SLIDESHOW_TITLE: () => LocalizedString
+		/**
+		 * Add the {count} images as one slideshow, or as an entry each?
+		 */
+		SLIDESHOW_QUESTION: (arg: { count: number }) => LocalizedString
+		/**
+		 * An entry each
+		 */
+		SEPARATE_IMAGES: () => LocalizedString
+		/**
+		 * One slideshow
+		 */
+		ONE_SLIDESHOW: () => LocalizedString
+		/**
+		 * Drop songs, images, videos or audio to add them here
+		 */
+		DROP_HINT: () => LocalizedString
+		/**
+		 * Switch to Prepare to add files to the agenda.
+		 */
+		LOCKED: () => LocalizedString
+		/**
+		 * {count} file{{s}} could not be added: only song files, images, videos and audio are supported.
+		 */
+		UNSUPPORTED: (arg: { count: number }) => LocalizedString
+		/**
+		 * Set up the media folder in Settings first, so media files can be added.
+		 */
+		NO_MEDIA_FOLDER: () => LocalizedString
+		/**
+		 * Not found in the media folder: {files}. Put the files into the media folder (or drop them in the desktop app), then drop them again.
+		 */
+		NOT_IN_MEDIA_FOLDER: (arg: { files: string }) => LocalizedString
+		/**
+		 * {count} item{{s}} added
+		 */
+		ADDED: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} item{{s}} added, {reused} already in the media folder
+		 */
+		ADDED_REUSED: (arg: { count: number, reused: number }) => LocalizedString
+		/**
+		 * Copy into the media folder
+		 */
+		COPY_TITLE: () => LocalizedString
+		/**
+		 * {count} file{{s}} {{is|are}} not in the media folder yet. Other computers only see files that are in it.
+		 */
+		COPY_HINT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Copy to
+		 */
+		TARGET_FOLDER: () => LocalizedString
+		/**
+		 * Media folder
+		 */
+		MEDIA_FOLDER: () => LocalizedString
+		/**
+		 * No subfolders
+		 */
+		NO_SUBFOLDERS: () => LocalizedString
+		/**
+		 * The media folder cannot be read. Check the media folder in Settings.
+		 */
+		FOLDER_UNAVAILABLE: () => LocalizedString
+		/**
+		 * New folder
+		 */
+		NEW_FOLDER: () => LocalizedString
+		/**
+		 * Folder name
+		 */
+		NEW_FOLDER_NAME: () => LocalizedString
+		/**
+		 * The folder could not be created.
+		 */
+		NEW_FOLDER_FAILED: () => LocalizedString
+		/**
+		 * Create
+		 */
+		CREATE: () => LocalizedString
+		/**
+		 * Copy and add
+		 */
+		COPY_AND_ADD: () => LocalizedString
+		/**
+		 * Copying failed: {message}
+		 */
+		COPY_FAILED: (arg: { message: string }) => LocalizedString
+		/**
+		 * These files could not be copied: {files}
+		 */
+		COPY_PARTLY_FAILED: (arg: { files: string }) => LocalizedString
+		/**
+		 * The file is not in the media folder
+		 */
+		MISSING_FILE: () => LocalizedString
+		/**
+		 * Find file…
+		 */
+		RELINK_MENU: () => LocalizedString
+		/**
+		 * Find the file
+		 */
+		RELINK_TITLE: () => LocalizedString
+		/**
+		 * “{name}” is not at {path} any more. Pick where it is now.
+		 */
+		RELINK_HINT: (arg: { name: string, path: string }) => LocalizedString
+		/**
+		 * Searching the media folder…
+		 */
+		RELINK_SEARCHING: () => LocalizedString
+		/**
+		 * No file named “{name}” in the media folder.
+		 */
+		RELINK_NONE: (arg: { name: string }) => LocalizedString
+		/**
+		 * Browse media folder…
+		 */
+		RELINK_BROWSE: () => LocalizedString
+		/**
+		 * Use this file
+		 */
+		RELINK_USE: () => LocalizedString
+	}
+	PREVIEW: {
+		/**
+		 * Preview
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Live
+		 */
+		LIVE: () => LocalizedString
+		/**
+		 * Not on screen
+		 */
+		NOT_ON_SCREEN: () => LocalizedString
+		/**
+		 * Waiting to go live
+		 */
+		WAITING: () => LocalizedString
+		/**
+		 * Go live
+		 */
+		GO_LIVE: () => LocalizedString
+		/**
+		 * Discard
+		 */
+		DISCARD: () => LocalizedString
+		/**
+		 * Open the preview in its own window
+		 */
+		POP_OUT: () => LocalizedString
+		/**
+		 * Previous slide
+		 */
+		PREV_SLIDE: () => LocalizedString
+		/**
+		 * Next slide
+		 */
+		NEXT_SLIDE: () => LocalizedString
+		/**
+		 * Back to the current slide
+		 */
+		BACK_TO_FOCUS: () => LocalizedString
+		/**
+		 * Select an item to preview it.
+		 */
+		NO_ITEM: () => LocalizedString
+		/**
+		 * {name} · {index} of {total}
+		 */
+		SLIDE_OF: (arg: { index: number, name: string, total: number }) => LocalizedString
+		/**
+		 * The first slide of this block, in the look it has in the open show.
+		 */
+		SONG_EDITOR_HINT: () => LocalizedString
+		/**
+		 * Program
+		 */
+		PROGRAM: () => LocalizedString
+		/**
+		 * What the screens of this group show now, black and hidden text included.
+		 */
+		PROGRAM_HINT: () => LocalizedString
+		/**
+		 * Next
+		 */
+		NEXT: () => LocalizedString
+		/**
+		 * Opened
+		 */
+		OPENED: () => LocalizedString
+		/**
+		 * Nothing after this slide
+		 */
+		END_OF_SHOW: () => LocalizedString
+		/**
+		 * Take
+		 */
+		TAKE: () => LocalizedString
+		/**
+		 * Put the preview on the screens
+		 */
+		TAKE_HINT: () => LocalizedString
+		/**
+		 * Safe-area guides
+		 */
+		GUIDES: () => LocalizedString
+		/**
+		 * Show the Program monitor above the preview
+		 */
+		SHOW_PROGRAM: () => LocalizedString
+		/**
+		 * Screen group the monitors draw
+		 */
+		SCREEN_GROUP: () => LocalizedString
+		/**
+		 * Black
+		 */
+		BLACK: () => LocalizedString
+		/**
+		 * Text hidden
+		 */
+		TEXT_HIDDEN: () => LocalizedString
+	}
+	OPERATOR: {
+		/**
+		 * Set up stage overlays — countdowns, messages, a clock
+		 */
+		NO_STAGE_LAYERS: () => LocalizedString
+		READINESS: {
+			/**
+			 * Ready for the service?
+			 */
+			TITLE: () => LocalizedString
+			/**
+			 * Ready
+			 */
+			READY: () => LocalizedString
+			/**
+			 * {count} to check
+			 */
+			ISSUES: (arg: { count: unknown }) => LocalizedString
+			/**
+			 * Check again
+			 */
+			RECHECK: () => LocalizedString
+			/**
+			 * All songs saved for offline use
+			 */
+			SONGS_CACHED: () => LocalizedString
+			/**
+			 * Not saved: {names}
+			 */
+			NOT_CACHED: (arg: { names: unknown }) => LocalizedString
+			/**
+			 * Load songs
+			 */
+			LOAD_SONGS: () => LocalizedString
+			/**
+			 * All media files found
+			 */
+			MEDIA_FOUND: () => LocalizedString
+			/**
+			 * Missing: {names}
+			 */
+			MISSING: (arg: { names: unknown }) => LocalizedString
+			/**
+			 * Output windows open and placed
+			 */
+			WINDOWS_READY: () => LocalizedString
+			/**
+			 * Closed: {names}
+			 */
+			CLOSED: (arg: { names: unknown }) => LocalizedString
+			/**
+			 * Hidden: {names}
+			 */
+			HIDDEN: (arg: { names: unknown }) => LocalizedString
+			/**
+			 * On the operator screen: {names}
+			 */
+			ON_OPERATOR_SCREEN: (arg: { names: unknown }) => LocalizedString
+			/**
+			 * Open all
+			 */
+			OPEN_ALL: () => LocalizedString
+			/**
+			 * Connected to the relay
+			 */
+			RELAY: () => LocalizedString
+			/**
+			 * Musicians, remote and viewers are not getting updates.
+			 */
+			RELAY_DOWN: () => LocalizedString
+		}
+		/**
+		 * Themes are set on the agenda group, in the set list.
+		 */
+		THEME_ON_GROUP: () => LocalizedString
+		/**
+		 * Credits
+		 */
+		COPYRIGHT_SLIDE: () => LocalizedString
+		/**
+		 * Show
+		 */
+		TOOLS_SHOW: () => LocalizedString
+		/**
+		 * Screens
+		 */
+		TOOLS_SCREENS: () => LocalizedString
+		/**
+		 * App
+		 */
+		TOOLS_APP: () => LocalizedString
+		/**
+		 * The background entries running behind the text, and switching between them.
+		 */
+		ROW_DESC_BACKGROUND: () => LocalizedString
+		/**
+		 * The slide on screen, the song’s sections to jump to, and which screens show text.
+		 */
+		ROW_DESC_SLIDES: () => LocalizedString
+		/**
+		 * Images, videos and slideshows on screen with their transport, and Go.
+		 */
+		ROW_DESC_MEDIA: () => LocalizedString
+		/**
+		 * Audio playing on this computer, with Fade and Stop.
+		 */
+		ROW_DESC_AUDIO: () => LocalizedString
+		/**
+		 * Stage overlays and cues running.
+		 */
+		ROW_DESC_OVERLAYS: () => LocalizedString
+		/**
+		 * {index} · {name} — click to put it on screen
+		 */
+		JUMP_TO_SLIDE: (arg: { index: number, name: string }) => LocalizedString
+		/**
+		 * Operator mode
+		 */
+		MODE: () => LocalizedString
+		/**
+		 * Prepare
+		 */
+		MODE_PREPARE: () => LocalizedString
+		/**
+		 * Live
+		 */
+		MODE_LIVE: () => LocalizedString
+		/**
+		 * Live: the set list and looks are locked so nothing changes by accident during the service.
+		 */
+		MODE_LIVE_HINT: () => LocalizedString
+		/**
+		 * Prepare: arrange the set list and edit looks.
+		 */
+		MODE_PREPARE_HINT: () => LocalizedString
+		/**
+		 * All windows
+		 */
+		MONITOR_ALL: () => LocalizedString
+		/**
+		 * {open} of {total} open
+		 */
+		MONITOR_OPEN: (arg: { open: number, total: number }) => LocalizedString
+		/**
+		 * no window open
+		 */
+		MONITOR_NONE_OPEN: () => LocalizedString
+		/**
+		 * Hide
+		 */
+		HIDE: () => LocalizedString
+		/**
+		 * Black
+		 */
+		BLACK: () => LocalizedString
+		/**
+		 * Hide the slide text
+		 */
+		HIDE_TEXT: () => LocalizedString
+		/**
+		 * Shift+click: black out all screens
+		 */
+		SHIFT_BLACK_ALL: () => LocalizedString
+		/**
+		 * All screens are black. Click to show them again.
+		 */
+		BLACK_ACTIVE_HINT: () => LocalizedString
+		/**
+		 * Windows of this screen group
+		 */
+		MONITOR_WINDOWS_MENU: () => LocalizedString
+		/**
+		 * More window actions
+		 */
+		WINDOW_MORE: () => LocalizedString
+		/**
+		 * Black
+		 */
+		MONITOR_BLACK: () => LocalizedString
+		/**
+		 * Text hidden
+		 */
+		MONITOR_NO_TEXT: () => LocalizedString
+		/**
+		 * Black all
+		 */
+		BLACK_ALL: () => LocalizedString
+		/**
+		 * Show
+		 */
+		SHOW_ALL: () => LocalizedString
+		/**
+		 * Background
+		 */
+		LAYER_BACKGROUND: () => LocalizedString
+		/**
+		 * Slides
+		 */
+		LAYER_SLIDES: () => LocalizedString
+		/**
+		 * Overlays
+		 */
+		LAYER_OVERLAYS: () => LocalizedString
+		/**
+		 * next: {name} at {section}
+		 */
+		NEXT_CHANGE: (arg: { name: string, section: string }) => LocalizedString
+		/**
+		 * no change in this item
+		 */
+		NO_CHANGE: () => LocalizedString
+		/**
+		 * Clear text
+		 */
+		CLEAR_TEXT: () => LocalizedString
+		/**
+		 * Show text
+		 */
+		SHOW_TEXT: () => LocalizedString
+		/**
+		 * Hide video
+		 */
+		HIDE_VIDEO: () => LocalizedString
+		/**
+		 * Show video
+		 */
+		SHOW_VIDEO: () => LocalizedString
+		/**
+		 * Hide overlays
+		 */
+		HIDE_OVERLAYS: () => LocalizedString
+		/**
+		 * Show overlays
+		 */
+		SHOW_OVERLAYS: () => LocalizedString
+		/**
+		 * {section} · {index} of {total}
+		 */
+		SECTION_OF: (arg: { index: number, section: string, total: number }) => LocalizedString
+		/**
+		 * no text on {groups}
+		 */
+		NO_TEXT_ON: (arg: { groups: string }) => LocalizedString
+		/**
+		 * These screen groups are set not to show the song text. Turn “Song text” on for them in the Window Manager → Screen groups.
+		 */
+		NO_TEXT_ON_HINT: () => LocalizedString
+		/**
+		 * Nothing selected
+		 */
+		NO_ITEM: () => LocalizedString
+		/**
+		 * This item
+		 */
+		INSPECTOR: () => LocalizedString
+		/**
+		 * Edit look…
+		 */
+		EDIT_LOOK: () => LocalizedString
+		/**
+		 * Locked in Live. Switch to Prepare to change the look.
+		 */
+		LOCKED_IN_LIVE: () => LocalizedString
+		/**
+		 * Select an item in the set list to see its look.
+		 */
+		SELECT_ITEM: () => LocalizedString
+		/**
+		 * Background changes
+		 */
+		TRACK_SUMMARY: () => LocalizedString
+		/**
+		 * The background does not change within this item.
+		 */
+		NO_TRACK: () => LocalizedString
+		/**
+		 * from {section}
+		 */
+		BACKGROUND_AT: (arg: { section: string }) => LocalizedString
+		/**
+		 * Video controls
+		 */
+		VIDEO_CONTROLS: () => LocalizedString
+		/**
+		 * View
+		 */
+		VIEW_MENU: () => LocalizedString
+		/**
+		 * Screen previews
+		 */
+		VIEW_PREVIEWS: () => LocalizedString
+		/**
+		 * Slides
+		 */
+		VIEW_SLIDES: () => LocalizedString
+		/**
+		 * Set list
+		 */
+		VIEW_SET_LIST: () => LocalizedString
+		/**
+		 * Side panel
+		 */
+		VIEW_SIDE_PANEL: () => LocalizedString
+		/**
+		 * Inspector
+		 */
+		VIEW_INSPECTOR: () => LocalizedString
+		/**
+		 * Preview
+		 */
+		VIEW_PREVIEW: () => LocalizedString
+		/**
+		 * Preview before live
+		 */
+		VIEW_PREVIEW_BEFORE_LIVE: () => LocalizedString
+		/**
+		 * Live mode: a click only previews a slide or item. A second click or Enter sends it to the screens. Arrow keys still go live.
+		 */
+		VIEW_PREVIEW_BEFORE_LIVE_HINT: () => LocalizedString
+		/**
+		 * Ctrl + scroll over the previews or slides resizes them.
+		 */
+		VIEW_HINT: () => LocalizedString
+		/**
+		 * Open window
+		 */
+		OPEN_WINDOW: () => LocalizedString
+		/**
+		 * Add window
+		 */
+		ADD_WINDOW: () => LocalizedString
+		/**
+		 * Now on screen
+		 */
+		NOW_ON_SCREEN: () => LocalizedString
+		/**
+		 * Entry
+		 */
+		SECTION_ENTRY: () => LocalizedString
+		/**
+		 * Name
+		 */
+		ENTRY_NAME: () => LocalizedString
+		/**
+		 * Group
+		 */
+		AGENDA_GROUP: () => LocalizedString
+		/**
+		 * Arrangement
+		 */
+		ARRANGEMENT: () => LocalizedString
+		/**
+		 * Translation
+		 */
+		TRANSLATION: () => LocalizedString
+		/**
+		 * Role
+		 */
+		ROLE: () => LocalizedString
+		/**
+		 * Background
+		 */
+		SUMMARY_BACKGROUND: () => LocalizedString
+		/**
+		 * Next change
+		 */
+		SUMMARY_NEXT: () => LocalizedString
+		/**
+		 * Key
+		 */
+		SUMMARY_KEY: () => LocalizedString
+		/**
+		 * Switch to Prepare to change the look.
+		 */
+		LIVE_SWITCH_HINT: () => LocalizedString
+		/**
+		 * Drag to resize · double-click to hide
+		 */
+		RESIZE_COLUMN: () => LocalizedString
+		/**
+		 * Media cue
+		 */
+		LAYER_MEDIA_CUE: () => LocalizedString
+		/**
+		 * No cue for this item
+		 */
+		NO_CUE: () => LocalizedString
+		/**
+		 * Create cue
+		 */
+		CREATE_CUE: () => LocalizedString
+		/**
+		 * Cue editor
+		 */
+		OPEN_CUE_EDITOR: () => LocalizedString
+		/**
+		 * Close editor
+		 */
+		CLOSE_CUE_EDITOR: () => LocalizedString
+		/**
+		 * Slide size
+		 */
+		SLIDE_SIZE: () => LocalizedString
+		/**
+		 * Tip: hold Ctrl and scroll over the slides to resize them.
+		 */
+		SLIDE_SIZE_HINT: () => LocalizedString
+		/**
+		 * Show set list
+		 */
+		SHOW_SET_LIST: () => LocalizedString
+		/**
+		 * Hide set list
+		 */
+		HIDE_SET_LIST: () => LocalizedString
+		/**
+		 * Show side panel
+		 */
+		SHOW_SIDE_PANEL: () => LocalizedString
+		/**
+		 * Hide side panel
+		 */
+		HIDE_SIDE_PANEL: () => LocalizedString
+		/**
+		 * ⛓ show look
+		 */
+		BADGE_SHOW_LOOK: () => LocalizedString
+		/**
+		 * ▶ synced video
+		 */
+		BADGE_SYNCED: () => LocalizedString
+		/**
+		 * track · {count} {{change|changes}}
+		 */
+		BADGE_TRACK: (arg: { count: number }) => LocalizedString
+		/**
+		 * no background
+		 */
+		BADGE_NO_BACKGROUND: () => LocalizedString
+		/**
+		 * {count} win
+		 */
+		MONITOR_WINDOWS: (arg: { count: number }) => LocalizedString
+		/**
+		 * Look
+		 */
+		TAB_LOOK: () => LocalizedString
+		/**
+		 * Backgrounds
+		 */
+		TAB_BACKGROUNDS: () => LocalizedString
+		/**
+		 * Stage
+		 */
+		TAB_STAGE: () => LocalizedString
+		/**
+		 * Local tweaks
+		 */
+		LOCAL_TWEAKS: () => LocalizedString
+		/**
+		 * Customize for this item…
+		 */
+		CUSTOMIZE: () => LocalizedString
+		/**
+		 * Edit track…
+		 */
+		EDIT_TRACK: () => LocalizedString
+		/**
+		 * {level} · skipped
+		 */
+		SKIPPED: (arg: { level: string }) => LocalizedString
+		/**
+		 * Now
+		 */
+		NOW: () => LocalizedString
+		/**
+		 * No stage actions fire when this item goes live.
+		 */
+		NO_TRIGGERS: () => LocalizedString
+		/**
+		 * Stage actions that fire when this item goes live.
+		 */
+		TRIGGERS_HINT: () => LocalizedString
+		/**
+		 * Start
+		 */
+		TRIGGER_START: () => LocalizedString
+		/**
+		 * Next cue
+		 */
+		TRIGGER_NEXT: () => LocalizedString
+		/**
+		 * Reset
+		 */
+		TRIGGER_RESET: () => LocalizedString
+		/**
+		 * Hide
+		 */
+		TRIGGER_HIDE: () => LocalizedString
+		/**
+		 * Show
+		 */
+		TRIGGER_SHOW: () => LocalizedString
+		/**
+		 * {index} · live
+		 */
+		LIVE_SLIDE: (arg: { index: number }) => LocalizedString
+		/**
+		 *  · fade {seconds}s
+		 */
+		CHANGE_FADE: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * no video playing
+		 */
+		NO_VIDEO: () => LocalizedString
+		/**
+		 * Clear
+		 */
+		CLEAR: () => LocalizedString
+		/**
+		 * Show
+		 */
+		SHOW: () => LocalizedString
+		/**
+		 * Play / pause
+		 */
+		PLAY_PAUSE: () => LocalizedString
+	}
+	BACKGROUNDS: {
+		/**
+		 * Backgrounds
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Backgrounds are kept apart from themes, so the same text design can sit on different backgrounds.
+		 */
+		HINT: () => LocalizedString
+		/**
+		 * Video
+		 */
+		NEW_VIDEO: () => LocalizedString
+		/**
+		 * Image
+		 */
+		NEW_IMAGE: () => LocalizedString
+		/**
+		 * Colour
+		 */
+		NEW_COLOR: () => LocalizedString
+		/**
+		 * No backgrounds yet
+		 */
+		EMPTY: () => LocalizedString
+		/**
+		 * Add a video, an image or a colour to start the library.
+		 */
+		EMPTY_HINT: () => LocalizedString
+		/**
+		 * Background
+		 */
+		UNTITLED: () => LocalizedString
+		/**
+		 * Name
+		 */
+		NAME: () => LocalizedString
+		/**
+		 * Back to backgrounds
+		 */
+		BACK: () => LocalizedString
+		/**
+		 * Colour
+		 */
+		COLOR: () => LocalizedString
+		/**
+		 * Image
+		 */
+		IMAGE: () => LocalizedString
+		/**
+		 * Video
+		 */
+		VIDEO: () => LocalizedString
+		/**
+		 * Video
+		 */
+		KIND_VIDEO: () => LocalizedString
+		/**
+		 * Image
+		 */
+		KIND_IMAGE: () => LocalizedString
+		/**
+		 * Colour
+		 */
+		KIND_COLOR: () => LocalizedString
+		/**
+		 * Empty
+		 */
+		KIND_EMPTY: () => LocalizedString
+		/**
+		 * Choose file…
+		 */
+		CHOOSE_FILE: () => LocalizedString
+		/**
+		 * Remove
+		 */
+		REMOVE_LAYER: () => LocalizedString
+		/**
+		 * Add colour
+		 */
+		ADD_COLOR: () => LocalizedString
+		/**
+		 * Add image
+		 */
+		ADD_IMAGE: () => LocalizedString
+		/**
+		 * Add video
+		 */
+		ADD_VIDEO: () => LocalizedString
+		/**
+		 * Fit
+		 */
+		FIT: () => LocalizedString
+		/**
+		 * Cover
+		 */
+		FIT_COVER: () => LocalizedString
+		/**
+		 * Contain
+		 */
+		FIT_CONTAIN: () => LocalizedString
+		/**
+		 * Fit width
+		 */
+		FIT_WIDTH: () => LocalizedString
+		/**
+		 * Fit height
+		 */
+		FIT_HEIGHT: () => LocalizedString
+		/**
+		 * Original size
+		 */
+		FIT_ORIGINAL: () => LocalizedString
+		/**
+		 * Position
+		 */
+		POSITION: () => LocalizedString
+		/**
+		 * Zoom
+		 */
+		ZOOM: () => LocalizedString
+		/**
+		 * Blur
+		 */
+		BLUR: () => LocalizedString
+		/**
+		 * Volume
+		 */
+		VOLUME: () => LocalizedString
+		/**
+		 * Fade in
+		 */
+		EASE_IN: () => LocalizedString
+		/**
+		 * Fade out
+		 */
+		EASE_OUT: () => LocalizedString
+		/**
+		 * Autoplay
+		 */
+		AUTOPLAY: () => LocalizedString
+		/**
+		 * Loop
+		 */
+		LOOP: () => LocalizedString
+		/**
+		 * Delete background
+		 */
+		DELETE: () => LocalizedString
+		/**
+		 * Delete “{name}”? Wherever it is assigned, no background is shown instead.
+		 */
+		DELETE_CONFIRM: (arg: { name: string }) => LocalizedString
+		/**
+		 * The background could not be saved. Check the connection and try again.
+		 */
+		SAVE_FAILED: () => LocalizedString
 	}
 	STAGE: {
 		/**
-		 * Stage Monitor
+		 * Shows as
+		 */
+		SHOWS_AS: () => LocalizedString
+		/**
+		 * Counts
+		 */
+		COUNTS: () => LocalizedString
+		/**
+		 * Length
+		 */
+		LENGTH: () => LocalizedString
+		/**
+		 * At zero
+		 */
+		AT_ZERO: () => LocalizedString
+		/**
+		 * Duplicate
+		 */
+		DUPLICATE_LAYER: () => LocalizedString
+		/**
+		 * Rename
+		 */
+		RENAME_LAYER: () => LocalizedString
+		/**
+		 * Enable
+		 */
+		ENABLE_LAYER: () => LocalizedString
+		/**
+		 * Disable
+		 */
+		DISABLE_LAYER: () => LocalizedString
+		/**
+		 * Layer actions
+		 */
+		LAYER_MENU: () => LocalizedString
+		/**
+		 * copy
+		 */
+		COPY_SUFFIX: () => LocalizedString
+		/**
+		 * Disabled
+		 */
+		DISABLED: () => LocalizedString
+		/**
+		 * Drag to move · drag a side to resize
+		 */
+		DRAG_HINT: () => LocalizedString
+		/**
+		 * Drag to reorder
+		 */
+		DRAG_TO_REORDER: () => LocalizedString
+		/**
+		 * Cue
+		 */
+		CUE: () => LocalizedString
+		/**
+		 * Alignment
+		 */
+		ALIGN: () => LocalizedString
+		/**
+		 * Colours
+		 */
+		COLOURS: () => LocalizedString
+		/**
+		 * Adjust time
+		 */
+		ADJUST_TIME: () => LocalizedString
+		/**
+		 * Set to 4:30
+		 */
+		ADJUST_SET_TO: () => LocalizedString
+		/**
+		 * {step} on the time left
+		 */
+		ADJUST_STEP_DOWN: (arg: { step: unknown }) => LocalizedString
+		/**
+		 * {step} on the time elapsed
+		 */
+		ADJUST_STEP_UP: (arg: { step: unknown }) => LocalizedString
+		/**
+		 * adjusted {by}
+		 */
+		ADJUSTED: (arg: { by: unknown }) => LocalizedString
+		/**
+		 * Your message here
+		 */
+		MESSAGE_PREVIEW: () => LocalizedString
+		/**
+		 * Empty layer
+		 */
+		PRESET_EMPTY: () => LocalizedString
+		/**
+		 * Counts down a length or to a time — sermon, walk-in
+		 */
+		PRESET_COUNTDOWN_HINT: () => LocalizedString
+		/**
+		 * Counts up from when it starts
+		 */
+		PRESET_COUNTUP_HINT: () => LocalizedString
+		/**
+		 * A text banner along the bottom
+		 */
+		PRESET_MESSAGE_HINT: () => LocalizedString
+		/**
+		 * The time of day, top left
+		 */
+		PRESET_CLOCK_HINT: () => LocalizedString
+		/**
+		 * Place and fill it yourself
+		 */
+		PRESET_EMPTY_HINT: () => LocalizedString
+		/**
+		 * Not running
+		 */
+		NOT_RUNNING: () => LocalizedString
+		/**
+		 * Content
+		 */
+		TAB_CONTENT: () => LocalizedString
+		/**
+		 * Where
+		 */
+		TAB_WHERE: () => LocalizedString
+		/**
+		 * Look
+		 */
+		TAB_LOOK: () => LocalizedString
+		/**
+		 * Next steps through the cues in this order; a countdown can hand over to the next cue by itself.
+		 */
+		CUES_HINT: () => LocalizedString
+		/**
+		 * Set up stage overlays
+		 */
+		EDIT_LAYERS: () => LocalizedString
+		/**
+		 * Edit {name}
+		 */
+		EDIT_LAYER: (arg: { name: unknown }) => LocalizedString
+		/**
+		 * Next: {name}
+		 */
+		NEXT_CUE: (arg: { name: unknown }) => LocalizedString
+		/**
+		 * Next — this is the last cue, the layer ends
+		 */
+		GO_TO_END: () => LocalizedString
+		/**
+		 * Stop — take it off the screens
+		 */
+		STOP: () => LocalizedString
+		/**
+		 * Stage overlays
 		 */
 		PANEL_TITLE: () => LocalizedString
 		/**
@@ -11188,13 +17442,9 @@ export type TranslationFunctions = {
 		 */
 		LAYER: () => LocalizedString
 		/**
-		 * Add Layer
+		 * New layer
 		 */
 		ADD_LAYER: () => LocalizedString
-		/**
-		 * Layer name
-		 */
-		LAYER_NAME: () => LocalizedString
 		/**
 		 * Stage layer
 		 */
@@ -11204,7 +17454,7 @@ export type TranslationFunctions = {
 		 */
 		NO_LAYERS: () => LocalizedString
 		/**
-		 * A layer is a place on the screen — a clock top right, a countdown bottom centre — with its own list of cues.
+		 * Pick what the stage screens should show. Each one starts placed and styled, and can be adjusted afterwards.
 		 */
 		NO_LAYERS_HINT: () => LocalizedString
 		/**
@@ -11216,17 +17466,21 @@ export type TranslationFunctions = {
 		 */
 		DELETE_LAYER_CONFIRM: (arg: { name: string }) => LocalizedString
 		/**
-		 * Enabled
-		 */
-		ENABLED: () => LocalizedString
-		/**
-		 * Shown on {count} window{{s}}
-		 */
-		ASSIGNED_TO: (arg: { count: number }) => LocalizedString
-		/**
-		 * Not assigned to any window
+		 * Not shown on any screen
 		 */
 		ASSIGNED_TO_NONE: () => LocalizedString
+		/**
+		 * Show on
+		 */
+		SHOW_ON: () => LocalizedString
+		/**
+		 * Every window in a picked screen group shows this layer.
+		 */
+		SHOW_ON_HINT: () => LocalizedString
+		/**
+		 * No screen group shows overlays yet. Add a Stage group under Screens.
+		 */
+		SHOW_ON_NO_GROUPS: () => LocalizedString
 		/**
 		 * Cues
 		 */
@@ -11264,9 +17518,9 @@ export type TranslationFunctions = {
 		 */
 		CUE_BLANK: () => LocalizedString
 		/**
-		 * On screen
+		 * Panel
 		 */
-		CUE_ACTIVE: () => LocalizedString
+		PANEL_COLOR: () => LocalizedString
 		/**
 		 * Cue {index} of {total}
 		 */
@@ -11295,14 +17549,6 @@ export type TranslationFunctions = {
 		 * Resume
 		 */
 		RESUME: () => LocalizedString
-		/**
-		 * Restart cue
-		 */
-		RESET: () => LocalizedString
-		/**
-		 * Back to first cue
-		 */
-		RESET_ALL: () => LocalizedString
 		/**
 		 * Start
 		 */
@@ -11515,14 +17761,6 @@ export type TranslationFunctions = {
 		 * A time that has already passed today counts down to tomorrow.
 		 */
 		AT_TIME_HINT: () => LocalizedString
-		/**
-		 * Minutes
-		 */
-		MINUTES: () => LocalizedString
-		/**
-		 * Seconds
-		 */
-		SECONDS: () => LocalizedString
 		/**
 		 * At zero
 		 */
@@ -11908,6 +18146,10 @@ export type TranslationFunctions = {
 	}
 	UNIFIED_SEARCH: {
 		/**
+		 * Search
+		 */
+		TITLE: () => LocalizedString
+		/**
 		 * Search songs, media, styles, bible...
 		 */
 		PLACEHOLDER: () => LocalizedString
@@ -12104,6 +18346,10 @@ export type TranslationFunctions = {
 		 */
 		ACTION_NEXT_BLOCK: () => LocalizedString
 		/**
+		 * Next slide (Space)
+		 */
+		ACTION_ADVANCE: () => LocalizedString
+		/**
 		 * Previous Line
 		 */
 		ACTION_PREV_LINE: () => LocalizedString
@@ -12124,13 +18370,37 @@ export type TranslationFunctions = {
 		 */
 		ACTION_CLOSE_DRAWER: () => LocalizedString
 		/**
-		 * Toggle Video Play/Pause
+		 * Media: play / pause (K)
 		 */
 		ACTION_TOGGLE_VIDEO: () => LocalizedString
 		/**
-		 * Toggle Video Visibility
+		 * Hide / show the background
 		 */
 		ACTION_TOGGLE_VIDEO_VISIBLE: () => LocalizedString
+		/**
+		 * Show / Hide Set List
+		 */
+		ACTION_TOGGLE_SET_LIST: () => LocalizedString
+		/**
+		 * Show / Hide Side Panel
+		 */
+		ACTION_TOGGLE_INSPECTOR: () => LocalizedString
+		/**
+		 * Send the previewed slide live
+		 */
+		ACTION_SEND_PREVIEW_LIVE: () => LocalizedString
+		/**
+		 * Go: next image, video or slideshow of the group
+		 */
+		ACTION_MEDIA_GO: () => LocalizedString
+		/**
+		 * Media: 5 s back (J)
+		 */
+		ACTION_MEDIA_BACK: () => LocalizedString
+		/**
+		 * Media: play (L)
+		 */
+		ACTION_MEDIA_PLAY: () => LocalizedString
 		/**
 		 * Hide Text on All Windows
 		 */
@@ -12230,6 +18500,10 @@ export type TranslationFunctions = {
 		 */
 		GROUP_REMOTE: () => LocalizedString
 		/**
+		 * Connections
+		 */
+		GROUP_CONNECTIONS: () => LocalizedString
+		/**
 		 * Songs & Library
 		 */
 		GROUP_LIBRARY: () => LocalizedString
@@ -12323,6 +18597,10 @@ export type TranslationFunctions = {
 			 */
 			PRESENTATION: () => LocalizedString
 			/**
+			 * Choose which rows the layer bar under the slides shows. Hidden rows keep working, with their keys and from the mobile control.
+			 */
+			LAYER_ROWS: () => LocalizedString
+			/**
 			 * How songs are opened, edited, imported and deleted.
 			 */
 			LIBRARY: () => LocalizedString
@@ -12338,6 +18616,10 @@ export type TranslationFunctions = {
 			 * Phones, viewer screens and external controllers connected to this presenter.
 			 */
 			REMOTE: () => LocalizedString
+			/**
+			 * The server this app uses and the services your account connects to: Nextcloud, ChurchTools and Spotify.
+			 */
+			CONNECTIONS: () => LocalizedString
 			/**
 			 * Options that only apply to the installed desktop app.
 			 */
@@ -12380,6 +18662,10 @@ export type TranslationFunctions = {
 			 * Control view
 			 */
 			CONTROL_VIEW: () => LocalizedString
+			/**
+			 * Layer bar rows
+			 */
+			LAYER_ROWS: () => LocalizedString
 			/**
 			 * Selecting and navigating
 			 */
@@ -12480,11 +18766,11 @@ export type TranslationFunctions = {
 			THEME_SYSTEM: () => LocalizedString
 		}
 		/**
-		 * Open the Companion / WebSocket helper
+		 * Set up Bitfocus Companion
 		 */
 		COMPANION_OPEN: () => LocalizedString
 		/**
-		 * Command reference and connection details for StreamDeck, Bitfocus Companion and custom scripts.
+		 * Stream Deck buttons through the Presenter module for Bitfocus Companion.
 		 */
 		COMPANION_DESC: () => LocalizedString
 		/**
@@ -12516,6 +18802,16 @@ export type TranslationFunctions = {
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
+			OFFLINE_FALLBACK: {
+				/**
+				 * Go offline automatically
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * When the server cannot be reached at startup and a show is saved on this device, open it in offline mode instead of the login page.
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
 			SHOW_LIMIT: {
 				/**
 				 * Shows per page
@@ -12538,21 +18834,11 @@ export type TranslationFunctions = {
 			}
 			SONG_CLICK_BEHAVIOUR: {
 				/**
-				 * Song click behavior
+				 * Go live with
 				 */
 				TITLE: () => LocalizedString
 				/**
-				 * Whether a single click or double-click selects a song in the sidebar
-				 */
-				DESCRIPTION: () => LocalizedString
-			}
-			VERSE_CLICK_BEHAVIOUR: {
-				/**
-				 * Block click behavior
-				 */
-				TITLE: () => LocalizedString
-				/**
-				 * Whether a single click or double-click activates a block in the control view
+				 * Whether a single click or a double-click puts a set list item or a slide on screen
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
@@ -12836,16 +19122,6 @@ export type TranslationFunctions = {
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
-			WINDOW_FOOTER_VISIBLE: {
-				/**
-				 * Show window footer bar
-				 */
-				TITLE: () => LocalizedString
-				/**
-				 * Display the quick-access window management bar at the bottom
-				 */
-				DESCRIPTION: () => LocalizedString
-			}
 			MUSICIAN_NAME: {
 				/**
 				 * Musician name
@@ -13011,6 +19287,26 @@ export type TranslationFunctions = {
 				TITLE: () => LocalizedString
 				/**
 				 * Duration of the hide-video fade in milliseconds (only used when mode is fade)
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			VIDEOS_FOLLOW_MASTER_SPEED: {
+				/**
+				 * Videos follow the master speed
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * A video you start plays at the master speed (M in the layer bar), so one control slows or speeds up everything. Any video can still get its own speed.
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
+			AUDIO_FADE_OUT: {
+				/**
+				 * Audio fade out (s)
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * How long Fade out takes for audio items, in seconds (0 = stop at once)
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
@@ -13606,197 +19902,57 @@ export type TranslationFunctions = {
 	}
 	COMPANION: {
 		/**
-		 * WebSocket / Companion Commands
+		 * Bitfocus Companion
 		 */
 		HELPER_TITLE: () => LocalizedString
 		/**
-		 * Connect external tools (Companion, StreamDeck, custom scripts) via the WebSocket API.
+		 * Stream Deck buttons through the Presenter module for Bitfocus Companion.
 		 */
 		HELPER_DESC: () => LocalizedString
 		/**
-		 * Enabled
+		 * Accept commands from Companion
 		 */
 		ENABLED: () => LocalizedString
-		/**
-		 * Commands enabled
-		 */
-		ENABLED_STATUS_ON: () => LocalizedString
-		/**
-		 * Commands disabled
-		 */
-		ENABLED_STATUS_OFF: () => LocalizedString
-		/**
-		 * WebSocket URL
-		 */
-		WS_URL: () => LocalizedString
-		/**
-		 * Copy to clipboard
-		 */
-		COPY: () => LocalizedString
-		/**
-		 * Copy URL
-		 */
-		COPY_URL: () => LocalizedString
-		/**
-		 * Copied!
-		 */
-		COPIED: () => LocalizedString
-		/**
-		 * Target Window
-		 */
-		TARGET_WINDOW: () => LocalizedString
-		/**
-		 * All Windows
-		 */
-		NO_TARGET: () => LocalizedString
-		/**
-		 * Custom Target
-		 */
-		CUSTOM_TARGET: () => LocalizedString
-		/**
-		 * Action
-		 */
-		ACTION: () => LocalizedString
-		/**
-		 * Description
-		 */
-		DESCRIPTION: () => LocalizedString
-		/**
-		 * Target
-		 */
-		TARGET: () => LocalizedString
-		/**
-		 * Server URLs
-		 */
-		SERVER_URLS: () => LocalizedString
-		/**
-		 * Connection
-		 */
-		CONNECTION_TITLE: () => LocalizedString
-		/**
-		 * WebSocket server info is not available in browser mode.
-		 */
-		SERVER_INFO_UNAVAILABLE: () => LocalizedString
 		/**
 		 * {count} active connection{{s}}
 		 */
 		CONNECTIONS: (arg: { count: string | number | boolean }) => LocalizedString
 		/**
-		 * Port {port}
+		 * Install the Presenter module: extract companion-module-efsh-presenter.zip (attached to every Presenter release) into Companion’s developer modules folder, then restart Companion.
 		 */
-		PORT: (arg: { port: unknown }) => LocalizedString
+		SETUP_1: () => LocalizedString
+		/**
+		 * In Companion, add a “Presenter” connection with one of the addresses below.
+		 */
+		SETUP_2: () => LocalizedString
+		/**
+		 * Drag buttons from its presets: slides and agenda entries with their titles, black and hidden text, media, and the live entry’s slides in their section colours.
+		 */
+		SETUP_3: () => LocalizedString
+		/**
+		 * Host
+		 */
+		HOST: () => LocalizedString
+		/**
+		 * Port
+		 */
+		PORT: () => LocalizedString
+		/**
+		 * Copy host
+		 */
+		COPY: () => LocalizedString
+		/**
+		 * Copied!
+		 */
+		COPIED: () => LocalizedString
+		/**
+		 * Companion connects to the desktop app; the browser version has no server for it.
+		 */
+		SERVER_INFO_UNAVAILABLE: () => LocalizedString
 		/**
 		 * Latest command
 		 */
 		LATEST_COMMAND: () => LocalizedString
-		/**
-		 * No command received yet
-		 */
-		NO_COMMAND_RECEIVED: () => LocalizedString
-		/**
-		 * Select the next show item and reset block/line selection.
-		 */
-		ACTION_DESC_NEXT_ITEM: () => LocalizedString
-		/**
-		 * Select the previous show item and reset block/line selection.
-		 */
-		ACTION_DESC_PREV_ITEM: () => LocalizedString
-		/**
-		 * Move to the next block in the current song order.
-		 */
-		ACTION_DESC_NEXT_BLOCK: () => LocalizedString
-		/**
-		 * Move to the previous block in the current song order.
-		 */
-		ACTION_DESC_PREV_BLOCK: () => LocalizedString
-		/**
-		 * Move to the next visible line (auto-advances block at the end).
-		 */
-		ACTION_DESC_NEXT_LINE: () => LocalizedString
-		/**
-		 * Move to the previous visible line (moves to previous block if needed).
-		 */
-		ACTION_DESC_PREV_LINE: () => LocalizedString
-		/**
-		 * Jump directly to the show item at payload.index.
-		 */
-		ACTION_DESC_SET_ITEM: () => LocalizedString
-		/**
-		 * Jump directly to the block at payload.index in the current song.
-		 */
-		ACTION_DESC_SET_BLOCK: () => LocalizedString
-		/**
-		 * Jump directly to the visible line at payload.index in the current block.
-		 */
-		ACTION_DESC_SET_LINE: () => LocalizedString
-		/**
-		 * Fade the target window(s) to black.
-		 */
-		ACTION_DESC_FADE_TO_BLACK: () => LocalizedString
-		/**
-		 * Fade the target window(s) back to live content.
-		 */
-		ACTION_DESC_FADE_FROM_BLACK: () => LocalizedString
-		/**
-		 * Toggle black-screen mode for the target window(s).
-		 */
-		ACTION_DESC_TOGGLE_BLACK: () => LocalizedString
-		/**
-		 * Freeze a target window so it ignores further content updates.
-		 */
-		ACTION_DESC_FREEZE_WINDOW: () => LocalizedString
-		/**
-		 * Unfreeze a target window and resume live updates.
-		 */
-		ACTION_DESC_UNFREEZE_WINDOW: () => LocalizedString
-		/**
-		 * Show a temporary identify overlay on all presentation windows.
-		 */
-		ACTION_DESC_IDENTIFY_WINDOWS: () => LocalizedString
-		/**
-		 * Set display mode (`normal` or `stream`) for matching target windows.
-		 */
-		ACTION_DESC_SET_DISPLAY_MODE: () => LocalizedString
-		/**
-		 * Start video playback on the target window(s).
-		 */
-		ACTION_DESC_VIDEO_PLAY: () => LocalizedString
-		/**
-		 * Pause video playback on the target window(s).
-		 */
-		ACTION_DESC_VIDEO_PAUSE: () => LocalizedString
-		/**
-		 * Stop video playback on the target window(s).
-		 */
-		ACTION_DESC_VIDEO_STOP: () => LocalizedString
-		/**
-		 * Seek video playback to payload.position seconds on the target window(s).
-		 */
-		ACTION_DESC_VIDEO_SEEK: () => LocalizedString
-		/**
-		 * Request the current controller state from the operator app.
-		 */
-		ACTION_DESC_GET_STATE: () => LocalizedString
-		/**
-		 * Return current presentation windows and runtime status.
-		 */
-		ACTION_DESC_GET_WINDOWS: () => LocalizedString
-		/**
-		 * Scan Network
-		 */
-		SCAN_NETWORK: () => LocalizedString
-		/**
-		 * Scanning...
-		 */
-		SCAN_RUNNING: () => LocalizedString
-		/**
-		 * No WebSocket servers found on the local network.
-		 */
-		SCAN_NO_RESULTS: () => LocalizedString
-		/**
-		 * Found {count} host(s) on port:
-		 */
-		SCAN_FOUND: (arg: { count: unknown }) => LocalizedString
 	}
 	MUSICIAN: {
 		/**
@@ -14998,6 +21154,10 @@ export type TranslationFunctions = {
 		 */
 		CMD_TOGGLE_VIDEO_PLAYBACK: () => LocalizedString
 		/**
+		 * Master video speed
+		 */
+		CMD_MASTER_SPEED: () => LocalizedString
+		/**
 		 * Black screen
 		 */
 		CMD_TOGGLE_BLACK: () => LocalizedString
@@ -15071,6 +21231,10 @@ export type TranslationFunctions = {
 		 * Backend is not reachable
 		 */
 		SNACK_MESSAGE: () => LocalizedString
+		/**
+		 * Server not reachable — switched to offline mode with the saved show
+		 */
+		SNACK_OFFLINE_FALLBACK: () => LocalizedString
 		/**
 		 * Change backend settings
 		 */

@@ -6,8 +6,9 @@
  * so they are drawn as toggles: one grid, current state visible at a glance, and the panel
  * stays open while several are flipped.
  *
- * Anything that is not a toggle — renaming, geometry, languages, stage layers — is one
- * click away in the Window Manager rather than duplicated here.
+ * Anything that is not a toggle — renaming, geometry — is one click away in the Window Manager
+ * rather than duplicated here. What a window shows belongs to its screen group, so the group is
+ * the one choice offered here.
  */
 import { Box, Divider, MenuItem, Popover, Select, Stack, ToggleButton, Tooltip, Typography } from '@mui/material';
 import {
@@ -16,13 +17,11 @@ import {
   CropFree as FramelessIcon,
   Fullscreen as FullscreenIcon,
   OpenInNew as BringToFrontIcon,
-  Palette as StyleIcon,
   Settings as SettingsIcon,
-  TextFields as HideTextIcon,
   Tv as ScreenIcon,
   VerticalAlignTop as OnTopIcon,
+  ViewQuilt as GroupIcon,
   VisibilityOff as HideWindowIcon,
-  Wallpaper as HideBackgroundIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { RigWindow } from '@/hooks/usePresentationWindows';
@@ -32,7 +31,8 @@ import type { ScreenInfo } from './ScreenPicker';
 export interface WindowQuickActionsProps {
   anchorEl: HTMLElement | null;
   window: RigWindow | undefined;
-  styles: Array<{ id: number; name: string }>;
+  /** Screen groups the window can move to — the quickest way to change what it shows. */
+  screenGroups: Array<{ id: number; name: string }>;
   screens: ScreenInfo[];
   onClose: () => void;
   onUpdate: (patch: Partial<WindowConfig>) => void;
@@ -85,7 +85,7 @@ const ActionToggle = ({
 export const WindowQuickActions = ({
   anchorEl,
   window: win,
-  styles,
+  screenGroups,
   screens,
   onClose,
   onUpdate,
@@ -138,20 +138,6 @@ export const WindowQuickActions = ({
             onClick={onToggleHidden}
           />
           <ActionToggle
-            active={!!cfg.hideText}
-            color="warning"
-            label={LL.WINDOW.HIDE_TEXT()}
-            icon={<HideTextIcon sx={{ fontSize: 18 }} />}
-            onClick={() => onUpdate({ hideText: !cfg.hideText })}
-          />
-          <ActionToggle
-            active={!!cfg.hideBackground}
-            color="warning"
-            label={LL.WINDOW.HIDE_BACKGROUND()}
-            icon={<HideBackgroundIcon sx={{ fontSize: 18 }} />}
-            onClick={() => onUpdate({ hideBackground: !cfg.hideBackground })}
-          />
-          <ActionToggle
             active={!!cfg.fullscreen}
             label={LL.WINDOW.FULLSCREEN()}
             icon={<FullscreenIcon sx={{ fontSize: 18 }} />}
@@ -177,22 +163,22 @@ export const WindowQuickActions = ({
           />
         </Box>
 
-        {styles.length > 0 && (
+        {screenGroups.length > 0 && (
           <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-            <StyleIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+            <GroupIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
             <Select
               size="small"
-              value={cfg.styleId || 0}
-              onChange={(e) => onUpdate({ styleId: (e.target.value as number) || undefined })}
+              value={screenGroups.some((g) => g.id === cfg.screenGroupId) ? cfg.screenGroupId : ''}
+              onChange={(e) => onUpdate({ screenGroupId: Number(e.target.value) })}
               sx={{ flex: 1, fontSize: '0.8rem' }}
               displayEmpty
             >
-              <MenuItem value={0} sx={{ fontSize: '0.8rem' }}>
-                <em>{LL.STYLE.NONE()}</em>
+              <MenuItem value="" disabled sx={{ fontSize: '0.8rem' }}>
+                <em>{LL.WINDOW.SCREEN_GROUP()}</em>
               </MenuItem>
-              {styles.map((s) => (
-                <MenuItem key={s.id} value={s.id} sx={{ fontSize: '0.8rem' }}>
-                  {s.name}
+              {screenGroups.map((g) => (
+                <MenuItem key={g.id} value={g.id} sx={{ fontSize: '0.8rem' }}>
+                  {g.name}
                 </MenuItem>
               ))}
             </Select>

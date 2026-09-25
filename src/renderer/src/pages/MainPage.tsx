@@ -4,6 +4,12 @@ import { ViewList as ShowListIcon, TouchApp as ControlIcon, Monitor as OutputIco
 import Footer from '@/components/layout/Footer';
 import Sidebar, { type SidebarHandle } from '@/components/layout/Sidebar';
 import Control from '@/components/show/Control';
+import { OperatorTopBar } from '@/components/operator/OperatorTopBar';
+import { ItemInspector } from '@/components/operator/ItemInspector';
+import { PreviewPanel } from '@/components/preview/PreviewPanel';
+import { LayerBar } from '@/components/operator/LayerBar';
+import { ColumnResizer } from '@/components/operator/ColumnResizer';
+import { INSPECTOR_DEFAULT, INSPECTOR_RANGE, SET_LIST_DEFAULT, SET_LIST_RANGE, clampSize } from '@/components/operator/tileSize';
 import { RequireAuth } from '@/routes/RequireAuth';
 import { Shows } from '@/components/show/Shows';
 import type { Show, ShowItem } from '@/api/shows.api';
@@ -12,8 +18,7 @@ import { useAppDispatch } from '@/store';
 import { setCurrentShow, closeShowSelector, useGetShow } from '@/store/showSlice';
 import { setSongsOrder as setSongsOrderAction, setSongOrders as setSongOrdersAction, loadShowSongs } from '@/store/songsSlice';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
-import { useWsCompanionCommands } from '@/hooks/useWsCompanionCommands';
-import { useBroadcastCompanionState } from '@/hooks/useBroadcastCompanionState';
+import CompanionHost from '@/components/layout/CompanionHost';
 import PresentationSyncHost from '@/components/layout/PresentationSyncHost';
 import StageEngineHost from '@/components/layout/StageEngineHost';
 import { useMetrics } from '@/hooks/useMetrics';
@@ -23,8 +28,17 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { formatRelativeTime } from '@/utils/relativeTime';
 import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
 import { useGetAccountSettingsQuery, useGetSessionQuery } from '@/api/session.api';
+import { useNextcloudAccountCheck } from '@/nextcloud/useNextcloudAccountCheck';
+import { useDefaultScreenGroups } from '@/hooks/useDefaultScreenGroups';
+import { sidePanelState, sidePanelVisible } from '@/components/operator/sidePanel';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useGetMusicianSettings } from '@/store/musicianSlice';
+
+/** The keyboard handler follows the live slide; as a leaf that re-renders nothing else (see CompanionHost). */
+const KeyboardHost = () => {
+  useKeyboardNavigation();
+  return null;
+};
 
 export const MainPage = () => {
   const dispatch = useAppDispatch();
@@ -79,7 +93,30 @@ export const MainPage = () => {
   // MainPage hooks run immediately on mount — before <RequireAuth> has a chance
   // to block the children render — so we must guard them here explicitly.
   // useGetSessionQuery re-uses the cached result from RequireAuth (no extra request).
-  const { offlineMode } = useGetSettings();
+  const settings = useGetSettings(
+    'offlineMode',
+    'operatorSetListOpen',
+    'operatorSetListWidth',
+    'operatorInspectorWidth',
+    'operatorSidePanelOpen',
+    'operatorInspectorOpen',
+    'operatorPreviewOpen',
+  );
+  const { offlineMode, operatorSetListOpen, operatorSetListWidth, operatorInspectorWidth } = settings;
+  // The side panel holds the preview on top and the inspector below; either can be off, and one
+  // switch hides the whole panel.
+  const sidePanel = sidePanelState(settings);
+  const rightColumnOpen = sidePanelVisible(sidePanel);
+  // Column widths while an edge is dragged; the settings are written once on release.
+  const [draggedWidths, setDraggedWidths] = useState<{ setList?: number; inspector?: number }>({});
+  const setListWidth = draggedWidths.setList ?? clampSize(operatorSetListWidth, SET_LIST_RANGE, SET_LIST_DEFAULT);
+  const inspectorWidth = draggedWidths.inspector ?? clampSize(operatorInspectorWidth, INSPECTOR_RANGE, INSPECTOR_DEFAULT);
+  // Top-bar elements the set list's toolbar is portalled into (desktop operator view).
+  const [showsActionsSlot, setShowsActionsSlot] = useState<HTMLElement | null>(null);
+  const [listActionsSlot, setListActionsSlot] = useState<HTMLElement | null>(null);
+  const [saveActionSlot, setSaveActionSlot] = useState<HTMLElement | null>(null);
+  const [appActionsSlot, setAppActionsSlot] = useState<HTMLElement | null>(null);
+  const [devicesActionsSlot, setDevicesActionsSlot] = useState<HTMLElement | null>(null);
   const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
   const isAuthenticated = offlineMode || session?.isAuthenticated === true;
 
@@ -97,10 +134,10 @@ export const MainPage = () => {
     }
   }, [accountSettings?.defaultStyleId, accountSettings?.showTitleTemplate]);
 
-  // Keyboard navigation hook
-  useKeyboardNavigation();
-  useWsCompanionCommands();
-  useBroadcastCompanionState();
+  // Web version: drop a Nextcloud connection that no longer fits the account.
+  useNextcloudAccountCheck(offlineMode || !!window.api);
+  // A brand-new account starts with a presentation and a stage group instead of an empty board.
+  useDefaultScreenGroups();
 
   // On mount: if a show was restored from localStorage, load its songs.
   // Guard on isAuthenticated so the songs API is not called before the session
@@ -124,7 +161,6 @@ export const MainPage = () => {
             title: show.title,
             order: orderToSave,
             groups: override ? currentShow?.groups : show.groups,
-            mediaCues: override ? currentShow?.mediaCues : show.mediaCues,
             styleId: override ? (currentShow?.styleId ?? null) : (show.styleId ?? null),
             eventId: (override ? currentShow?.eventId : show.eventId) ?? null,
             eventName: (override ? currentShow?.eventName : show.eventName) ?? null,
@@ -156,6 +192,8 @@ export const MainPage = () => {
       <Shows open={isShowSelectorOpen} onShowSelected={handleShowSelected} />
       <PresentationSyncHost />
       <StageEngineHost />
+      <CompanionHost />
+      <KeyboardHost />
       {/* Show update notification */}
       <Snackbar open={showUpdateAvailable} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert
@@ -215,7 +253,8 @@ export const MainPage = () => {
             height: '100vh',
           }}
         >
-          <DesktopAppBanner />
+          {/* On desktop the download offer sits in the account menu instead of taking a row. */}
+          {isMobile && <DesktopAppBanner />}
           {isMobile ? (
             // ── Mobile layout ──────────────────────────────────────────────
             <>
@@ -262,15 +301,71 @@ export const MainPage = () => {
           ) : (
             // ── Desktop layout ─────────────────────────────────────────────
             <>
+              {/* Operator view: monitors, mode and the set list's toolbar on top, set list | slides | look
+                  in the middle (both side columns can be hidden), everything that runs in the layer bar,
+                  connections in the footer. */}
+              <OperatorTopBar
+                showsActionsRef={setShowsActionsSlot}
+                listActionsRef={setListActionsSlot}
+                saveActionRef={setSaveActionSlot}
+                appActionsRef={setAppActionsSlot}
+                devicesActionsRef={setDevicesActionsSlot}
+              />
               <Stack direction="row" sx={{ flexGrow: 1, overflow: 'hidden', minHeight: 0 }}>
-                <Sidebar ref={sidebarRef} />
+                <Sidebar
+                  ref={sidebarRef}
+                  toolbarSlots={{
+                    app: appActionsSlot,
+                    shows: showsActionsSlot,
+                    lists: listActionsSlot,
+                    save: saveActionSlot,
+                    devices: devicesActionsSlot,
+                  }}
+                  collapsed={operatorSetListOpen === false}
+                  width={setListWidth}
+                />
+                {operatorSetListOpen !== false && (
+                  <ColumnResizer
+                    width={setListWidth}
+                    range={SET_LIST_RANGE}
+                    direction={1}
+                    label={LL.OPERATOR.RESIZE_COLUMN()}
+                    onResize={(width) => setDraggedWidths((current) => ({ ...current, setList: width }))}
+                    onCommit={(width) => {
+                      updateSetting('operatorSetListWidth', width);
+                      setDraggedWidths((current) => ({ ...current, setList: undefined }));
+                    }}
+                    onHide={() => updateSetting('operatorSetListOpen', false)}
+                  />
+                )}
                 <Control
                   onOpenSearch={() => sidebarRef.current?.openSearch()}
                   onOpenMediaBrowser={(subType) => sidebarRef.current?.openMediaBrowser(subType)}
                   onOpenBiblePicker={() => sidebarRef.current?.openBiblePicker()}
                 />
+                {rightColumnOpen && (
+                  <>
+                    <ColumnResizer
+                      width={inspectorWidth}
+                      range={INSPECTOR_RANGE}
+                      direction={-1}
+                      label={LL.OPERATOR.RESIZE_COLUMN()}
+                      onResize={(width) => setDraggedWidths((current) => ({ ...current, inspector: width }))}
+                      onCommit={(width) => {
+                        updateSetting('operatorInspectorWidth', width);
+                        setDraggedWidths((current) => ({ ...current, inspector: undefined }));
+                      }}
+                      onHide={() => updateSetting('operatorSidePanelOpen', false)}
+                    />
+                    <Stack sx={{ width: inspectorWidth, flexShrink: 0, borderLeft: 1, borderColor: 'divider', minHeight: 0 }}>
+                      {sidePanel.preview && <PreviewPanel />}
+                      {sidePanel.inspector && <ItemInspector width="100%" />}
+                    </Stack>
+                  </>
+                )}
               </Stack>
-              <Footer />
+              {/* The layer bar's status line carries the footer's windows and connections. */}
+              <LayerBar />
             </>
           )}
         </Stack>

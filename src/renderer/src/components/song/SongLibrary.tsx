@@ -39,6 +39,7 @@ import { useMetrics } from '@/hooks/useMetrics';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { RowActionMenu } from '@/components/common/RowActionMenu';
 import { SongLanguageReview } from '@/components/song/SongLanguageReview';
+import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 
 type SortOrder = 'lexicographic' | 'numeric';
 
@@ -48,7 +49,7 @@ type Props = {
   onSongSelected: (song: SongListItem) => void;
 };
 
-export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
+const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
   const { LL } = useI18nContext();
   const isMobile = useIsMobile();
   const [filter, setFilter] = useState('');
@@ -57,7 +58,7 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
   const [songToDelete, setSongToDelete] = useState<SongListItem | null>(null);
   const [languageReviewOpen, setLanguageReviewOpen] = useState(false);
 
-  const { showDeleteFromDb } = useGetSettings();
+  const { showDeleteFromDb } = useGetSettings('showDeleteFromDb');
 
   const { data: allSongs, isLoading } = useGetSongsAllQuery({ order: sortOrder });
   const [deleteSong, { isLoading: isDeleting }] = useDeleteSongMutation();
@@ -433,3 +434,5 @@ export const SongLibrary = ({ open, onClose, onSongSelected }: Props) => {
     </>
   );
 };
+
+export const SongLibrary = stillWhileClosed(SongLibraryBody);

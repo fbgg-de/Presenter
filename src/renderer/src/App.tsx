@@ -42,7 +42,7 @@ const HardRedirect = ({ to }: { to: string }) => {
 const App = () => {
   useMetricSync();
 
-  const { themeMode, uiLanguage, offlineMode } = useGetSettings();
+  const { themeMode, uiLanguage, offlineMode } = useGetSettings('themeMode', 'uiLanguage', 'offlineMode');
   const { trackEvent } = useMetrics();
   const [boundaryError, setBoundaryError] = useState<Error | null>(null);
   const freshStartTracked = useRef(false);

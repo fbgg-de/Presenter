@@ -46,7 +46,6 @@ export interface FrontendAPI {
   updatePresentationContent: (id: string, content: PresentationContentIPC) => void;
   /** Stage-monitor overlay for one window; its own channel, see presentationBridge. */
   updateStageOverlay: (id: string, payload: unknown) => void;
-  broadcastPresentationContent: (content: PresentationContentIPC) => void;
   listScreens: () => Promise<ScreenInfo[]>;
   getWindowStates: () => Promise<WindowState[]>;
 
@@ -68,6 +67,7 @@ export interface FrontendAPI {
   startMediaServer: (mediaPath: string) => Promise<string>;
   pickMediaFiles: () => Promise<string[]>;
   importMediaFiles: (mediaPath: string, subPath: string, sources: string[]) => Promise<MediaImportResult>;
+  createMediaFolder?: (mediaPath: string, subPath: string, name: string) => Promise<string>;
   getPathForFile: (file: File) => string;
 
   // ── Musician view ──
@@ -137,6 +137,8 @@ export interface FrontendAPI {
 export interface MediaImportResult {
   copied: string[];
   skipped: { name: string; reason: 'unsupported' | 'not-a-file' | 'exists' | 'error'; message?: string }[];
+  /** Where each source ended up (by name in the target folder); `reused` when an identical file was already there. */
+  placed?: { source: string; name: string; reused: boolean }[];
 }
 
 export interface VideoStatus {

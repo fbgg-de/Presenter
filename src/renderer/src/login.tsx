@@ -18,7 +18,7 @@ import ConnectivityChecker from '@/components/settings/ConnectivityChecker';
 loadAllLocales();
 
 const LoginApp = () => {
-  const { themeMode, uiLanguage } = useGetSettings();
+  const { themeMode, uiLanguage } = useGetSettings('themeMode', 'uiLanguage');
   const resolvedMode = resolveThemeMode(themeMode);
   const muiTheme = useMemo(() => getTheme(resolvedMode), [resolvedMode]);
 

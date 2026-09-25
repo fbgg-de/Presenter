@@ -1,9 +1,10 @@
 import { presenterApi } from './base.api';
 import type { ApiSuccess } from './base.api';
-import type { MediaCue, MediaCueBinding } from '@/media/types';
+import type { MediaItemData } from '@/media/mediaItem';
 
 export type ShowItemType = 'song' | 'media' | 'bible_verse';
-export type MediaSubType = 'image' | 'video' | 'color';
+/** `audio` plays on the operator's computer only and is never sent to a presentation window. */
+export type MediaSubType = 'image' | 'video' | 'color' | 'audio' | 'slideshow';
 
 /**
  * A named, optionally-colored group that items can be organized into within a show. Groups are an
@@ -17,6 +18,12 @@ export type ShowGroup = {
   color?: string;
   /** Persisted collapse state (collapsed hides the group's items in the sidebar). */
   collapsed?: boolean;
+  /** Theme (style id) for every item in the group; unset follows the show. */
+  styleId?: number;
+  /** How the group plays its media entries (see `media/groupPlayback.ts`); unset uses the defaults. */
+  media?: Partial<import('@/media/groupPlayback').GroupMediaSettings>;
+  /** How the group's backgrounds change and what they do when the group is left. */
+  backgrounds?: Partial<import('@/media/groupPlayback').GroupBackgroundSettings>;
 };
 
 /**
@@ -35,7 +42,11 @@ export type StageTrigger = {
 };
 
 export type ShowItem = {
-  mediaCue?: MediaCueBinding;
+  /**
+   * Stable identity of the entry, given when it is created. Entries saved before ids existed have
+   * none; nothing may assume one is present yet.
+   */
+  id?: string;
   type: ShowItemType;
   /** Id of the group this item belongs to (see Show.groups). Items without one fall into Default. */
   groupId?: string;
@@ -56,21 +67,24 @@ export type ShowItem = {
   mediaBlur?: number;
   /** Video autoplay (default true) */
   mediaAutoplay?: boolean;
-  /** Video loop (default true) */
+  /** Video loop (default true); audio loop (default false) */
   mediaLoop?: boolean;
+  /** Audio volume 0–1 (default 1) */
+  mediaVolume?: number;
+  /**
+   * Image and video entries: versions, role and screens (see `media/mediaItem.ts`). Entries saved
+   * before it existed only carry `mediaPath` and the display fields above.
+   */
+  media?: MediaItemData;
   bibleRef?: string;
   bibleTranslation?: string;
   bibleFormattedSegments?: { start: number; end: number; bold: boolean }[];
   label?: string;
-  styleId?: number;
   /** Stage-monitor actions fired when this item becomes active. */
   stageTriggers?: StageTrigger[];
-  /** Per-window style override: keys are window names, values are style IDs (or null = no style). */
-  itemStyleByWindow?: Record<string, number | null>;
 };
 
 export type Show = {
-  mediaCues?: MediaCue[];
   title: string;
   order: ShowItem[];
   /** Ordered list of item groups (metadata + sequence). A Default group is ensured on load. */
@@ -119,7 +133,6 @@ const showsApi = presenterApi.injectEndpoints({
         title: string;
         order: ShowItem[];
         groups?: ShowGroup[];
-        mediaCues?: MediaCue[];
         styleId?: number | null;
         eventId?: number | null;
         eventName?: string | null;

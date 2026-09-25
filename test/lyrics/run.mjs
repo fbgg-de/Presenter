@@ -18,7 +18,7 @@
 import { build } from 'esbuild';
 import { writeFileSync, mkdtempSync, readFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { join } from 'path';
+import { join, resolve } from 'path';
 import { pathToFileURL } from 'url';
 
 const dir = mkdtempSync(join(tmpdir(), 'lyrics-'));
@@ -50,15 +50,18 @@ writeFileSync(
 await build({
   entryPoints: [
     'src/renderer/src/song/lyrics.ts',
+    'src/renderer/src/song/songText.ts',
     'src/renderer/src/song/detectLanguage.ts',
     'src/renderer/src/presentation/lineFilter.ts',
     'src/renderer/src/utils/languageSlots.ts',
+    'src/renderer/src/song/lyricFit.ts',
   ],
   bundle: true,
   format: 'esm',
   outdir: dir,
   outbase: 'src/renderer/src',
   platform: 'node',
+  alias: { '@': resolve('src/renderer/src') },
   plugins: [
     {
       name: 'song-barrel-stub',
@@ -71,8 +74,10 @@ await build({
 
 const L = await import(pathToFileURL(join(dir, 'song', 'lyrics.js')).href);
 const D = await import(pathToFileURL(join(dir, 'song', 'detectLanguage.js')).href);
+const T = await import(pathToFileURL(join(dir, 'song', 'songText.js')).href);
 const F = await import(pathToFileURL(join(dir, 'presentation', 'lineFilter.js')).href);
 const S = await import(pathToFileURL(join(dir, 'utils', 'languageSlots.js')).href);
+const FIT = await import(pathToFileURL(join(dir, 'song', 'lyricFit.js')).href);
 
 let failed = 0;
 const eq = (name, got, want) => {
@@ -375,6 +380,42 @@ eq('untagged song still groups without a primary language', texts(F.filterLinesB
 eq('grouping collapses without the anchor language', texts(F.filterLinesByLanguage(bilingual, ['EN'])), ['Line two']);
 eq('and is correct once it is supplied', texts(F.filterLinesByLanguage(bilingual, ['EN'], 'EN')), ['Line one', 'Line two']);
 
+// A filter that names no language the song is written in — a screen group set to French, or a
+// theme whose slots do not line up — used to empty the block, putting a blank slide on that
+// output while every other one still showed the text. The anchor lines stand in instead.
+eq('a filter the song cannot answer falls back to the anchor lines', texts(F.filterLinesByLanguage(bilingual, ['FR'], 'EN')), [
+  'Line one',
+  'Line two',
+]);
+eq('a block with no anchor at all falls back to everything it has', texts(F.filterLinesByLanguage(bilingual, ['FR'], 'FR')), [
+  'Line one',
+  'Zeile eins',
+  'Line two',
+  'Zeile zwei',
+]);
+
+// ── Stream position ───────────────────────────────────────────────────────────
+//
+// A stream window steps line by line through the *anchor* lines. Counting untagged lines alone
+// meant a fully tagged song had nothing to count, so such a stream sat at the top of its block
+// and only ever moved when the operator changed block.
+
+const streamBlocks = [
+  [
+    { text: 'Line one', language: 'EN' },
+    { text: 'Zeile eins', language: 'DE' },
+    { text: 'Line two', language: 'EN' },
+    { text: 'Zeile zwei', language: 'DE' },
+  ],
+  [{ text: 'Chorus', language: 'EN' }],
+];
+
+eq('tagged song: second lyric line is the third rendered line', F.streamFlatIndex(streamBlocks, 0, 1, 'EN'), 2);
+eq('tagged song: the next block starts after all four lines', F.streamFlatIndex(streamBlocks, 1, 0, 'EN'), 4);
+eq('untagged song still counts its untagged anchors', F.streamFlatIndex([legacyLines], 0, 1), 2);
+eq('a translation-only output steps line by line', F.streamFlatIndex([[streamBlocks[0][1], streamBlocks[0][3]]], 0, 1, 'EN'), 1);
+eq('a line index past the end stays at the start of its block', F.streamFlatIndex(streamBlocks, 1, 5, 'EN'), 4);
+
 // ── Language slots ────────────────────────────────────────────────────────────
 //
 // A style names positions, not languages: slot 1 is whatever the song lists first. These check
@@ -478,6 +519,70 @@ eq('separators ignored', L.inferSongLanguages(['[EN] One', '---', '', '[DE] Eins
 eq('empty code kept in the filter', S.languagesForStyle([{ slot: 1 }, { slot: 2 }], ['', 'DE']), ['', 'DE']);
 eq('hiding slot 1 still works there', S.languagesForStyle([{ slot: 1, visible: false }, { slot: 2 }], ['', 'DE']), ['DE']);
 eq('a slot the song lacks still drops out', S.languagesForStyle([{ slot: 1 }, { slot: 2 }], ['']), ['']);
+
+// ── Whole song as text ────────────────────────────────────────────────────────
+
+const stored = (result, languages) => result.blocks.map((b) => [b.name, L.serialiseBlockLines(b.pages, languages)]);
+const textSong = [
+  { name: 'Verse 1', pages: L.parseBlockLines(['[DE] Eins', '[EN] One', '---', '[DE] Zwei'], 'DE') },
+  { name: 'Chorus', pages: L.parseBlockLines(['[DE] Refrain', '', '[DE] Ende'], 'DE') },
+];
+const songText = T.blocksToSongText(textSong, ['DE', 'EN']);
+eq('text writes the default language untagged', songText, '# Verse 1\nEins\n[EN] One\n---\nZwei\n\n# Chorus\nRefrain\n\nEnde');
+const back = T.songTextToBlocks(songText, ['DE', 'EN'], 'Verse', ['Verse 1', 'Chorus']);
+eq(
+  'text round trip keeps the stored form',
+  stored(back, ['DE', 'EN']),
+  textSong.map((b) => [b.name, L.serialiseBlockLines(b.pages, ['DE', 'EN'])]),
+);
+eq('round trip has no problems, renames or removals', [back.problems, back.renames, back.removed, back.slides], [[], {}, [], 3]);
+
+const renamed = T.songTextToBlocks(songText.replace('# Chorus', '# Refrain'), ['DE', 'EN'], 'Verse', ['Verse 1', 'Chorus']);
+eq('a heading changed in place is a rename', renamed.renames, { Chorus: 'Refrain' });
+eq('and not a removal', renamed.removed, []);
+eq('renames follow into orders', T.followBlockChanges(['Verse 1', 'Chorus', 'Chorus'], renamed.renames, ['Verse 1', 'Refrain']), [
+  'Verse 1',
+  'Refrain',
+  'Refrain',
+]);
+
+const dropped = T.songTextToBlocks('# Verse 1\nEins', ['DE'], 'Verse', ['Verse 1', 'Chorus']);
+eq('a missing heading is a removal', dropped.removed, ['Chorus']);
+
+const reordered = T.songTextToBlocks('# Chorus\nA\n# Verse 1\nB', ['DE'], 'Verse', ['Verse 1', 'Chorus']);
+eq('reordering blocks is neither rename nor removal', [reordered.renames, reordered.removed], [{}, []]);
+
+const problems = T.songTextToBlocks('# Verse\nA\n#\nB\n# Verse\n[FR] C', ['DE', 'EN'], 'Verse');
+eq('problems carry their line', problems.problems, [
+  { kind: 'empty_name', line: 3 },
+  { kind: 'duplicate', line: 5, name: 'Verse' },
+  { kind: 'unknown_language', line: 6, code: 'FR' },
+]);
+
+const loose = T.songTextToBlocks('\n\nOhne Titel\n#1 in my heart\n\n\n# Chorus\n\nRefrain\n\n', ['DE'], 'Verse');
+eq(
+  'lyrics before the first heading get the fallback name',
+  loose.blocks.map((b) => b.name),
+  ['Verse', 'Chorus'],
+);
+eq('#word is a lyric, outer blank lines are dropped', stored(loose, ['DE']), [
+  ['Verse', ['[DE] Ohne Titel', '[DE] #1 in my heart']],
+  ['Chorus', ['[DE] Refrain']],
+]);
+eq('a tagged default language is still the primary line', stored(T.songTextToBlocks('# V\n[de] Eins', ['DE'], 'V'), ['DE']), [
+  ['V', ['[DE] Eins']],
+]);
+
+// ── What one screen holds, for the editor's "line too long" marks (song/lyricFit.ts) ──
+eq(
+  'CSS lengths become the output pixels',
+  [FIT.lengthToPx('4vw', 100), FIT.lengthToPx('120%', 80), FIT.lengthToPx('48px', 10), FIT.lengthToPx(undefined, 10, 7)],
+  [76.8, 96, 48, 7],
+);
+const limits = FIT.fitLimits({ fontSize: '5vw', lineHeight: '120%', padding: '2vh 5vw', fontFamily: 'Roboto' });
+eq('the paddings come off the width, the line height sets how many lines fit', [limits.maxWidth, limits.maxLines], [1728, 9]);
+eq('the font is spelled out for measuring', limits.font.startsWith('96px'), true);
+eq('without a canvas nothing is flagged', FIT.lineOverflows('a very long line', limits), false);
 
 console.log(failed ? `\n${failed} failing` : '\nall passing');
 process.exit(failed ? 1 : 0);

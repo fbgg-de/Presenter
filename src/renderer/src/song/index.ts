@@ -3,6 +3,7 @@ export * from './CcliSong';
 export * from './SngSong';
 export * from './lyrics';
 export * from './detectLanguage';
+export * from './songText';
 
 export type TBlocks = { [key: string]: string[] };
 

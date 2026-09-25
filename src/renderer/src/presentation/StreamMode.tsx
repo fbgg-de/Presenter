@@ -2,6 +2,7 @@ import { useRef, useEffect, CSSProperties } from 'react';
 import { PresentationLine } from '@/presentation/types';
 import { LanguageStyleEntry } from '@/api/styles.api';
 import { filterLinesByLanguage, resolveLineLangCss } from '@/presentation/index';
+import { streamFlatIndex } from '@/presentation/lineFilter';
 import { slotForLanguage } from '@/utils/languageSlots';
 
 /**
@@ -35,25 +36,11 @@ export const StreamMode = ({
   const filteredBlocks = blocks.map((block) => filterLinesByLanguage(block, languages, songLanguages?.[0]));
   const allLines: PresentationLine[] = filteredBlocks.flat();
 
-  // Compute flat index: convert primary-line activeLineIndex to flat position
-  let flatIndex = 0;
-  for (let b = 0; b < activeBlockIndex && b < blocks.length; b++) {
-    flatIndex += filteredBlocks[b].length;
-  }
-  if (activeBlockIndex < blocks.length) {
-    const currentFiltered = filteredBlocks[activeBlockIndex];
-    // Count primary lines to find flat position of activeLineIndex-th primary
-    let primCount = 0;
-    for (let i = 0; i < currentFiltered.length; i++) {
-      if (!currentFiltered[i].language) {
-        if (primCount === activeLineIndex) {
-          flatIndex += i;
-          break;
-        }
-        primCount++;
-      }
-    }
-  }
+  // Where the active lyric line sits in the flat list. The steps are the *anchor* lines, which
+  // for a song written with explicit tags are the ones in its own first language — counting only
+  // untagged lines left `activeLineIndex` with nothing to find, so such a stream never moved
+  // within a block and only followed block changes.
+  const flatIndex = streamFlatIndex(filteredBlocks, activeBlockIndex, activeLineIndex, songLanguages?.[0]);
 
   // Determine how many display lines each "semantic line" occupies (= language count)
   const visibleLanguages = new Set(allLines.map((l) => l.language ?? ''));

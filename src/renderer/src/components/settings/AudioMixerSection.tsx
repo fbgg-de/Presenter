@@ -18,7 +18,7 @@ import { useGetAudioMixerStatus } from '@/store/audioMixerSlice';
 
 export const AudioMixerSection = () => {
   const { LL } = useI18nContext();
-  const { audioMixer } = useGetSettings();
+  const { audioMixer } = useGetSettings('audioMixer');
   const updateSetting = useUpdateSetting();
   const status = useGetAudioMixerStatus();
 

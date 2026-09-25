@@ -3,47 +3,29 @@
  *
  * This replaces `WindowConfigForm`, which was one ~250-line column rendered twice — once to
  * create and once per window to edit — and which pushed the window list off screen the
- * moment it opened. The split is by question rather than by widget: *where* it is, *what*
- * it shows, and *which stage layers* land on it.
+ * moment it opened. The split is by question rather than by widget: *where* it is, *which
+ * screen group* it belongs to, and *which stage layers* land on it.
  *
- * The boolean flags are an icon toggle row rather than five switch rows. They are one bit
- * each, they already appear as one-click items in the footer menu, and as switches they
- * cost about 100px of a panel that has a screen map to fit in.
+ * A window is only a placement on this computer. What it shows — layers, stream mode, languages,
+ * transparency, stage overlays — is decided by its screen group, so the second and third tab
+ * only show the group's decisions and point to where they are changed.
+ *
+ * The boolean flags are an icon toggle row rather than switch rows. They are one bit each,
+ * they already appear as one-click items in the footer menu, and as switches they cost about
+ * 100px of a panel that has a screen map to fit in.
  */
 import { useEffect, useState, type ReactNode } from 'react';
+import { Box, Chip, MenuItem, Stack, Tab, Tabs, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import {
-  Box,
-  Checkbox,
-  Chip,
-  FormControlLabel,
-  MenuItem,
-  Select,
-  Stack,
-  Tab,
-  Tabs,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
-  Tooltip,
-  Typography,
-} from '@mui/material';
-import {
-  Cast as StreamIcon,
   CropFree as FramelessIcon,
   Fullscreen as FullscreenIcon,
-  Monitor as NormalIcon,
   MouseOutlined as MouseIcon,
-  Opacity as TransparentIcon,
-  Palette as StyleIcon,
-  TextFields as HideTextIcon,
   VerticalAlignTop as OnTopIcon,
-  Wallpaper as HideBackgroundIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { WindowConfig } from '@/store/windowSlice';
 import type { StageLayerEntity } from '@/stage/types';
-import { LanguagePicker } from '@/components/common/LanguagePicker';
-import { useAccountLanguages } from '@/hooks/useAccountLanguages';
+import { normaliseScreenGroupData, type ScreenGroupEntity, type ScreenGroupLayers } from '@/screens/types';
 import { ScreenPicker, screenIdForBounds, type ScreenInfo, type ScreenPickerWindow } from './ScreenPicker';
 
 export interface WindowInspectorProps {
@@ -51,8 +33,9 @@ export interface WindowInspectorProps {
   onChange: (patch: Partial<WindowConfig>) => void;
   screens: ScreenInfo[];
   openWindows: ScreenPickerWindow[];
-  styles: Array<{ id: number; name: string }>;
   stageLayers: StageLayerEntity[];
+  /** Account screen groups the window can join. */
+  screenGroups?: ScreenGroupEntity[];
   /** Live geometry of the window being edited, so the map opens on where it actually is. */
   bounds?: { x: number; y: number; width: number; height: number };
   /** Rendered under the tabs — the Create button, in new-window mode. */
@@ -109,20 +92,53 @@ const FLAGS = [
   { key: 'frameless', Icon: FramelessIcon, labelKey: 'FRAMELESS' },
   { key: 'alwaysOnTop', Icon: OnTopIcon, labelKey: 'ALWAYS_ON_TOP' },
   { key: 'hideMouse', Icon: MouseIcon, labelKey: 'HIDE_MOUSE' },
-  { key: 'transparent', Icon: TransparentIcon, labelKey: 'TRANSPARENT' },
 ] as const;
 
-export const WindowInspector = ({ config, onChange, screens, openWindows, styles, stageLayers, bounds, footer }: WindowInspectorProps) => {
+const LAYER_KEYS: Array<keyof ScreenGroupLayers> = ['background', 'slides', 'media', 'bibleVerses', 'overlays'];
+
+/** One line of the group summary: a label and what the group decides. */
+const SummaryRow = ({ label, value }: { label: string; value: ReactNode }) => (
+  <Stack direction="row" spacing={1} sx={{ alignItems: 'baseline', justifyContent: 'space-between' }}>
+    <Typography variant="caption" sx={{ color: 'text.secondary', flexShrink: 0 }}>
+      {label}
+    </Typography>
+    <Typography variant="body2" component="div" sx={{ textAlign: 'right', minWidth: 0 }}>
+      {value}
+    </Typography>
+  </Stack>
+);
+
+export const WindowInspector = ({
+  config,
+  onChange,
+  screens,
+  openWindows,
+  stageLayers,
+  screenGroups = [],
+  bounds,
+  footer,
+}: WindowInspectorProps) => {
   const { LL } = useI18nContext();
+  const G = LL.SCREEN_GROUP;
   const [tab, setTab] = useState(0);
-  const { available: availableLanguages } = useAccountLanguages();
 
   const flagLabel = (key: (typeof FLAGS)[number]['labelKey']): string => (key === 'HIDE_MOUSE' ? LL.FOOTER.HIDE_MOUSE() : LL.WINDOW[key]());
 
   const activeFlags = FLAGS.filter((f) => (f.key === 'frameless' ? config.frameless !== false : !!config[f.key])).map((f) => f.key);
 
   const selectedScreenId = screenIdForBounds(bounds ?? boundsFromConfig(config), screens) ?? '';
-  const languages = config.languages ?? [];
+  const group = screenGroups.find((g) => g.id === config.screenGroupId);
+  const groupData = group ? normaliseScreenGroupData(group.data) : undefined;
+  const groupStageLayers = group ? stageLayers.filter((l) => l.data.screenGroupIds?.includes(group.id)) : [];
+
+  const layerLabel = (key: keyof ScreenGroupLayers): string =>
+    ({
+      background: G.LAYER_BACKGROUND(),
+      slides: G.LAYER_SLIDES(),
+      media: G.LAYER_MEDIA(),
+      bibleVerses: G.LAYER_BIBLE(),
+      overlays: G.LAYER_OVERLAYS(),
+    })[key];
 
   return (
     <Stack sx={{ height: '100%', minHeight: 0 }}>
@@ -186,7 +202,7 @@ export const WindowInspector = ({ config, onChange, screens, openWindows, styles
                 size="small"
                 onChange={(_e, next: string[]) => {
                   // Report only what actually flipped: the group hands back the whole set,
-                  // and writing all five every time would churn the window config.
+                  // and writing all of them every time would churn the window config.
                   for (const flag of FLAGS) {
                     const was = activeFlags.includes(flag.key);
                     const now = next.includes(flag.key);
@@ -208,106 +224,53 @@ export const WindowInspector = ({ config, onChange, screens, openWindows, styles
 
         {tab === 1 && (
           <Stack spacing={1.5}>
-            <ToggleButtonGroup
-              value={config.displayMode ?? 'normal'}
-              exclusive
+            <TextField
+              select
               size="small"
-              fullWidth
-              onChange={(_e, v: 'normal' | 'stream' | null) => v && onChange({ displayMode: v })}
+              label={LL.WINDOW.SCREEN_GROUP()}
+              value={group ? group.id : ''}
+              helperText={LL.WINDOW.SCREEN_GROUP_HINT()}
+              onChange={(e) => onChange({ screenGroupId: Number(e.target.value) })}
+              slotProps={{ select: { displayEmpty: true }, inputLabel: { shrink: true } }}
             >
-              <ToggleButton value="normal" sx={{ gap: 0.5, textTransform: 'none' }}>
-                <NormalIcon sx={{ fontSize: 16 }} />
-                {LL.FOOTER.NORMAL_MODE()}
-              </ToggleButton>
-              <ToggleButton value="stream" sx={{ gap: 0.5, textTransform: 'none' }}>
-                <StreamIcon sx={{ fontSize: 16 }} />
-                {LL.FOOTER.STREAM_MODE()}
-              </ToggleButton>
-            </ToggleButtonGroup>
-
-            {/* Only meaningful in stream mode, so it does not sit there confusing anyone in normal mode. */}
-            {config.displayMode === 'stream' && (
-              <CommittedNumberField
-                label={LL.WINDOW.STREAM_LINES()}
-                value={config.streamLines}
-                onCommit={(v) => onChange({ streamLines: v })}
-              />
-            )}
-
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Tooltip title={LL.STYLE.EDITOR()}>
-                <StyleIcon sx={{ fontSize: 18, color: 'text.secondary' }} />
-              </Tooltip>
-              <Select
-                size="small"
-                value={config.styleId || 0}
-                onChange={(e) => onChange({ styleId: (e.target.value as number) || undefined })}
-                sx={{ flex: 1 }}
-                displayEmpty
-              >
-                <MenuItem value={0}>
-                  <em>{LL.STYLE.NONE()}</em>
+              {!group && (
+                <MenuItem value="" disabled>
+                  <em>{LL.WINDOW.SCREEN_GROUP_NONE()}</em>
                 </MenuItem>
-                {styles.map((s) => (
-                  <MenuItem key={s.id} value={s.id}>
-                    {s.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </Stack>
+              )}
+              {screenGroups.map((g) => (
+                <MenuItem key={g.id} value={g.id}>
+                  {g.name}
+                </MenuItem>
+              ))}
+            </TextField>
 
-            <Stack spacing={0.5}>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {LL.WINDOW.LANGUAGES()}
-              </Typography>
-              <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
-                {languages.length === 0 && <Chip size="small" variant="outlined" label={LL.WINDOW.LANGUAGES_ALL()} sx={{ height: 22 }} />}
-                {languages.map((code) => (
-                  <Chip
-                    key={code}
-                    size="small"
-                    label={code}
-                    onDelete={() => onChange({ languages: languages.filter((c) => c !== code) })}
-                    sx={{ height: 22 }}
-                  />
-                ))}
-                <LanguagePicker
-                  selected={languages}
-                  suggested={availableLanguages}
-                  onAdd={(code) => onChange({ languages: [...languages, code] })}
+            {groupData && (
+              <Stack spacing={0.75} sx={{ p: 1.25, borderRadius: 1, bgcolor: 'action.hover' }}>
+                <SummaryRow
+                  label={G.DISPLAY()}
+                  value={groupData.display.mode === 'stream' ? G.DISPLAY_STREAM({ count: groupData.display.lines }) : G.DISPLAY_NORMAL()}
                 />
+                <SummaryRow
+                  label={G.LANGUAGES()}
+                  value={groupData.languages.length > 0 ? groupData.languages.join(', ') : G.LANGUAGES_FROM_THEME()}
+                />
+                {groupData.transparent && <SummaryRow label={G.TRANSPARENT()} value="✓" />}
+                <SummaryRow
+                  label={G.SHOWS()}
+                  value={
+                    <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.5, justifyContent: 'flex-end' }}>
+                      {LAYER_KEYS.filter((key) => groupData.layers[key]).map((key) => (
+                        <Chip key={key} size="small" label={layerLabel(key)} sx={{ height: 20, fontSize: '0.7rem' }} />
+                      ))}
+                    </Stack>
+                  }
+                />
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  {G.CHANGE_ON_GROUP()}
+                </Typography>
               </Stack>
-              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                {LL.WINDOW.LANGUAGES_HINT()}
-              </Typography>
-            </Stack>
-
-            <Stack>
-              <FormControlLabel
-                control={<Checkbox size="small" checked={!!config.hideText} onChange={(e) => onChange({ hideText: e.target.checked })} />}
-                label={
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                    <HideTextIcon sx={{ fontSize: 16 }} />
-                    <Typography variant="body2">{LL.WINDOW.HIDE_TEXT()}</Typography>
-                  </Stack>
-                }
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    size="small"
-                    checked={!!config.hideBackground}
-                    onChange={(e) => onChange({ hideBackground: e.target.checked })}
-                  />
-                }
-                label={
-                  <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                    <HideBackgroundIcon sx={{ fontSize: 16 }} />
-                    <Typography variant="body2">{LL.WINDOW.HIDE_BACKGROUND()}</Typography>
-                  </Stack>
-                }
-              />
-            </Stack>
+            )}
           </Stack>
         )}
 
@@ -320,35 +283,16 @@ export const WindowInspector = ({ config, onChange, screens, openWindows, styles
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                 {LL.WINDOW.STAGE_LAYERS_NONE()}
               </Typography>
+            ) : groupStageLayers.length === 0 || groupData?.layers.overlays === false ? (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                {LL.WINDOW.STAGE_LAYERS_NONE_HERE()}
+              </Typography>
             ) : (
-              stageLayers.map((layer) => {
-                const selected = (config.stageLayerIds ?? []).includes(layer.id);
-                return (
-                  <FormControlLabel
-                    key={layer.id}
-                    control={
-                      <Checkbox
-                        size="small"
-                        checked={selected}
-                        onChange={(e) => {
-                          const current = config.stageLayerIds ?? [];
-                          onChange({
-                            stageLayerIds: e.target.checked ? [...current, layer.id] : current.filter((id) => id !== layer.id),
-                          });
-                        }}
-                      />
-                    }
-                    label={
-                      <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center' }}>
-                        <Typography variant="body2">{layer.name}</Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          {layer.data.cues.length > 0 ? LL.STAGE.CUE_OF({ index: 1, total: layer.data.cues.length }) : LL.STAGE.NO_CUES()}
-                        </Typography>
-                      </Stack>
-                    }
-                  />
-                );
-              })
+              <Stack direction="row" sx={{ flexWrap: 'wrap', gap: 0.75 }}>
+                {groupStageLayers.map((layer) => (
+                  <Chip key={layer.id} label={layer.name} size="small" variant="outlined" />
+                ))}
+              </Stack>
             )}
           </Stack>
         )}

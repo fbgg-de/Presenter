@@ -44,6 +44,8 @@ interface SyncState {
   blockNames?: string[];
   /** Allowed remote command ids, broadcast by the operator. Absent = all allowed. */
   remoteCommands?: string[];
+  /** The master video speed. Absent = an operator from before master speed (no speed card). */
+  masterRate?: number;
 }
 
 interface WsHost {
@@ -93,6 +95,8 @@ const T = {
   agenda: de ? 'Ablauf' : 'Agenda',
   order: de ? 'Reihenfolge' : 'Order',
   nowPlaying: de ? 'Nichts ausgewählt' : 'Nothing selected',
+  speed: de ? 'Video-Geschwindigkeit' : 'Video speed',
+  speedReset: de ? 'Doppelt tippen: normale Geschwindigkeit' : 'Double-tap for normal speed',
 };
 
 // ── Colors ────────────────────────────────────────────────────────────────────
@@ -422,6 +426,148 @@ const spinnerCss = `
   animation: ctl-spin 0.7s linear infinite;
 }`;
 
+// ── Master speed card ─────────────────────────────────────────────────────────
+
+const SPEED_MIN = 0.25;
+const SPEED_MAX = 4;
+const SPEED_STEP = 0.05;
+/** Slider moves are sent at most this often; the last one always goes out. */
+const SPEED_SEND_EVERY_MS = 120;
+const speedLabel = (rate: number) => `${Number(rate.toFixed(2))}×`;
+/** Logarithmic, like the operator's slider: 0.5× and 2× equally far from 1×. */
+const speedToSlider = (rate: number) => Math.round(Math.log2(rate) * 100);
+const sliderToSpeed = (value: number) => (Math.abs(value) < 2 ? 1 : Math.round(2 ** (value / 100) * 100) / 100);
+/** Two taps closer than this on the value reset to normal speed. */
+const DOUBLE_TAP_MS = 350;
+/** How long a released slider keeps its value while the operator's confirmation is on its way. */
+const SPEED_HOLD_MS = 1500;
+
+/**
+ * The master playback speed every following video plays at: − / + in small steps, the value
+ * (double-tap for normal speed — a single tap mid-service must not reset it) and a slider. What it shows is the operator's broadcast value, so a
+ * change made anywhere — operator, Companion, another phone — appears here too.
+ */
+const SpeedCard = ({ rate, onSpeed }: { rate: number; onSpeed: (rate: number) => void }) => {
+  // The slider's raw position while dragged, and for a moment after release until the operator's
+  // broadcast confirms it — without that the thumb jumped back to the old value, then forward.
+  const [dragging, setDragging] = useState<number | null>(null);
+  const lastSent = useRef(0);
+  const lastTap = useRef(0);
+  const trailing = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hold = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      clearTimeout(trailing.current ?? undefined);
+      clearTimeout(hold.current ?? undefined);
+    },
+    [],
+  );
+  const shown = dragging !== null ? sliderToSpeed(dragging) : rate;
+  const release = () => {
+    clearTimeout(hold.current ?? undefined);
+    hold.current = setTimeout(() => setDragging(null), SPEED_HOLD_MS);
+  };
+  const clampSpeed = (v: number) => Math.min(SPEED_MAX, Math.max(SPEED_MIN, Math.round(v * 100) / 100));
+
+  const sendThrottled = (value: number) => {
+    clearTimeout(trailing.current ?? undefined);
+    const wait = SPEED_SEND_EVERY_MS - (Date.now() - lastSent.current);
+    const send = () => {
+      lastSent.current = Date.now();
+      onSpeed(value);
+    };
+    if (wait <= 0) send();
+    else trailing.current = setTimeout(send, wait);
+  };
+
+  const stepButton = (label: string, delta: number) => (
+    <button
+      type="button"
+      onClick={() => onSpeed(clampSpeed(rate + delta))}
+      style={{
+        width: 56,
+        height: 48,
+        borderRadius: 12,
+        border: `1px solid ${C.border}`,
+        background: C.panel,
+        color: C.text,
+        fontSize: 24,
+        fontWeight: 600,
+        cursor: 'pointer',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <div
+      style={{
+        border: `1px solid ${C.border}`,
+        borderRadius: 14,
+        background: C.panel,
+        padding: 12,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+      }}
+    >
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: C.dim }}>{T.speed}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        {stepButton('−', -SPEED_STEP)}
+        <button
+          type="button"
+          onClick={() => {
+            const now = Date.now();
+            if (now - lastTap.current < DOUBLE_TAP_MS) {
+              lastTap.current = 0;
+              clearTimeout(hold.current ?? undefined);
+              setDragging(null);
+              onSpeed(1);
+            } else lastTap.current = now;
+          }}
+          title={T.speedReset}
+          style={{
+            flex: 1,
+            height: 48,
+            borderRadius: 12,
+            border: 'none',
+            background: 'transparent',
+            color: shown !== 1 ? C.warn : C.text,
+            fontSize: 26,
+            fontWeight: 700,
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          {speedLabel(shown)}
+        </button>
+        {stepButton('+', SPEED_STEP)}
+      </div>
+      <input
+        type="range"
+        aria-label={T.speed}
+        min={speedToSlider(SPEED_MIN)}
+        max={speedToSlider(SPEED_MAX)}
+        step={1}
+        value={dragging ?? speedToSlider(rate)}
+        onChange={(e) => {
+          const position = Number(e.target.value);
+          clearTimeout(hold.current ?? undefined);
+          hold.current = null;
+          setDragging(position);
+          sendThrottled(sliderToSpeed(position));
+        }}
+        onPointerUp={release}
+        onTouchEnd={release}
+        style={{ width: '100%', accentColor: C.warn, height: 32 }}
+      />
+    </div>
+  );
+};
+
 const ControlApp = () => {
   const [phase, setPhase] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
@@ -698,6 +844,12 @@ const ControlApp = () => {
 
   const isBlack = sync.isBlack === true;
   const isTextHidden = sync.isTextHidden === true;
+  const showSpeed = typeof sync.masterRate === 'number' && allowed('master_speed');
+  const sendSpeed = useCallback((value: number) => {
+    const ws = wsRef.current;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    ws.send(JSON.stringify({ type: 'broadcast', action: 'remote_command', data: { command: 'master_speed', value } }));
+  }, []);
   const videoHidden = sync.videoVisible === false;
 
   // Title shown in the now-playing card — prefer the operator-provided itemTitle
@@ -907,21 +1059,24 @@ const ControlApp = () => {
         />
       ) : !commandsKnown ? (
         <div style={{ flex: 1 }} />
-      ) : tiles.length > 0 ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, flex: 1, alignContent: 'start' }}>
-          {tiles.map((t) => (
-            <Tile
-              key={t.id}
-              icon={t.icon}
-              label={t.label}
-              active={t.active}
-              big={t.big}
-              tone={t.tone}
-              pending={pendingCmd === t.id}
-              confirmed={confirmedCmd === t.id}
-              onClick={() => sendCommand(t.id)}
-            />
-          ))}
+      ) : tiles.length > 0 || showSpeed ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, alignContent: 'start' }}>
+            {tiles.map((t) => (
+              <Tile
+                key={t.id}
+                icon={t.icon}
+                label={t.label}
+                active={t.active}
+                big={t.big}
+                tone={t.tone}
+                pending={pendingCmd === t.id}
+                confirmed={confirmedCmd === t.id}
+                onClick={() => sendCommand(t.id)}
+              />
+            ))}
+          </div>
+          {showSpeed && <SpeedCard rate={sync.masterRate ?? 1} onSpeed={sendSpeed} />}
         </div>
       ) : (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.dim, fontSize: 15 }}>

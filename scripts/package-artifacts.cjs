@@ -133,7 +133,9 @@ async function packageViewer(outDir) {
 async function packageArtifacts(outDir) {
   mkdirSync(outDir, { recursive: true });
 
-  return [...packageRelay(outDir), ...(await packageViewer(outDir))];
+  // The Bitfocus Companion module — an ESM script, hence the dynamic import.
+  const { packageCompanionModule } = await import('./package-companion-module.mjs');
+  return [...packageRelay(outDir), ...(await packageViewer(outDir)), await packageCompanionModule(outDir)];
 }
 
 module.exports = { packageArtifacts, versionOf, repoRoot };

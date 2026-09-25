@@ -19,16 +19,7 @@ class ChurchToolsEvents extends RestController
     /** Load the account's ChurchTools config (url + token), or null if not configured. */
     private function getCtConfig(): ?array
     {
-        $account = $_SESSION['account'] ?? 0;
-        if (!$account) {
-            return null;
-        }
-        $stmt = self::prepare('SELECT `church_tools_url`, `church_tools_token` FROM `account` WHERE `license` = ?');
-        $stmt->bind_param('i', $account)->execute()->fetchOne($row)->close();
-        if (!$row || empty($row['church_tools_url']) || empty($row['church_tools_token'])) {
-            return null;
-        }
-        return ['url' => $row['church_tools_url'], 'token' => $row['church_tools_token']];
+        return ChurchToolsClient::forAccount((int)($_SESSION['account'] ?? 0));
     }
 
     protected function get(Request &$req, Response &$res): never

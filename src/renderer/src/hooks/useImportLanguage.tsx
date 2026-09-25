@@ -52,7 +52,7 @@ type Pending = {
  */
 export const useImportLanguage = (): { resolveImportLanguage: ResolveImportLanguage; importLanguageDialog: ReactNode } => {
   const { LL } = useI18nContext();
-  const { uiLanguage } = useGetSettings();
+  const { uiLanguage } = useGetSettings('uiLanguage');
   const { available, defaultLanguage } = useAccountLanguages();
 
   const [pending, setPending] = useState<Pending | null>(null);

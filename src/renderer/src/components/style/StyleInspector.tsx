@@ -24,6 +24,7 @@ import { resolveStyleData, DEFAULT_STYLE, type ResolvedStyle } from '@/utils/sty
 import { useGetPresentationSettings } from '@/store/presentationSlice';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useGetShow } from '@/store/showSlice';
+import { DEFAULT_GROUP_ID } from '@/utils/showGroups';
 
 interface StyleInspectorProps {
   open: boolean;
@@ -89,15 +90,15 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
   const { LL } = useI18nContext();
   const { data: allStyles = [] } = useGetStylesQuery();
 
-  const { globalStyleId } = useGetSettings();
-  const { activeItemIndex } = useGetPresentationSettings();
+  const { globalStyleId } = useGetSettings('globalStyleId');
+  const { activeItemIndex } = useGetPresentationSettings('activeItemIndex');
   const { currentShow } = useGetShow();
 
   const activeItem = currentShow?.order?.[activeItemIndex];
 
-  // Resolve each style level
+  // Resolve each style level. The highest one is the agenda group the item is in.
   const showStyleId = currentShow?.styleId;
-  const itemStyleId = activeItem?.styleId;
+  const itemStyleId = currentShow?.groups?.find((g) => g.id === (activeItem?.groupId ?? DEFAULT_GROUP_ID))?.styleId;
 
   const globalStyle = useMemo(() => allStyles.find((s) => s.id === globalStyleId), [allStyles, globalStyleId]);
   const showStyle = useMemo(() => allStyles.find((s) => s.id === showStyleId), [allStyles, showStyleId]);
@@ -122,7 +123,7 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
         case 'Show':
           return LL.STYLE.LEVEL_SHOW();
         case 'Item':
-          return LL.STYLE.LEVEL_ITEM();
+          return LL.LOOK.LEVEL_GROUP();
       }
     };
 
@@ -218,7 +219,7 @@ export const StyleInspector = ({ open, onClose, onEditStyle, windowName }: Style
                 color: 'text.secondary',
               }}
             >
-              {LL.STYLE.ITEM()}
+              {LL.LOOK.LEVEL_GROUP()}
             </Typography>
             <Typography variant="body2">{itemStyle?.name || `(${LL.STYLE.NONE()})`}</Typography>
           </Box>

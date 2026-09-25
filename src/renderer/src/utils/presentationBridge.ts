@@ -1,8 +1,8 @@
 import type { PresentationContent } from '@/presentation/types';
-import type { LanguageStyleEntry } from '@/api/styles.api';
 import { WindowConfig } from '@/store/windowSlice';
-import { languagesForStyle } from '@/utils/languageSlots';
-import { EMPTY_STAGE_PAYLOAD, type StageOverlayPayload } from '@/stage/types';
+import { EMPTY_STAGE_PAYLOAD, stageLayerShownOnWindow, type StageOverlayPayload } from '@/stage/types';
+import { layersForGroup, type ScreenGroupEntity } from '@/screens/types';
+import { applyScreenGroup, groupDisplay } from '@/presentation/groupContent';
 
 interface PresentationWindowEntry {
   id: string;
@@ -78,19 +78,52 @@ export function adoptElectronWindow(id: string, config: WindowConfig): void {
 }
 
 /**
- * Optional resolver supplied by usePresentationSync that, given a window id and
- * its config, returns the per-window resolved style to merge into the content
- * before broadcasting. When undefined, no per-window style override is applied.
+ * Optional resolver supplied by usePresentationSync that, given a window id and its config,
+ * returns that window's complete resolved style, or undefined to use the broadcast style.
  */
 type WindowStyleResolver = (id: string, config: WindowConfig) => unknown | undefined;
 let windowStyleResolver: WindowStyleResolver | undefined;
-let windowCueResolver: ((id: string, content: PresentationContent) => PresentationContent['mediaCue']) | undefined;
-export function setWindowCueResolver(resolver: typeof windowCueResolver) {
-  windowCueResolver = resolver;
+/** The media entries a window of a screen group shows, supplied by the media host. */
+let windowMediaResolver: ((groupId: number | undefined) => PresentationContent['media']) | undefined;
+export function setWindowMediaResolver(resolver: typeof windowMediaResolver) {
+  windowMediaResolver = resolver;
 }
 
 export function setWindowStyleResolver(fn: WindowStyleResolver | undefined): void {
   windowStyleResolver = fn;
+}
+
+/**
+ * The account's screen groups. A window's group decides which layers it shows, and that is
+ * resolved per window on every send — so the groups live here, next to the other resolvers.
+ */
+let screenGroups: ScreenGroupEntity[] = [];
+
+/** The main process's copy of what the group decides, so a window it replays or recreates matches. */
+function electronDisplayConfig(config: WindowConfig) {
+  const display = groupDisplay(screenGroups, config.screenGroupId);
+  return {
+    displayMode: display.displayMode,
+    streamLines: display.streamLines,
+    streamTransparentBg: display.transparent,
+  };
+}
+
+/** Tell the main process about group changes that affect an open window (e.g. transparency). */
+function syncElectronDisplay(id: string, entry: PresentationWindowEntry): void {
+  if (!entry.isElectron || entry.closed) return;
+  void window.api?.updateWindowConfig?.(id, electronDisplayConfig(entry.config) as never)?.catch?.(() => {});
+}
+
+/** Replace the known groups and re-send to every window, since any of them may now show less. */
+export function setScreenGroups(groups: ScreenGroupEntity[]): void {
+  screenGroups = groups;
+  for (const [id, entry] of openWindows) {
+    syncElectronDisplay(id, entry);
+    entry.lastSentSerialized = undefined;
+    if (lastBroadcastContent) void sendContent(id, lastBroadcastContent);
+    replayStage(id);
+  }
 }
 
 /**
@@ -118,8 +151,6 @@ export async function openPresentationWindow(config: WindowConfig = {}): Promise
 async function openPresentationWindowElectron(config: WindowConfig): Promise<string> {
   const electronConfig = {
     name: config.name || 'Presentation',
-    displayMode: config.displayMode || 'normal',
-    languages: config.languages?.join(',') || 'all',
     positionX: config.positionX ?? config.left,
     positionY: config.positionY ?? config.top,
     width: config.width || 1920,
@@ -128,11 +159,8 @@ async function openPresentationWindowElectron(config: WindowConfig): Promise<str
     frameless: config.frameless ?? true,
     alwaysOnTop: config.alwaysOnTop || false,
     hideMouse: config.hideMouse || false,
-    hideText: config.hideText || false,
-    hideBackground: config.hideBackground || false,
     frozen: false,
-    streamLines: config.streamLines,
-    streamTransparentBg: config.transparent || false,
+    ...electronDisplayConfig(config),
   };
 
   const id = await window.api.createPresentationWindow(electronConfig);
@@ -183,16 +211,13 @@ function openPresentationWindowBrowser(config: WindowConfig): string {
     .join(',');
 
   // Build URL with query params for display mode config
+  // The group's settings, for the first paint before any content arrives.
+  const display = groupDisplay(screenGroups, config.screenGroupId);
   const queryParams = new URLSearchParams();
-  if (config.displayMode) queryParams.set('mode', config.displayMode);
+  queryParams.set('mode', display.displayMode);
   if (config.name) queryParams.set('name', config.name);
-  if (config.streamLines) queryParams.set('lines', String(config.streamLines));
-  if (config.languages && config.languages.length > 0) {
-    queryParams.set('languages', config.languages.join(','));
-  }
-  if (config.transparent) {
-    queryParams.set('transparent', '1');
-  }
+  if (display.streamLines) queryParams.set('lines', String(display.streamLines));
+  if (display.transparent) queryParams.set('transparent', '1');
 
   // The popup announces itself with this id once its message listener is live — see
   // the PRESENTATION_READY handler below.
@@ -367,14 +392,16 @@ export async function broadcastContent(content: PresentationContent): Promise<vo
 let lastBroadcastStage: StageOverlayPayload = EMPTY_STAGE_PAYLOAD;
 
 /**
- * The layers a given window subscribes to. Subscription is opt-in: a window with no
- * `stageLayerIds` shows no stage content, so adding a countdown never surprises a beamer
- * that was only ever meant to show lyrics.
+ * The layers a given window shows. Opt-in: a layer appears only on the screen groups it is
+ * assigned to, so adding a countdown never surprises a beamer that was only ever meant to show
+ * lyrics.
  */
 function stagePayloadForWindow(payload: StageOverlayPayload, config: WindowConfig): StageOverlayPayload {
-  const subscribed = config.stageLayerIds;
-  if (!subscribed || subscribed.length === 0) return EMPTY_STAGE_PAYLOAD;
-  return { layers: payload.layers.filter((l) => subscribed.includes(l.id)) };
+  const groupLayers = layersForGroup(screenGroups, config.screenGroupId);
+  // A disabled or deleted group behaves like no group, so its layer assignments do not apply.
+  if (!groupLayers || groupLayers.overlays === false) return EMPTY_STAGE_PAYLOAD;
+  const layers = payload.layers.filter((l) => stageLayerShownOnWindow(l, config.screenGroupId));
+  return layers.length === 0 ? EMPTY_STAGE_PAYLOAD : { layers };
 }
 
 /** Send the stage overlay to one window, skipping the hop when nothing changed for it. */
@@ -445,25 +472,25 @@ export function invalidateSentContentCache(id?: string): void {
 
 /**
  * Update an open window's stored config in the bridge registry.
- * MUST be called whenever per-window settings (especially `styleId`) change in
- * Redux/localStorage so the windowStyleResolver picks up the new value on the
- * next broadcast — otherwise the bridge keeps using the config snapshot taken
- * when the window was first opened, and style assignments appear to do nothing
- * until the window is closed and reopened.
+ * MUST be called whenever a window's config (its screen group above all) changes in
+ * Redux/localStorage, so the next broadcast resolves the window's group from the new
+ * value instead of the snapshot taken when the window was first opened.
  */
 export function updateWindowConfigInBridge(id: string, partial: Partial<WindowConfig>): void {
   const entry = openWindows.get(id);
   if (!entry) return;
   entry.config = { ...entry.config, ...partial };
+  // Joining another group can change what the main process holds for the window.
+  if ('screenGroupId' in partial) syncElectronDisplay(id, entry);
   // Invalidate the per-window dedupe cache so the next broadcast actually
-  // picks up the new config (e.g. styleId, displayMode, languages).
+  // picks up the new config (e.g. styleId, displayMode).
   entry.lastSentSerialized = undefined;
   // Immediately re-send the last broadcast content so the style change takes
   // effect without waiting for the next navigation event.
   if (lastBroadcastContent) {
     void sendContent(id, lastBroadcastContent);
   }
-  // `stageLayerIds` may have changed, which decides what this window is allowed to see.
+  // The group may have changed, which decides which stage layers this window is allowed to see.
   replayStage(id);
 }
 
@@ -481,10 +508,7 @@ export async function getOpenWindows(): Promise<Array<{ id: string; config: Wind
         const entry = openWindows.get(state.id);
         result.push({
           id: state.id,
-          config: entry?.config || {
-            name: state.name,
-            displayMode: state.displayMode,
-          },
+          config: entry?.config || { name: state.name },
           closed: false,
         });
       }
@@ -640,35 +664,10 @@ export async function listScreens(): Promise<
  * Apply per-window config overrides to presentation content.
  */
 function applyWindowOverrides(content: PresentationContent, config: WindowConfig, id?: string): PresentationContent {
-  const merged: PresentationContent = {
-    ...content,
-    displayMode: config.displayMode || content.displayMode,
-    languages: config.languages || content.languages,
-    streamLines: config.streamLines || content.streamLines,
-    windowName: config.name || content.windowName,
-    hideText: config.hideText || content.hideText,
-    hideBackground: config.hideBackground || content.hideBackground,
-  };
-
-  // If a per-window style preset is configured, layer it on top of the cascade.
-  if (id && windowStyleResolver) {
-    const windowStyle = windowStyleResolver(id, config);
-    if (windowStyle && typeof windowStyle === 'object') {
-      const cleanStyle = Object.fromEntries(
-        Object.entries(windowStyle as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined),
-      );
-      merged.style = { ...(merged.style || {}), ...cleanStyle } as typeof merged.style;
-    }
-  }
-
-  merged.mediaCue = id ? windowCueResolver?.(id, content) : undefined;
-  // Which languages this window shows is the style's decision, but the style only names slots
-  // — "the second language" — so it can only be turned into actual codes here, where the song's
-  // own language order is also in hand. A window-level override still wins over both.
-  if (!config.languages) {
-    const style = merged.style as { showAllLanguages?: boolean; languageStyles?: LanguageStyleEntry[] } | undefined;
-    merged.languages = languagesForStyle(style?.languageStyles, merged.songLanguages, style?.showAllLanguages);
-  }
-
-  return merged;
+  const style = id && windowStyleResolver ? windowStyleResolver(id, config) : undefined;
+  return applyScreenGroup(content, screenGroups, config.screenGroupId, {
+    style: style && typeof style === 'object' ? (style as PresentationContent['style']) : undefined,
+    media: windowMediaResolver?.(config.screenGroupId),
+    windowName: config.name,
+  });
 }

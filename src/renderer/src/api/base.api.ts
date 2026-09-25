@@ -79,6 +79,37 @@ const dynamicBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryE
   return result;
 };
 
+/** Every tag the API caches under — invalidated all at once after signing in again. */
+export const API_TAG_TYPES = [
+  'AccountIntegrations',
+  'AccountSettings',
+  'AdminAccounts',
+  'AdminConfig',
+  'AdminMigrations',
+  'AdminProviders',
+  'AdminSongs',
+  'Bands',
+  'DbCopy',
+  'Logs',
+  'Metrics',
+  'PdfAnnotations',
+  'PdfIcons',
+  'Pdfs',
+  'ScreenGroups',
+  'ScreenSets',
+  'Library',
+  'Session',
+  'SetLists',
+  'SetListSpotifyTracks',
+  'ShowItemTypes',
+  'Shows',
+  'Song',
+  'Songs',
+  'StageLayers',
+  'Styles',
+  'ViewerToken',
+] as const;
+
 /**
  * Base RTK Query API instance.
  * Endpoints are injected per domain in the sibling slice files.
@@ -86,30 +117,6 @@ const dynamicBaseQuery: BaseQueryFn<string | FetchArgs, unknown, FetchBaseQueryE
 export const presenterApi = createApi({
   reducerPath: 'presenterApi',
   baseQuery: dynamicBaseQuery,
-  tagTypes: [
-    'AccountSettings',
-    'AdminAccounts',
-    'AdminConfig',
-    'AdminMigrations',
-    'AdminProviders',
-    'AdminSongs',
-    'Bands',
-    'DbCopy',
-    'Logs',
-    'Metrics',
-    'PdfAnnotations',
-    'PdfIcons',
-    'Pdfs',
-    'Session',
-    'SetLists',
-    'SetListSpotifyTracks',
-    'ShowItemTypes',
-    'Shows',
-    'Song',
-    'Songs',
-    'StageLayers',
-    'Styles',
-    'ViewerToken',
-  ],
+  tagTypes: API_TAG_TYPES,
   endpoints: () => ({}),
 });

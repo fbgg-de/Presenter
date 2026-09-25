@@ -33,31 +33,33 @@ export const GlobalStyleRow = () => {
   const [updateAccountSettings] = useUpdateAccountSettingsMutation();
 
   return (
-    <SettingFrame
-      label={LL.SETTINGS.GLOBAL_STYLE()}
-      control={
-        <Select
-          size="small"
-          fullWidth
-          value={accountSettings?.defaultStyleId ?? settings.globalStyleId ?? 0}
-          onChange={(e) => {
-            const id = Number(e.target.value);
-            updateSetting('globalStyleId', id);
-            trackEvent('style_changed', 'style', String(id), { scope: 'global' });
-            if (!settings.offlineMode) {
-              updateAccountSettings({ defaultStyleId: id || null });
-            }
-          }}
-        >
-          <MenuItem value={0}>{LL.STYLE.NONE()}</MenuItem>
-          {styles.map((style) => (
-            <MenuItem key={style.id} value={style.id}>
-              {style.name}
-            </MenuItem>
-          ))}
-        </Select>
-      }
-    />
+    <>
+      <SettingFrame
+        label={LL.SETTINGS.GLOBAL_STYLE()}
+        control={
+          <Select
+            size="small"
+            fullWidth
+            value={accountSettings?.defaultStyleId ?? settings.globalStyleId ?? 0}
+            onChange={(e) => {
+              const id = Number(e.target.value);
+              updateSetting('globalStyleId', id);
+              trackEvent('style_changed', 'style', String(id), { scope: 'global' });
+              if (!settings.offlineMode) {
+                updateAccountSettings({ defaultStyleId: id || null });
+              }
+            }}
+          >
+            <MenuItem value={0}>{LL.STYLE.NONE()}</MenuItem>
+            {styles.map((style) => (
+              <MenuItem key={style.id} value={style.id}>
+                {style.name}
+              </MenuItem>
+            ))}
+          </Select>
+        }
+      />
+    </>
   );
 };
 
@@ -98,7 +100,7 @@ export const ShowTitleTemplateRow = () => {
  */
 export const RemoteCommandsBlock = () => {
   const { LL } = useI18nContext();
-  const { remoteControlCommands } = useGetSettings();
+  const { remoteControlCommands } = useGetSettings('remoteControlCommands');
   const updateSetting = useTrackedUpdateSetting();
 
   const commandLabel = (id: RemoteCommandId): string => {
@@ -119,6 +121,8 @@ export const RemoteCommandsBlock = () => {
         return LL.REMOTE.CMD_TOGGLE_VIDEO_PLAYBACK();
       case 'toggle_black':
         return LL.REMOTE.CMD_TOGGLE_BLACK();
+      case 'master_speed':
+        return LL.REMOTE.CMD_MASTER_SPEED();
     }
   };
 

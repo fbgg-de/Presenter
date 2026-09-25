@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { Alert, Box, Button, Card, CardContent, List, ListItem, ListItemText, Stack, Typography } from '@mui/material';
 import { Error as ErrorIcon, ArrowBack as BackIcon } from '@mui/icons-material';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { oidcErrorTitle } from '@/utils/oidcErrors';
 
@@ -12,13 +12,14 @@ const useQueryParam = (name: string): string | null => {
 
 export const UnauthorizedPage = () => {
   const { LL } = useI18nContext();
-  const navigate = useNavigate();
 
   const error = useQueryParam('error');
   const requiredGroup = useQueryParam('required_group');
   const userGroups = useQueryParam('user_groups');
   const sub = useQueryParam('sub');
   const details = useQueryParam('details');
+  /** Written to the server log beside the cause (oidc.php `failLogin`). */
+  const reference = useQueryParam('ref');
 
   useEffect(() => {
     // Log error for debugging
@@ -246,6 +247,24 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
           </>
         );
 
+      // Failures a second attempt usually fixes: the message, then "sign in again".
+      case 'oidc.session_lost':
+      case 'oidc.provider_unreachable':
+      case 'oidc.login_expired':
+      case 'oidc.groups_claim_invalid': {
+        const message = {
+          'oidc.session_lost': LL.ERRORS.SESSION_LOST_MESSAGE(),
+          'oidc.provider_unreachable': LL.ERRORS.PROVIDER_UNREACHABLE_MESSAGE(),
+          'oidc.login_expired': LL.ERRORS.LOGIN_EXPIRED_MESSAGE(),
+          'oidc.groups_claim_invalid': LL.ERRORS.GROUPS_CLAIM_INVALID_MESSAGE(),
+        }[error];
+        return (
+          <Typography variant="body1" gutterBottom>
+            {message}
+          </Typography>
+        );
+      }
+
       case 'oidc.authentication_failed':
         return (
           <>
@@ -328,6 +347,11 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
             </Stack>
 
             <Box>{getErrorMessage()}</Box>
+            {reference && (
+              <Typography variant="caption" sx={{ color: 'text.secondary', fontFamily: 'monospace', userSelect: 'text' }}>
+                {LL.AUTH.ERROR_REFERENCE({ ref: reference })}
+              </Typography>
+            )}
 
             <Stack
               direction="row"
@@ -335,8 +359,11 @@ define('OIDC_CLIENT_SCOPES', ['openid', 'email', 'profile']);`}
                 gap: 2,
               }}
             >
-              <Button variant="contained" startIcon={<BackIcon />} onClick={() => navigate('/login')} fullWidth>
-                {LL.AUTH.BACK_TO_LOGIN()}
+              {/* The login page is its own document (login.html): a full load, not an in-app route. */}
+              <Button variant="contained" startIcon={<BackIcon />} onClick={() => window.location.assign('/login')} fullWidth>
+                {error === 'oidc.session_lost' || error === 'oidc.provider_unreachable' || error === 'oidc.login_expired'
+                  ? LL.AUTH.TRY_AGAIN()
+                  : LL.AUTH.BACK_TO_LOGIN()}
               </Button>
             </Stack>
           </Stack>

@@ -6,12 +6,14 @@ import {
   NotificationsNone as NotificationsIcon,
   KeyboardAlt as KeyboardIcon,
   SettingsRemote as RemoteIcon,
+  Hub as ConnectionsIcon,
   DesktopWindows as DesktopIcon,
   PrivacyTip as PrivacyIcon,
   type SvgIconComponent,
 } from '@mui/icons-material';
 import type { TranslationFunctions } from '@/i18n/i18n-types';
 import type { SettingsState } from '@/store/settingsSlice';
+import { LayerRowsSetting } from '@/components/operator/layerRows';
 
 /**
  * The settings catalog: one description of what the settings panel contains.
@@ -79,6 +81,9 @@ export type CatalogContext = {
     desktopDownload: () => ReactNode;
     backup: () => ReactNode;
     privacyNotice: () => ReactNode;
+    nextcloud: () => ReactNode;
+    spotify: () => ReactNode;
+    churchTools: () => ReactNode;
   };
 };
 
@@ -168,24 +173,6 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
         render: () => ctx.slots.bands(),
         keywords: [LL.BANDS.TITLE(), LL.BANDS.MEMBERS(), 'band', 'lineup', 'besetzung', 'musiker'],
       },
-      // Desktop app only: the browser build always talks to the server it was loaded from and
-      // ignores the setting (see getBackendBaseUrl).
-      ...(ctx.isElectron
-        ? [
-            {
-              id: 'connection',
-              title: S.CONNECTION(),
-              settings: [
-                {
-                  key: 'backendUrl' as const,
-                  label: O.BACKEND_URL.TITLE(),
-                  description: O.BACKEND_URL.DESCRIPTION(),
-                  control: { kind: 'text' as const, placeholder: 'https://...' },
-                },
-              ],
-            },
-          ]
-        : []),
       {
         id: 'backup',
         title: S.BACKUP(),
@@ -236,6 +223,18 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
             description: O.VIDEO_FADE_DURATION.DESCRIPTION(),
             control: { kind: 'number', min: 0, step: 50 },
           },
+          {
+            key: 'audioFadeOutSeconds',
+            label: O.AUDIO_FADE_OUT.TITLE(),
+            description: O.AUDIO_FADE_OUT.DESCRIPTION(),
+            control: { kind: 'number', min: 0, max: 30, step: 0.5 },
+          },
+          {
+            key: 'videosFollowMasterSpeed',
+            label: O.VIDEOS_FOLLOW_MASTER_SPEED.TITLE(),
+            description: O.VIDEOS_FOLLOW_MASTER_SPEED.DESCRIPTION(),
+            control: { kind: 'boolean' },
+          },
         ],
       },
       {
@@ -259,6 +258,14 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
         ],
       },
       {
+        // The rows of the operator's layer bar, drawn as the bar draws them.
+        id: 'layer-rows',
+        title: S.LAYER_ROWS(),
+        description: D.LAYER_ROWS(),
+        render: () => <LayerRowsSetting />,
+        keywords: ['layer bar', 'footer', 'background', 'slides', 'media', 'audio', 'overlays', 'Ebenen', 'Fußleiste'],
+      },
+      {
         // Not the audience's screen — the operator's own window.
         id: 'control-view',
         title: S.CONTROL_VIEW(),
@@ -275,12 +282,6 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
                 { value: '4:3', label: '4:3' },
               ],
             },
-          },
-          {
-            key: 'windowFooterVisible',
-            label: O.WINDOW_FOOTER_VISIBLE.TITLE(),
-            description: O.WINDOW_FOOTER_VISIBLE.DESCRIPTION(),
-            control: { kind: 'boolean' },
           },
         ],
       },
@@ -301,12 +302,6 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
             key: 'songClick',
             label: O.SONG_CLICK_BEHAVIOUR.TITLE(),
             description: O.SONG_CLICK_BEHAVIOUR.DESCRIPTION(),
-            control: { kind: 'select', options: clickOptions },
-          },
-          {
-            key: 'verseClick',
-            label: O.VERSE_CLICK_BEHAVIOUR.TITLE(),
-            description: O.VERSE_CLICK_BEHAVIOUR.DESCRIPTION(),
             control: { kind: 'select', options: clickOptions },
           },
           {
@@ -508,8 +503,65 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
     title: S.COMPANION(),
     description: LL.SETTINGS.COMPANION_DESC(),
     render: () => ctx.slots.companion(),
-    keywords: [LL.COMPANION.HELPER_TITLE(), LL.COMPANION.HELPER_DESC(), 'websocket', 'streamdeck'],
+    keywords: [LL.COMPANION.HELPER_TITLE(), LL.COMPANION.HELPER_DESC(), 'websocket', 'streamdeck', 'stream deck'],
   });
+
+  // Where this presenter and its account connect to: the server (desktop app) and the services the
+  // account set up itself. The services live on the server, so they are left out while offline.
+  const connections: SettingsCategory = {
+    id: 'connections',
+    label: LL.SETTINGS.GROUP_CONNECTIONS(),
+    description: D.CONNECTIONS(),
+    icon: ConnectionsIcon,
+    sections: [
+      // Desktop app only: the browser build always talks to the server it was loaded from and
+      // ignores the setting (see getBackendBaseUrl).
+      {
+        id: 'connection',
+        title: S.CONNECTION(),
+        settings: [
+          ...(ctx.isElectron
+            ? [
+                {
+                  key: 'backendUrl' as const,
+                  label: O.BACKEND_URL.TITLE(),
+                  description: O.BACKEND_URL.DESCRIPTION(),
+                  control: { kind: 'text' as const, placeholder: 'https://...' },
+                },
+              ]
+            : []),
+          {
+            key: 'offlineFallback' as const,
+            label: O.OFFLINE_FALLBACK.TITLE(),
+            description: O.OFFLINE_FALLBACK.DESCRIPTION(),
+            control: { kind: 'boolean' as const },
+          },
+        ],
+      },
+      ...(!ctx.offlineMode
+        ? [
+            {
+              id: 'nextcloud',
+              title: LL.NEXTCLOUD.TITLE(),
+              render: () => ctx.slots.nextcloud(),
+              keywords: ['nextcloud', 'cloud', 'webdav', LL.NEXTCLOUD.MEDIA_FOLDER(), LL.NEXTCLOUD.ADDRESS()],
+            },
+            {
+              id: 'church-tools',
+              title: LL.CHURCH_TOOLS_SETTINGS.TITLE(),
+              render: () => ctx.slots.churchTools(),
+              keywords: ['churchtools', 'ccli', 'songselect', LL.CHURCH_TOOLS_SETTINGS.URL(), LL.CHURCH_TOOLS_SETTINGS.TOKEN()],
+            },
+            {
+              id: 'spotify',
+              title: LL.SPOTIFY_SETTINGS.TITLE(),
+              render: () => ctx.slots.spotify(),
+              keywords: ['spotify', LL.SPOTIFY_SETTINGS.CLIENT_ID(), LL.SPOTIFY_SETTINGS.CLIENT_SECRET()],
+            },
+          ]
+        : []),
+    ],
+  };
 
   const remote: SettingsCategory = {
     id: 'remote',
@@ -591,5 +643,15 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
     ],
   };
 
-  return [general, presentation, library, notifications, keyboard, remote, desktop, privacy];
+  return [
+    general,
+    presentation,
+    library,
+    notifications,
+    keyboard,
+    ...(connections.sections.length ? [connections] : []),
+    remote,
+    desktop,
+    privacy,
+  ];
 };

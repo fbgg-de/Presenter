@@ -144,10 +144,6 @@ export const registerIpcHandlers = (windowManager: PresentationWindowManager) =>
     windowManager.handlePresentationReady(event.sender);
   });
 
-  ipcMain.on('broadcast-presentation-content', (_event, content: PresentationContentIPC) => {
-    windowManager.broadcastContent(content);
-  });
-
   ipcMain.handle('list-screens', () => {
     return windowManager.listScreens();
   });
