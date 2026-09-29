@@ -152,6 +152,8 @@ let stopControlServer: (() => Promise<void>) | null = null;
 let persistMainWindowBounds: (() => void) | null = null;
 let shutdownReason = 'window close';
 let quitAllowed = false;
+/** Set once a quit is under way: from then on nothing may ask the operator anything. */
+let shuttingDown = false;
 
 /** Ask for a stop the same way the window close does, so one path handles all of them. */
 const requestShutdown = (reason: string): void => {
@@ -261,15 +263,61 @@ const createWindow = () => {
   // Only save bounds when the user intentionally closes the window.
   // Saving on every move/resize would capture OS-clamped values (e.g. taskbar
   // shrinking the height from 1080 → 1040) and persist the wrong size.
+  // 'close' comes BEFORE the page's beforeunload, so it must not end anything yet: destroying the
+  // outputs here blanked every screen even when the page then kept the window open (an unsaved
+  // song edit, or the Live guard below). The outputs go in 'closed', once the window really is.
+  let closeRequested = false;
   mainWindow.on('close', () => {
+    closeRequested = true;
     persistBounds();
-    // Destroy any presentation/musician windows so the app can fully quit.
-    // Without this, secondary windows remain open and 'window-all-closed' never fires.
-    try {
-      windowManager.destroyAll();
-    } catch (err) {
-      console.error('[Main] Failed to destroy presentation windows on main close:', err);
+  });
+
+  // Who closes the window matters. A person (title-bar X, Alt+F4, the taskbar's "Close window")
+  // goes through the system close command, WM_SYSCOMMAND/SC_CLOSE, before Windows sends WM_CLOSE.
+  // Startup Manager's graceful stop (`taskkill` without /F) posts WM_CLOSE directly — asking
+  // there would stall its stop until it force-kills us, so only a person is asked.
+  let userCloseAt = 0;
+  if (process.platform === 'win32') {
+    const WM_SYSCOMMAND = 0x0112;
+    const SC_CLOSE = 0xf060;
+    mainWindow.hookWindowMessage(WM_SYSCOMMAND, (wParam) => {
+      // Little-endian, so the first two bytes are the command whatever the pointer size; its
+      // low four bits are the system's own.
+      if ((wParam.readUInt16LE(0) & 0xfff0) === SC_CLOSE) userCloseAt = Date.now();
+    });
+  }
+  const closedByUser = () => process.platform !== 'win32' || Date.now() - userCloseAt < 2000;
+
+  // The page vetoed its unload: Live with outputs open (LiveCloseGuard) or an unsaved edit.
+  // Electron only cancels silently, so ask. Reloads and navigations go ahead — the outputs
+  // survive those and the operator view adopts them again — and so does every close that is
+  // not a person's (Startup Manager's WM_CLOSE, stop command, updater, session end): those
+  // must never wait on a dialog.
+  mainWindow.webContents.on('will-prevent-unload', (event) => {
+    const isClose = closeRequested;
+    closeRequested = false;
+    if (!isClose || shuttingDown || !closedByUser()) {
+      event.preventDefault(); // = ignore the veto
+      return;
     }
+    const german = app.getLocale().startsWith('de');
+    void dialog
+      .showMessageBox(mainWindow!, {
+        type: 'warning',
+        buttons: german ? ['Weiterlaufen lassen', 'Trotzdem schließen'] : ['Keep running', 'Close anyway'],
+        // A stray Enter, Space or Esc keeps the show running.
+        defaultId: 0,
+        cancelId: 0,
+        title: 'Presenter',
+        message: german ? 'Presenter schließen?' : 'Close Presenter?',
+        detail: german
+          ? 'Presenter ist noch in Gebrauch: Ausgabefenster sind im Live-Modus offen oder eine Änderung ist nicht gespeichert. Beim Schließen werden alle Ausgaben schwarz.'
+          : 'Presenter is still in use: output windows are open in Live mode or an edit is not saved. Closing blanks every output.',
+      })
+      .then(({ response }) => {
+        // destroy() skips beforeunload; 'closed' then takes the outputs and quits.
+        if (response === 1 && mainWindow && !mainWindow.isDestroyed()) mainWindow.destroy();
+      });
   });
 
   // Windows ending the session — shutdown, update restart, log-off — never emits
@@ -277,6 +325,9 @@ const createWindow = () => {
   // later. Save what matters while Windows still waits: 'query-session-end' comes first and
   // leaves the most time, 'session-end' is the last chance.
   const persistForSessionEnd = (): void => {
+    // Windows is shutting down or logging off: nothing may ask anything now, or the page's
+    // Live guard would hold up the system shutdown ("Presenter is preventing shutdown").
+    shuttingDown = true;
     session.defaultSession.flushStorageData();
     persistBounds();
     void flushSessionCookies?.().catch(() => console.error('[Cookies] Failed to flush cookies at session end'));
@@ -286,6 +337,13 @@ const createWindow = () => {
 
   mainWindow.on('closed', () => {
     mainWindow = null;
+    // Destroy any presentation/musician windows so the app can fully quit.
+    // Without this, secondary windows remain open and 'window-all-closed' never fires.
+    try {
+      windowManager.destroyAll();
+    } catch (err) {
+      console.error('[Main] Failed to destroy presentation windows on main close:', err);
+    }
     // Ensure the app actually quits on platforms other than macOS.
     if (process.platform !== 'darwin') {
       app.quit();
@@ -483,8 +541,16 @@ const createWindow = () => {
   // Auto-fill OIDC provider login form when the window navigates to an external page.
   // Many IdP pages render their form asynchronously, so we retry with increasing delays
   // until fields are found or a timeout is reached.
+  // Set by an automatic submit, cleared once the window reaches a page without a sign-in form.
+  // Meeting the form again before that means the provider turned the saved credentials down;
+  // submitting them again would repeat the refusal in a loop, and ChurchTools may lock the account.
+  let autoSubmitted = false;
   const scheduleAutoFill = async (url: string): Promise<void> => {
-    if (!url || url.startsWith('file://') || url.startsWith('about:')) return;
+    if (!url || url.startsWith('about:')) return;
+    if (url.startsWith('file://')) {
+      autoSubmitted = false;
+      return;
+    }
 
     const creds = getCredentials();
     if (!creds) return;
@@ -605,7 +671,17 @@ const createWindow = () => {
       }
     }
 
-    if (filledCount === 0 || !autoLoginEnabled) return;
+    if (filledCount === 0) {
+      autoSubmitted = false;
+      return;
+    }
+    if (!autoLoginEnabled) return;
+    if (autoSubmitted) {
+      console.warn(
+        '[Credentials] The sign-in form came back after the automatic submit — not submitting again (is the saved password still right?)',
+      );
+      return;
+    }
 
     // Give the provider's own scripts a moment to react to the filled fields before
     // asking the form to submit.
@@ -620,6 +696,7 @@ const createWindow = () => {
         message?: string | null;
       };
       if (result.ok) {
+        autoSubmitted = true;
         console.log(`[Credentials] Auto-login submitted the form (${result.reason})`);
       } else if (result.reason === 'invalid') {
         console.warn(
@@ -639,8 +716,8 @@ const createWindow = () => {
     scheduleAutoFill(url).catch((err) => console.error('[Credentials] Auto-fill error:', err));
   });
 
-  // did-navigate fires when the renderer navigates to a new URL (including IdP redirects).
-  // Combined with did-finish-load this ensures we attempt auto-fill on every navigation.
+  // Auto-fill runs from did-finish-load only: starting it here as well filled and submitted
+  // every sign-in form twice, posting the same AuthState in two racing requests.
   mainWindow.webContents.on('did-navigate', (_event, url) => {
     // Safety net: the desktop app must never run the website's copy of its pages. If the window
     // still ends up on one (login finished on the server, a stray link), open the local page
@@ -670,7 +747,6 @@ const createWindow = () => {
     } catch {
       /* unparseable URL — nothing to redirect */
     }
-    scheduleAutoFill(url).catch((err) => console.error('[Credentials] Auto-fill error:', err));
   });
 
   // HMR for renderer based on electron-vite cli.
@@ -811,11 +887,20 @@ if (app.isPackaged) {
   autoUpdater.on('update-downloaded', ({ version, releaseDate, releaseNotes, releaseName }) => {
     console.log('[Updater] Update downloaded:', version);
     mainWindow?.webContents.send('updater-update-downloaded', { version, releaseDate });
-    // Also show native dialog as fallback
+    // Never mid-service: the dialog takes keyboard focus, and the next Space meant for "next
+    // slide" pressed Restart — every screen went dark. With outputs open the update simply
+    // installs on the next normal quit (autoInstallOnAppQuit).
+    if (windowManager.getAllWindows().size > 0) {
+      console.log('[Updater] Outputs are open — the update installs when Presenter quits');
+      return;
+    }
     dialog
       .showMessageBox({
         type: 'info',
         buttons: ['Restart', 'Later'],
+        // A stray key press must not restart the app.
+        defaultId: 1,
+        cancelId: 1,
         title: 'Application Update Available',
         message:
           (process.platform === 'win32'
@@ -863,6 +948,19 @@ app.whenReady().then(async () => {
   // In production, F12 still opens DevTools for debugging purposes
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window);
+    // A crashed renderer (GPU fault, out of memory on a big video) otherwise leaves its window
+    // blank for the rest of the service. Reloading is enough: an output gets its content back
+    // through the ready handshake, the operator view adopts the surviving outputs by name.
+    // Capped so a page that crashes while loading cannot spin.
+    let crashes: number[] = [];
+    window.webContents.on('render-process-gone', (_event, details) => {
+      if (details.reason === 'clean-exit' || window.isDestroyed()) return;
+      const now = Date.now();
+      crashes = [...crashes.filter((at) => now - at < 60_000), now];
+      const retry = crashes.length <= 3;
+      console.error(`[Window] renderer gone (${details.reason}, exit ${details.exitCode}) — ${retry ? 'reloading' : 'giving up'}`);
+      if (retry) window.webContents.reload();
+    });
     if (app.isPackaged) {
       window.webContents.on('before-input-event', (_event, input) => {
         if (input.type === 'keyDown' && input.key === 'F12') {
@@ -878,6 +976,8 @@ app.whenReady().then(async () => {
 
   // Create the main window
   createWindow();
+  // Projectors that drop out and come back (see watchDisplays).
+  windowManager.watchDisplays();
   if (app.isPackaged && mainWindow) {
     mainWindow.webContents.on('did-finish-load', async () => {
       try {
@@ -1021,6 +1121,7 @@ app.on('before-quit', (e) => {
   if (!gotTheLock) return; // duplicate instance bowing out — it owns none of this
   if (quitAllowed) return; // teardown already ran; let this quit through
   e.preventDefault();
+  shuttingDown = true;
 
   void shutdown.run(shutdownReason).then(() => {
     quitAllowed = true;

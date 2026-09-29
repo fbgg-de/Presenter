@@ -42,12 +42,12 @@ const songsApi = presenterApi.injectEndpoints({
       query: ({ q, mode = 'title', limit }) => ({ url: `rest/SongsSearch/${mode}`, params: limit ? { q, limit } : { q } }),
     }),
     getSong: build.query<ApiSuccess<SongEntity>, { songNumber: number }>({
-      query: ({ songNumber }) => `rest/Song/${songNumber}`,
+      query: ({ songNumber }) => ({ url: `rest/Song/${songNumber}`, timeout: 15_000 }),
       providesTags: (_res, _err, arg) => [{ type: 'Song', id: arg.songNumber }],
     }),
     /** Lightweight change-detection feed (songNumber + updated_at only) for background polling. */
     getSongsRevision: build.query<ApiSuccess<{ songs: { songNumber: number; date?: string | null }[]; count: number }>, void>({
-      query: () => 'rest/SongsRevision',
+      query: () => ({ url: 'rest/SongsRevision', timeout: 15_000 }),
     }),
     createSong: build.mutation<ApiSuccess<SongEntity>, Partial<SongEntity> & Pick<SongEntity, 'title' | 'initialOrder' | 'blocks'>>({
       query: (body) => ({ url: 'rest/Song', method: 'POST', body }),

@@ -34,10 +34,9 @@ import { useShortcut } from '@/hooks/useShortcut';
 import { useEntryRunning } from '@/media/useMediaHost';
 import { PLAYHEAD } from '@/components/media/Transport';
 import { MonitorFrame, SafeAreaGuides, Segmented } from '@/components/media/Viewer';
-import { PREVIEW_PAGE_URL, PresentationFrame } from './PresentationFrame';
+import { PREVIEW_PAGE_URL, PresentationFrame, outputSize } from './PresentationFrame';
 import type { PresentationContent } from '@/presentation/types';
 
-const DEFAULT_SIZE = { width: 1920, height: 1080 };
 /** Preview's tally: green, as on a vision mixer (Program is red). */
 const PREVIEW_TALLY = '#3fb950';
 
@@ -99,13 +98,16 @@ export const PreviewPanel = () => {
     'operatorPreviewGuides',
   );
   const updateSetting = useUpdateSetting();
-  const { activeItemIndex, activeBlockIndex, previewTarget, isBlack, isTextHidden } = useGetPresentationSettings(
-    'activeItemIndex',
-    'activeBlockIndex',
-    'previewTarget',
-    'isBlack',
-    'isTextHidden',
-  );
+  const { activeItemIndex, activeBlockIndex, previewTarget, isBlack, isTextHidden, videoVisible, mediaVisible } =
+    useGetPresentationSettings(
+      'activeItemIndex',
+      'activeBlockIndex',
+      'previewTarget',
+      'isBlack',
+      'isTextHidden',
+      'videoVisible',
+      'mediaVisible',
+    );
   const open = useOpenItem();
   const { currentShow } = useGetShow();
   const openEntry = currentShow?.order?.[open.index];
@@ -120,15 +122,13 @@ export const PreviewPanel = () => {
   const group = groups.find((g) => g.id === operatorPreviewGroupId) ?? groups[0];
 
   // Draw at the size of a real window of the group on this computer, so proportions match.
-  const size = useMemo(() => {
-    const win = rig.windows.find((w) => w.config.screenGroupId === group?.id && (w.bounds || (w.config.width && w.config.height)));
-    const width = win?.bounds?.width ?? win?.config.width;
-    const height = win?.bounds?.height ?? win?.config.height;
-    return width && height ? { width, height } : DEFAULT_SIZE;
-  }, [rig.windows, group?.id]);
+  const size = useMemo(() => outputSize(rig.windows, group?.id), [rig.windows, group?.id]);
 
   // ── Program: the live slide as the screens have it ──
-  const liveState = useMemo(() => ({ isBlack, hideText: isTextHidden }), [isBlack, isTextHidden]);
+  const liveState = useMemo(
+    () => ({ isBlack, hideText: isTextHidden, videoVisible, mediaVisible }),
+    [isBlack, isTextHidden, videoVisible, mediaVisible],
+  );
   const program = usePreviewContent(activeItemIndex, activeBlockIndex, group?.id, liveState);
 
   // ── Preview: waiting slide → opened entry → the next slide ──

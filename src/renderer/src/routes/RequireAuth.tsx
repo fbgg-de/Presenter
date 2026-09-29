@@ -1,8 +1,9 @@
 import { useEffect, type PropsWithChildren } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useGetSessionQuery } from '@/api/session.api';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useAppSelector } from '@/store';
+import { redirectToLogin } from '@/utils';
 
 export const RequireAuth = ({ children }: PropsWithChildren) => {
   const location = useLocation();
@@ -21,6 +22,18 @@ export const RequireAuth = ({ children }: PropsWithChildren) => {
     if (fallBack) updateSetting('offlineMode', true);
   }, [fallBack, updateSetting]);
 
+  // Decided by the last good answer, not `isError`: RTK keeps `data` when a refetch fails, and a
+  // network blip during a show must not unmount the operator view. A real expiry is handled by
+  // SessionExpired's notice, which signs in again without leaving the page.
+  const signedOut = !offlineMode && !isLoading && !fallBack && !data?.isAuthenticated;
+  const next = location.pathname + location.search + location.hash;
+  useEffect(() => {
+    // A page load through redirectToLogin, never a routed "/login": in the desktop app the login
+    // page is its own file, and "/login" under file:// became "/C:/login" — which rendered this
+    // again and nested `next=` forever (a blank window whenever the server was unreachable).
+    if (signedOut) redirectToLogin(next);
+  }, [signedOut, next]);
+
   // In offline mode, always allow access without authentication
   if (offlineMode) {
     return <>{children}</>;
@@ -30,13 +43,7 @@ export const RequireAuth = ({ children }: PropsWithChildren) => {
     return null;
   }
 
-  // Decided by the last good answer, not `isError`: RTK keeps `data` when a refetch fails, and a
-  // network blip during a show must not unmount the operator view. A real expiry is handled by
-  // SessionExpired's notice, which signs in again without leaving the page.
-  if (!data?.isAuthenticated) {
-    const next = encodeURIComponent(location.pathname + location.search + location.hash);
-    return <Navigate to={`/login?next=${next}`} replace />;
-  }
+  if (!data?.isAuthenticated) return null;
 
   return <>{children}</>;
 };

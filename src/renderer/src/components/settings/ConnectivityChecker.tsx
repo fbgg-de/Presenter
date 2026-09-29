@@ -123,7 +123,8 @@ export const ConnectivityChecker = ({ children }: { children?: ReactNode }) => {
         setTesting(false);
       }
     },
-    [dispatch, LL],
+    // backendUrl: a failed test must fall back to the address in use now, not the one at mount.
+    [dispatch, LL, backendUrl, testSession, updateSetting],
   );
 
   // ── Apply the successfully-tested URL ──
@@ -135,7 +136,7 @@ export const ConnectivityChecker = ({ children }: { children?: ReactNode }) => {
     setTestResult(null);
     // Refetch the session with the new URL already active
     refetch();
-  }, [urlInput, dispatch, refetch]);
+  }, [urlInput, updateSetting, refetch]);
 
   // ── Snackbar close handler — ignore clickaway ──
   const handleSnackClose = (_event?: SyntheticEvent | Event, reason?: string) => {

@@ -9,7 +9,7 @@ export interface SizeRange {
 
 /** Screen preview tile width in the operator view's top bar. */
 export const MONITOR_RANGE: SizeRange = { min: 90, max: 360, step: 10 };
-export const MONITOR_DEFAULT = 140;
+export const MONITOR_DEFAULT = 90;
 /** Minimum slide card width in the operator view. */
 export const SLIDE_RANGE: SizeRange = { min: 160, max: 720, step: 20 };
 export const SLIDE_DEFAULT = 280;

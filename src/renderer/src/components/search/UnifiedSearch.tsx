@@ -494,7 +494,7 @@ export const UnifiedSearch = ({
           }}
         />
         {!panel && (
-          <IconButton size="small" onClick={onClose}>
+          <IconButton aria-label={LL.COMMON.CLOSE()} size="small" onClick={onClose}>
             <CloseIcon fontSize="small" />
           </IconButton>
         )}
@@ -574,6 +574,7 @@ export const UnifiedSearch = ({
                   checked={includeChurchToolsResults}
                   onChange={(e) => updateSetting('includeChurchToolsResults', e.target.checked)}
                   onClick={(e) => e.stopPropagation()}
+                  slotProps={{ input: { 'aria-label': LL.UNIFIED_SEARCH.INCLUDE_CHURCHTOOLS_HINT() } }}
                 />
               </Stack>
             </Tooltip>
@@ -604,6 +605,7 @@ export const UnifiedSearch = ({
                 checked={includeChurchToolsResults}
                 onChange={(e) => updateSetting('includeChurchToolsResults', e.target.checked)}
                 onClick={(e) => e.stopPropagation()}
+                slotProps={{ input: { 'aria-label': LL.UNIFIED_SEARCH.INCLUDE_CHURCHTOOLS_HINT() } }}
               />
             </Stack>
           </Tooltip>
@@ -651,6 +653,7 @@ export const UnifiedSearch = ({
                   checked={includeChurchToolsResults}
                   onChange={(e) => updateSetting('includeChurchToolsResults', e.target.checked)}
                   onClick={(e) => e.stopPropagation()}
+                  slotProps={{ input: { 'aria-label': LL.UNIFIED_SEARCH.INCLUDE_CHURCHTOOLS_HINT() } }}
                 />
               </Stack>
             </Tooltip>

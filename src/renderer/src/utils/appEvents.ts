@@ -10,6 +10,8 @@ type AppEvents = {
   'presenter:edit-style': { styleId?: number };
   /** Open an agenda group's settings, on one of its tabs when given. */
   'presenter:group-settings': { groupId: string; tab?: 'general' | 'theme' | 'playback' };
+  /** Open the song search drawer (Ctrl+F). */
+  'presenter:open-search': Record<string, never>;
 };
 
 export const emitAppEvent = <K extends keyof AppEvents>(name: K, detail: AppEvents[K]) =>

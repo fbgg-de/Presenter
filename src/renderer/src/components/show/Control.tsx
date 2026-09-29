@@ -127,24 +127,9 @@ const Control = ({
       default:
         return <ControlSong index={activeItemIndex} isLive={isLive} />;
     }
-  }, [
-    activeItemIndex,
-    isLive,
-    activeItem?.type,
-    activeItem?.mediaSubType,
-    activeItem?.mediaPath,
-    // Media display props — must trigger re-render so the preview updates immediately
-    activeItem?.mediaZoom,
-    activeItem?.mediaBlur,
-    activeItem?.mediaObjectFit,
-    activeItem?.mediaObjectPosition,
-    activeItem?.mediaAutoplay,
-    activeItem?.mediaLoop,
-    activeItem?.mediaVolume,
-    activeItem?.media,
-    activeItem?.mediaColor,
-    activeItem?.label,
-  ]);
+    // The item itself, not a hand-kept list of its fields: the list missed the verse text, so an
+    // edited verse kept its old pages here. The controls are memo()s; an unchanged item is the same object.
+  }, [activeItemIndex, isLive, activeItem]);
 
   // No show loaded or no items
   if (!currentShow || !currentShow.order || currentShow.order.length === 0) {

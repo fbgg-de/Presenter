@@ -117,7 +117,7 @@ export const PdfDashboard = ({ songNumber, open, onClose }: PdfDashboardProps) =
               {LL.PDF.DASHBOARD()} — {LL.PDF.SONG_NUMBER({ number: String(songNumber) })}
             </Typography>
           </Stack>
-          <IconButton onClick={onClose}>
+          <IconButton aria-label={LL.COMMON.CLOSE()} onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </Stack>

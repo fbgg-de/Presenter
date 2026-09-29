@@ -73,10 +73,12 @@ export const useMetrics = () => {
         enqueueMetric({ event, entity_type: entityType, entity_id: entityId, metadata: enriched });
         return;
       }
-      recordMetric({ event, entity_type: entityType, entity_id: entityId, metadata: enriched }).catch(() => {
-        // Network error while "online" — fall back to queue
-        enqueueMetric({ event, entity_type: entityType, entity_id: entityId, metadata: enriched });
-      });
+      recordMetric({ event, entity_type: entityType, entity_id: entityId, metadata: enriched })
+        .unwrap()
+        .catch(() => {
+          // Network error or refused while "online" — fall back to queue (only unwrap() rejects)
+          enqueueMetric({ event, entity_type: entityType, entity_id: entityId, metadata: enriched });
+        });
     },
     [recordMetric],
   );

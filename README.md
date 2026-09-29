@@ -115,6 +115,10 @@ there ~15s later. Three things follow from that:
 - **Closing the window quits the app.** It never hides, so a plain `taskkill /PID <pid>` is
   enough. Note that `taskkill /T` is _not_ — Chromium refuses a tree close, so a supervisor
   must target the process that owns the window.
+- **Only a person is asked.** In Live mode with outputs open, closing the window asks first —
+  but only when a person closes it (title-bar X, Alt+F4, taskbar), which Windows sends as the
+  system close command. A supervisor's `WM_CLOSE`, the stop command below and Windows shutting
+  down or logging off always quit without a question.
 - **A loopback stop command**, for stopping it before a window exists or from a script:
 
   ```bash

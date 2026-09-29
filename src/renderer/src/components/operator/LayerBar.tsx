@@ -13,11 +13,12 @@
  * screen, Shift on an ending control skips the fade. Buttons say what they will do to the
  * screens, so Go names the entry it starts rather than leaving the operator to work it out.
  *
- * A status line closes the bar: window and connection chips (a window chip opens the Window
- * Manager) and Black all.
+ * On a short screen (a 768/800/864-pixel laptop) the layers with nothing running fold into one
+ * line at the bottom — name, eye and their one action each — so the slides above keep the room.
+ * A layer gets its full row back the moment something runs on it.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Box, Button, ButtonBase, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import { Box, Button, ButtonBase, IconButton, Stack, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
   Audiotrack as AudioLayerIcon,
@@ -95,11 +96,14 @@ const LayerRow = ({
   detail,
   layer,
   action,
+  compact,
   children,
 }: {
   name: string;
   detail?: string;
   layer: keyof typeof LAYER_COLORS;
+  /** Tighter rows on a short screen. */
+  compact?: boolean;
   /** The layer's show/hide eye, at the right end of the name column. */
   action?: ReactNode;
   children: ReactNode;
@@ -125,11 +129,37 @@ const LayerRow = ({
       <Stack
         direction="row"
         spacing={1.25}
-        sx={{ alignItems: 'center', px: 1.5, py: 0.25, minHeight: 40, borderTop: 1, borderColor: 'divider', minWidth: 0 }}
+        sx={{ alignItems: 'center', px: 1.5, py: 0.25, minHeight: compact ? 34 : 40, borderTop: 1, borderColor: 'divider', minWidth: 0 }}
       >
         {children}
       </Stack>
     </>
+  );
+};
+
+/** A folded layer in the short-screen idle line: its name (the idle hint as tooltip) and its controls. */
+const FoldedLayer = ({
+  layer,
+  name,
+  hint,
+  action,
+}: {
+  layer: keyof typeof LAYER_COLORS;
+  name: string;
+  hint: string;
+  action: ReactNode;
+}) => {
+  const Icon = LAYER_ICONS[layer];
+  return (
+    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', flexShrink: 0 }}>
+      <Tooltip title={hint}>
+        <Stack direction="row" spacing={0.75} sx={{ alignItems: 'center', cursor: 'help' }}>
+          <Icon sx={{ fontSize: 16, color: LAYER_COLORS[layer] }} />
+          <SectionLabel>{name}</SectionLabel>
+        </Stack>
+      </Tooltip>
+      {action}
+    </Stack>
   );
 };
 
@@ -482,18 +512,6 @@ const BlockStrip = ({
   );
 };
 
-/** "Chorus · 2/4": the live section, beside the item's name. */
-const LiveSectionLabel = ({ names }: { names: string[] }) => {
-  const { LL } = useI18nContext();
-  const { activeBlockIndex } = useGetPresentationSettings('activeBlockIndex');
-  if (!names[activeBlockIndex]) return null;
-  return (
-    <Typography variant="caption" noWrap sx={{ fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums', color: 'text.secondary' }}>
-      {LL.OPERATOR.SECTION_OF({ section: names[activeBlockIndex], index: activeBlockIndex + 1, total: names.length })}
-    </Typography>
-  );
-};
-
 /** Whether Shift is held right now — the layer eyes spell out their keys while it is. */
 const useShiftHeld = (): boolean => {
   const [held, setHeld] = useState(false);
@@ -578,19 +596,111 @@ export const LayerBar = () => {
   const backgrounds = playbacks.filter((p) => p.role === 'background').reverse();
   const contents = playbacks.filter((p) => p.role === 'content').reverse();
 
-  // Which groups show the text of the active item — and, just as importantly, which do not. A
-  // group whose text layer is off is the one way an output can stay blank while every other one
+  // Which groups do not show the text of the active item. A group whose text layer is off is the one way an output can stay blank while every other one
   // is right, and until it was named here that looked like a broken screen rather than a setting.
   const textLayer = item?.type === 'bible_verse' ? 'bibleVerses' : 'slides';
-  const enabledGroups = groups.filter((group) => group.enabled);
-  const textGroups = enabledGroups
-    .filter((group) => normaliseScreenGroupData(group.data).layers[textLayer])
-    .map((group) => group.name)
-    .join(' · ');
-  const textlessGroups = enabledGroups
+  const textlessGroups = groups
+    .filter((group) => group.enabled)
     .filter((group) => !normaliseScreenGroupData(group.data).layers[textLayer])
     .map((group) => group.name)
     .join(' · ');
+
+  // A short screen folds the layers with nothing running into one line (see the header).
+  // ponytail: height threshold only; make it a setting if someone wants it on a tall screen too.
+  const compact = useMediaQuery('(max-height: 860px)');
+  const stageRunning = stage.statuses.some((s) => s.layer.enabled && s.cueCount > 0);
+  const folded = {
+    background: compact && backgrounds.length === 0 && groupBackgrounds.length === 0,
+    media: compact && contents.length === 0,
+    audio: compact && audioTracks.length === 0,
+    overlays: compact && !stageRunning,
+  };
+
+  // Controls a layer keeps whether it has its own row or sits folded in the idle line.
+  const backgroundEye = (
+    <LayerHideButton
+      shiftHeld={shiftHeld}
+      hidden={!videoVisible}
+      onToggle={() => dispatch(setVideoVisible(!videoVisible))}
+      hint={videoVisible ? M.HIDE_BACKGROUND() : M.SHOW_BACKGROUND()}
+      shortcut={hideBackgroundKey}
+    />
+  );
+  const mediaActions = (
+    <>
+      {/* The show-wide speed every following video plays at — backgrounds included. */}
+      <MasterSpeedControl />
+      <LayerHideButton
+        shiftHeld={shiftHeld}
+        hidden={!mediaVisible}
+        onToggle={() => dispatch(setMediaVisible(!mediaVisible))}
+        hint={mediaVisible ? M.HIDE_LAYER() : M.SHOW_LAYER()}
+      />
+    </>
+  );
+  const audioEye = (
+    <LayerHideButton
+      shiftHeld={shiftHeld}
+      hidden={audioMuted}
+      onToggle={() => setAudioMuted(!audioMuted)}
+      hint={audioMuted ? LL.AUDIO.UNMUTE_LAYER() : LL.AUDIO.MUTE_LAYER()}
+    />
+  );
+  const overlayActions = (
+    <>
+      {/* The setup sits with the row's name, like every layer's own control — not at the far end. */}
+      <Tooltip title={LL.STAGE.EDIT_LAYERS()}>
+        <IconButton size="small" aria-label={LL.STAGE.EDIT_LAYERS()} onClick={() => setStagePanel({ open: true })} sx={{ p: 0.25 }}>
+          <SetupIcon sx={{ fontSize: 16 }} />
+        </IconButton>
+      </Tooltip>
+      <LayerHideButton
+        shiftHeld={shiftHeld}
+        hidden={stage.allHidden}
+        onToggle={() => dispatch(toggleStageAllHidden())}
+        hint={stage.allHidden ? LL.STAGE.SHOW_ALL() : LL.STAGE.HIDE_ALL()}
+      />
+    </>
+  );
+  const goButton = currentShow && groupContents.length > 0 && (
+    // Go says what it starts. With nothing left it stays in place but disabled, so the
+    // end of a group's media reads as "that was the last one" rather than as a button
+    // that quietly stopped working.
+    <Tooltip title={goNext.length === 0 ? M.GO_NOTHING() : withShortcut(M.GO_HINT(), goKey)}>
+      <span>
+        <Button
+          size="small"
+          variant="contained"
+          startIcon={<GoIcon />}
+          disabled={goNext.length === 0}
+          onClick={() => void goMedia(currentShow, agendaGroupId, groups, fadeMs)}
+          sx={{ textTransform: 'none', maxWidth: 220 }}
+        >
+          <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {goNext.length === 0
+              ? M.GO()
+              : goNext.length === 1
+                ? M.GO_NEXT({ name: mediaItemLabel(currentShow.order[goNext[0]]) })
+                : M.GO_COUNT({ count: goNext.length })}
+          </Box>
+        </Button>
+      </span>
+    </Tooltip>
+  );
+  const foldedLayers = [
+    shown('background') && folded.background && (
+      <FoldedLayer key="background" layer="background" name={O.LAYER_BACKGROUND()} hint={M.THEME_COLOUR_ONLY()} action={backgroundEye} />
+    ),
+    shown('media') && folded.media && (
+      <FoldedLayer key="media" layer="media" name={M.LAYER()} hint={M.NOTHING_ON_SCREEN()} action={mediaActions} />
+    ),
+    shown('audio') && folded.audio && (
+      <FoldedLayer key="audio" layer="audio" name={LL.AUDIO.LAYER()} hint={LL.AUDIO.NOTHING_PLAYING()} action={audioEye} />
+    ),
+    shown('overlays') && folded.overlays && (
+      <FoldedLayer key="overlays" layer="overlays" name={O.LAYER_OVERLAYS()} hint={O.NO_STAGE_LAYERS()} action={overlayActions} />
+    ),
+  ].filter(Boolean);
 
   return (
     <Box sx={{ bgcolor: 'background.paper' }}>
@@ -602,20 +712,8 @@ export const LayerBar = () => {
           transition: (theme) => theme.transitions.create('grid-template-columns', { duration: 120 }),
         }}
       >
-        {shown('background') && (
-          <LayerRow
-            name={O.LAYER_BACKGROUND()}
-            layer="background"
-            action={
-              <LayerHideButton
-                shiftHeld={shiftHeld}
-                hidden={!videoVisible}
-                onToggle={() => dispatch(setVideoVisible(!videoVisible))}
-                hint={videoVisible ? M.HIDE_BACKGROUND() : M.SHOW_BACKGROUND()}
-                shortcut={hideBackgroundKey}
-              />
-            }
-          >
+        {shown('background') && !folded.background && (
+          <LayerRow name={O.LAYER_BACKGROUND()} layer="background" compact={compact} action={backgroundEye}>
             {backgrounds.length > 0 || groupBackgrounds.length > 0 ? (
               <Stack spacing={0.25} sx={{ flex: 1, minWidth: 0, py: 0.25, opacity: videoVisible ? 1 : 0.6 }}>
                 {backgrounds.map((playback) => (
@@ -667,6 +765,7 @@ export const LayerBar = () => {
           <LayerRow
             name={O.LAYER_SLIDES()}
             layer="slides"
+            compact={compact}
             action={
               <LayerHideButton
                 shiftHeld={shiftHeld}
@@ -677,47 +776,28 @@ export const LayerBar = () => {
               />
             }
           >
-            <Stack spacing={0.5} sx={{ flex: 1, minWidth: 0, py: 0.5 }}>
-              <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0 }}>
+            {/* Just the jump buttons: title and section are already on the slide grid above. */}
+            <Stack direction="row" spacing={1.25} sx={{ flex: 1, minWidth: 0, py: 0.5, alignItems: 'center' }}>
+              {stripSlides.length > 1 ? (
+                <BlockStrip slides={stripSlides} />
+              ) : (
                 <Typography variant="body2" noWrap sx={{ fontWeight: 500, minWidth: 0 }}>
                   {item ? item.label || song?.title || item.bibleRef : O.NO_ITEM()}
                 </Typography>
-                {song && <LiveSectionLabel names={slideNames} />}
-                {textGroups && (
-                  <Typography variant="caption" noWrap sx={{ color: 'text.secondary', minWidth: 0 }}>
-                    {textGroups}
+              )}
+              {textlessGroups && (
+                <Tooltip title={O.NO_TEXT_ON_HINT()}>
+                  <Typography variant="caption" noWrap sx={{ color: 'warning.main', minWidth: 0, flexShrink: 0, cursor: 'help' }}>
+                    {O.NO_TEXT_ON({ groups: textlessGroups })}
                   </Typography>
-                )}
-                {textlessGroups && (
-                  <Tooltip title={O.NO_TEXT_ON_HINT()}>
-                    <Typography variant="caption" noWrap sx={{ color: 'warning.main', minWidth: 0, cursor: 'help' }}>
-                      {O.NO_TEXT_ON({ groups: textlessGroups })}
-                    </Typography>
-                  </Tooltip>
-                )}
-              </Stack>
-              {stripSlides.length > 1 && <BlockStrip slides={stripSlides} />}
+                </Tooltip>
+              )}
             </Stack>
           </LayerRow>
         )}
 
-        {shown('media') && (
-          <LayerRow
-            name={M.LAYER()}
-            layer="media"
-            action={
-              <>
-                {/* The show-wide speed every following video plays at — backgrounds included. */}
-                <MasterSpeedControl />
-                <LayerHideButton
-                  shiftHeld={shiftHeld}
-                  hidden={!mediaVisible}
-                  onToggle={() => dispatch(setMediaVisible(!mediaVisible))}
-                  hint={mediaVisible ? M.HIDE_LAYER() : M.SHOW_LAYER()}
-                />
-              </>
-            }
-          >
+        {shown('media') && !folded.media && (
+          <LayerRow name={M.LAYER()} layer="media" compact={compact} action={mediaActions}>
             {contents.length > 0 ? (
               <Stack spacing={0.25} sx={{ flex: 1, minWidth: 0, py: 0.25, opacity: mediaVisible ? 1 : 0.6 }}>
                 {contents.map((playback) => (
@@ -730,31 +810,7 @@ export const LayerBar = () => {
               </Typography>
             )}
             <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0, alignItems: 'center' }}>
-              {currentShow && groupContents.length > 0 && (
-                // Go says what it starts. With nothing left it stays in place but disabled, so the
-                // end of a group's media reads as "that was the last one" rather than as a button
-                // that quietly stopped working.
-                <Tooltip title={goNext.length === 0 ? M.GO_NOTHING() : withShortcut(M.GO_HINT(), goKey)}>
-                  <span>
-                    <Button
-                      size="small"
-                      variant="contained"
-                      startIcon={<GoIcon />}
-                      disabled={goNext.length === 0}
-                      onClick={() => void goMedia(currentShow, agendaGroupId, groups, fadeMs)}
-                      sx={{ textTransform: 'none', maxWidth: 220 }}
-                    >
-                      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {goNext.length === 0
-                          ? M.GO()
-                          : goNext.length === 1
-                            ? M.GO_NEXT({ name: mediaItemLabel(currentShow.order[goNext[0]]) })
-                            : M.GO_COUNT({ count: goNext.length })}
-                      </Box>
-                    </Button>
-                  </span>
-                </Tooltip>
-              )}
+              {goButton}
               {contents.length > 0 && (
                 // One ending control instead of "Fade all" beside "Stop all": the difference
                 // between them is only *when*, which is what Shift means everywhere else here.
@@ -774,19 +830,8 @@ export const LayerBar = () => {
           </LayerRow>
         )}
 
-        {shown('audio') && (
-          <LayerRow
-            name={LL.AUDIO.LAYER()}
-            layer="audio"
-            action={
-              <LayerHideButton
-                shiftHeld={shiftHeld}
-                hidden={audioMuted}
-                onToggle={() => setAudioMuted(!audioMuted)}
-                hint={audioMuted ? LL.AUDIO.UNMUTE_LAYER() : LL.AUDIO.MUTE_LAYER()}
-              />
-            }
-          >
+        {shown('audio') && !folded.audio && (
+          <LayerRow name={LL.AUDIO.LAYER()} layer="audio" compact={compact} action={audioEye}>
             {audioTracks.length > 0 ? (
               <Stack spacing={0.25} sx={{ flex: 1, minWidth: 0, py: 0.25, opacity: audioMuted ? 0.6 : 1 }}>
                 {audioTracks.map((track) => (
@@ -820,28 +865,9 @@ export const LayerBar = () => {
           </LayerRow>
         )}
 
-        {shown('overlays') && (
-          <LayerRow
-            name={O.LAYER_OVERLAYS()}
-            layer="overlays"
-            action={
-              <>
-                {/* The setup sits with the row's name, like every layer's own control — not at the far end. */}
-                <Tooltip title={LL.STAGE.EDIT_LAYERS()}>
-                  <IconButton size="small" onClick={() => setStagePanel({ open: true })} sx={{ p: 0.25 }}>
-                    <SetupIcon sx={{ fontSize: 16 }} />
-                  </IconButton>
-                </Tooltip>
-                <LayerHideButton
-                  shiftHeld={shiftHeld}
-                  hidden={stage.allHidden}
-                  onToggle={() => dispatch(toggleStageAllHidden())}
-                  hint={stage.allHidden ? LL.STAGE.SHOW_ALL() : LL.STAGE.HIDE_ALL()}
-                />
-              </>
-            }
-          >
-            {stage.statuses.some((s) => s.layer.enabled && s.cueCount > 0) ? (
+        {shown('overlays') && !folded.overlays && (
+          <LayerRow name={O.LAYER_OVERLAYS()} layer="overlays" compact={compact} action={overlayActions}>
+            {stageRunning ? (
               <StageTransport
                 statuses={stage.statuses}
                 allHidden={stage.allHidden}
@@ -861,6 +887,26 @@ export const LayerBar = () => {
               </Button>
             )}
           </LayerRow>
+        )}
+
+        {foldedLayers.length > 0 && (
+          <Stack
+            direction="row"
+            sx={{
+              gridColumn: '1 / -1',
+              alignItems: 'center',
+              columnGap: 3,
+              px: 1.5,
+              py: 0.25,
+              minHeight: 34,
+              borderTop: 1,
+              borderColor: 'divider',
+            }}
+          >
+            {foldedLayers}
+            <Box sx={{ flex: 1 }} />
+            {folded.media && goButton}
+          </Stack>
         )}
       </Box>
 

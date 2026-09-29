@@ -21,6 +21,7 @@ import {
 import { Edit as EditIcon, RestartAlt as ResetIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
+import { IS_MAC } from '@/utils/keyboard';
 
 /** Default keyboard mapping per §22.1 */
 export const DEFAULT_KEYBOARD_MAPPING: Record<string, { enabled: boolean; key: string }> = {
@@ -53,6 +54,8 @@ export const DEFAULT_KEYBOARD_MAPPING: Record<string, { enabled: boolean; key: s
   // J / L around K (play/pause, above): back 5 s and play — the open audio item or the running media.
   media_back: { enabled: true, key: 'KeyJ' },
   media_play: { enabled: true, key: 'KeyL' },
+  // Find, as everywhere: opens the song search drawer (a preparation tool, so not in Live).
+  open_search: { enabled: true, key: 'Ctrl+KeyF' },
 };
 
 /** All configurable actions */
@@ -76,6 +79,7 @@ const ACTIONS = [
   'media_go',
   'media_back',
   'media_play',
+  'open_search',
 ] as const;
 
 type ActionId = (typeof ACTIONS)[number];
@@ -124,6 +128,8 @@ const useActionLabel = (): ((action: ActionId) => string) => {
           return LL.KEYBOARD.ACTION_MEDIA_BACK();
         case 'media_play':
           return LL.KEYBOARD.ACTION_MEDIA_PLAY();
+        case 'open_search':
+          return LL.KEYBOARD.ACTION_OPEN_SEARCH();
         default:
           return action;
       }
@@ -254,11 +260,12 @@ export const KeyboardMappingEditor = () => {
         setCaptureAction(null);
         return;
       }
+      // ⌘ on a Mac is recorded as Ctrl, the way the operator view reads it (see eventToCombo).
       const next: Pending = {
-        ctrl: e.ctrlKey,
+        ctrl: e.ctrlKey || (IS_MAC && e.metaKey),
         shift: e.shiftKey,
         alt: e.altKey,
-        meta: e.metaKey,
+        meta: e.metaKey && !IS_MAC,
         mainKey: isModifier(e.code) ? pendingRef.current.mainKey : e.code,
       };
       setPendingBoth(next);
@@ -270,10 +277,10 @@ export const KeyboardMappingEditor = () => {
       // Update modifier flags on release, but keep the captured main key so
       // the user can release everything before clicking Apply.
       const next: Pending = {
-        ctrl: e.ctrlKey,
+        ctrl: e.ctrlKey || (IS_MAC && e.metaKey),
         shift: e.shiftKey,
         alt: e.altKey,
-        meta: e.metaKey,
+        meta: e.metaKey && !IS_MAC,
         mainKey: pendingRef.current.mainKey,
       };
       // If only modifiers are part of the chord (no main key yet) and the

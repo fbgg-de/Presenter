@@ -760,7 +760,7 @@ const StagePanelBody = ({ open, onClose, layerId }: { open: boolean; onClose: ()
           <Typography variant="h6" sx={{ fontWeight: 700, flex: 1 }}>
             {S.PANEL_TITLE()}
           </Typography>
-          <IconButton onClick={onClose}>
+          <IconButton aria-label={LL.COMMON.CLOSE()} onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </Stack>

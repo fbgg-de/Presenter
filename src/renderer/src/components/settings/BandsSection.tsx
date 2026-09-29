@@ -84,6 +84,7 @@ const BandRow = ({
           <CommittedInput
             value={band.name}
             type="text"
+            ariaLabel={LL.COMMON.NAME()}
             onCommit={(name) => {
               const trimmed = name.trim();
               if (trimmed && trimmed !== band.name) updateBand({ id: band.id, name: trimmed });
@@ -92,14 +93,14 @@ const BandRow = ({
         </Box>
         <Tooltip title={LL.BANDS.MOVE_UP()}>
           <span>
-            <IconButton size="small" disabled={isFirst || disabled} onClick={() => onMove(-1)}>
+            <IconButton size="small" aria-label={LL.BANDS.MOVE_UP()} disabled={isFirst || disabled} onClick={() => onMove(-1)}>
               <MoveUpIcon fontSize="small" />
             </IconButton>
           </span>
         </Tooltip>
         <Tooltip title={LL.BANDS.MOVE_DOWN()}>
           <span>
-            <IconButton size="small" disabled={isLast || disabled} onClick={() => onMove(1)}>
+            <IconButton size="small" aria-label={LL.BANDS.MOVE_DOWN()} disabled={isLast || disabled} onClick={() => onMove(1)}>
               <MoveDownIcon fontSize="small" />
             </IconButton>
           </span>

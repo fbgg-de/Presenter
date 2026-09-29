@@ -321,6 +321,10 @@ type RootTranslation = {
 		 */
 		AUTO_LOGIN_STOPPED: string
 		/**
+		 * S​i​g​n​i​n​g​ ​y​o​u​ ​i​n​ ​a​u​t​o​m​a​t​i​c​a​l​l​y​…
+		 */
+		AUTO_LOGIN_RUNNING: string
+		/**
 		 * L​i​c​e​n​s​e
 		 */
 		LICENSE: string
@@ -1434,6 +1438,22 @@ type RootTranslation = {
 		 */
 		FILTER: string
 		/**
+		 * C​l​e​a​r​ ​s​e​a​r​c​h
+		 */
+		CLEAR_FILTER: string
+		/**
+		 * R​e​t​r​y
+		 */
+		RETRY: string
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​l​o​a​d​ ​t​h​e​ ​s​o​n​g​ ​l​i​b​r​a​r​y​.​ ​C​h​e​c​k​ ​y​o​u​r​ ​c​o​n​n​e​c​t​i​o​n​ ​a​n​d​ ​t​r​y​ ​a​g​a​i​n​.
+		 */
+		LOAD_FAILED: string
+		/**
+		 * T​h​e​ ​s​o​n​g​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​d​e​l​e​t​e​d​.​ ​P​l​e​a​s​e​ ​t​r​y​ ​a​g​a​i​n​.
+		 */
+		DELETE_FAILED: string
+		/**
 		 * D​e​l​e​t​e​ ​S​o​n​g​?
 		 */
 		CONFIRM_DELETE: string
@@ -1516,6 +1536,42 @@ type RootTranslation = {
 		 * U​n​s​a​v​e​d
 		 */
 		UNSAVED: string
+		/**
+		 * S​a​v​i​n​g​…
+		 */
+		SAVING: string
+		/**
+		 * R​e​c​o​n​n​e​c​t​ ​b​e​f​o​r​e​ ​s​a​v​i​n​g​ ​t​o​ ​t​h​e​ ​s​e​r​v​e​r​.​ ​Y​o​u​r​ ​d​r​a​f​t​ ​s​t​a​y​s​ ​o​n​ ​t​h​i​s​ ​d​e​v​i​c​e​.
+		 */
+		SAVE_OFFLINE: string
+		/**
+		 * T​h​e​ ​s​o​n​g​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​s​a​v​e​d​.​ ​Y​o​u​r​ ​e​d​i​t​s​ ​a​r​e​ ​s​t​i​l​l​ ​h​e​r​e​.​ ​C​h​e​c​k​ ​t​h​e​ ​c​o​n​n​e​c​t​i​o​n​ ​a​n​d​ ​t​r​y​ ​a​g​a​i​n​.
+		 */
+		SAVE_FAILED: string
+		/**
+		 * F​i​x​ ​t​h​e​ ​p​r​o​b​l​e​m​s​ ​i​n​ ​t​h​e​ ​T​e​x​t​ ​t​a​b​ ​b​e​f​o​r​e​ ​s​a​v​i​n​g​.
+		 */
+		SAVE_TEXT_INVALID: string
+		/**
+		 * A​n​ ​u​n​f​i​n​i​s​h​e​d​ ​d​r​a​f​t​ ​i​s​ ​s​a​v​e​d​ ​o​n​ ​t​h​i​s​ ​d​e​v​i​c​e​.
+		 */
+		DRAFT_AVAILABLE: string
+		/**
+		 * R​e​s​t​o​r​e​ ​d​r​a​f​t
+		 */
+		RESTORE_DRAFT: string
+		/**
+		 * D​i​s​c​a​r​d​ ​d​r​a​f​t
+		 */
+		DISCARD_DRAFT: string
+		/**
+		 * T​h​i​s​ ​d​e​v​i​c​e​ ​c​o​u​l​d​ ​n​o​t​ ​s​a​v​e​ ​t​h​e​ ​d​r​a​f​t​.​ ​K​e​e​p​ ​t​h​e​ ​e​d​i​t​o​r​ ​o​p​e​n​ ​a​n​d​ ​s​a​v​e​ ​t​o​ ​t​h​e​ ​s​e​r​v​e​r​ ​b​e​f​o​r​e​ ​l​e​a​v​i​n​g​.
+		 */
+		DRAFT_FAILED: string
+		/**
+		 * C​l​o​s​i​n​g​ ​k​e​e​p​s​ ​a​ ​d​r​a​f​t​ ​o​n​ ​t​h​i​s​ ​d​e​v​i​c​e​.​ ​A​p​p​l​y​ ​s​a​v​e​s​ ​t​h​e​ ​s​o​n​g​ ​t​o​ ​t​h​e​ ​s​e​r​v​e​r​.
+		 */
+		DRAFT_HINT: string
 		/**
 		 * D​e​l​e​t​e​ ​b​l​o​c​k
 		 */
@@ -2122,6 +2178,16 @@ type RootTranslation = {
 		 * G​r​o​u​p​ ​s​e​t​t​i​n​g​s
 		 */
 		SETTINGS: string
+		/**
+		 * S​h​o​w​ ​t​h​e​ ​e​n​t​r​i​e​s​ ​o​f​ ​{​n​a​m​e​}
+		 * @param {string} name
+		 */
+		EXPAND: RequiredParams<'name'>
+		/**
+		 * H​i​d​e​ ​t​h​e​ ​e​n​t​r​i​e​s​ ​o​f​ ​{​n​a​m​e​}
+		 * @param {string} name
+		 */
+		COLLAPSE: RequiredParams<'name'>
 		/**
 		 * A​d​d​ ​i​t​e​m
 		 */
@@ -5917,6 +5983,23 @@ type RootTranslation = {
 			 */
 			MEDIA_FOUND: string
 			/**
+			 * C​h​e​c​k​i​n​g​…
+			 */
+			CHECKING: string
+			/**
+			 * U​n​v​e​r​i​f​i​e​d
+			 */
+			UNVERIFIED: string
+			/**
+			 * M​e​d​i​a​ ​f​i​l​e​s​ ​m​i​s​s​i​n​g
+			 */
+			MEDIA_MISSING: string
+			/**
+			 * C​o​u​l​d​ ​n​o​t​ ​v​e​r​i​f​y​:​ ​{​n​a​m​e​s​}​.​ ​C​h​e​c​k​ ​t​h​e​ ​m​e​d​i​a​ ​c​o​n​n​e​c​t​i​o​n​ ​a​n​d​ ​t​r​y​ ​a​g​a​i​n​.
+			 * @param {unknown} names
+			 */
+			MEDIA_UNVERIFIED: RequiredParams<'names'>
+			/**
 			 * M​i​s​s​i​n​g​:​ ​{​n​a​m​e​s​}
 			 * @param {unknown} names
 			 */
@@ -7737,6 +7820,10 @@ type RootTranslation = {
 		 * M​e​d​i​a​:​ ​p​l​a​y​ ​(​L​)
 		 */
 		ACTION_MEDIA_PLAY: string
+		/**
+		 * S​e​a​r​c​h​ ​s​o​n​g​s
+		 */
+		ACTION_OPEN_SEARCH: string
 		/**
 		 * H​i​d​e​ ​T​e​x​t​ ​o​n​ ​A​l​l​ ​W​i​n​d​o​w​s
 		 */
@@ -11226,6 +11313,10 @@ export type TranslationFunctions = {
 		 */
 		AUTO_LOGIN_STOPPED: () => LocalizedString
 		/**
+		 * Signing you in automatically…
+		 */
+		AUTO_LOGIN_RUNNING: () => LocalizedString
+		/**
 		 * License
 		 */
 		LICENSE: () => LocalizedString
@@ -12278,6 +12369,22 @@ export type TranslationFunctions = {
 		 */
 		FILTER: () => LocalizedString
 		/**
+		 * Clear search
+		 */
+		CLEAR_FILTER: () => LocalizedString
+		/**
+		 * Retry
+		 */
+		RETRY: () => LocalizedString
+		/**
+		 * Could not load the song library. Check your connection and try again.
+		 */
+		LOAD_FAILED: () => LocalizedString
+		/**
+		 * The song could not be deleted. Please try again.
+		 */
+		DELETE_FAILED: () => LocalizedString
+		/**
 		 * Delete Song?
 		 */
 		CONFIRM_DELETE: () => LocalizedString
@@ -12355,6 +12462,42 @@ export type TranslationFunctions = {
 		 * Unsaved
 		 */
 		UNSAVED: () => LocalizedString
+		/**
+		 * Saving…
+		 */
+		SAVING: () => LocalizedString
+		/**
+		 * Reconnect before saving to the server. Your draft stays on this device.
+		 */
+		SAVE_OFFLINE: () => LocalizedString
+		/**
+		 * The song could not be saved. Your edits are still here. Check the connection and try again.
+		 */
+		SAVE_FAILED: () => LocalizedString
+		/**
+		 * Fix the problems in the Text tab before saving.
+		 */
+		SAVE_TEXT_INVALID: () => LocalizedString
+		/**
+		 * An unfinished draft is saved on this device.
+		 */
+		DRAFT_AVAILABLE: () => LocalizedString
+		/**
+		 * Restore draft
+		 */
+		RESTORE_DRAFT: () => LocalizedString
+		/**
+		 * Discard draft
+		 */
+		DISCARD_DRAFT: () => LocalizedString
+		/**
+		 * This device could not save the draft. Keep the editor open and save to the server before leaving.
+		 */
+		DRAFT_FAILED: () => LocalizedString
+		/**
+		 * Closing keeps a draft on this device. Apply saves the song to the server.
+		 */
+		DRAFT_HINT: () => LocalizedString
 		/**
 		 * Delete block
 		 */
@@ -12927,6 +13070,14 @@ export type TranslationFunctions = {
 		 * Group settings
 		 */
 		SETTINGS: () => LocalizedString
+		/**
+		 * Show the entries of {name}
+		 */
+		EXPAND: (arg: { name: string }) => LocalizedString
+		/**
+		 * Hide the entries of {name}
+		 */
+		COLLAPSE: (arg: { name: string }) => LocalizedString
 		/**
 		 * Add item
 		 */
@@ -16625,6 +16776,22 @@ export type TranslationFunctions = {
 			 */
 			MEDIA_FOUND: () => LocalizedString
 			/**
+			 * Checking…
+			 */
+			CHECKING: () => LocalizedString
+			/**
+			 * Unverified
+			 */
+			UNVERIFIED: () => LocalizedString
+			/**
+			 * Media files missing
+			 */
+			MEDIA_MISSING: () => LocalizedString
+			/**
+			 * Could not verify: {names}. Check the media connection and try again.
+			 */
+			MEDIA_UNVERIFIED: (arg: { names: unknown }) => LocalizedString
+			/**
 			 * Missing: {names}
 			 */
 			MISSING: (arg: { names: unknown }) => LocalizedString
@@ -18401,6 +18568,10 @@ export type TranslationFunctions = {
 		 * Media: play (L)
 		 */
 		ACTION_MEDIA_PLAY: () => LocalizedString
+		/**
+		 * Search songs
+		 */
+		ACTION_OPEN_SEARCH: () => LocalizedString
 		/**
 		 * Hide Text on All Windows
 		 */

@@ -125,6 +125,16 @@ if (urlTransparent !== '1' && !isPreview) {
   void showDevBanner({ compact: true });
 }
 
+// An output must not go dark because the operator's laptop idled into display sleep during a
+// long sermon. The browser drops the lock whenever the page is hidden, so take it again on return.
+if (!isPreview && 'wakeLock' in navigator) {
+  const keepAwake = () => {
+    if (document.visibilityState === 'visible') navigator.wakeLock.request('screen').catch(() => {});
+  };
+  keepAwake();
+  document.addEventListener('visibilitychange', keepAwake);
+}
+
 // Track the last known content for re-render after identify
 let lastProps: PresentationProps = { content: EMPTY_CONTENT };
 

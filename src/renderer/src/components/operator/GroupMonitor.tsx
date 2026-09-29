@@ -7,9 +7,9 @@ import type { BackgroundData } from '@/look/types';
 import { styleBackground as backgroundOf } from '@/look/styleBackground';
 
 /**
- * A small picture of what one screen group shows: its background and the first lines of the
- * active slide in its theme. Drawn from the resolved look rather than mirrored from the real
- * window, so it costs nothing per monitor and works before a window is even open.
+ * A small picture of one screen group: `picture` when the caller has the real thing (the operator's
+ * top bar passes the actual output page), else drawn from a look — its background and the first
+ * lines of a sample in its theme (the theme editor's group strip).
  */
 export const GroupMonitor = ({
   label,
@@ -29,9 +29,12 @@ export const GroupMonitor = ({
   onShowWindows,
   showWindowsLabel,
   picture,
+  aspect = '16/9',
 }: {
-  /** Draws the picture instead of background and lines — a Stage group's real stage screen. */
+  /** Draws the picture instead of background and lines. */
   picture?: ReactNode;
+  /** The tile's proportions — the group's window, when `picture` draws it at its real size. */
+  aspect?: string;
   /** Offered while no window of the group is open: the tile becomes a "+ Open window" button. */
   onOpen?: () => void;
   /** A live tile opens the group's windows (show/hide, quick actions, Window Manager). */
@@ -42,21 +45,22 @@ export const GroupMonitor = ({
   width?: number | string;
   label: string;
   sublabel?: string;
-  style: ResolvedStyle;
+  /** The drawn picture (without `picture`): */
+  style?: ResolvedStyle;
   /** A media item shown full-screen instead of the background. */
   media?: BackgroundData;
   /** The background entry running on the group; without one the theme's colour shows. */
   background?: BackgroundData;
-  lines: string[];
-  showText: boolean;
-  showBackground: boolean;
+  lines?: string[];
+  showText?: boolean;
+  showBackground?: boolean;
   black: boolean;
   blackLabel: string;
   /** Whether a window of this group is open. */
   live: boolean;
 }) => {
   const { measureRef, scale } = usePreviewScale();
-  const textCss = useMemo(() => scale(styleToTextCss(style)), [style, scale]);
+  const textCss = useMemo(() => (style ? scale(styleToTextCss(style)) : {}), [style, scale]);
 
   return (
     <Stack spacing={0.25} sx={{ width, flexShrink: 0 }}>
@@ -65,7 +69,7 @@ export const GroupMonitor = ({
         <ButtonBase
           onClick={onOpen}
           sx={{
-            aspectRatio: '16/9',
+            aspectRatio: aspect,
             width: '100%',
             borderRadius: 0.5,
             border: '2px dashed',
@@ -87,7 +91,7 @@ export const GroupMonitor = ({
             position: 'relative',
             display: 'block',
             width: '100%',
-            aspectRatio: '16/9',
+            aspectRatio: aspect,
             overflow: 'hidden',
             borderRadius: 0.5,
             outline: 2,
@@ -97,12 +101,12 @@ export const GroupMonitor = ({
           }}
         >
           {picture}
-          {!picture && (media || showBackground) && (
+          {!picture && style && (media || showBackground) && (
             <Box sx={{ position: 'absolute', inset: 0, '& > div': { border: 0, borderRadius: 0, height: '100%', aspectRatio: 'auto' } }}>
               <BackgroundThumb data={media ?? { ...backgroundOf(style), ...background }} />
             </Box>
           )}
-          {!picture && showText && !media && lines.length > 0 && (
+          {!picture && style && lines && showText && !media && lines.length > 0 && (
             <Stack
               sx={{
                 position: 'absolute',

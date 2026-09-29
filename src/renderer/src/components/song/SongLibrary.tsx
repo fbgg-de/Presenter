@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -20,6 +20,8 @@ import {
   InputAdornment,
   ToggleButtonGroup,
   ToggleButton,
+  Alert,
+  LinearProgress,
 } from '@mui/material';
 import {
   Close as CloseIcon,
@@ -40,6 +42,9 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { RowActionMenu } from '@/components/common/RowActionMenu';
 import { SongLanguageReview } from '@/components/song/SongLanguageReview';
 import { stillWhileClosed } from '@/components/common/stillWhileClosed';
+import { indexLibrarySongs, parseCcliNumber, searchLibrarySongs } from '@/song/librarySearch';
+
+const PAGE_SIZE = 100;
 
 type SortOrder = 'lexicographic' | 'numeric';
 
@@ -56,11 +61,13 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
   const [sortOrder, setSortOrder] = useState<SortOrder>('lexicographic');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [songToDelete, setSongToDelete] = useState<SongListItem | null>(null);
+  const [deleteError, setDeleteError] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [languageReviewOpen, setLanguageReviewOpen] = useState(false);
 
   const { showDeleteFromDb } = useGetSettings('showDeleteFromDb');
 
-  const { data: allSongs, isLoading } = useGetSongsAllQuery({ order: sortOrder });
+  const { data: allSongs, isLoading, isFetching, isError, refetch } = useGetSongsAllQuery({ order: sortOrder }, { skip: !open });
   const [deleteSong, { isLoading: isDeleting }] = useDeleteSongMutation();
   const [renumberSong, { isLoading: isRenumbering }] = useRenumberSongMutation();
   const { trackEvent } = useMetrics();
@@ -71,9 +78,9 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
   const [ccliError, setCcliError] = useState<string | null>(null);
 
   const handleSetCcli = async () => {
-    if (!ccliSong) return;
-    const newNumber = parseInt(ccliInput.trim(), 10);
-    if (!Number.isInteger(newNumber) || newNumber < SONG_CUSTOM_NUMBER_LIMIT) {
+    if (!ccliSong || isRenumbering) return;
+    const newNumber = parseCcliNumber(ccliInput, SONG_CUSTOM_NUMBER_LIMIT);
+    if (newNumber === undefined) {
       setCcliError(LL.SONGS.CCLI_INVALID({ min: SONG_CUSTOM_NUMBER_LIMIT }));
       return;
     }
@@ -96,21 +103,26 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
     }
   };
 
-  const filteredSongs = allSongs?.filter(
-    (song) =>
-      song.title.toLowerCase().includes(filter.toLowerCase()) ||
-      song.songNumber.toString().includes(filter) ||
-      (song.authors?.toLowerCase().includes(filter.toLowerCase()) ?? false),
-  );
+  const searchIndex = useMemo(() => indexLibrarySongs(allSongs ?? []), [allSongs]);
+  const filteredSongs = useMemo(() => searchLibrarySongs(searchIndex, filter), [searchIndex, filter]);
+  const visibleSongs = filteredSongs.slice(0, visibleCount);
+
+  const requestDelete = (song: SongListItem) => {
+    setDeleteError(false);
+    setSongToDelete(song);
+    setDeleteConfirmOpen(true);
+  };
 
   const handleDelete = async () => {
-    if (songToDelete) {
+    if (songToDelete && !isDeleting) {
+      setDeleteError(false);
       try {
         await deleteSong({ songNumber: songToDelete.songNumber }).unwrap();
         trackEvent('song_deleted', 'song', String(songToDelete.songNumber));
         setDeleteConfirmOpen(false);
         setSongToDelete(null);
       } catch (error) {
+        setDeleteError(true);
         console.error('Failed to delete song:', error);
       }
     }
@@ -124,14 +136,15 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
         onClose={onClose}
         maxWidth="md"
         fullWidth
+        aria-labelledby="song-library-title"
         // A phone has no room for a dialog inside a dialog — take the whole screen.
         fullScreen={isMobile}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, px: { xs: 2, sm: 3 } }}>
-          <Typography variant="h6" component="span" noWrap sx={{ minWidth: 0 }}>
+          <Typography id="song-library-title" variant="h6" component="span" noWrap sx={{ minWidth: 0 }}>
             {LL.SONGS.LIBRARY()}
           </Typography>
-          {filteredSongs && <Chip label={filteredSongs.length} size="small" variant="outlined" sx={{ flexShrink: 0 }} />}
+          {allSongs && <Chip label={filteredSongs.length} size="small" variant="outlined" sx={{ flexShrink: 0 }} />}
           <Box
             sx={{
               flexGrow: 1,
@@ -140,22 +153,27 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
           <ToggleButtonGroup
             value={sortOrder}
             exclusive
-            onChange={(_e, val) => val && setSortOrder(val)}
+            onChange={(_e, val) => {
+              if (val) {
+                setSortOrder(val);
+                setVisibleCount(PAGE_SIZE);
+              }
+            }}
             size="small"
             sx={{ mr: { xs: 0, sm: 1 }, flexShrink: 0 }}
           >
-            <ToggleButton value="lexicographic">
+            <ToggleButton value="lexicographic" aria-label={LL.SONGS.SORT_BY_NAME()}>
               <Tooltip title={LL.SONGS.SORT_BY_NAME()}>
                 <SortByAlphaIcon fontSize="small" />
               </Tooltip>
             </ToggleButton>
-            <ToggleButton value="numeric">
+            <ToggleButton value="numeric" aria-label={LL.SONGS.SORT_BY_NUMBER()}>
               <Tooltip title={LL.SONGS.SORT_BY_NUMBER()}>
                 <SortByNumberIcon fontSize="small" />
               </Tooltip>
             </ToggleButton>
           </ToggleButtonGroup>
-          <IconButton size="small" onClick={onClose} sx={{ flexShrink: 0 }}>
+          <IconButton size="small" onClick={onClose} aria-label={LL.COMMON.CLOSE()} sx={{ flexShrink: 0 }}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
@@ -163,20 +181,39 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
             full-screen phone instead of stopping at 60% of it. */}
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', minHeight: 0, px: { xs: 2, sm: 3 } }}>
           <TextField
+            autoFocus
             fullWidth
             placeholder={LL.SONGS.FILTER()}
             variant="outlined"
             value={filter}
-            onChange={(e) => setFilter(e.target.value)}
+            onChange={(e) => {
+              setFilter(e.target.value);
+              setVisibleCount(PAGE_SIZE);
+            }}
             size="small"
             sx={{ mb: 2 }}
             slotProps={{
+              htmlInput: { 'aria-label': LL.SONGS.FILTER() },
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
                     <SearchIcon fontSize="small" color="action" />
                   </InputAdornment>
                 ),
+                endAdornment: filter ? (
+                  <InputAdornment position="end">
+                    <IconButton
+                      size="small"
+                      aria-label={LL.SONGS.CLEAR_FILTER()}
+                      onClick={() => {
+                        setFilter('');
+                        setVisibleCount(PAGE_SIZE);
+                      }}
+                    >
+                      <CloseIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                ) : undefined,
               },
             }}
           />
@@ -191,6 +228,21 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
             {LL.SONG_LANGUAGE_REVIEW.OPEN()}
           </Button>
 
+          {isError && (
+            <Alert
+              severity="error"
+              sx={{ mb: 2 }}
+              action={
+                <Button color="inherit" size="small" disabled={isFetching} onClick={() => void refetch()}>
+                  {LL.SONGS.RETRY()}
+                </Button>
+              }
+            >
+              {LL.SONGS.LOAD_FAILED()}
+            </Alert>
+          )}
+          {isFetching && !isLoading && <LinearProgress aria-label={LL.COMMON.LOADING()} sx={{ mb: 1 }} />}
+
           {isLoading ? (
             <Box
               sx={{
@@ -199,11 +251,11 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
                 py: 4,
               }}
             >
-              <CircularProgress />
+              <CircularProgress aria-label={LL.COMMON.LOADING()} />
             </Box>
           ) : filteredSongs && filteredSongs.length > 0 ? (
             <List dense sx={{ flex: 1, minHeight: 0, maxHeight: { xs: 'none', sm: '60vh' }, overflow: 'auto' }}>
-              {filteredSongs.map((song) => (
+              {visibleSongs.map((song) => (
                 <ListItem
                   key={song.songNumber}
                   disablePadding
@@ -230,10 +282,7 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
                             key: 'delete',
                             label: LL.COMMON.DELETE(),
                             icon: <DeleteIcon fontSize="small" />,
-                            onClick: () => {
-                              setSongToDelete(song);
-                              setDeleteConfirmOpen(true);
-                            },
+                            onClick: () => requestDelete(song),
                             destructive: true,
                             hidden: !showDeleteFromDb,
                           },
@@ -247,6 +296,7 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
                             <IconButton
                               edge="end"
                               size="small"
+                              aria-label={LL.SONGS.SET_CCLI()}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setCcliSong(song);
@@ -263,10 +313,10 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
                             <IconButton
                               edge="end"
                               size="small"
+                              aria-label={LL.COMMON.DELETE()}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSongToDelete(song);
-                                setDeleteConfirmOpen(true);
+                                requestDelete(song);
                               }}
                             >
                               <DeleteIcon fontSize="small" />
@@ -356,8 +406,15 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
                   </ListItemButton>
                 </ListItem>
               ))}
+              {visibleCount < filteredSongs.length && (
+                <ListItem>
+                  <Button fullWidth onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}>
+                    {LL.COMMON.LOAD_MORE()} ({visibleSongs.length} / {filteredSongs.length})
+                  </Button>
+                </ListItem>
+              )}
             </List>
-          ) : (
+          ) : !isError ? (
             <Box
               sx={{
                 display: 'flex',
@@ -373,13 +430,18 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
                 {LL.SONGS.NO_FOUND()}
               </Typography>
             </Box>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
       {/* Delete Confirmation Dialog */}
       <Dialog open={deleteConfirmOpen} onClose={() => !isDeleting && setDeleteConfirmOpen(false)}>
         <DialogTitle>{LL.SONGS.CONFIRM_DELETE()}</DialogTitle>
         <DialogContent>
+          {deleteError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {LL.SONGS.DELETE_FAILED()}
+            </Alert>
+          )}
           <Typography>
             {LL.SONGS.CONFIRM_DELETE_MESSAGE({
               title: songToDelete?.title || '',
@@ -408,6 +470,7 @@ const SongLibraryBody = ({ open, onClose, onSongSelected }: Props) => {
               autoFocus
               size="small"
               type="number"
+              disabled={isRenumbering}
               label={LL.SONGS.CCLI_NUMBER()}
               value={ccliInput}
               onChange={(e) => {

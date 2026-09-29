@@ -11,6 +11,7 @@ import { LayerBar } from '@/components/operator/LayerBar';
 import { ColumnResizer } from '@/components/operator/ColumnResizer';
 import { INSPECTOR_DEFAULT, INSPECTOR_RANGE, SET_LIST_DEFAULT, SET_LIST_RANGE, clampSize } from '@/components/operator/tileSize';
 import { RequireAuth } from '@/routes/RequireAuth';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { Shows } from '@/components/show/Shows';
 import type { Show, ShowItem } from '@/api/shows.api';
 import { useSaveShowMutation } from '@/api/shows.api';
@@ -33,10 +34,32 @@ import { useDefaultScreenGroups } from '@/hooks/useDefaultScreenGroups';
 import { sidePanelState, sidePanelVisible } from '@/components/operator/sidePanel';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useGetMusicianSettings } from '@/store/musicianSlice';
+import { usePresentationWindows } from '@/hooks/usePresentationWindows';
 
 /** The keyboard handler follows the live slide; as a leaf that re-renders nothing else (see CompanionHost). */
 const KeyboardHost = () => {
   useKeyboardNavigation();
+  return null;
+};
+
+/**
+ * Closing the operator view in Live, with outputs open, blanks every screen. Veto the unload so it
+ * is asked first: the browser shows its "Leave site?" prompt, the desktop app its own (main
+ * process, 'will-prevent-unload' — which lets reloads through, since outputs survive those).
+ */
+const LiveCloseGuard = () => {
+  const { operatorMode } = useGetSettings('operatorMode');
+  const rig = usePresentationWindows();
+  const guard = operatorMode === 'live' && rig.windows.some((w) => w.isOpen);
+  useEffect(() => {
+    if (!guard) return;
+    const veto = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = ''; // older engines only honour this
+    };
+    window.addEventListener('beforeunload', veto);
+    return () => window.removeEventListener('beforeunload', veto);
+  }, [guard]);
   return null;
 };
 
@@ -137,7 +160,9 @@ export const MainPage = () => {
   // Web version: drop a Nextcloud connection that no longer fits the account.
   useNextcloudAccountCheck(offlineMode || !!window.api);
   // A brand-new account starts with a presentation and a stage group instead of an empty board.
-  useDefaultScreenGroups();
+  // Not before the session is confirmed: this runs outside RequireAuth, and a signed-out request
+  // answers 401, which raises the session-expired notice on the way to the login page.
+  useDefaultScreenGroups(!isAuthenticated);
 
   // On mount: if a show was restored from localStorage, load its songs.
   // Guard on isAuthenticated so the songs API is not called before the session
@@ -190,10 +215,21 @@ export const MainPage = () => {
   return (
     <RequireAuth>
       <Shows open={isShowSelectorOpen} onShowSelected={handleShowSelected} />
-      <PresentationSyncHost />
-      <StageEngineHost />
-      <CompanionHost />
-      <KeyboardHost />
+      {/* One boundary per host and panel: a panel that throws mid-service must not take the output
+          sync, the keyboard or the other panels down with it (the app-level boundary would). */}
+      <ErrorBoundary>
+        <PresentationSyncHost />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <StageEngineHost />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <CompanionHost />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <KeyboardHost />
+      </ErrorBoundary>
+      <LiveCloseGuard />
       {/* Show update notification */}
       <Snackbar open={showUpdateAvailable} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
         <Alert
@@ -261,24 +297,28 @@ export const MainPage = () => {
               <Stack sx={{ flexGrow: 1, overflow: 'hidden', minHeight: 0 }}>
                 {/* Sidebar (show list) */}
                 <Box sx={{ display: mobileTab === 0 ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                  <Sidebar ref={sidebarRef} />
+                  <ErrorBoundary>
+                    <Sidebar ref={sidebarRef} />
+                  </ErrorBoundary>
                 </Box>
                 {/* Control (song/item control) */}
                 <Box sx={{ display: mobileTab === 1 ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                  <Control
-                    onOpenSearch={() => {
-                      setMobileTab(0);
-                      sidebarRef.current?.openSearch();
-                    }}
-                    onOpenMediaBrowser={(subType) => {
-                      setMobileTab(0);
-                      sidebarRef.current?.openMediaBrowser(subType);
-                    }}
-                    onOpenBiblePicker={() => {
-                      setMobileTab(0);
-                      sidebarRef.current?.openBiblePicker();
-                    }}
-                  />
+                  <ErrorBoundary>
+                    <Control
+                      onOpenSearch={() => {
+                        setMobileTab(0);
+                        sidebarRef.current?.openSearch();
+                      }}
+                      onOpenMediaBrowser={(subType) => {
+                        setMobileTab(0);
+                        sidebarRef.current?.openMediaBrowser(subType);
+                      }}
+                      onOpenBiblePicker={() => {
+                        setMobileTab(0);
+                        sidebarRef.current?.openBiblePicker();
+                      }}
+                    />
+                  </ErrorBoundary>
                 </Box>
                 {/* The footer's controls — windows, black, connections — as their own tab.
                     They have no bar to live in here, and they are not optional: black-out and
@@ -286,7 +326,9 @@ export const MainPage = () => {
                     like the other tabs so its window polling and warnings do not restart on
                     every visit. */}
                 <Box sx={{ display: mobileTab === 2 ? 'flex' : 'none', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-                  <Footer variant="panel" />
+                  <ErrorBoundary>
+                    <Footer variant="panel" />
+                  </ErrorBoundary>
                 </Box>
               </Stack>
               {/* Bottom navigation replacing the footer on mobile */}
@@ -304,26 +346,30 @@ export const MainPage = () => {
               {/* Operator view: monitors, mode and the set list's toolbar on top, set list | slides | look
                   in the middle (both side columns can be hidden), everything that runs in the layer bar,
                   connections in the footer. */}
-              <OperatorTopBar
-                showsActionsRef={setShowsActionsSlot}
-                listActionsRef={setListActionsSlot}
-                saveActionRef={setSaveActionSlot}
-                appActionsRef={setAppActionsSlot}
-                devicesActionsRef={setDevicesActionsSlot}
-              />
-              <Stack direction="row" sx={{ flexGrow: 1, overflow: 'hidden', minHeight: 0 }}>
-                <Sidebar
-                  ref={sidebarRef}
-                  toolbarSlots={{
-                    app: appActionsSlot,
-                    shows: showsActionsSlot,
-                    lists: listActionsSlot,
-                    save: saveActionSlot,
-                    devices: devicesActionsSlot,
-                  }}
-                  collapsed={operatorSetListOpen === false}
-                  width={setListWidth}
+              <ErrorBoundary>
+                <OperatorTopBar
+                  showsActionsRef={setShowsActionsSlot}
+                  listActionsRef={setListActionsSlot}
+                  saveActionRef={setSaveActionSlot}
+                  appActionsRef={setAppActionsSlot}
+                  devicesActionsRef={setDevicesActionsSlot}
                 />
+              </ErrorBoundary>
+              <Stack direction="row" sx={{ flexGrow: 1, overflow: 'hidden', minHeight: 0 }}>
+                <ErrorBoundary>
+                  <Sidebar
+                    ref={sidebarRef}
+                    toolbarSlots={{
+                      app: appActionsSlot,
+                      shows: showsActionsSlot,
+                      lists: listActionsSlot,
+                      save: saveActionSlot,
+                      devices: devicesActionsSlot,
+                    }}
+                    collapsed={operatorSetListOpen === false}
+                    width={setListWidth}
+                  />
+                </ErrorBoundary>
                 {operatorSetListOpen !== false && (
                   <ColumnResizer
                     width={setListWidth}
@@ -338,11 +384,13 @@ export const MainPage = () => {
                     onHide={() => updateSetting('operatorSetListOpen', false)}
                   />
                 )}
-                <Control
-                  onOpenSearch={() => sidebarRef.current?.openSearch()}
-                  onOpenMediaBrowser={(subType) => sidebarRef.current?.openMediaBrowser(subType)}
-                  onOpenBiblePicker={() => sidebarRef.current?.openBiblePicker()}
-                />
+                <ErrorBoundary>
+                  <Control
+                    onOpenSearch={() => sidebarRef.current?.openSearch()}
+                    onOpenMediaBrowser={(subType) => sidebarRef.current?.openMediaBrowser(subType)}
+                    onOpenBiblePicker={() => sidebarRef.current?.openBiblePicker()}
+                  />
+                </ErrorBoundary>
                 {rightColumnOpen && (
                   <>
                     <ColumnResizer
@@ -358,14 +406,18 @@ export const MainPage = () => {
                       onHide={() => updateSetting('operatorSidePanelOpen', false)}
                     />
                     <Stack sx={{ width: inspectorWidth, flexShrink: 0, borderLeft: 1, borderColor: 'divider', minHeight: 0 }}>
-                      {sidePanel.preview && <PreviewPanel />}
-                      {sidePanel.inspector && <ItemInspector width="100%" />}
+                      <ErrorBoundary>
+                        {sidePanel.preview && <PreviewPanel />}
+                        {sidePanel.inspector && <ItemInspector width="100%" />}
+                      </ErrorBoundary>
                     </Stack>
                   </>
                 )}
               </Stack>
               {/* The layer bar's status line carries the footer's windows and connections. */}
-              <LayerBar />
+              <ErrorBoundary>
+                <LayerBar />
+              </ErrorBoundary>
             </>
           )}
         </Stack>

@@ -2,6 +2,21 @@
 
 Tooling for running and inspecting the app without a real backend.
 
+- `reliability/` — storage quota/permission/desktop-bridge failure recovery, library search,
+  and CCLI input validation. Run with `node test/reliability/run.mjs`. The companion
+  `node test/reliability/browser.mjs` uses isolated mock servers and headless Chrome/Edge
+  to check keyboard guards, failed loads and deletions, search and paging with 230 songs,
+  and phone/desktop dialog fit. Screenshots go to `test/viewport/screenshots/`.
+  Run `node test/reliability/async-browser.mjs` for real React/Redux tests of failed revision
+  retries, late show responses, query subscription cleanup, bounded song/media requests,
+  readiness states, and editor save/draft recovery on desktop and phone. This includes
+  Strict Mode and a full page reload; all network writes use test fixtures.
+
+- `desktop/` — the real Electron app from the build, with a throwaway profile and no backend:
+  login page instead of a redirect loop, crash reload, output wake lock, projector unplug/replug,
+  reload vs. close guard, clean quit. `npm run test:desktop` (builds first; `--no-build` skips it).
+  Opens real windows, so it needs a desktop session.
+
 - `mock-backend/` — fixture HTTP server standing in for the PHP API (below).
 - `ws-sync/` — integration test for the WebSocket relay and the sync protocol, run with
   `npm run test:ws`. See [ws-sync/README.md](ws-sync/README.md).

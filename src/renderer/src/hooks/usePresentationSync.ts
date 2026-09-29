@@ -729,7 +729,7 @@ export const usePresentationSync = (): void => {
     // Deduplicate scheduling using a lightweight key (includes styleHash so style
     // edits actually re-broadcast and apply immediately).
     const ai = b.activeItem;
-    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${mediaVisible}|${b.blocks.length}|${b.nextLinePreview}|${ai?.mediaColor}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${masterRate}|${b.agenda.map((a) => a.label).join('~')}`;
+    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${mediaVisible}|${b.blocks.length}|${b.nextLinePreview}|${ai?.mediaColor}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${masterRate}|${showLicenseNumber}|${LL.AUTH.LICENSE()}|${b.agenda.map((a) => a.label).join('~')}`;
     const key = contentKey + mediaSig;
     if (key === lastKeyRef.current) return;
     lastKeyRef.current = key;
@@ -765,6 +765,10 @@ export const usePresentationSync = (): void => {
     remoteCommandsSig,
     // The phone shows the master speed, so a change from anywhere reaches it.
     masterRate,
+    // The credits slide's licence line is switched in settings while a song is on screen,
+    // and its label follows the interface language.
+    showLicenseNumber,
+    LL,
     // Agenda label/order changes (e.g. song titles loading in) rebroadcast the agenda.
     agenda,
     // Peer requested current state — force a re-broadcast even if nothing changed.

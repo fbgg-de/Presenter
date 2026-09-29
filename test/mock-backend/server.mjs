@@ -137,6 +137,8 @@ const session = () => ({
 
 /** Admin session variant: run with MOCK_ADMIN=1 to reach the /admin routes. */
 const isAdmin = process.env.MOCK_ADMIN === '1';
+/** Signed-out variant: MOCK_SIGNED_OUT=1 — the session says so and the other endpoints answer 401, like the server. */
+const signedOut = process.env.MOCK_SIGNED_OUT === '1';
 
 /**
  * Route table. Keys are matched as prefixes against the path, longest key first, so
@@ -673,7 +675,9 @@ createServer(async (req, res) => {
   let payload = {};
   let status = 200;
   try {
-    payload = handler ? handler({ path, method: req.method, body, query }) : {};
+    if (signedOut && route === '/rest/Session') payload = { account: 0, name: '', mail: '', isAuthenticated: false, authType: null, settings: {} };
+    else if (signedOut && route !== '/rest/Accounts' && path.startsWith('/rest/')) payload = { __status: 401, error: 'Unauthorized' };
+    else payload = handler ? handler({ path, method: req.method, body, query }) : {};
     if (!handler) status = 200; // unknown endpoints answer {} rather than 404 — see the header comment
   } catch (error) {
     status = 500;

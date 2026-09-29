@@ -339,7 +339,7 @@ export const PdfUploadModal = ({
             <Typography variant="h6">{LL.PDF.MANAGE_TITLE()}</Typography>
             <Chip label={`#${songNumber}`} size="small" variant="outlined" sx={{ fontSize: '0.75rem' }} />
           </Stack>
-          <IconButton onClick={handleClose} size="small">
+          <IconButton aria-label={LL.COMMON.CLOSE()} onClick={handleClose} size="small">
             <CloseIcon />
           </IconButton>
         </Stack>

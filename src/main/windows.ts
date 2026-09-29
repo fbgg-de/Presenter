@@ -2,7 +2,7 @@
  * Presentation Window Manager — Electron main process.
  * Creates, tracks, and controls presentation BrowserWindows (§7.2, §12, §13).
  */
-import { BrowserWindow, screen, type WebContents } from 'electron';
+import { BrowserWindow, screen, type Rectangle, type WebContents } from 'electron';
 import { join } from 'path';
 import { is } from '@electron-toolkit/utils';
 import type { WindowConfig, WindowState, ScreenInfo, MusicianViewConfig, PresentationContentIPC } from '../shared/types';
@@ -28,6 +28,50 @@ export class PresentationWindowManager {
   /** Last broadcast content — re-sent after window recreation */
   /** Reference to main window for sending bounds-change notifications */
   private mainWindow: BrowserWindow | null = null;
+  /** Outputs whose screen was unplugged, with the bounds that put them back on it. */
+  private parked = new Map<string, { bounds: Rectangle; fullscreen: boolean }>();
+
+  /**
+   * A projector that drops its signal for a moment (loose HDMI, standby) disappears as a screen.
+   * The OS then moves its output onto a remaining screen — usually the operator's laptop, covering
+   * the operator view — and leaves it there when the projector returns. Instead: hide the output
+   * while its screen is gone and put it back, full screen, when a screen appears where it was.
+   * The screen is recognised by position, as the window config stores no display identity.
+   */
+  watchDisplays(): void {
+    const centreOf = (r: Rectangle) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
+    const inside = (r: Rectangle, p: { x: number; y: number }) => p.x >= r.x && p.x < r.x + r.width && p.y >= r.y && p.y < r.y + r.height;
+
+    screen.on('display-removed', (_event, display) => {
+      for (const [id, managed] of this.windows) {
+        const win = managed.browserWindow;
+        const { positionX: x, positionY: y, width, height } = managed.config;
+        if (win.isDestroyed() || this.parked.has(id) || x === undefined || y === undefined) continue;
+        const home = { x, y, width, height };
+        if (!inside(display.bounds, centreOf(home))) continue;
+        this.parked.set(id, { bounds: home, fullscreen: managed.config.fullscreen || win.isFullScreen() });
+        console.warn(`[Windows] Screen of "${managed.config.name}" was removed — hiding it until the screen is back`);
+        win.hide();
+      }
+    });
+
+    screen.on('display-added', (_event, display) => {
+      for (const [id, park] of this.parked) {
+        const managed = this.windows.get(id);
+        if (!managed || managed.browserWindow.isDestroyed()) {
+          this.parked.delete(id);
+          continue;
+        }
+        if (!inside(display.bounds, centreOf(park.bounds))) continue;
+        this.parked.delete(id);
+        const win = managed.browserWindow;
+        console.log(`[Windows] Screen of "${managed.config.name}" is back — restoring it`);
+        win.setBounds(park.bounds);
+        win.showInactive(); // the operator keeps the keyboard
+        if (park.fullscreen) win.setFullScreen(true);
+      }
+    });
+  }
 
   setMainWindow(win: BrowserWindow | null): void {
     this.mainWindow = win;
@@ -116,7 +160,8 @@ export class PresentationWindowManager {
       if (boundsTimer) clearTimeout(boundsTimer);
       boundsTimer = setTimeout(() => {
         boundsTimer = null;
-        if (!win.isDestroyed() && !win.isFullScreen()) {
+        // A parked output was moved by the OS, not the operator — keep its real place.
+        if (!win.isDestroyed() && !win.isFullScreen() && !this.parked.has(id)) {
           this.notifyBoundsChanged(id, win);
         }
       }, 300);

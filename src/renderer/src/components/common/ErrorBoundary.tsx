@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { Alert, Box, Button } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { reportClientError } from '@/utils/clientErrorLog';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -29,7 +30,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    this.props.onError?.(error, info);
+    // Panel boundaries pass no handler; their errors still belong in the server log.
+    if (this.props.onError) this.props.onError(error, info);
+    else reportClientError({ message: error.message, stack: error.stack, source: 'react_boundary' });
   }
 
   render() {

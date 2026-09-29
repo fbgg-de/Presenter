@@ -23,21 +23,10 @@ import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { DEFAULT_GROUP_ID } from '@/utils/showGroups';
 import { toggleFocusedAudio } from '@/media/audioPlayers';
 import { navigableBlockCount } from '@/utils/itemBlocks';
+import { eventToCombo, shouldIgnorePresentationKey } from '@/utils/keyboard';
+import { emitAppEvent } from '@/utils/appEvents';
 
 /** Count only primary (non-translated) lines in a raw block lines array. */
-
-/** Build a combo string from a keyboard event (matches KeyboardMappingEditor.eventToCombo) */
-const eventToCombo = (e: KeyboardEvent): string => {
-  const parts: string[] = [];
-  if (e.ctrlKey) parts.push('Ctrl');
-  if (e.shiftKey) parts.push('Shift');
-  if (e.altKey) parts.push('Alt');
-  if (e.metaKey) parts.push('Meta');
-  if (!['Control', 'Shift', 'Alt', 'Meta'].includes(e.key)) {
-    parts.push(e.code);
-  }
-  return parts.join('+');
-};
 
 /**
  * Keyboard navigation hook — reads all state from Redux and dispatches
@@ -169,14 +158,7 @@ export const useKeyboardNavigation = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const s = stateRef.current;
-      if (s.keyboardDisabled || e.defaultPrevented || (e.target as HTMLElement)?.closest('[role="dialog"], [role="menu"], [role="slider"]'))
-        return;
-
-      // Don't intercept keyboard events when focus is inside form elements
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || (e.target as HTMLElement)?.isContentEditable) {
-        return;
-      }
+      if (s.keyboardDisabled || shouldIgnorePresentationKey(e)) return;
 
       const combo = eventToCombo(e);
       const mediaFade = s.hideTransitionMode === 'fade' ? s.hideTransitionDuration : 0;
@@ -186,6 +168,7 @@ export const useKeyboardNavigation = () => {
       const digit = /^Alt\+Digit([1-9])$/.exec(combo);
       if (digit && s.currentShow) {
         e.preventDefault();
+        if (e.repeat) return;
         void switchBackground(s.currentShow, agendaGroupId, Number(digit[1]), s.screenGroups, mediaFade);
         return;
       }
@@ -195,6 +178,25 @@ export const useKeyboardNavigation = () => {
 
       // Check if this action is enabled
       if (!s.isEnabled(action)) return;
+      // Holding a toggle must not flicker the live output or repeatedly start media.
+      // Navigation remains repeatable for operators who intentionally hold an arrow key.
+      if (
+        e.repeat &&
+        ![
+          'prev_item',
+          'Ctrl+prev_item',
+          'next_item',
+          'Ctrl+next_item',
+          'prev_block',
+          'advance',
+          'next_block',
+          'prev_line',
+          'next_line',
+        ].includes(action)
+      ) {
+        e.preventDefault();
+        return;
+      }
 
       const prevSong = () => {
         if (s.activeItemIndex > 0) {
@@ -323,6 +325,10 @@ export const useKeyboardNavigation = () => {
         case 'jump_to_start':
           e.preventDefault();
           dispatch(setActiveBlockIndex(0));
+          break;
+        case 'open_search':
+          e.preventDefault();
+          emitAppEvent('presenter:open-search', {});
           break;
         case 'media_go':
           if (!s.currentShow) return;

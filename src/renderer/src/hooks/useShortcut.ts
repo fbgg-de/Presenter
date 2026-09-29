@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGetSettings } from '@/store/settingsSlice';
 import { DEFAULT_KEYBOARD_MAPPING } from '@/components/settings/KeyboardMappingEditor';
+import { IS_MAC } from '@/utils/keyboard';
 
 /** How a key code reads on a keycap when the layout cannot be asked. */
 const KEY_NAMES: Record<string, string> = {
@@ -38,6 +39,7 @@ export const shortcutLabel = (combo: string, layout?: LayoutMap) =>
   combo
     .split('+')
     .map((part) => {
+      if (part === 'Ctrl' && IS_MAC) return '⌘';
       if (KEY_NAMES[part] && !part.startsWith('Bracket')) return KEY_NAMES[part];
       const char = layout?.get(part);
       if (char && char.length === 1) return char.toUpperCase();

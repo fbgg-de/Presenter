@@ -1,4 +1,4 @@
-import { ReactNode, useState, MouseEvent } from 'react';
+import { ReactNode, useRef, useState, MouseEvent } from 'react';
 import {
   Box,
   Button,
@@ -189,8 +189,8 @@ interface ShowGroupListProps {
   groups: ShowGroup[];
   /** Render one item row. `flatIndex` is the item's index in the flat order. */
   renderItem: (item: ShowItem, flatIndex: number) => ReactNode;
-  /** Drag & drop: move the item at `from` to flat position `to` (arrayMove semantics) into `targetGroupId`. */
-  onMoveItem: (from: number, to: number, targetGroupId: string) => void;
+  /** Drag & drop: move the item at `from` to flat position `to` (arrayMove semantics) into `targetGroupId`. Left out, items cannot be dragged. */
+  onMoveItem?: (from: number, to: number, targetGroupId: string) => void;
   onToggleCollapse: (groupId: string) => void;
   /** When true, group management (add/rename/recolor/reorder/delete, cross-group drag) is enabled. */
   editable?: boolean;
@@ -275,6 +275,9 @@ export const ShowGroupList = ({
   // Same live preview for group drags: cards swap positions while dragging (committed on drop).
   const [previewGroups, setPreviewGroups] = useState<ShowGroup[] | null>(null);
   const [activeGroupDrag, setActiveGroupDrag] = useState<{ group: ShowGroup; count: number } | null>(null);
+  // Set for a frame after an item changed group: the cards resize, the collision is measured again
+  // against the old layout and sends the item straight back — over and over ("Maximum update depth").
+  const regroupSettling = useRef(false);
 
   const displayGroups = previewGroups ?? effectiveGroups;
   const entries: Entry[] = preview ?? order.map((item, origIndex) => ({ item, origIndex }));
@@ -364,6 +367,11 @@ export const ShowGroupList = ({
     // Non-editable views (musician) may reorder within a group but not regroup.
     if (!editable && targetGid !== sourceGid) return;
     if (to === from && targetGid === sourceGid) return;
+    if (targetGid !== sourceGid) {
+      if (regroupSettling.current) return;
+      regroupSettling.current = true;
+      requestAnimationFrame(() => (regroupSettling.current = false));
+    }
 
     const next = [...preview];
     const [moved] = next.splice(from, 1);
@@ -385,7 +393,7 @@ export const ShowGroupList = ({
       if (pos < 0) return;
       const targetGid = entryGid(finalPreview[pos]);
       if (pos === origIndex && targetGid === gidOf(origIndex)) return; // nothing moved
-      onMoveItem(origIndex, pos, targetGid);
+      onMoveItem?.(origIndex, pos, targetGid);
       return;
     }
 
@@ -443,7 +451,16 @@ export const ShowGroupList = ({
                     }}
                     onClick={() => onToggleCollapse(group.id)}
                   >
-                    <IconButton size="small" sx={{ p: 0.25 }}>
+                    <IconButton
+                      size="small"
+                      aria-expanded={expanded}
+                      aria-label={
+                        expanded
+                          ? LL.SHOW_GROUPS.COLLAPSE({ name: groupDisplayName(group, LL.SHOW_GROUPS.DEFAULT()) })
+                          : LL.SHOW_GROUPS.EXPAND({ name: groupDisplayName(group, LL.SHOW_GROUPS.DEFAULT()) })
+                      }
+                      sx={{ p: 0.25 }}
+                    >
                       {expanded ? <ExpandMoreIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />}
                     </IconButton>
 
@@ -547,7 +564,7 @@ export const ShowGroupList = ({
                   >
                     <List disablePadding>
                       {items.map(({ item, origIndex }) => (
-                        <SortableRow key={`${ITEM_ID_PREFIX}${origIndex}`} id={`${ITEM_ID_PREFIX}${origIndex}`}>
+                        <SortableRow key={`${ITEM_ID_PREFIX}${origIndex}`} id={`${ITEM_ID_PREFIX}${origIndex}`} disabled={!onMoveItem}>
                           {renderItem(item, origIndex)}
                         </SortableRow>
                       ))}

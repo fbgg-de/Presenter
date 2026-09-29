@@ -8,8 +8,8 @@
  *
  * Green only when everything passes, amber otherwise — found before the service, not during it.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Button, Chip, Popover, Stack, Typography } from '@mui/material';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { Button, Chip, CircularProgress, Popover, Stack, Typography } from '@mui/material';
 import { CheckCircle as OkIcon, ErrorOutlined as WarnIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
@@ -20,12 +20,14 @@ import { useGetPresentationSettings } from '@/store/presentationSlice';
 import { useGetSessionQuery } from '@/api/session.api';
 import { usePresentationWindows } from '@/hooks/usePresentationWindows';
 import { activeVersionOf, mediaItemDataOf } from '@/media/mediaItem';
-import { invalidateMediaProbe, probeMediaUrl, resolveMediaUrl } from '@/utils/mediaUrl';
+import { invalidateMediaProbe, probeMediaUrl, resolveMediaUrl, getMediaProbeGeneration, subscribeMediaProbes } from '@/utils/mediaUrl';
 import type { ShowItem } from '@/api/shows.api';
+import { useNextcloud } from '@/nextcloud/connection';
 
 type Check = {
   id: string;
   ok: boolean;
+  status?: 'checking' | 'ready' | 'missing' | 'unverified';
   label: string;
   /** What is wrong, by name — only shown while failing. */
   detail?: string;
@@ -70,23 +72,37 @@ export const useReadiness = (generation: number): Check[] => {
     return numbers.filter((n) => !cached.has(String(n))).map((n) => songs[n]?.title ?? `#${n}`);
   }, [order, songs, generation]);
 
-  // Media files — only a definite "not found" counts (as in useMediaFileMissing).
-  const mediaPaths = useMemo(() => [...new Set(order.flatMap(mediaPathsOf))], [order]);
-  const [missingMedia, setMissingMedia] = useState<string[]>([]);
+  const nextcloud = useNextcloud();
+  const media = useMemo(() => {
+    void nextcloud;
+    return [...new Set(order.flatMap(mediaPathsOf))].map((path) => ({ path, url: resolveMediaUrl(path) }));
+  }, [order, nextcloud]);
+  const probeGeneration = useSyncExternalStore(subscribeMediaProbes, getMediaProbeGeneration, getMediaProbeGeneration);
+  const mediaKey = JSON.stringify([media, generation, probeGeneration]);
+  const [mediaResult, setMediaResult] = useState<{ key: string; missing: string[]; unverified: string[] }>();
+  const checking = media.length > 0 && mediaResult?.key !== mediaKey;
+  const missingMedia = mediaResult?.key === mediaKey ? mediaResult.missing : [];
+  const unverifiedMedia = mediaResult?.key === mediaKey ? mediaResult.unverified : [];
   useEffect(() => {
     let cancelled = false;
     void Promise.all(
-      mediaPaths.map(async (path) => {
-        const url = resolveMediaUrl(path);
-        return url && (await probeMediaUrl(url)) === 'not_found' ? fileName(path) : null;
+      media.map(async ({ path, url }) => {
+        const status = url ? await probeMediaUrl(url) : 'server_down';
+        return { path, status };
       }),
-    ).then((names) => {
-      if (!cancelled) setMissingMedia(names.filter((n): n is string => !!n));
+    ).then((results) => {
+      if (!cancelled)
+        setMediaResult({
+          key: mediaKey,
+          missing: results.filter((result) => result.status === 'not_found').map((result) => fileName(result.path)),
+          unverified: results.filter((result) => result.status === 'server_down').map((result) => fileName(result.path)),
+        });
     });
     return () => {
       cancelled = true;
     };
-  }, [mediaPaths, generation]);
+  }, [media, mediaKey]);
+  const mediaStatus = checking ? 'checking' : missingMedia.length ? 'missing' : unverifiedMedia.length ? 'unverified' : 'ready';
 
   const managed = windows.filter((w) => !w.unmanaged);
   const closed = managed.filter((w) => !w.isOpen).map((w) => w.name);
@@ -106,7 +122,25 @@ export const useReadiness = (generation: number): Check[] => {
           ? { label: R.LOAD_SONGS(), run: () => void dispatch(loadShowSongs({ show: currentShow, forceRefetch: true })) }
           : undefined,
     },
-    { id: 'media', ok: missingMedia.length === 0, label: R.MEDIA_FOUND(), detail: R.MISSING({ names: missingMedia.join(', ') }) },
+    {
+      id: 'media',
+      ok: mediaStatus === 'ready',
+      status: mediaStatus,
+      label:
+        mediaStatus === 'checking'
+          ? R.CHECKING()
+          : mediaStatus === 'missing'
+            ? R.MEDIA_MISSING()
+            : mediaStatus === 'unverified'
+              ? R.UNVERIFIED()
+              : R.MEDIA_FOUND(),
+      detail: [
+        missingMedia.length ? R.MISSING({ names: missingMedia.join(', ') }) : '',
+        unverifiedMedia.length ? R.MEDIA_UNVERIFIED({ names: unverifiedMedia.join(', ') }) : '',
+      ]
+        .filter(Boolean)
+        .join(' · '),
+    },
   ];
   if (managed.length > 0) {
     checks.push({
@@ -134,6 +168,8 @@ export const ReadinessChip = () => {
   const [generation, setGeneration] = useState(0);
   const checks = useReadiness(generation);
   const failing = checks.filter((c) => !c.ok).length;
+  const checking = checks.some((check) => check.status === 'checking');
+  const onlyUnverified = checks.filter((check) => !check.ok).every((check) => check.status === 'unverified');
 
   // Files may have been copied in since the last probe: opening the list checks again.
   const recheck = useCallback(() => {
@@ -145,8 +181,8 @@ export const ReadinessChip = () => {
     <>
       <Chip
         size="small"
-        icon={failing ? <WarnIcon /> : <OkIcon />}
-        label={failing ? R.ISSUES({ count: failing }) : R.READY()}
+        icon={checking ? <CircularProgress size={14} color="inherit" /> : failing ? <WarnIcon /> : <OkIcon />}
+        label={checking ? R.CHECKING() : failing ? (onlyUnverified ? R.UNVERIFIED() : R.ISSUES({ count: failing })) : R.READY()}
         color={failing ? 'warning' : 'success'}
         variant={failing ? 'filled' : 'outlined'}
         onClick={(e) => {
@@ -155,16 +191,22 @@ export const ReadinessChip = () => {
         }}
       />
       <Popover open={!!anchor} anchorEl={anchor} onClose={() => setAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}>
-        <Stack spacing={1.25} sx={{ p: 2, width: 360 }}>
+        <Stack spacing={1.25} sx={{ p: 2, width: 360, maxWidth: 'calc(100vw - 32px)', boxSizing: 'border-box' }}>
           <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
             <Typography variant="subtitle2">{R.TITLE()}</Typography>
-            <Button size="small" color="inherit" startIcon={<RefreshIcon />} onClick={recheck}>
+            <Button size="small" color="inherit" startIcon={<RefreshIcon />} onClick={recheck} disabled={checking}>
               {R.RECHECK()}
             </Button>
           </Stack>
           {checks.map((check) => (
             <Stack key={check.id} direction="row" spacing={1} sx={{ alignItems: 'flex-start' }}>
-              {check.ok ? <OkIcon fontSize="small" color="success" /> : <WarnIcon fontSize="small" color="warning" />}
+              {check.status === 'checking' ? (
+                <CircularProgress size={20} />
+              ) : check.ok ? (
+                <OkIcon fontSize="small" color="success" />
+              ) : (
+                <WarnIcon fontSize="small" color="warning" />
+              )}
               <Stack sx={{ flex: 1, minWidth: 0 }}>
                 <Typography variant="body2">{check.label}</Typography>
                 {!check.ok && check.detail && (

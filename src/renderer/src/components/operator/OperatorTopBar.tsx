@@ -9,6 +9,7 @@ import {
   MenuOpen as SetListOpenIcon,
   ViewSidebar as SidePanelOpenIcon,
   ViewSidebarOutlined as SidePanelClosedIcon,
+  Window as WindowManagerIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetPresentationSettings } from '@/store/presentationSlice';
@@ -16,17 +17,8 @@ import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useGetShow } from '@/store/showSlice';
 import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { usePresentationWindows } from '@/hooks/usePresentationWindows';
-import { useActiveLook } from '@/hooks/useActiveLook';
-import { lookVariesByGroup, resolveLook } from '@/look/resolveLook';
-import { normaliseScreenGroupData } from '@/screens/types';
-import type { BackgroundData } from '@/look/types';
-import { mediaForScreen, usePlaybacks } from '@/media/playback';
-import type { CuePacket } from '@/media/types';
-import { parseTaggedLine } from '@/song';
-import { versePages } from '@/utils/itemBlocks';
-import { parseOrderKey } from '@/utils/orderKeyUtils';
-import { StageScreen } from '@/presentation/StageScreen';
-import type { StageFrame } from '@/presentation/stageFrame';
+import { usePreviewContent } from '@/hooks/usePreviewContent';
+import { PresentationFrame, outputSize } from '@/components/preview/PresentationFrame';
 import Footer from '@/components/layout/Footer';
 import { GroupMonitor } from './GroupMonitor';
 import { MonitorWindowsMenu, openWindowManager } from './MonitorWindowsMenu';
@@ -238,10 +230,15 @@ export const OperatorTopBar = ({
 
       <MonitorStrip boxRef={monitorWheelRef} monitorWidth={monitorWidth} />
 
-      {/* Right edge: the View menu above the side panel toggle. */}
+      {/* Right edge: the View menu and the Window Manager above the side panel toggle. */}
       <Stack sx={{ flexShrink: 0, alignItems: 'center', gap: 0.25 }}>
-        <Stack sx={{ minHeight: 34, justifyContent: 'center' }}>
+        <Stack direction="row" sx={{ minHeight: 34, alignItems: 'center' }}>
           <ViewMenu />
+          <Tooltip title={LL.HEADER.WINDOW_MANAGER()}>
+            <IconButton size="small" onClick={() => openWindowManager()} aria-label={LL.HEADER.WINDOW_MANAGER()}>
+              <WindowManagerIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
         </Stack>
         <Tooltip title={withShortcut(sidePanelOpen ? O.HIDE_SIDE_PANEL() : O.SHOW_SIDE_PANEL(), sidePanelKey)}>
           <IconButton
@@ -259,76 +256,41 @@ export const OperatorTopBar = ({
 };
 
 /**
- * A monitor per screen group. Its own component because it follows the live slide and the
- * playing media (four updates a second while a video runs): in the bar itself every one of
- * those re-rendered the title, the tool strips and the footer controls too.
+ * The real output page of one screen group, as its windows show it right now — drawn by the same
+ * renderer from the same content (see PresentationFrame). Only the stage overlays are missing;
+ * they reach the windows on a channel of their own.
  */
-const MonitorStrip = ({ boxRef, monitorWidth }: { boxRef: (node: HTMLElement | null) => void; monitorWidth: number }) => {
-  const { LL } = useI18nContext();
-  const O = LL.OPERATOR;
-  const { operatorMode } = useGetSettings('operatorMode');
-  const { isBlack, isTextHidden, videoVisible, mediaVisible } = useGetPresentationSettings(
+const LiveOutput = ({ groupId, size, title }: { groupId: number | undefined; size: { width: number; height: number }; title: string }) => {
+  const { activeItemIndex, activeBlockIndex, isBlack, isTextHidden, videoVisible, mediaVisible } = useGetPresentationSettings(
+    'activeItemIndex',
+    'activeBlockIndex',
     'isBlack',
     'isTextHidden',
     'videoVisible',
     'mediaVisible',
   );
-  const playbacks = usePlaybacks();
+  const live = useMemo(
+    () => ({ isBlack, hideText: isTextHidden, videoVisible, mediaVisible }),
+    [isBlack, isTextHidden, videoVisible, mediaVisible],
+  );
+  const { content } = usePreviewContent(activeItemIndex, activeBlockIndex, groupId, live);
+  return <PresentationFrame content={content} width={size.width} height={size.height} title={title} />;
+};
+
+/**
+ * A monitor per screen group. Its own component because the tiles follow the live slide and the
+ * playing media: in the bar itself every one of those updates re-rendered the title, the tool
+ * strips and the footer controls too.
+ */
+const MonitorStrip = ({ boxRef, monitorWidth }: { boxRef: (node: HTMLElement | null) => void; monitorWidth: number }) => {
+  const { LL } = useI18nContext();
+  const O = LL.OPERATOR;
+  const { operatorMode } = useGetSettings('operatorMode');
+  const { isBlack } = useGetPresentationSettings('isBlack');
   const { data: groups = [] } = useGetScreenGroupsQuery();
   const rig = usePresentationWindows();
-  const { input, item, song, blocks } = useActiveLook();
-  const { activeBlockIndex } = useGetPresentationSettings('activeBlockIndex');
   // The screen preview whose windows menu is open.
   const [windowsMenu, setWindowsMenu] = useState<{ anchor: HTMLElement; key: string } | null>(null);
-
-  // What a stage screen draws right now, for a Stage group's tile — the same frame the window builds.
-  const stageFrame = useMemo<StageFrame>(() => {
-    const primary = (raw: string[]) => {
-      const parsed = raw.map(parseTaggedLine);
-      const main = parsed.filter((line) => !line.language);
-      return (main.length ? main : parsed).map((line) => line.text).filter((text) => text.trim());
-    };
-    const sections =
-      item?.type === 'song'
-        ? blocks.map((block) => ({ name: block.name, lines: primary(block.lines) }))
-        : item?.type === 'bible_verse'
-          ? versePages(item).map((page) => ({ name: page.name, lines: page.lines.filter((line) => line.trim()) }))
-          : [];
-    const current = sections[activeBlockIndex];
-    const next = sections[activeBlockIndex + 1];
-    return {
-      kind: item?.type ?? 'empty',
-      title: item?.type === 'bible_verse' ? item.bibleRef : (song?.title ?? item?.label),
-      songKey: item?.type === 'song' ? item.key || parseOrderKey(item.order).key : undefined,
-      sections: sections.map((section) => section.name),
-      activeIndex: activeBlockIndex,
-      current: current?.lines ?? [],
-      next: next ? { name: next.name, lines: next.lines } : undefined,
-      textHidden: isTextHidden,
-    };
-  }, [item, song, blocks, activeBlockIndex, isTextHidden]);
-
-  // The first lines of what is on screen: primary lyric lines, or the verse text.
-  const lines = useMemo(() => {
-    if (item?.type === 'song') {
-      const parsed = (blocks[activeBlockIndex]?.lines ?? []).map(parseTaggedLine);
-      const primary = parsed.filter((line) => !line.language);
-      return (primary.length ? primary : parsed).map((line) => line.text).slice(0, 2);
-    }
-    if (item?.type === 'bible_verse') return (versePages(item)[activeBlockIndex]?.lines ?? []).filter((line) => line.trim()).slice(0, 2);
-    return [];
-  }, [item, blocks, activeBlockIndex]);
-
-  // A colour entry fills the screen; images and videos come from what is running on each group.
-  const colour: BackgroundData | undefined =
-    item?.type === 'media' && item.mediaSubType === 'color' ? { color: item.mediaColor } : undefined;
-  const thumbOf = (packet: CuePacket | undefined): BackgroundData | undefined => {
-    if (!packet || packet.visible === false) return undefined;
-    const source = packet.cue.sources.find((s) => s.id === packet.assignment?.sourceId);
-    return source
-      ? { [source.type]: { path: source.path, fit: packet.assignment?.frame.fit === 'contain' ? 'contain' : 'cover' } }
-      : undefined;
-  };
 
   /** Open a group's closed windows — or, when it has none yet, the Window Manager to add one. */
   const openWindows = (windows: typeof rig.windows) => {
@@ -340,81 +302,52 @@ const MonitorStrip = ({ boxRef, monitorWidth }: { boxRef: (node: HTMLElement | n
   };
 
   const monitors = useMemo(() => {
-    const varies = lookVariesByGroup(input);
     const openLabel = (windows: typeof rig.windows) => O.MONITOR_WINDOWS({ count: windows.length });
-    if (groups.length === 0) {
-      return [
-        {
-          key: 'all',
-          label: O.MONITOR_ALL(),
-          sublabel: openLabel(rig.windows),
-          windows: rig.windows,
-          live: rig.windows.some((w) => w.isOpen),
-          style: resolveLook(input).style,
-          layers: undefined,
-        },
-      ];
-    }
+    const monitor = (key: string, label: string, groupId: number | undefined, windows: typeof rig.windows) => ({
+      key,
+      label,
+      groupId,
+      sublabel: openLabel(windows),
+      windows,
+      live: windows.some((w) => w.isOpen),
+      size: outputSize(rig.windows, groupId),
+    });
+    if (groups.length === 0) return [monitor('all', O.MONITOR_ALL(), undefined, rig.windows)];
     return groups
       .filter((group) => group.enabled)
-      .map((group) => {
-        const windows = rig.windows.filter((w) => w.config.screenGroupId === group.id);
-        return {
-          key: String(group.id),
-          label: group.name,
-          sublabel: openLabel(windows),
-          windows,
-          live: windows.some((w) => w.isOpen),
-          style: resolveLook(input, varies ? String(group.id) : undefined).style,
-          layers: normaliseScreenGroupData(group.data).layers,
-          stageLayout: normaliseScreenGroupData(group.data).stage,
-        };
-      });
+      .map((group) =>
+        monitor(
+          String(group.id),
+          group.name,
+          group.id,
+          rig.windows.filter((w) => w.config.screenGroupId === group.id),
+        ),
+      );
     // `rig.windows` is a fresh array per poll; its identity is what should drive this.
-  }, [input, groups, rig.windows, O]);
+  }, [groups, rig.windows, O]);
 
   return (
     <>
       <Box ref={boxRef} sx={{ flex: 1, minWidth: 0, overflowX: 'auto' }}>
         <Stack direction="row" spacing={1.5} sx={{ justifyContent: 'flex-end', width: 'max-content', ml: 'auto', py: 0.5, px: 0.5 }}>
-          {monitors.map((monitor) => {
-            const layers = monitor.layers;
-            const mediaShown = item?.type !== 'media' || !layers || layers.media;
-            const running = mediaForScreen(playbacks, monitor.key === 'all' ? undefined : Number(monitor.key), {
-              backgroundVisible: videoVisible,
-              contentVisible: mediaVisible,
-            });
-            const content = thumbOf(running.contents.filter((packet) => packet.visible !== false).at(-1)) ?? colour;
-            const textLayer = !layers || (item?.type === 'bible_verse' ? layers.bibleVerses : layers.slides);
-            return (
-              <GroupMonitor
-                key={monitor.key}
-                label={monitor.label}
-                sublabel={monitor.sublabel}
-                style={monitor.style}
-                media={mediaShown ? content : undefined}
-                background={thumbOf(running.background)}
-                lines={lines}
-                showText={textLayer && !isTextHidden && mediaShown}
-                showBackground={!layers || layers.background}
-                black={isBlack}
-                blackLabel={O.MONITOR_BLACK()}
-                live={monitor.live}
-                width={monitorWidth}
-                // Setting up a window for a group that has none is preparation; reopening one is not.
-                onOpen={operatorMode === 'live' && monitor.windows.length === 0 ? undefined : () => openWindows(monitor.windows)}
-                // A Stage group's tile shows the real stage screen, not the audience picture.
-                picture={
-                  'stageLayout' in monitor && monitor.stageLayout ? (
-                    <StageScreen frame={stageFrame} settings={monitor.stageLayout} />
-                  ) : undefined
-                }
-                openLabel={monitor.windows.length > 0 ? O.OPEN_WINDOW() : O.ADD_WINDOW()}
-                onShowWindows={(anchor) => setWindowsMenu({ anchor, key: monitor.key })}
-                showWindowsLabel={O.MONITOR_WINDOWS_MENU()}
-              />
-            );
-          })}
+          {monitors.map((monitor) => (
+            <GroupMonitor
+              key={monitor.key}
+              label={monitor.label}
+              sublabel={monitor.sublabel}
+              picture={<LiveOutput groupId={monitor.groupId} size={monitor.size} title={monitor.label} />}
+              aspect={`${monitor.size.width}/${monitor.size.height}`}
+              black={isBlack}
+              blackLabel={O.MONITOR_BLACK()}
+              live={monitor.live}
+              width={monitorWidth}
+              // Setting up a window for a group that has none is preparation; reopening one is not.
+              onOpen={operatorMode === 'live' && monitor.windows.length === 0 ? undefined : () => openWindows(monitor.windows)}
+              openLabel={monitor.windows.length > 0 ? O.OPEN_WINDOW() : O.ADD_WINDOW()}
+              onShowWindows={(anchor) => setWindowsMenu({ anchor, key: monitor.key })}
+              showWindowsLabel={O.MONITOR_WINDOWS_MENU()}
+            />
+          ))}
         </Stack>
       </Box>
 

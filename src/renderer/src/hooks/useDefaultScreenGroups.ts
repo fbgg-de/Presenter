@@ -14,9 +14,9 @@ import { useEffect, useRef } from 'react';
 import { useGetScreenGroupsQuery, useSeedDefaultScreenGroupsMutation } from '@/api/screenGroups.api';
 import { useI18nContext } from '@/i18n/i18n-react';
 
-export function useDefaultScreenGroups(): void {
+export function useDefaultScreenGroups(skip = false): void {
   const { LL } = useI18nContext();
-  const { data: groups, isSuccess } = useGetScreenGroupsQuery();
+  const { data: groups, isSuccess } = useGetScreenGroupsQuery(undefined, { skip });
   const [seed] = useSeedDefaultScreenGroupsMutation();
   // Once per renderer: a failed request (offline) must not turn into a retry loop, and a
   // successful one is answered by the list refetch rather than by this effect running again.

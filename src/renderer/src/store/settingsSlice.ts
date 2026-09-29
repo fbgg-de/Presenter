@@ -346,7 +346,7 @@ const defaultState: SettingsState = {
   offlineMode: false,
   offlineFallback: false,
   operatorMode: 'prepare',
-  operatorMonitorWidth: 140,
+  operatorMonitorWidth: 90,
   operatorSlideSize: 280,
   operatorSetListOpen: true,
   operatorSidePanelOpen: true,

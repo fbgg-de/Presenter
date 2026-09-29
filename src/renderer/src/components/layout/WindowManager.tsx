@@ -162,7 +162,7 @@ const WindowManagerBody = ({ open, onClose, openWithNew, selectWindowId }: Windo
             {LL.WINDOW.PANEL_TITLE()}
           </Typography>
           <Box sx={{ flexGrow: 1 }} />
-          <IconButton onClick={onClose}>
+          <IconButton aria-label={LL.COMMON.CLOSE()} onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </Stack>

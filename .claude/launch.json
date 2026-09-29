@@ -20,16 +20,36 @@
       "port": 5173
     },
     {
+      "name": "web-mock-signed-out",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:web:mock"
+      ],
+      "env": {
+        "MOCK_SIGNED_OUT": "1"
+      },
+      "port": 5173
+    },
+    {
       "name": "relay",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["ws-server/dist/server.js"],
+      "runtimeArgs": [
+        "ws-server/dist/server.js"
+      ],
       "port": 9001
     },
     {
       "name": "web-mock-relay",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:web:mock"],
-      "env": { "MOCK_WS_HOST": "localhost", "MOCK_WS_PORT": "9001" },
+      "runtimeArgs": [
+        "run",
+        "dev:web:mock"
+      ],
+      "env": {
+        "MOCK_WS_HOST": "localhost",
+        "MOCK_WS_PORT": "9001"
+      },
       "port": 5173
     },
     {

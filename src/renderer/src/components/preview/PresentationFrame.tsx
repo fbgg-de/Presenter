@@ -9,8 +9,17 @@
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Box } from '@mui/material';
 import type { PresentationContent } from '@/presentation/types';
+import type { RigWindow } from '@/hooks/usePresentationWindows';
 
 export const PREVIEW_PAGE_URL = './presentation.html?preview=1';
+
+/** The size a group's windows draw at on this computer, so a picture of them keeps their proportions. */
+export const outputSize = (windows: RigWindow[], groupId: number | undefined): { width: number; height: number } => {
+  const win = windows.find((w) => w.config.screenGroupId === groupId && (w.bounds || (w.config.width && w.config.height)));
+  const width = win?.bounds?.width ?? win?.config.width;
+  const height = win?.bounds?.height ?? win?.config.height;
+  return width && height ? { width, height } : { width: 1920, height: 1080 };
+};
 
 export const PresentationFrame = memo(function PresentationFrame({
   content,

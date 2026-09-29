@@ -1080,7 +1080,7 @@ export const PdfAnnotationToolbar = ({
     } catch (err) {
       console.error('[PdfAnnotation] download failed:', err);
     }
-  }, [pdfUrl, songNumber, filename, allAnnotations, hiddenLayers]);
+  }, [pdfUrl, songNumber, songName, filename, allAnnotations, hiddenLayers]);
 
   // -- Blinking cursor for text tool --
   const [cursorVisible, setCursorVisible] = useState(true);

@@ -208,7 +208,7 @@ const BreakRow = ({ id, label, onRemove, removeLabel }: { id: string; label: str
       <Divider sx={{ flexGrow: 1, borderStyle: 'dashed' }} />
       <Chip size="small" variant="outlined" icon={<PageBreakIcon sx={{ fontSize: 14 }} />} label={label} />
       <Divider sx={{ flexGrow: 1, borderStyle: 'dashed' }} />
-      <IconButton size="small" className="break-remove" sx={{ opacity: 0 }} onClick={onRemove} title={removeLabel}>
+      <IconButton aria-label={removeLabel} size="small" className="break-remove" sx={{ opacity: 0 }} onClick={onRemove} title={removeLabel}>
         <CloseIcon fontSize="small" />
       </IconButton>
     </Stack>

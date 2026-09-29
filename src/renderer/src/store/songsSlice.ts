@@ -4,6 +4,8 @@ import { Song } from '@/song';
 import type { Show } from '@/api/shows.api';
 import { useAppSelector } from './hooks';
 import { registerEvictor, EVICT_PRIORITY } from './persist';
+import type { RootState } from './index';
+import { queueSongFetch } from '@/utils/taskQueue';
 
 // Lazy import to avoid circular dependency
 let _songsApi: typeof import('@/api/songs.api').songsApi | null = null;
@@ -241,11 +243,17 @@ registerEvictor({
  * used by explicit "reload from server" actions, which must pick up song/order edits
  * made elsewhere even though the cache entry is still considered fresh.
  */
+let activeShowLoad: string | undefined;
 export const loadShowSongs = createAsyncThunk(
   'songs/loadShowSongs',
-  async (arg: Show | { show: Show; forceRefetch?: boolean }, { dispatch }) => {
+  async (arg: Show | { show: Show; forceRefetch?: boolean }, { dispatch, getState, requestId, signal }) => {
     const show = 'show' in arg ? arg.show : arg;
     const forceRefetch = 'show' in arg ? !!arg.forceRefetch : false;
+    activeShowLoad = requestId;
+    const initial = getState() as RootState;
+    const selected = initial.show.currentShow;
+    const isCurrent = () => !signal.aborted && activeShowLoad === requestId && (getState() as RootState).show.currentShow === selected;
+    if (selected?.title !== show.title) return;
     if (!show.order || show.order.length === 0) {
       dispatch(setSongsOrder([]));
       dispatch(setSongOrders({}));
@@ -266,21 +274,32 @@ export const loadShowSongs = createAsyncThunk(
 
     const songsApi = await getSongsApi();
     const uniqueNumbers = [...new Set(songNumbers)];
-    const fetchPromises = uniqueNumbers.map(async (songNumber) => {
-      try {
-        const result = await dispatch(songsApi.endpoints.getSong.initiate({ songNumber }, { forceRefetch }));
-        const data = 'data' in result ? (result as { data?: ISong }).data : undefined;
-        if (data && data.songNumber) {
-          dispatch(addSongToStore(new Song(data)));
+    const fetchPromises = uniqueNumbers.map((songNumber) =>
+      queueSongFetch(async () => {
+        if (!isCurrent()) return undefined;
+        try {
+          const result = await dispatch(songsApi.endpoints.getSong.initiate({ songNumber }, { forceRefetch, subscribe: false }));
+          const data = 'data' in result ? (result as { data?: ISong }).data : undefined;
+          return data?.songNumber === songNumber ? new Song(data) : undefined;
+        } catch (err) {
+          console.error(`Failed to fetch song #${songNumber}:`, err);
         }
-      } catch (err) {
-        console.error(`Failed to fetch song #${songNumber}:`, err);
-      }
-    });
+        return undefined;
+      }),
+    );
 
-    await Promise.all(fetchPromises);
+    const fetched = await Promise.all(fetchPromises);
+    if (!isCurrent()) return;
+    const currentSongs = (getState() as RootState).songs.songs;
+    const merged = { ...currentSongs };
+    for (const song of fetched) {
+      // Preserve a song edited while this batch was in flight.
+      if (song && currentSongs[song.songNumber] === initial.songs.songs[song.songNumber]) merged[song.songNumber] = song;
+    }
 
     dispatch(setSongsOrder(songNumbers));
+    // Persist the fetched songs once per batch, rather than serializing the whole cache per song.
+    dispatch(setSongs(merged));
     dispatch(setSongOrders(orderMap));
   },
 );

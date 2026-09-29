@@ -10,13 +10,14 @@ import { BrowserRouter, Route, Routes, Navigate, useParams } from 'react-router-
 import { MainPage } from '@/pages/MainPage';
 import { UnauthorizedPage } from '@/pages/UnauthorizedPage';
 import ConnectivityChecker from '@/components/settings/ConnectivityChecker';
-import { SETTINGS_KEY, useGetSettings } from '@/store/settingsSlice';
+import { SETTINGS_KEY, getSetting, useGetSettings } from '@/store/settingsSlice';
 import { useMetricSync } from '@/hooks/useMetricSync';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { GlobalErrorHandler } from '@/components/common/GlobalErrorHandler';
-import { useMetrics } from '@/hooks/useMetrics';
 import { useGetSessionQuery } from '@/api/session.api';
-import { AUTO_LOGIN_STARTED_KEY, redirectToLogin } from '@/utils';
+import { AUTO_LOGIN_STARTED_KEY } from '@/utils';
+import { enqueueMetric } from '@/utils/metricQueue';
+import { getDeviceId } from '@/utils/deviceId';
 
 // Load all locales upfront so switching is instant
 loadAllLocales();
@@ -34,7 +35,7 @@ const AccountLoginRedirect = () => {
  */
 const HardRedirect = ({ to }: { to: string }) => {
   useEffect(() => {
-    window.location.replace(to);
+    window.location.replace(to + window.location.search);
   }, [to]);
   return null;
 };
@@ -43,39 +44,35 @@ const App = () => {
   useMetricSync();
 
   const { themeMode, uiLanguage, offlineMode } = useGetSettings('themeMode', 'uiLanguage', 'offlineMode');
-  const { trackEvent } = useMetrics();
   const [boundaryError, setBoundaryError] = useState<Error | null>(null);
   const freshStartTracked = useRef(false);
 
-  // Track fresh start — fired when no settings exist yet in localStorage
+  // Track fresh start — fired when no settings exist yet in localStorage. Queued rather than sent:
+  // a first launch is signed out, the server refuses metrics without a session, and
+  // useMetricSync sends the queue once signed in.
   useEffect(() => {
     if (freshStartTracked.current) return;
     freshStartTracked.current = true;
     const hasSettings = !!localStorage.getItem(SETTINGS_KEY);
-    if (!hasSettings) {
-      trackEvent('fresh_start', undefined, undefined, {
-        language: navigator.language,
-      });
+    if (!hasSettings && getSetting('metricsEnabled')) {
+      enqueueMetric({ event: 'fresh_start', metadata: { device_id: getDeviceId(), language: navigator.language } });
     }
-  }, [trackEvent]);
+  }, []);
 
-  // Check authentication — skip in offline mode
-  const { data: session, isLoading: sessionLoading } = useGetSessionQuery(undefined, { skip: offlineMode });
-
-  // Redirect to dedicated login page when unauthenticated (online mode only)
+  // Signing out is handled where a page needs a session (RequireAuth, with the way back in `next`).
+  // Redirecting here as well raced it and dropped `next`, and sent /unauthorized (a refused sign-in)
+  // to the login page before its reason could be read.
+  const { data: session } = useGetSessionQuery(undefined, { skip: offlineMode });
+  const signedIn = session?.isAuthenticated === true;
   useEffect(() => {
-    if (offlineMode || sessionLoading) return;
-    if (session && !session.isAuthenticated) {
-      redirectToLogin();
-    } else if (session?.isAuthenticated) {
-      // Signed in, so the login page may sign in automatically again next time (see LoginPage).
-      try {
-        sessionStorage.removeItem(AUTO_LOGIN_STARTED_KEY);
-      } catch {
-        // Storage unavailable — nothing was stored to clear.
-      }
+    if (!signedIn) return;
+    // Signed in, so the login page may sign in automatically again next time (see LoginPage).
+    try {
+      sessionStorage.removeItem(AUTO_LOGIN_STARTED_KEY);
+    } catch {
+      // Storage unavailable — nothing was stored to clear.
     }
-  }, [offlineMode, session, sessionLoading]);
+  }, [signedIn]);
 
   // Resolve system theme and listen for OS preference changes
   const [resolvedMode, setResolvedMode] = useState(resolveThemeMode(themeMode));

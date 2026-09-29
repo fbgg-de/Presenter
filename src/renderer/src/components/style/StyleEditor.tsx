@@ -725,7 +725,7 @@ const StyleEditorBody = ({ open, onClose, editStyleId }: StyleEditorProps) => {
                 <Button variant="contained" startIcon={<AddIcon />} onClick={openCreate}>
                   {LL.STYLE.NEW()}
                 </Button>
-                <IconButton onClick={onClose}>
+                <IconButton aria-label={LL.COMMON.CLOSE()} onClick={onClose}>
                   <CloseIcon />
                 </IconButton>
               </Stack>
@@ -1035,7 +1035,7 @@ const StyleEditorBody = ({ open, onClose, editStyleId }: StyleEditorProps) => {
                     )}
                   </>
                 )}
-                <IconButton onClick={onClose}>
+                <IconButton aria-label={LL.COMMON.CLOSE()} onClick={onClose}>
                   <CloseIcon />
                 </IconButton>
               </Stack>

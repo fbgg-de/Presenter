@@ -1,5 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Box, Button, Card, CardContent, Divider, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import {
+  Alert,
+  Backdrop,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Divider,
+  MenuItem,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { Security as SecurityIcon, WifiOff as WifiOffIcon, Wifi as WifiIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -88,6 +102,18 @@ export const LoginPage = () => {
   const loginErrorRef = useQueryParam('ref');
   /** Set when the automatic sign-in was skipped because the previous one did not end in a session. */
   const [autoLoginStopped, setAutoLoginStopped] = useState(false);
+  /**
+   * The automatic sign-in is on its way to the provider. The page is covered until it leaves: a
+   * second click on Log in would start a second flow, and the provider rejects the one that
+   * finishes with the other's state.
+   */
+  const [autoLoggingIn, setAutoLoggingIn] = useState(false);
+  useEffect(() => {
+    // Back from the provider out of the page cache: the redirect is over, the page usable again.
+    const onPageShow = (e: PageTransitionEvent) => e.persisted && setAutoLoggingIn(false);
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, []);
   /** "Trouble signing in?" — resets cookies and/or local data when a sign-in keeps failing or looping. */
   const [resetOpen, setResetOpen] = useState(false);
   const resetAction = (
@@ -220,6 +246,7 @@ export const LoginPage = () => {
       // Without storage a loop cannot be told apart from a first attempt, so do not risk one.
       return;
     }
+    setAutoLoggingIn(true);
     openUrl(url);
   }, [isAdminSelected, isTenantSelected, adminOidcLoading, oidcLoading, adminOidcUrlData, oidcUrlData, loginError, switchAccount]);
 
@@ -409,6 +436,10 @@ export const LoginPage = () => {
           </Stack>
         </CardContent>
       </Card>
+      <Backdrop open={autoLoggingIn} sx={{ zIndex: (theme) => theme.zIndex.modal + 1, flexDirection: 'column', gap: 2 }}>
+        <CircularProgress color="inherit" />
+        <Typography>{LL.AUTH.AUTO_LOGIN_RUNNING()}</Typography>
+      </Backdrop>
       {/* Mounted only while open, so the preselection starts fresh each time. */}
       {resetOpen && <LogoutResetDialog open context="login" onClose={() => setResetOpen(false)} />}
     </Box>

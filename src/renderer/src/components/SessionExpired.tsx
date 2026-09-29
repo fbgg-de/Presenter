@@ -17,6 +17,7 @@ import { useAppDispatch } from '@/store';
 import { API_TAG_TYPES, getBackendBaseUrl, presenterApi, SESSION_EXPIRED_EVENT } from '@/api/base.api';
 import { useGetSessionQuery } from '@/api/session.api';
 import { openReloginWindow, RELOGIN_DONE_MESSAGE } from '@/utils/relogin';
+import { redirectToLogin } from '@/utils';
 
 /** How long before the ceiling the renew notice appears. */
 const WARN_BEFORE_MS = 10 * 60 * 1000;
@@ -43,9 +44,9 @@ const SessionExpired = () => {
       }, 1000);
       return;
     }
-    // Pass the current page as `next` so after re-login the user lands back here
-    const next = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = '/login?next=' + next;
+    // Pass the current page as `next` so after re-login the user lands back here (the desktop
+    // app's login page is a file of its own — redirectToLogin knows where).
+    redirectToLogin(window.location.pathname + window.location.search);
   }, []);
 
   // The sign-in window reports back: a fresh session — fetch everything that failed or went stale.

@@ -107,18 +107,23 @@ export const SettingRow = ({ def }: { def: SettingDef }) => {
           </Tooltip>
         ) : null
       }
-      control={<SettingControlInput def={def} value={value} unit={unit} onChange={(v) => updateSetting(def.key, v as never)} />}
+      control={
+        <SettingControlInput def={def} label={label} value={value} unit={unit} onChange={(v) => updateSetting(def.key, v as never)} />
+      }
     />
   );
 };
 
 const SettingControlInput = ({
   def,
+  label,
   value,
   unit,
   onChange,
 }: {
   def: SettingDef;
+  /** The row's visible label, which is beside the control rather than tied to it — so name it. */
+  label: string;
   value: unknown;
   unit?: string;
   onChange: (value: unknown) => void;
@@ -128,11 +133,24 @@ const SettingControlInput = ({
 
   switch (control.kind) {
     case 'boolean':
-      return <Switch size="small" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />;
+      return (
+        <Switch
+          size="small"
+          checked={Boolean(value)}
+          onChange={(e) => onChange(e.target.checked)}
+          slotProps={{ input: { 'aria-label': label } }}
+        />
+      );
 
     case 'select':
       return (
-        <Select size="small" fullWidth value={String(value ?? '')} onChange={(e) => onChange(e.target.value)}>
+        <Select
+          size="small"
+          fullWidth
+          value={String(value ?? '')}
+          onChange={(e) => onChange(e.target.value)}
+          inputProps={{ 'aria-label': label }}
+        >
           {control.options.map((option) => (
             <MenuItem key={option.value} value={option.value}>
               {option.label}
@@ -150,6 +168,7 @@ const SettingControlInput = ({
           value={String(value ?? '')}
           type="number"
           unit={unit}
+          ariaLabel={label}
           inputProps={{ min: control.min, max: control.max, step: control.step }}
           onCommit={(v) => onChange(Number(v))}
         />
@@ -158,7 +177,7 @@ const SettingControlInput = ({
     case 'path':
       return (
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', width: '100%' }}>
-          <CommittedInput value={String(value ?? '')} type="text" onCommit={(v) => onChange(v)} />
+          <CommittedInput value={String(value ?? '')} type="text" ariaLabel={label} onCommit={(v) => onChange(v)} />
           {window.api?.pickDirectory && (
             <Tooltip title={LL.STYLE.BROWSE()}>
               <IconButton
@@ -176,7 +195,15 @@ const SettingControlInput = ({
       );
 
     default:
-      return <CommittedInput value={String(value ?? '')} type="text" placeholder={control.placeholder} onCommit={(v) => onChange(v)} />;
+      return (
+        <CommittedInput
+          value={String(value ?? '')}
+          type="text"
+          ariaLabel={label}
+          placeholder={control.placeholder}
+          onCommit={(v) => onChange(v)}
+        />
+      );
   }
 };
 
@@ -189,6 +216,7 @@ export const CommittedInput = ({
   type,
   unit,
   placeholder,
+  ariaLabel,
   inputProps,
   onCommit,
 }: {
@@ -196,6 +224,7 @@ export const CommittedInput = ({
   type: 'text' | 'number';
   unit?: string;
   placeholder?: string;
+  ariaLabel?: string;
   inputProps?: Record<string, unknown>;
   onCommit: (value: string) => void;
 }) => {
@@ -214,7 +243,7 @@ export const CommittedInput = ({
       type={type}
       value={draft}
       placeholder={placeholder}
-      inputProps={inputProps}
+      inputProps={{ ...inputProps, 'aria-label': ariaLabel }}
       endAdornment={
         unit ? (
           <InputAdornment position="end">

@@ -76,7 +76,11 @@ function isQuotaError(err: unknown): boolean {
  * room by dropping offline data" from "nothing could be saved at all".
  */
 function announce(detail: { key: string; freed: string[]; saved: boolean }): void {
-  window.dispatchEvent(new CustomEvent('presenter:storage-full', { detail }));
+  try {
+    window.dispatchEvent(new CustomEvent('presenter:storage-full', { detail }));
+  } catch (err) {
+    console.error('[persist] could not announce storage failure', err);
+  }
 }
 
 /**
@@ -93,6 +97,7 @@ export function persistState(key: string, value: unknown): boolean {
   let serialized: string;
   try {
     serialized = JSON.stringify(value);
+    if (serialized === undefined) return false;
   } catch (err) {
     console.error(`[persist] could not serialize "${key}" — not saved`, err);
     return false;
@@ -112,7 +117,12 @@ export function persistState(key: string, value: unknown): boolean {
     // overflow costs only the styles rather than the whole offline cache.
     const freed: string[] = [];
     for (const evictor of evictors) {
-      if (!evictor.run()) continue;
+      try {
+        if (!evictor.run()) continue;
+      } catch (evictionError) {
+        console.error(`[persist] could not free ${evictor.name}`, evictionError);
+        continue;
+      }
       freed.push(evictor.name);
       try {
         localStorage.setItem(key, serialized);
@@ -120,7 +130,13 @@ export function persistState(key: string, value: unknown): boolean {
         console.warn(`[persist] storage was full — freed ${freed.join(', ')} to save "${key}"`);
         announce({ key, freed, saved: true });
         return true;
-      } catch {
+      } catch (retryError) {
+        // Losing storage access is not a space problem. Preserve the remaining caches.
+        if (!isQuotaError(retryError)) {
+          console.error(`[persist] could not save "${key}"`, retryError);
+          announce({ key, freed, saved: false });
+          return false;
+        }
         // Still not enough — carry on to the next tier.
       }
     }
@@ -147,13 +163,33 @@ export function persistState(key: string, value: unknown): boolean {
 const FLUSH_INTERVAL_MS = 1000;
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 
+/** Draft deletion also needs a desktop flush, otherwise a crash can resurrect a saved draft. */
+export function removePersistedState(key: string): boolean {
+  try {
+    localStorage.removeItem(key);
+    requestDiskFlush();
+    return true;
+  } catch (err) {
+    console.error(`[persist] could not remove "${key}"`, err);
+    return false;
+  }
+}
+
 function requestDiskFlush(): void {
   if (flushTimer !== null) return;
-  const api = (window as { api?: { flushStorage?: () => void } }).api;
-  // The browser build has no main process to ask; the browser flushes on its own schedule.
-  if (!api?.flushStorage) return;
-  flushTimer = setTimeout(() => {
-    flushTimer = null;
-    api.flushStorage?.();
-  }, FLUSH_INTERVAL_MS);
+  try {
+    const api = (window as { api?: { flushStorage?: () => void | Promise<void> } }).api;
+    // A missing or disconnected desktop bridge must not turn a successful write into a failure.
+    if (!api?.flushStorage) return;
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      try {
+        void Promise.resolve(api.flushStorage?.()).catch((err) => console.error('[persist] could not flush storage', err));
+      } catch (err) {
+        console.error('[persist] could not flush storage', err);
+      }
+    }, FLUSH_INTERVAL_MS);
+  } catch (err) {
+    console.error('[persist] could not schedule storage flush', err);
+  }
 }

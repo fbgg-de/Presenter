@@ -75,7 +75,7 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
             <CableIcon />
             <Typography variant="h6">{C.HELPER_TITLE()}</Typography>
           </Stack>
-          <IconButton onClick={onClose}>
+          <IconButton aria-label={LL.COMMON.CLOSE()} onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </Stack>

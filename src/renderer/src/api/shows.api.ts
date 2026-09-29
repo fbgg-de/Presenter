@@ -107,7 +107,7 @@ export type ShowsResponse = {
   shows: Show[];
 };
 
-const showsApi = presenterApi.injectEndpoints({
+export const showsApi = presenterApi.injectEndpoints({
   endpoints: (build) => ({
     getShows: build.query<ApiSuccess<ShowsResponse>, { limit?: number; page?: number } | void>({
       query: (arg) => {
@@ -119,12 +119,12 @@ const showsApi = presenterApi.injectEndpoints({
     }),
     /** Fetch a single show by title (avoids loading the whole library to look one up). */
     getShow: build.query<ApiSuccess<ShowsResponse>, { title: string }>({
-      query: ({ title }) => `rest/Shows/1/0?title=${encodeURIComponent(title)}`,
+      query: ({ title }) => ({ url: `rest/Shows/1/0?title=${encodeURIComponent(title)}`, timeout: 15_000 }),
       providesTags: [{ type: 'Shows', id: 'LIST' }],
     }),
     /** Lightweight change-detection feed (title + date only) for background polling. */
     getShowsRevision: build.query<ApiSuccess<{ shows: { title: string; date?: string }[]; count: number }>, void>({
-      query: () => 'rest/ShowsRevision',
+      query: () => ({ url: 'rest/ShowsRevision', timeout: 15_000 }),
       providesTags: [{ type: 'Shows', id: 'LIST' }],
     }),
     saveShow: build.mutation<

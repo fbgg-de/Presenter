@@ -93,7 +93,7 @@ const BibleVersePickerBody = ({ open, onClose, onAdd }: BibleVersePickerProps) =
               flexGrow: 1,
             }}
           />
-          <IconButton size="small" onClick={onClose}>
+          <IconButton aria-label={LL.COMMON.CLOSE()} size="small" onClick={onClose}>
             <CloseIcon />
           </IconButton>
         </Stack>

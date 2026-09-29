@@ -132,6 +132,7 @@ import { MediaItemBadges } from '@/components/agenda/MediaItemBadges';
 import { MediaHoverPreview } from '@/components/agenda/MediaHoverPreview';
 import { GroupSettingsDialog } from '@/components/agenda/GroupSettingsDialog';
 import { useAppEvent } from '@/utils/appEvents';
+import { useShortcut, withShortcut } from '@/hooks/useShortcut';
 import { useLibraryActions } from '@/components/library/useLibraryActions';
 import { mediaItemLabel, newMediaItemData, newSlideshowData, type MediaRole } from '@/media/mediaItem';
 import { genItemId } from '@/utils/showGroups';
@@ -197,6 +198,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
   const { songClick, operatorMode } = useGetSettings('songClick', 'operatorMode');
   /** Live mode locks the set list: no adding, reordering or item menus while the service runs. */
   const locked = operatorMode === 'live';
+  const searchKey = useShortcut('open_search');
   const { currentShow, isDirty } = useGetShow();
   const { data: screenGroups = [] } = useGetScreenGroupsQuery();
 
@@ -687,6 +689,10 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
     const count = showItems.filter((entry) => (entry.groupId ?? DEFAULT_GROUP_ID) === groupId).length;
     setSettingsGroup({ group, count, tab });
   });
+  // Ctrl+F. Search adds to the set list, which Live keeps locked — like its button, it is gone there.
+  useAppEvent('presenter:open-search', () => {
+    if (!locked) openSearch();
+  });
   useAppEvent('presenter:edit-style', ({ styleId }) => {
     setStyleEditorEditId(styleId);
     setStyleEditorOpen(true);
@@ -824,7 +830,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
                 )}
                 {/* Context menu button — every entry in it edits the show, so it is gone in Live */}
                 {!locked && (
-                  <IconButton size="small" onClick={(e) => handleItemMenuOpen(e, i)} sx={{ p: 0.25 }}>
+                  <IconButton size="small" aria-label={LL.COMMON.MORE_ACTIONS()} onClick={(e) => handleItemMenuOpen(e, i)} sx={{ p: 0.25 }}>
                     <MoreVertIcon fontSize="small" sx={{ color: active ? '#fff' : undefined }} />
                   </IconButton>
                 )}
@@ -1353,8 +1359,8 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
                 <SetListIcon />
               </IconButton>
             </Tooltip>
-            <Tooltip title={LL.SONGS.SEARCH()}>
-              <IconButton size="small" onClick={() => openSearch()}>
+            <Tooltip title={withShortcut(LL.SONGS.SEARCH(), searchKey)}>
+              <IconButton size="small" aria-label={LL.SONGS.SEARCH()} onClick={() => openSearch()}>
                 <SearchIcon />
               </IconButton>
             </Tooltip>
@@ -1729,7 +1735,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
             order={showItems}
             groups={groups}
             renderItem={renderItemRow}
-            onMoveItem={locked ? () => {} : handleMoveItem}
+            onMoveItem={locked ? undefined : handleMoveItem}
             onToggleCollapse={handleToggleGroupCollapse}
             editable={!locked}
             onRenameGroup={handleRenameGroup}
