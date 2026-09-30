@@ -17,14 +17,28 @@ import { createTaskQueue } from './taskQueue';
 export const MEDIA_SERVER_BASE = 'http://127.0.0.1:9100';
 
 /**
+ * The desktop app's own media server at any port it may take (9100, or up to ten further when that
+ * one is busy). Older versions saved the full address of a file picked while the server ran on
+ * such a fallback port — after a restart it is back on 9100 and that address answers nothing.
+ */
+const OWN_SERVER = /^https?:\/\/(?:127\.0\.0\.1|localhost):91(?:0\d|10)(?=\/)/i;
+
+/** The desktop app: its operator window has `api`, its screens `presentationApi`. */
+const inDesktopApp = () => {
+  if (typeof window === 'undefined') return false;
+  const bridges = window as { api?: unknown; presentationApi?: unknown };
+  return !!(bridges.api || bridges.presentationApi);
+};
+
+/**
  * Resolve a stored media path to an absolute URL safe for <img>/<video> src.
  * Returns undefined for empty input or unsupported absolute filesystem paths
  * (logs a warning so legacy data can be spotted).
  */
 export function resolveMediaUrl(path: string | undefined | null): string | undefined {
   if (!path) return undefined;
-  // Remote URLs pass through.
-  if (/^https?:\/\//i.test(path)) return path;
+  // Remote URLs pass through — but in the desktop app, its own server's address is the media folder.
+  if (/^https?:\/\//i.test(path)) return inDesktopApp() ? path.replace(OWN_SERVER, MEDIA_SERVER_BASE) : path;
   // Reject absolute filesystem paths — see header comment.
   if (path.startsWith('file://') || path.startsWith('/') || /^[a-zA-Z]:[/\\]/.test(path)) {
     if (typeof console !== 'undefined') {

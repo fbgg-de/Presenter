@@ -12,9 +12,11 @@
  * page gets one by arming it (the chip shows on hover), or all of them at once from the header.
  */
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import { Alert, AlertTitle, Box, Button, Chip, IconButton, Skeleton, Stack, Tooltip, Typography } from '@mui/material';
+import { visuallyHidden } from '@mui/utils';
 import {
   FontDownloadOff as MissingFontIcon,
+  Refresh as RetryIcon,
   TimerOffOutlined as DisarmIcon,
   TimerOutlined as TimerIcon,
   Visibility as ShowPageIcon,
@@ -28,6 +30,7 @@ import { setActiveBlockIndex, useGetPresentationSettings } from '@/store/present
 import { useGetSettings } from '@/store/settingsSlice';
 import { useSlideSelect } from '@/hooks/useSlideSelect';
 import { documentFileOf } from '@/presentation/itemContent';
+import { probeMediaUrl, type MediaProbeStatus } from '@/utils/mediaUrl';
 import {
   documentArmHint,
   documentArmingShown,
@@ -43,35 +46,87 @@ import { useTick } from '@/components/media/Transport';
 import { armableChipSx } from '@/media/armableChip';
 import { LAYER_COLORS } from '@/components/operator/layerRows';
 
-/** The file opened off-screen, for its pages' pictures and builds — kept after use, so reopening the entry is instant. */
-function useOpenedDocument(item: ShowItem): { doc?: OpenedDocument; error?: string } {
+/**
+ * The file opened off-screen, for its pages' pictures and builds — kept after use, so reopening the
+ * entry is instant. A failed file is not kept, so `retry` opens it anew.
+ */
+function useOpenedDocument(item: ShowItem): { url?: string; doc?: OpenedDocument; error?: string; retry: () => void } {
   const file = documentFileOf(item);
   const kind = file?.kind;
   const url = file?.url;
-  // Kept with the file it belongs to, so another file reads as not opened yet.
-  const [state, setState] = useState<{ url?: string; doc?: OpenedDocument; error?: string }>({});
+  const [attempt, setAttempt] = useState(0);
+  const key = `${url} ${attempt}`;
+  // Kept with the file and attempt it belongs to, so another file (or a retry) reads as not opened yet.
+  const [state, setState] = useState<{ key?: string; doc?: OpenedDocument; error?: string }>({});
   useEffect(() => {
     if (!kind || !url) return;
     let cancelled = false;
     const lease = takeDocument(kind, url);
+    const opened = `${url} ${attempt}`;
     lease.opened
       .then((doc) => {
-        if (!cancelled) setState({ url, doc });
+        if (!cancelled) setState({ key: opened, doc });
       })
       .catch((error: unknown) => {
-        if (!cancelled) setState({ url, error: error instanceof Error ? error.message : String(error) });
+        if (!cancelled) setState({ key: opened, error: error instanceof Error ? error.message : String(error) });
       });
     return () => {
       cancelled = true;
       lease.release();
     };
-  }, [kind, url]);
-  return state.url === url ? state : {};
+  }, [kind, url, attempt]);
+  const retry = useCallback(() => setAttempt((n) => n + 1), []);
+  return state.key === key ? { url, doc: state.doc, error: state.error, retry } : { url, retry };
 }
 
-/** A page's picture, redrawn when the card changes size. */
+/** Why a file could not be opened, asked of the server: nothing answers, the file is not there, or it is there but unreadable. */
+function useFailureReason(url: string | undefined, failed: boolean): MediaProbeStatus | undefined {
+  const [reason, setReason] = useState<{ url: string; status: MediaProbeStatus }>();
+  useEffect(() => {
+    if (!failed || !url) return;
+    let cancelled = false;
+    void probeMediaUrl(url).then((status) => {
+      if (!cancelled) setReason({ url, status });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [url, failed]);
+  return failed && reason && reason.url === url ? reason.status : undefined;
+}
+
+/** A file's name from its path or address, as people know it. */
+const fileNameOf = (path: string | undefined): string => {
+  const name = (path ?? '').split(/[\\/]/).pop()?.split('?')[0] ?? '';
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+};
+
+/** Pages shown while nothing is known about the file yet — about a short deck's worth. */
+const PLACEHOLDER_PAGES = 6;
+
+/** A page not drawn yet: a slide's outline — a title and a few lines — shimmering in its place. */
+const PageSkeleton = () => (
+  <Stack sx={{ position: 'absolute', inset: 0, p: '9% 10%', gap: '7%', bgcolor: 'rgba(255,255,255,0.03)' }}>
+    <Skeleton variant="rounded" animation="wave" sx={{ width: '58%', height: '15%', transform: 'none', flexShrink: 0 }} />
+    {[86, 72, 78].map((width) => (
+      <Skeleton
+        key={width}
+        variant="rounded"
+        animation="wave"
+        sx={{ width: `${width}%`, height: '7%', transform: 'none', flexShrink: 0 }}
+      />
+    ))}
+  </Stack>
+);
+
+/** A page's picture, redrawn when the card changes size; its outline shimmers until the first drawing is done. */
 const PageThumb = memo(function PageThumb({ doc, page }: { doc: OpenedDocument; page: number }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const [drawn, setDrawn] = useState(false);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -79,13 +134,74 @@ const PageThumb = memo(function PageThumb({ doc, page }: { doc: OpenedDocument; 
     const observer = new ResizeObserver(() => {
       if (el.clientWidth === width) return;
       width = el.clientWidth;
-      void doc.drawPage(page, el).catch(() => {});
+      // A page that cannot be drawn stops shimmering too: it would never end otherwise.
+      void doc
+        .drawPage(page, el)
+        .catch(() => {})
+        .finally(() => setDrawn(true));
     });
     observer.observe(el);
     return () => observer.disconnect();
   }, [doc, page]);
-  return <Box ref={ref} sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', pointerEvents: 'none' }} />;
+  return (
+    <>
+      {!drawn && <PageSkeleton />}
+      <Box ref={ref} sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', pointerEvents: 'none' }} />
+    </>
+  );
 });
+
+/**
+ * In place of the cards when the file could not be opened: which file, why in plain words (once the
+ * server has been asked), the address and the error itself for whoever looks into it, and Try again.
+ */
+const OpenError = ({ name, url, message, onRetry }: { name: string; url?: string; message: string; onRetry: () => void }) => {
+  const { LL } = useI18nContext();
+  const D = LL.DOCUMENT;
+  const reason = useFailureReason(url, true);
+  const address = url ? new URL(url).host : '';
+  const why =
+    reason === 'server_down'
+      ? D.OPEN_SERVER_DOWN({ address })
+      : reason === 'not_found'
+        ? D.OPEN_NOT_FOUND({ menu: LL.AGENDA_DROP.RELINK_MENU() })
+        : reason === 'ok'
+          ? D.OPEN_UNREADABLE()
+          : undefined;
+  return (
+    <Alert
+      severity="error"
+      variant="outlined"
+      sx={{ gridColumn: '1 / -1', '& .MuiAlert-message': { minWidth: 0, flex: 1 } }}
+      action={
+        <Button color="inherit" size="small" startIcon={<RetryIcon />} onClick={onRetry} sx={{ whiteSpace: 'nowrap' }}>
+          {D.RETRY()}
+        </Button>
+      }
+    >
+      <AlertTitle>{D.OPEN_FAILED({ name })}</AlertTitle>
+      {why && (
+        <Typography variant="body2" sx={{ mb: 1 }}>
+          {why}
+        </Typography>
+      )}
+      {/* The technical part, selectable to copy into a report. */}
+      <Typography
+        component="div"
+        sx={{
+          fontFamily: '"JetBrains Mono", ui-monospace, Consolas, monospace',
+          fontSize: 11.5,
+          color: 'text.secondary',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-all',
+          userSelect: 'text',
+        }}
+      >
+        {[url, message].filter(Boolean).join('\n')}
+      </Typography>
+    </Alert>
+  );
+};
 
 /** Seconds until the live page turns, counting down; its full time while it is not counting. */
 const Countdown = ({ itemIndex, seconds }: { itemIndex: number; seconds: number }) => {
@@ -151,7 +267,7 @@ const ControlDocument = ({ item, index: itemIndex, isLive }: { item: ShowItem; i
   const locked = operatorMode === 'live';
   const { activeBlockIndex } = useGetPresentationSettings('activeBlockIndex');
   const { select: selectSlide, previewTarget } = useSlideSelect();
-  const { doc, error } = useOpenedDocument(item);
+  const { url, doc, error, retry } = useOpenedDocument(item);
 
   const known = item.documentBuilds;
   const knownTimings = item.documentTimings;
@@ -206,7 +322,6 @@ const ControlDocument = ({ item, index: itemIndex, isLive }: { item: ShowItem; i
   // Until a page turns by itself, the chips only show on hover: most decks are turned by hand.
   const quiet = !documentArmingShown(item);
 
-  const status = error ? D.OPEN_FAILED({ message: error }) : !doc ? D.LOADING() : undefined;
   const fonts = doc?.missingFonts.length ? D.MISSING_FONTS({ fonts: doc.missingFonts.join(', ') }) : undefined;
 
   return (
@@ -236,14 +351,39 @@ const ControlDocument = ({ item, index: itemIndex, isLive }: { item: ShowItem; i
           )}
         </>
       }
-      footer={
-        status && (
-          <Typography variant="body2" color={error ? 'error' : 'text.secondary'} sx={{ px: 1.5, pb: 1.5 }}>
-            {status}
-          </Typography>
-        )
-      }
     >
+      {error && <OpenError name={fileNameOf(item.mediaPath) || item.label || D.DOCUMENT()} url={url} message={error} onRetry={retry} />}
+      {/* While the file opens: its pages as outlines — as many as the entry knows, live and picked
+          ones marked, and clickable, so the service can go on — under a line saying so. */}
+      {!doc && !error && (
+        <>
+          {/* The outlines say it on screen; this says it to a screen reader. */}
+          <Box role="status" sx={visuallyHidden}>
+            {D.LOADING()}
+          </Box>
+          {(known?.length ? known : Array<number>(PLACEHOLDER_PAGES).fill(0)).map((count, page) => {
+            const selected = live?.page === page;
+            const left = hidden.includes(page);
+            return (
+              <SlideCard
+                key={page}
+                blockIndex={page}
+                name={known ? (left ? D.HIDDEN() : count ? D.BUILDS({ count }) : '') : ''}
+                selected={selected}
+                previewed={previewed?.page === page}
+                label={String(page + 1)}
+                onBlockClick={known && !left ? handleClick : undefined}
+                onBlockDoubleClick={known && !left ? handleDoubleClick : undefined}
+                forwardRef={selected ? selectedRef : undefined}
+              >
+                <Box sx={{ position: 'absolute', inset: 0, opacity: left ? 0.3 : 1 }}>
+                  <PageSkeleton />
+                </Box>
+              </SlideCard>
+            );
+          })}
+        </>
+      )}
       {doc &&
         builds.map((count, page) => {
           const selected = live?.page === page;

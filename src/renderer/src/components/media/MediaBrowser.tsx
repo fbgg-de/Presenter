@@ -499,8 +499,9 @@ const MediaBrowserBody = ({
   };
 
   const handleAddFile = (file: MediaFile) => {
-    // Keep custom server addresses (including Electron's fallback port) with the selection.
-    const path = viaNextcloud || file.url.startsWith(MEDIA_SERVER_BASE + '/') ? file.path : file.url;
+    // A custom server address on the web goes with the selection. The desktop app's own server is
+    // the media folder: its port can differ from one start to the next, so only the path is kept.
+    const path = viaNextcloud || isElectronApp() || file.url.startsWith(MEDIA_SERVER_BASE + '/') ? file.path : file.url;
     if (mode === 'pick' && onPick) {
       onPick(path);
       onClose();

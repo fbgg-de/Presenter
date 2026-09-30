@@ -145,6 +145,18 @@ eq('the file is resolved like media, segment by segment', parts.document, {
   kind: 'pptx',
   url: 'http://127.0.0.1:9100/Predigt/Folien%201.pptx',
 });
+// The desktop app's server on a fallback port once got saved into entries; after a restart it is
+// back on 9100. In the desktop app such an address is the media folder; on the web it is kept.
+const saved = { type: 'document', mediaPath: 'http://127.0.0.1:9101/Berufung.pptx' };
+eq('on the web a saved server address is kept', C.documentFileOf(saved).url, 'http://127.0.0.1:9101/Berufung.pptx');
+globalThis.window = { api: {} };
+eq('in the desktop app its own server address is the media folder', C.documentFileOf(saved).url, 'http://127.0.0.1:9100/Berufung.pptx');
+eq(
+  'another server stays as it is',
+  C.documentFileOf({ type: 'document', mediaPath: 'http://192.168.1.5:9101/a.pdf' }).url,
+  'http://192.168.1.5:9101/a.pdf',
+);
+delete globalThis.window;
 const at = (blockIndex) =>
   C.contentForItem(parts, {
     item,

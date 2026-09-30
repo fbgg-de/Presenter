@@ -1545,7 +1545,11 @@ const en = {
   DOCUMENT: {
     DOCUMENT: 'Presentation',
     LOADING: 'Opening the file…',
-    OPEN_FAILED: 'The file could not be opened: {message:string}',
+    OPEN_FAILED: 'Couldn’t open “{name:string}”',
+    OPEN_SERVER_DOWN: 'Nothing answers at {address:string}, where the media folder is served. Is the media server running, and the media folder set in Settings?',
+    OPEN_NOT_FOUND: 'The file isn’t in the media folder any more — moved, renamed or deleted? “{menu:string}” in the entry’s menu links it again.',
+    OPEN_UNREADABLE: 'The file is there but could not be read. It may be damaged, password-protected or not really a PDF or PowerPoint file.',
+    RETRY: 'Try again',
     BUILD: '{page:number} · click {step:number} of {builds:number}',
     BUILDS: '{count:number} click{{s}}',
     PAGES: '{count:number} page{{s}}',

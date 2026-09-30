@@ -5868,10 +5868,28 @@ type RootTranslation = {
 		 */
 		LOADING: string
 		/**
-		 * T​h​e​ ​f​i​l​e​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​o​p​e​n​e​d​:​ ​{​m​e​s​s​a​g​e​}
-		 * @param {string} message
+		 * C​o​u​l​d​n​’​t​ ​o​p​e​n​ ​“​{​n​a​m​e​}​”
+		 * @param {string} name
 		 */
-		OPEN_FAILED: RequiredParams<'message'>
+		OPEN_FAILED: RequiredParams<'name'>
+		/**
+		 * N​o​t​h​i​n​g​ ​a​n​s​w​e​r​s​ ​a​t​ ​{​a​d​d​r​e​s​s​}​,​ ​w​h​e​r​e​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​i​s​ ​s​e​r​v​e​d​.​ ​I​s​ ​t​h​e​ ​m​e​d​i​a​ ​s​e​r​v​e​r​ ​r​u​n​n​i​n​g​,​ ​a​n​d​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​s​e​t​ ​i​n​ ​S​e​t​t​i​n​g​s​?
+		 * @param {string} address
+		 */
+		OPEN_SERVER_DOWN: RequiredParams<'address'>
+		/**
+		 * T​h​e​ ​f​i​l​e​ ​i​s​n​’​t​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​a​n​y​ ​m​o​r​e​ ​—​ ​m​o​v​e​d​,​ ​r​e​n​a​m​e​d​ ​o​r​ ​d​e​l​e​t​e​d​?​ ​“​{​m​e​n​u​}​”​ ​i​n​ ​t​h​e​ ​e​n​t​r​y​’​s​ ​m​e​n​u​ ​l​i​n​k​s​ ​i​t​ ​a​g​a​i​n​.
+		 * @param {string} menu
+		 */
+		OPEN_NOT_FOUND: RequiredParams<'menu'>
+		/**
+		 * T​h​e​ ​f​i​l​e​ ​i​s​ ​t​h​e​r​e​ ​b​u​t​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​r​e​a​d​.​ ​I​t​ ​m​a​y​ ​b​e​ ​d​a​m​a​g​e​d​,​ ​p​a​s​s​w​o​r​d​-​p​r​o​t​e​c​t​e​d​ ​o​r​ ​n​o​t​ ​r​e​a​l​l​y​ ​a​ ​P​D​F​ ​o​r​ ​P​o​w​e​r​P​o​i​n​t​ ​f​i​l​e​.
+		 */
+		OPEN_UNREADABLE: string
+		/**
+		 * T​r​y​ ​a​g​a​i​n
+		 */
+		RETRY: string
 		/**
 		 * {​p​a​g​e​}​ ​·​ ​c​l​i​c​k​ ​{​s​t​e​p​}​ ​o​f​ ​{​b​u​i​l​d​s​}
 		 * @param {number} builds
@@ -16839,9 +16857,25 @@ export type TranslationFunctions = {
 		 */
 		LOADING: () => LocalizedString
 		/**
-		 * The file could not be opened: {message}
+		 * Couldn’t open “{name}”
 		 */
-		OPEN_FAILED: (arg: { message: string }) => LocalizedString
+		OPEN_FAILED: (arg: { name: string }) => LocalizedString
+		/**
+		 * Nothing answers at {address}, where the media folder is served. Is the media server running, and the media folder set in Settings?
+		 */
+		OPEN_SERVER_DOWN: (arg: { address: string }) => LocalizedString
+		/**
+		 * The file isn’t in the media folder any more — moved, renamed or deleted? “{menu}” in the entry’s menu links it again.
+		 */
+		OPEN_NOT_FOUND: (arg: { menu: string }) => LocalizedString
+		/**
+		 * The file is there but could not be read. It may be damaged, password-protected or not really a PDF or PowerPoint file.
+		 */
+		OPEN_UNREADABLE: () => LocalizedString
+		/**
+		 * Try again
+		 */
+		RETRY: () => LocalizedString
 		/**
 		 * {page} · click {step} of {builds}
 		 */

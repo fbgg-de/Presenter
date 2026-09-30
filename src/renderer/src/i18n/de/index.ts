@@ -1558,7 +1558,11 @@ const de: Translation = {
   DOCUMENT: {
     DOCUMENT: 'Präsentation',
     LOADING: 'Datei wird geöffnet…',
-    OPEN_FAILED: 'Die Datei konnte nicht geöffnet werden: {message}',
+    OPEN_FAILED: '„{name}“ konnte nicht geöffnet werden',
+    OPEN_SERVER_DOWN: 'Unter {address}, wo der Medienordner bereitgestellt wird, antwortet nichts. Läuft der Medienserver, und ist der Medienordner in den Einstellungen gesetzt?',
+    OPEN_NOT_FOUND: 'Die Datei liegt nicht mehr im Medienordner – verschoben, umbenannt oder gelöscht? „{menu}“ im Menü des Eintrags verknüpft sie neu.',
+    OPEN_UNREADABLE: 'Die Datei ist da, konnte aber nicht gelesen werden. Sie ist vielleicht beschädigt, kennwortgeschützt oder gar keine PDF- oder PowerPoint-Datei.',
+    RETRY: 'Erneut versuchen',
     BUILD: '{page} · Klick {step} von {builds}',
     BUILDS: '{count} {{Klick|Klicks}}',
     PAGES: '{count} {{Seite|Seiten}}',
