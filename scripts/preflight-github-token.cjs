@@ -125,3 +125,15 @@ async function preflightGitHubToken() {
 }
 
 module.exports = { preflightGitHubToken };
+
+// Also usable as a standalone step, so the publish scripts that invoke electron-builder
+// directly — publish:win and publish:mac — get the same check without routing through
+// publish-all.mjs.
+if (require.main === module) {
+  preflightGitHubToken()
+    .then((ok) => process.exit(ok ? 0 : 1))
+    .catch((error) => {
+      console.error(`\n\x1b[31m✖ GitHub publish preflight failed\x1b[0m\n  ${error.message}\n`);
+      process.exit(1);
+    });
+}
