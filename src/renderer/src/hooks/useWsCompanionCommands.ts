@@ -31,7 +31,7 @@ import { useStageStatus } from '@/hooks/useStageEngine';
 import { useSlideSelect } from '@/hooks/useSlideSelect';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { useGetShow } from '@/store/showSlice';
-import { countPrimaryLines } from '@/song';
+import { countPrimaryLines, lineStep } from '@/song';
 import { navigableBlockCount } from '@/utils/itemBlocks';
 import { wsActionTrigger } from './useBroadcastCompanionState';
 
@@ -161,34 +161,15 @@ export const useWsCompanionCommands = () => {
           }
           break;
         }
-        case 'prev_line': {
-          if (!s.currentSong) break;
-          if (s.activeLineIndex > 0) {
-            trigger(data.action);
-            dispatch(setActiveLineIndex(s.activeLineIndex - 1));
-          } else if (s.activeBlockIndex > 0) {
-            const prevBlockLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex - 1);
-            const primaryCount = countPrimaryLines(prevBlockLines, s.currentSong.languages?.[0]);
-            trigger(data.action);
-            dispatch(setActiveBlockIndex(s.activeBlockIndex - 1));
-            dispatch(setActiveLineIndex(Math.max(0, primaryCount - 1)));
-          }
-          break;
-        }
+        case 'prev_line':
         case 'next_line': {
           if (!s.currentSong) break;
-          const currentLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex);
-          const primaryCount = countPrimaryLines(currentLines, s.currentSong.languages?.[0]);
-          if (s.activeLineIndex < primaryCount - 1) {
-            trigger(data.action);
-            dispatch(setActiveLineIndex(s.activeLineIndex + 1));
-          } else {
-            const nonCopyrightCount = s.currentSong.getBlocks(s.orderName).filter((b) => !b.copyright).length;
-            if (s.activeBlockIndex < nonCopyrightCount - 1) {
-              trigger(data.action);
-              dispatch(setActiveBlockIndex(s.activeBlockIndex + 1));
-            }
-          }
+          // The same step as the arrow keys: empty rows skipped, across sections at the edges.
+          const step = lineStep(s.currentSong, s.orderName, s.activeBlockIndex, s.activeLineIndex, data.action === 'next_line' ? 1 : -1);
+          if (!step) break;
+          trigger(data.action);
+          if (step.block !== s.activeBlockIndex) dispatch(setActiveBlockIndex(step.block));
+          dispatch(setActiveLineIndex(step.line));
           break;
         }
         case 'set_item': {

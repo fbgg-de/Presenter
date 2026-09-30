@@ -86,6 +86,8 @@ import {
 } from '@/components/media/Transport';
 import { InspectorRow, InspectorSection, Segmented, ViewerFrame, type LampState } from '@/components/media/Viewer';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
+import { useMediaFolderIssue } from '@/media/useMediaFolder';
+import { MediaFolderNotice } from '@/components/media/MediaFolderNotice';
 
 /** The file menu's entry that opens the media browser. */
 const OTHER_FILE = '__other__';
@@ -145,6 +147,9 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
     (next: MediaItemData) => dispatch(updateShowItem({ index: itemIndex, item: { media: next } })),
     [dispatch, itemIndex],
   );
+
+  // When the media folder is the problem (none set up, its server silent), said above the viewer.
+  const folderIssue = useMediaFolderIssue(version?.sources[0]?.path);
 
   if (item.mediaSubType === 'color') return <ColorCard item={item} aspectRatio={aspectRatio} />;
   if (!data || !version) {
@@ -660,6 +665,7 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
         </Box>
       }
     >
+      {folderIssue && <MediaFolderNotice issue={folderIssue} sx={{ mb: 1.5 }} />}
       <ViewerFrame
         lamp={lamp}
         // The card header names the entry; the viewer names the screen whose framing it shows.

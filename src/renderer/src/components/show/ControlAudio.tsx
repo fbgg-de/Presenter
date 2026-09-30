@@ -53,6 +53,8 @@ import {
   TRANSPORT_ACTIVE,
 } from '@/components/media/Transport';
 import { InspectorRow, InspectorSection, ViewerFrame, type LampState } from '@/components/media/Viewer';
+import { useMediaFolderIssue } from '@/media/useMediaFolder';
+import { MediaFolderNotice } from '@/components/media/MediaFolderNotice';
 
 /** Loop is off unless the item turns it on: walk-in music ends, a pad is looped on purpose. */
 const audioLoopOf = (item: ShowItem) => item.mediaLoop === true;
@@ -76,6 +78,7 @@ const ControlAudio = ({ item, index }: { item: ShowItem; index: number }) => {
 
   const key = audioKeyOf(item);
   const url = resolveMediaUrl(item.mediaPath);
+  const folderIssue = useMediaFolderIssue(item.mediaPath);
   const label = item.label || mediaLabelOf(item.mediaPath ?? '');
   const loop = audioLoopOf(item);
   const volume = audioVolumeOf(item);
@@ -144,6 +147,7 @@ const ControlAudio = ({ item, index }: { item: ShowItem; index: number }) => {
         ) : undefined
       }
     >
+      {folderIssue && <MediaFolderNotice issue={folderIssue} sx={{ mb: 1.5 }} />}
       {!url ? (
         <Alert severity="warning">{A.NO_FILE()}</Alert>
       ) : (

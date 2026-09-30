@@ -291,15 +291,18 @@ const Footer = ({ variant = 'bar', compact = false, layout }: FooterProps) => {
   // belongs to FooterWindows, and the stage engine's position to useStageEngine.
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
   const [stagePanelOpen, setStagePanelOpen] = useState(false);
-  const [windowManager, setWindowManager] = useState<{ open: boolean; withNew?: boolean; selectId?: string }>({ open: false });
+  const [windowManager, setWindowManager] = useState<{ open: boolean; withNew?: boolean; selectId?: string; groupId?: number }>({
+    open: false,
+  });
 
-  const openWindowManager = useCallback((options?: { withNew?: boolean; selectId?: string }) => {
+  const openWindowManager = useCallback((options?: { withNew?: boolean; selectId?: string; groupId?: number }) => {
     setWindowManager({ open: true, ...options });
   }, []);
 
   // Other parts of the operator view (a screen preview without windows) ask for the Window Manager.
   useEffect(() => {
-    const handler = (e: Event) => openWindowManager((e as CustomEvent<{ withNew?: boolean; selectId?: string }>).detail ?? {});
+    const handler = (e: Event) =>
+      openWindowManager((e as CustomEvent<{ withNew?: boolean; selectId?: string; groupId?: number }>).detail ?? {});
     window.addEventListener('presenter:open-window-manager', handler);
     return () => window.removeEventListener('presenter:open-window-manager', handler);
   }, [openWindowManager]);
@@ -336,6 +339,7 @@ const Footer = ({ variant = 'bar', compact = false, layout }: FooterProps) => {
       <WindowManager
         open={windowManager.open}
         openWithNew={windowManager.withNew}
+        newWindowGroupId={windowManager.groupId}
         selectWindowId={windowManager.selectId}
         onClose={() => setWindowManager({ open: false })}
       />

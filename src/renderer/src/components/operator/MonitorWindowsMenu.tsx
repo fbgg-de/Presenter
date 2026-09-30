@@ -23,13 +23,17 @@ import type { usePresentationWindows, RigWindow } from '@/hooks/usePresentationW
 import { WindowQuickActions } from '@/components/layout/WindowQuickActions';
 import type { ScreenInfo } from '@/components/layout/ScreenPicker';
 
-/** Ask the Window Manager (hosted by the operator status) to open, optionally on a window or the new-window form. */
-export const openWindowManager = (detail: { withNew?: boolean; selectId?: string } = {}) =>
+/**
+ * Ask the Window Manager (hosted by the operator status) to open, optionally on a window or the
+ * new-window form — for `groupId`'s screens when one is given, else the default group's.
+ */
+export const openWindowManager = (detail: { withNew?: boolean; selectId?: string; groupId?: number } = {}) =>
   window.dispatchEvent(new CustomEvent('presenter:open-window-manager', { detail }));
 
 export const MonitorWindowsMenu = ({
   anchorEl,
   title,
+  groupId,
   windows,
   rig,
   onClose,
@@ -37,6 +41,8 @@ export const MonitorWindowsMenu = ({
   anchorEl: HTMLElement | null;
   /** The screen group's name. */
   title: string;
+  /** The screen group a window added from here joins. */
+  groupId?: number;
   windows: RigWindow[];
   rig: ReturnType<typeof usePresentationWindows>;
   onClose: () => void;
@@ -138,7 +144,7 @@ export const MonitorWindowsMenu = ({
             startIcon={<AddIcon />}
             onClick={() => {
               onClose();
-              openWindowManager({ withNew: true });
+              openWindowManager({ withNew: true, groupId });
             }}
           >
             {LL.WINDOW.ADD()}

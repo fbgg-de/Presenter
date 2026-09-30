@@ -10,7 +10,15 @@ import { extname, basename } from 'path';
 import { defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 import react from '@vitejs/plugin-react';
-import { appBuildDefines, rendererAliases, rendererInputs, sharedServerConfig } from './vite.shared';
+import {
+  appBuildDefines,
+  CHUNK_CHECK_OFF,
+  chunkSizeCheck,
+  rendererAliases,
+  rendererInputs,
+  rendererOnWarn,
+  sharedServerConfig,
+} from './vite.shared';
 import { errorFallbackPlugin } from './vite.plugin.error-fallback';
 const root = resolve(__dirname, 'src/renderer');
 /**
@@ -36,12 +44,15 @@ export default defineConfig({
     target: ['es2020', 'chrome87', 'safari14', 'firefox78', 'edge88'],
     rollupOptions: {
       input: rendererInputs,
+      onwarn: rendererOnWarn,
     },
+    chunkSizeWarningLimit: CHUNK_CHECK_OFF,
   },
   server: sharedServerConfig,
   plugins: [
     react(),
     errorFallbackPlugin(),
+    chunkSizeCheck(),
     viteStaticCopy({
       targets: [
         { src: src('api/*'), dest: outDir },

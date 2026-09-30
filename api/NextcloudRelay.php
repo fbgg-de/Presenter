@@ -484,8 +484,14 @@ class NextcloudRelay extends RestController
             http_build_query(['path' => $path, 'shareType' => 3, 'permissions' => 1]),
             $auth
         );
-        $data = json_decode($created['body'], true)['ocs']['data'] ?? null;
+        $body = json_decode($created['body'], true);
+        $data = $body['ocs']['data'] ?? null;
         if ($created['status'] !== 200 || empty($data['token'])) {
+            // Nextcloud says why (the root folder, a password it enforces, links turned off): pass it on.
+            $why = trim((string)($body['ocs']['meta']['message'] ?? ''));
+            if ($why !== '' && in_array($created['status'], [400, 403, 404], true)) {
+                $res->error($created['status'], 'Nextcloud did not create a public link for this folder: ' . $why, false);
+            }
             if ($created['status'] === 403) {
                 $res->error(403, 'Nextcloud does not allow public links for this folder (maybe a password is required)', false);
             }

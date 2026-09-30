@@ -2370,7 +2370,7 @@ type RootTranslation = {
 		 */
 		EMPTY_HINT_BODY: string
 		/**
-		 * C​l​i​c​k​ ​t​o​ ​i​m​p​o​r​t​ ​.​t​x​t​ ​o​r​ ​.​s​n​g​ ​s​o​n​g​ ​f​i​l​e​s​,​ ​o​r​ ​d​r​o​p​ ​s​o​n​g​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​a​u​d​i​o​,​ ​P​D​F​s​ ​a​n​d​ ​P​o​w​e​r​P​o​i​n​t​s​ ​h​e​r​e
+		 * C​l​i​c​k​ ​o​r​ ​d​r​o​p​ ​s​o​n​g​s​ ​(​.​s​n​g​,​ ​.​t​x​t​)​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​a​u​d​i​o​,​ ​P​D​F​s​ ​a​n​d​ ​P​o​w​e​r​P​o​i​n​t​s​ ​h​e​r​e
 		 */
 		EMPTY_HINT_DROP: string
 		/**
@@ -2498,9 +2498,76 @@ type RootTranslation = {
 		 */
 		SEARCH_PRESENTATIONS: string
 		/**
-		 * C​o​n​f​i​g​u​r​e​ ​a​ ​m​e​d​i​a​ ​d​i​r​e​c​t​o​r​y​ ​i​n​ ​S​e​t​t​i​n​g​s​ ​→​ ​E​l​e​c​t​r​o​n​ ​→​ ​M​e​d​i​a​ ​P​a​t​h
+		 * N​o​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​s​e​t​ ​u​p
 		 */
-		CONFIGURE_PATH: string
+		FOLDER_UNSET_TITLE: string
+		/**
+		 * I​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​a​u​d​i​o​,​ ​P​D​F​s​ ​a​n​d​ ​P​o​w​e​r​P​o​i​n​t​s​ ​a​r​e​ ​r​e​a​d​ ​f​r​o​m​ ​a​ ​m​e​d​i​a​ ​f​o​l​d​e​r​.​ ​C​h​o​o​s​e​ ​o​n​e​,​ ​a​n​d​ ​t​h​e​ ​m​e​d​i​a​ ​b​r​o​w​s​e​r​ ​a​n​d​ ​e​v​e​r​y​ ​m​e​d​i​a​ ​e​n​t​r​y​ ​w​o​r​k​ ​f​r​o​m​ ​i​t​.
+		 */
+		FOLDER_UNSET: string
+		/**
+		 * M​e​d​i​a​ ​f​o​l​d​e​r​ ​n​o​t​ ​r​e​a​c​h​a​b​l​e
+		 */
+		FOLDER_UNREACHABLE_TITLE: string
+		/**
+		 * N​o​t​h​i​n​g​ ​a​n​s​w​e​r​s​ ​a​t​ ​{​a​d​d​r​e​s​s​}​,​ ​w​h​e​r​e​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​i​s​ ​s​e​r​v​e​d​.​ ​C​h​e​c​k​ ​t​h​e​ ​m​e​d​i​a​ ​l​o​c​a​t​i​o​n​ ​i​n​ ​S​e​t​t​i​n​g​s​.
+		 * @param {string} address
+		 */
+		FOLDER_UNREACHABLE: RequiredParams<'address'>
+		/**
+		 * M​e​d​i​a​ ​f​o​l​d​e​r​ ​n​o​t​ ​f​o​u​n​d
+		 */
+		FOLDER_MISSING_TITLE: string
+		/**
+		 * T​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​“​{​p​a​t​h​}​”​ ​i​s​ ​n​o​t​ ​t​h​e​r​e​ ​—​ ​m​o​v​e​d​,​ ​r​e​n​a​m​e​d​,​ ​o​r​ ​o​n​ ​a​ ​d​r​i​v​e​ ​t​h​a​t​ ​i​s​ ​n​o​t​ ​c​o​n​n​e​c​t​e​d​?
+		 * @param {string} path
+		 */
+		FOLDER_MISSING: RequiredParams<'path'>
+		/**
+		 * S​e​t​ ​u​p​ ​m​e​d​i​a​ ​f​o​l​d​e​r
+		 */
+		FOLDER_SET_UP: string
+		/**
+		 * M​e​d​i​a​ ​l​o​c​a​t​i​o​n
+		 */
+		FOLDER_OPEN_SETTING: string
+		/**
+		 * N​e​x​t​c​l​o​u​d​ ​n​o​t​ ​c​o​n​n​e​c​t​e​d
+		 */
+		NEXTCLOUD_UNSET_TITLE: string
+		/**
+		 * I​n​ ​t​h​e​ ​b​r​o​w​s​e​r​,​ ​m​e​d​i​a​ ​c​o​m​e​s​ ​f​r​o​m​ ​y​o​u​r​ ​N​e​x​t​c​l​o​u​d​.​ ​C​o​n​n​e​c​t​ ​i​t​ ​a​n​d​ ​c​h​o​o​s​e​ ​i​t​s​ ​m​e​d​i​a​ ​f​o​l​d​e​r​,​ ​a​n​d​ ​t​h​e​ ​m​e​d​i​a​ ​b​r​o​w​s​e​r​ ​a​n​d​ ​e​v​e​r​y​ ​m​e​d​i​a​ ​e​n​t​r​y​ ​w​o​r​k​ ​f​r​o​m​ ​t​h​e​r​e​.
+		 */
+		NEXTCLOUD_UNSET: string
+		/**
+		 * N​o​ ​N​e​x​t​c​l​o​u​d​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​c​h​o​s​e​n
+		 */
+		NEXTCLOUD_NO_FOLDER_TITLE: string
+		/**
+		 * N​e​x​t​c​l​o​u​d​ ​i​s​ ​c​o​n​n​e​c​t​e​d​.​ ​C​h​o​o​s​e​ ​t​h​e​ ​f​o​l​d​e​r​ ​t​h​a​t​ ​h​o​l​d​s​ ​y​o​u​r​ ​m​e​d​i​a​,​ ​a​n​d​ ​t​h​e​ ​m​e​d​i​a​ ​b​r​o​w​s​e​r​ ​a​n​d​ ​e​v​e​r​y​ ​m​e​d​i​a​ ​e​n​t​r​y​ ​w​o​r​k​ ​f​r​o​m​ ​t​h​e​r​e​.
+		 */
+		NEXTCLOUD_NO_FOLDER: string
+		/**
+		 * N​e​x​t​c​l​o​u​d​ ​n​o​t​ ​r​e​a​c​h​a​b​l​e
+		 */
+		NEXTCLOUD_UNREACHABLE_TITLE: string
+		/**
+		 * N​o​t​h​i​n​g​ ​a​n​s​w​e​r​s​ ​a​t​ ​{​a​d​d​r​e​s​s​}​,​ ​w​h​e​r​e​ ​y​o​u​r​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​i​s​ ​s​h​a​r​e​d​ ​f​r​o​m​ ​N​e​x​t​c​l​o​u​d​.​ ​C​h​e​c​k​ ​t​h​e​ ​N​e​x​t​c​l​o​u​d​ ​c​o​n​n​e​c​t​i​o​n​ ​i​n​ ​S​e​t​t​i​n​g​s​.
+		 * @param {string} address
+		 */
+		NEXTCLOUD_UNREACHABLE: RequiredParams<'address'>
+		/**
+		 * C​o​n​n​e​c​t​ ​N​e​x​t​c​l​o​u​d
+		 */
+		NEXTCLOUD_CONNECT: string
+		/**
+		 * C​h​o​o​s​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r
+		 */
+		NEXTCLOUD_CHOOSE: string
+		/**
+		 * N​e​x​t​c​l​o​u​d​ ​c​o​n​n​e​c​t​i​o​n
+		 */
+		NEXTCLOUD_SETTING: string
 		/**
 		 * A​d​d​ ​b​y​ ​U​R​L
 		 */
@@ -5873,11 +5940,6 @@ type RootTranslation = {
 		 */
 		OPEN_FAILED: RequiredParams<'name'>
 		/**
-		 * N​o​t​h​i​n​g​ ​a​n​s​w​e​r​s​ ​a​t​ ​{​a​d​d​r​e​s​s​}​,​ ​w​h​e​r​e​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​i​s​ ​s​e​r​v​e​d​.​ ​I​s​ ​t​h​e​ ​m​e​d​i​a​ ​s​e​r​v​e​r​ ​r​u​n​n​i​n​g​,​ ​a​n​d​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​s​e​t​ ​i​n​ ​S​e​t​t​i​n​g​s​?
-		 * @param {string} address
-		 */
-		OPEN_SERVER_DOWN: RequiredParams<'address'>
-		/**
 		 * T​h​e​ ​f​i​l​e​ ​i​s​n​’​t​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​a​n​y​ ​m​o​r​e​ ​—​ ​m​o​v​e​d​,​ ​r​e​n​a​m​e​d​ ​o​r​ ​d​e​l​e​t​e​d​?​ ​“​{​m​e​n​u​}​”​ ​i​n​ ​t​h​e​ ​e​n​t​r​y​’​s​ ​m​e​n​u​ ​l​i​n​k​s​ ​i​t​ ​a​g​a​i​n​.
 		 * @param {string} menu
 		 */
@@ -7507,6 +7569,14 @@ type RootTranslation = {
 		 */
 		DOWNLOAD_WINDOWS: string
 		/**
+		 * D​o​w​n​l​o​a​d​ ​f​o​r​ ​m​a​c​O​S
+		 */
+		DOWNLOAD_MACOS: string
+		/**
+		 * D​o​w​n​l​o​a​d​ ​f​o​r​ ​L​i​n​u​x
+		 */
+		DOWNLOAD_LINUX: string
+		/**
 		 * D​i​s​m​i​s​s
 		 */
 		DISMISS: string
@@ -7543,6 +7613,10 @@ type RootTranslation = {
 		 * @param {unknown} os
 		 */
 		MODAL_DETECT_HINT: RequiredParams<'os'>
+		/**
+		 * Y​o​u​r​ ​O​S
+		 */
+		YOUR_OS: string
 		/**
 		 * N​o​t​ ​y​e​t​ ​a​v​a​i​l​a​b​l​e​ ​f​o​r​ ​t​h​i​s​ ​O​S​.​ ​C​h​e​c​k​ ​b​a​c​k​ ​l​a​t​e​r​.
 		 */
@@ -13445,7 +13519,7 @@ export type TranslationFunctions = {
 		 */
 		EMPTY_HINT_BODY: () => LocalizedString
 		/**
-		 * Click to import .txt or .sng song files, or drop songs, images, videos, audio, PDFs and PowerPoints here
+		 * Click or drop songs (.sng, .txt), images, videos, audio, PDFs and PowerPoints here
 		 */
 		EMPTY_HINT_DROP: () => LocalizedString
 		/**
@@ -13573,9 +13647,73 @@ export type TranslationFunctions = {
 		 */
 		SEARCH_PRESENTATIONS: () => LocalizedString
 		/**
-		 * Configure a media directory in Settings → Electron → Media Path
+		 * No media folder set up
 		 */
-		CONFIGURE_PATH: () => LocalizedString
+		FOLDER_UNSET_TITLE: () => LocalizedString
+		/**
+		 * Images, videos, audio, PDFs and PowerPoints are read from a media folder. Choose one, and the media browser and every media entry work from it.
+		 */
+		FOLDER_UNSET: () => LocalizedString
+		/**
+		 * Media folder not reachable
+		 */
+		FOLDER_UNREACHABLE_TITLE: () => LocalizedString
+		/**
+		 * Nothing answers at {address}, where the media folder is served. Check the media location in Settings.
+		 */
+		FOLDER_UNREACHABLE: (arg: { address: string }) => LocalizedString
+		/**
+		 * Media folder not found
+		 */
+		FOLDER_MISSING_TITLE: () => LocalizedString
+		/**
+		 * The media folder “{path}” is not there — moved, renamed, or on a drive that is not connected?
+		 */
+		FOLDER_MISSING: (arg: { path: string }) => LocalizedString
+		/**
+		 * Set up media folder
+		 */
+		FOLDER_SET_UP: () => LocalizedString
+		/**
+		 * Media location
+		 */
+		FOLDER_OPEN_SETTING: () => LocalizedString
+		/**
+		 * Nextcloud not connected
+		 */
+		NEXTCLOUD_UNSET_TITLE: () => LocalizedString
+		/**
+		 * In the browser, media comes from your Nextcloud. Connect it and choose its media folder, and the media browser and every media entry work from there.
+		 */
+		NEXTCLOUD_UNSET: () => LocalizedString
+		/**
+		 * No Nextcloud media folder chosen
+		 */
+		NEXTCLOUD_NO_FOLDER_TITLE: () => LocalizedString
+		/**
+		 * Nextcloud is connected. Choose the folder that holds your media, and the media browser and every media entry work from there.
+		 */
+		NEXTCLOUD_NO_FOLDER: () => LocalizedString
+		/**
+		 * Nextcloud not reachable
+		 */
+		NEXTCLOUD_UNREACHABLE_TITLE: () => LocalizedString
+		/**
+		 * Nothing answers at {address}, where your media folder is shared from Nextcloud. Check the Nextcloud connection in Settings.
+		 */
+		NEXTCLOUD_UNREACHABLE: (arg: { address: string }) => LocalizedString
+		/**
+		 * Connect Nextcloud
+		 */
+		NEXTCLOUD_CONNECT: () => LocalizedString
+		/**
+		 * Choose media folder
+		 */
+		NEXTCLOUD_CHOOSE: () => LocalizedString
+		/**
+		 * Nextcloud connection
+		 */
+		NEXTCLOUD_SETTING: () => LocalizedString
 		/**
 		 * Add by URL
 		 */
@@ -16861,10 +16999,6 @@ export type TranslationFunctions = {
 		 */
 		OPEN_FAILED: (arg: { name: string }) => LocalizedString
 		/**
-		 * Nothing answers at {address}, where the media folder is served. Is the media server running, and the media folder set in Settings?
-		 */
-		OPEN_SERVER_DOWN: (arg: { address: string }) => LocalizedString
-		/**
 		 * The file isn’t in the media folder any more — moved, renamed or deleted? “{menu}” in the entry’s menu links it again.
 		 */
 		OPEN_NOT_FOUND: (arg: { menu: string }) => LocalizedString
@@ -18439,6 +18573,14 @@ export type TranslationFunctions = {
 		 */
 		DOWNLOAD_WINDOWS: () => LocalizedString
 		/**
+		 * Download for macOS
+		 */
+		DOWNLOAD_MACOS: () => LocalizedString
+		/**
+		 * Download for Linux
+		 */
+		DOWNLOAD_LINUX: () => LocalizedString
+		/**
 		 * Dismiss
 		 */
 		DISMISS: () => LocalizedString
@@ -18474,6 +18616,10 @@ export type TranslationFunctions = {
 		 * Your OS: {os}
 		 */
 		MODAL_DETECT_HINT: (arg: { os: unknown }) => LocalizedString
+		/**
+		 * Your OS
+		 */
+		YOUR_OS: () => LocalizedString
 		/**
 		 * Not yet available for this OS. Check back later.
 		 */

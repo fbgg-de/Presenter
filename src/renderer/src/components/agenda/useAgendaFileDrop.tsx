@@ -1,5 +1,6 @@
 /**
- * Dropping files onto the agenda.
+ * Dropping files onto the agenda — or picking them in the file dialog of an empty group's drop
+ * area (`onPick`), which takes the same files the same way.
  *
  * - Lyric files (.sng, CCLI .txt) are imported as songs, as before.
  * - Images, videos and audio become media items in the group they are dropped on — after the entry
@@ -12,7 +13,7 @@
  * Group cards carry `data-agenda-group` and item rows `data-agenda-index`, which is how the target
  * is read off the drop point without the list having to know about files.
  */
-import { useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ChangeEvent, type DragEvent, type ReactNode } from 'react';
 import {
   Alert,
   Button,
@@ -190,13 +191,24 @@ export function useAgendaFileDrop({
     event.preventDefault();
     depth.current = 0;
     setDragging(false);
+    addFiles(Array.from(event.dataTransfer.files), targetFrom(event.target));
+  };
+
+  /** Files picked in the file dialog of an empty group's drop area: into that group, like a drop. */
+  const onPick = (event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    addFiles(Array.from(input.files ?? []), targetFrom(input));
+    // Cleared, so picking the same file again still counts as a change.
+    input.value = '';
+  };
+
+  /** Dropped or picked files into `target`: songs imported, media and documents added. */
+  const addFiles = (files: File[], target: DropTarget) => {
     if (disabled) {
       setNotice({ severity: 'info', message: A.LOCKED() });
       return;
     }
 
-    const target = targetFrom(event.target);
-    const files = Array.from(event.dataTransfer.files);
     const songs = files.filter((file) => isSongFileName(file.name));
     const media = files.filter((file) => mediaKindOf(file.name));
     const ignored = files.length - songs.length - media.length;
@@ -399,5 +411,5 @@ export function useAgendaFileDrop({
     </>
   );
 
-  return { dropProps, overlay, dialogs };
+  return { dropProps, overlay, dialogs, onPick };
 }

@@ -14,7 +14,7 @@ import {
 } from '@/store/presentationSlice';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { DEFAULT_KEYBOARD_MAPPING } from '@/components/settings/KeyboardMappingEditor';
-import { countPrimaryLines } from '@/song';
+import { lineStep } from '@/song';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import { useGetShow } from '@/store/showSlice';
 import { shuttle, togglePlaybackKey } from '@/media/mediaControls';
@@ -224,42 +224,21 @@ export const useKeyboardNavigation = () => {
         }
       };
 
-      const prevLine = () => {
+      /** A line up or down, empty rows skipped, into the neighbouring section at a block's edge. */
+      const stepLine = (direction: 1 | -1) => {
         // Verse pages have no line navigation of their own: a line step is a page step.
         if (!s.currentSong) {
-          prevBlock();
+          if (direction > 0) nextBlock();
+          else prevBlock();
           return;
         }
-        if (s.currentSong) {
-          if (s.activeLineIndex > 0) {
-            dispatch(setActiveLineIndex(s.activeLineIndex - 1));
-          } else if (s.activeBlockIndex > 0) {
-            const prevBlockLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex - 1);
-            const primaryCount = countPrimaryLines(prevBlockLines, s.currentSong.languages?.[0]);
-            dispatch(setActiveBlockIndex(s.activeBlockIndex - 1));
-            dispatch(setActiveLineIndex(Math.max(0, primaryCount - 1)));
-          }
-        }
+        const step = lineStep(s.currentSong, s.orderName, s.activeBlockIndex, s.activeLineIndex, direction);
+        if (!step) return;
+        if (step.block !== s.activeBlockIndex) dispatch(setActiveBlockIndex(step.block));
+        dispatch(setActiveLineIndex(step.line));
       };
-
-      const nextLine = () => {
-        if (!s.currentSong) {
-          nextBlock();
-          return;
-        }
-        if (s.currentSong) {
-          const currentLines = s.currentSong.getBlock(s.orderName, s.activeBlockIndex);
-          const primaryCount = countPrimaryLines(currentLines, s.currentSong.languages?.[0]);
-          if (s.activeLineIndex < primaryCount - 1) {
-            dispatch(setActiveLineIndex(s.activeLineIndex + 1));
-          } else {
-            const nonCopyrightCount = s.currentSong.getBlocks(s.orderName).filter((b) => !b.copyright).length;
-            if (s.activeBlockIndex < nonCopyrightCount - 1) {
-              dispatch(setActiveBlockIndex(s.activeBlockIndex + 1));
-            }
-          }
-        }
-      };
+      const prevLine = () => stepLine(-1);
+      const nextLine = () => stepLine(1);
 
       switch (action) {
         case 'prev_item':

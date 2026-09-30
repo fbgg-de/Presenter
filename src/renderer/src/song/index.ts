@@ -105,3 +105,37 @@ export const countPrimaryLines = (lines: string[], declaredPrimary?: string): nu
 
   return lines.filter((line) => isPrimaryLine(line, primary)).length;
 };
+
+/**
+ * The lines a line step stops at, as indexes into the block's primary lines: those with text.
+ * An empty row is spacing on the slide, not a line to present — highlighted, it is invisible, so
+ * a step onto one looked as if the key had done nothing.
+ */
+export const steppableLineIndexes = (lines: string[], declaredPrimary?: string): number[] => {
+  const primary = resolvePrimaryLanguage(lines, declaredPrimary);
+
+  return lines.filter((line) => isPrimaryLine(line, primary)).flatMap((line, index) => (parseTaggedLine(line).text.trim() ? [index] : []));
+};
+
+/**
+ * Where a line step lands (`direction` 1 = next, -1 = previous): the next line with text in the
+ * block, else the first (last) one of the next (previous) section. Undefined at the song's end.
+ */
+export const lineStep = (
+  song: Pick<ISong, 'getBlock' | 'getBlocks' | 'languages'>,
+  order: string,
+  block: number,
+  line: number,
+  direction: 1 | -1,
+): { block: number; line: number } | undefined => {
+  const stops = (index: number) => steppableLineIndexes(song.getBlock(order, index), song.languages?.[0]);
+  const here = stops(block);
+  const within = direction > 0 ? here.find((index) => index > line) : here.filter((index) => index < line).pop();
+  if (within !== undefined) return { block, line: within };
+
+  const target = block + direction;
+  const sections = song.getBlocks(order).filter((section) => !section.copyright).length;
+  if (target < 0 || target >= sections) return undefined;
+  const there = stops(target);
+  return { block: target, line: (direction > 0 ? there[0] : there[there.length - 1]) ?? 0 };
+};

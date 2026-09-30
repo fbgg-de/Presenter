@@ -131,7 +131,15 @@ export const CopyToMediaFolderDialog = ({
   };
 
   return (
-    <Dialog open={open} onClose={busy ? undefined : onCancel} maxWidth="sm" fullWidth>
+    <Dialog
+      open={open}
+      // Cancel, Escape or a choice close it — not a click beside it. Right after the Nextcloud
+      // sign-in it opens behind the sign-in window, and the click that brings this window back
+      // lands on the backdrop: the picker was gone before a folder could be chosen.
+      onClose={busy ? undefined : (_event, reason) => reason !== 'backdropClick' && onCancel()}
+      maxWidth="sm"
+      fullWidth
+    >
       <DialogTitle>{title ?? A.COPY_TITLE()}</DialogTitle>
       <DialogContent>
         <Stack spacing={2}>

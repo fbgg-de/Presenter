@@ -584,5 +584,34 @@ eq('the paddings come off the width, the line height sets how many lines fit', [
 eq('the font is spelled out for measuring', limits.font.startsWith('96px'), true);
 eq('without a canvas nothing is flagged', FIT.lineOverflows('a very long line', limits), false);
 
+// Line steps skip empty rows: highlighted, an empty row is invisible, so a step onto one looked
+// like a key that did nothing. At a section's edge the step moves into the next (previous) one.
+{
+  await build({
+    entryPoints: ['src/renderer/src/song/index.ts'],
+    bundle: true,
+    format: 'esm',
+    platform: 'node',
+    outfile: join(dir, 'song-barrel.js'),
+    alias: { '@': resolve('src/renderer/src') },
+    logLevel: 'error',
+  });
+  const SONG = await import(pathToFileURL(join(dir, 'song-barrel.js')).href);
+  const sections = [['[DE] a', '', '[DE] b', '[EN] b-en', ''], ['', '[DE] c'], ['[DE] d']];
+  const song = {
+    languages: ['DE'],
+    getBlock: (_order, index) => sections[index] ?? [],
+    getBlocks: () => [...sections.map((lines) => ({ lines, copyright: false })), { lines: [], copyright: true }],
+  };
+  const walk = (direction, from) => {
+    const stops = [];
+    for (let at = from; (at = SONG.lineStep(song, 'Default', at.block, at.line, direction)); ) stops.push(`${at.block}.${at.line}`);
+    return stops;
+  };
+  eq('only lines with text are stops, translations never', [0, 1, 2].map((i) => SONG.steppableLineIndexes(sections[i], 'DE')), [[0, 2], [1], [0]]);
+  eq('down skips empty rows, into the next section', walk(1, { block: 0, line: 0 }), ['0.2', '1.1', '2.0']);
+  eq('up lands on the last line with text', walk(-1, { block: 2, line: 0 }), ['1.1', '0.2', '0.0']);
+}
+
 console.log(failed ? `\n${failed} failing` : '\nall passing');
 process.exit(failed ? 1 : 0);

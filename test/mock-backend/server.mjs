@@ -148,6 +148,25 @@ const handlers = {
   '/rest/Session': (req) =>
     req.method === 'DELETE' ? { message: 'logged out' } : { ...session(), authType: isAdmin ? 'oidc_admin' : 'oidc' },
   '/rest/Accounts': () => [{ license: fixtures.account.license, name: fixtures.account.name }],
+  // A Windows and a macOS installer in /app; Linux has none.
+  '/rest/Installers': () => ({
+    installers: [
+      {
+        os: 'windows',
+        file: 'presenter-setup.exe',
+        url: '/app/presenter-setup.exe',
+        size: 98_304_000,
+        modified: '2026-09-30T12:00:00+02:00',
+      },
+      {
+        os: 'macos',
+        file: 'presenter-setup.dmg',
+        url: '/app/presenter-setup.dmg',
+        size: 121_634_816,
+        modified: '2026-09-30T16:30:00+02:00',
+      },
+    ],
+  }),
   '/rest/NextcloudRelay': nextcloudRelay,
   '/rest/AccountIntegrations': (req) => {
     integrations();
@@ -675,7 +694,8 @@ createServer(async (req, res) => {
   let payload = {};
   let status = 200;
   try {
-    if (signedOut && route === '/rest/Session') payload = { account: 0, name: '', mail: '', isAuthenticated: false, authType: null, settings: {} };
+    if (signedOut && route === '/rest/Session')
+      payload = { account: 0, name: '', mail: '', isAuthenticated: false, authType: null, settings: {} };
     else if (signedOut && route !== '/rest/Accounts' && path.startsWith('/rest/')) payload = { __status: 401, error: 'Unauthorized' };
     else payload = handler ? handler({ path, method: req.method, body, query }) : {};
     if (!handler) status = 200; // unknown endpoints answer {} rather than 404 — see the header comment

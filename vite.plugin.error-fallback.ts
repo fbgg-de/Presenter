@@ -118,9 +118,10 @@ export function errorFallbackPlugin(): Plugin {
     // ── HTML transformation ─────────────────────────────────────────────────
 
     transformIndexHtml: {
-      /** Run before Vite's own HTML processing so the tag is in place when
-       *  Vite scans for module entry points. */
-      order: 'pre',
+      /** After Vite's own HTML processing: the tag is a classic script on purpose, and Vite, had it
+       *  seen it, would only say it cannot bundle one. It still lands first in `<head>`, ahead of
+       *  the module scripts Vite has put there. */
+      order: 'post',
 
       handler(html) {
         // Remove any existing error-fallback script tag (module or otherwise).

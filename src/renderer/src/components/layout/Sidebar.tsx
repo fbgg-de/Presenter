@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState, MouseEvent, ChangeEvent, type ReactNode } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, MouseEvent, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Alert,
@@ -129,6 +129,7 @@ import { useSlideSelect } from '@/hooks/useSlideSelect';
 import { useAgendaFileDrop } from '@/components/agenda/useAgendaFileDrop';
 import { RelinkMediaDialog } from '@/components/agenda/RelinkMediaDialog';
 import { MissingMediaFileIcon } from '@/components/agenda/MissingMediaFileIcon';
+import { OPEN_SETTINGS_EVENT, type SettingsTarget } from '@/components/settings/openSettings';
 import { AgendaAudioButton } from '@/components/agenda/AgendaAudioButton';
 import { DocumentItemBadges, MediaItemBadges } from '@/components/agenda/MediaItemBadges';
 import { MediaHoverPreview } from '@/components/agenda/MediaHoverPreview';
@@ -137,7 +138,7 @@ import { useAppEvent } from '@/utils/appEvents';
 import { useShortcut, withShortcut } from '@/hooks/useShortcut';
 import { useLibraryActions } from '@/components/library/useLibraryActions';
 import { mediaItemLabel, newMediaItemData, newSlideshowData, type MediaRole } from '@/media/mediaItem';
-import { mediaLabelOf } from '@/media/mediaFiles';
+import { AGENDA_FILE_ACCEPT, mediaLabelOf } from '@/media/mediaFiles';
 import { genItemId } from '@/utils/showGroups';
 import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { WindowManager } from '@/components/layout/WindowManager';
@@ -368,7 +369,21 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
   const setOpenSettings = (open: boolean) => {
     _setOpenSettings(open);
     dispatch(setKeyboardDisabled(open));
+    if (!open) setSettingsTarget(undefined);
   };
+  // "Set up media folder" and the like, from anywhere: Settings at that place (see openSettings).
+  const [settingsTarget, setSettingsTarget] = useState<SettingsTarget>();
+  const [settingsKey, setSettingsKey] = useState(0);
+  useEffect(() => {
+    const handler = (event: Event) => {
+      setSettingsTarget((event as CustomEvent<SettingsTarget | undefined>).detail);
+      setSettingsKey((key) => key + 1);
+      _setOpenSettings(true);
+      dispatch(setKeyboardDisabled(true));
+    };
+    window.addEventListener(OPEN_SETTINGS_EVENT, handler);
+    return () => window.removeEventListener(OPEN_SETTINGS_EVENT, handler);
+  }, [dispatch]);
 
   const setOpenSongEditor = (open: boolean) => {
     _setOpenSongEditor(open);
@@ -556,13 +571,6 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
   const hasExtension = (file: File, ext: string): boolean => file.name.toLowerCase().endsWith(ext);
   const isSngFile = (file: File): boolean => hasExtension(file, '.sng');
 
-  /**
-   * Returns true for files this sidebar can import (CCLI .txt or SongBeamer .sng). Decided by
-   * extension alone: the reported MIME type is empty or arbitrary for both depending on the
-   * OS, so requiring `text/plain` turned valid .txt files away.
-   */
-  const isSupportedSongFile = (file: File): boolean => hasExtension(file, '.txt') || isSngFile(file);
-
   /** Parse a supported song file into an ISong. */
   const parseSongFile = (file: File, content: string): ISong => (isSngFile(file) ? SngSong(content) : CCLISong(file.name, content));
 
@@ -643,12 +651,6 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
 
   // Ref for the hidden file-input used by the drop-zone click handler
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    [...(e.target.files ?? [])].filter(isSupportedSongFile).forEach(importSongFile);
-    // Reset so the same file can be re-selected
-    e.target.value = '';
-  };
 
   // Get display info for a show item
   const getItemLabel = (item: ShowItem, index: number): string => {
@@ -1165,7 +1167,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
           {syncMsg?.text}
         </Alert>
       </Snackbar>
-      <Settings open={openSettings} setOpen={setOpenSettings} />
+      <Settings key={settingsKey} open={openSettings} setOpen={setOpenSettings} target={settingsTarget} />
       <SongEditor
         open={openSongEditor}
         setOpen={setOpenSongEditor}
@@ -1818,7 +1820,8 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
                 <Typography variant="caption" color="text.disabled">
                   {LL.SHOW_ITEMS.EMPTY_HINT_DROP()}
                 </Typography>
-                <input ref={fileInputRef} type="file" accept=".txt,.sng" multiple hidden onChange={handleFileInputChange} />
+                {/* Whatever a drop takes — songs, media, PDFs and PowerPoints — handled the same way. */}
+                <input ref={fileInputRef} type="file" accept={AGENDA_FILE_ACCEPT} multiple hidden onChange={agendaDrop.onPick} />
               </Box>
             }
             onReorderGroup={handleReorderGroup}

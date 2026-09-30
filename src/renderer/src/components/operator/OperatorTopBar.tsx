@@ -274,7 +274,7 @@ const LiveOutput = ({ groupId, size, title }: { groupId: number | undefined; siz
     [isBlack, isTextHidden, videoVisible, mediaVisible],
   );
   const { content } = usePreviewContent(activeItemIndex, activeBlockIndex, groupId, live);
-  return <PresentationFrame content={content} width={size.width} height={size.height} title={title} />;
+  return <PresentationFrame content={content} width={size.width} height={size.height} title={title} overlayGroupId={groupId} />;
 };
 
 /**
@@ -293,9 +293,10 @@ const MonitorStrip = ({ boxRef, monitorWidth }: { boxRef: (node: HTMLElement | n
   const [windowsMenu, setWindowsMenu] = useState<{ anchor: HTMLElement; key: string } | null>(null);
 
   /** Open a group's closed windows — or, when it has none yet, the Window Manager to add one. */
-  const openWindows = (windows: typeof rig.windows) => {
+  const openWindows = (windows: typeof rig.windows, groupId: number | undefined) => {
+    // A group with no window yet gets its first one: the new window is for this group's screens.
     if (windows.length === 0) {
-      openWindowManager({ withNew: true });
+      openWindowManager({ withNew: true, groupId });
       return;
     }
     for (const win of windows) if (!win.isOpen) void rig.open(win.id);
@@ -342,7 +343,9 @@ const MonitorStrip = ({ boxRef, monitorWidth }: { boxRef: (node: HTMLElement | n
               live={monitor.live}
               width={monitorWidth}
               // Setting up a window for a group that has none is preparation; reopening one is not.
-              onOpen={operatorMode === 'live' && monitor.windows.length === 0 ? undefined : () => openWindows(monitor.windows)}
+              onOpen={
+                operatorMode === 'live' && monitor.windows.length === 0 ? undefined : () => openWindows(monitor.windows, monitor.groupId)
+              }
               openLabel={monitor.windows.length > 0 ? O.OPEN_WINDOW() : O.ADD_WINDOW()}
               onShowWindows={(anchor) => setWindowsMenu({ anchor, key: monitor.key })}
               showWindowsLabel={O.MONITOR_WINDOWS_MENU()}
@@ -357,6 +360,7 @@ const MonitorStrip = ({ boxRef, monitorWidth }: { boxRef: (node: HTMLElement | n
           <MonitorWindowsMenu
             anchorEl={monitor ? (windowsMenu?.anchor ?? null) : null}
             title={monitor?.label ?? ''}
+            groupId={monitor?.groupId}
             windows={monitor?.windows ?? []}
             rig={rig}
             onClose={() => setWindowsMenu(null)}

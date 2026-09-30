@@ -20,6 +20,9 @@ const EXTENSIONS: Record<MediaFileKind, string[]> = {
 /** Lyric files the agenda imports as songs. */
 export const SONG_FILE_EXTENSIONS = ['.sng', '.txt'];
 
+/** Everything the agenda takes, as a file input's `accept`: songs, media and documents alike. */
+export const AGENDA_FILE_ACCEPT = [...SONG_FILE_EXTENSIONS, ...Object.values(EXTENSIONS).flat()].join(',');
+
 const extensionOf = (name: string): string => {
   const dot = name.lastIndexOf('.');
   return dot >= 0 ? name.slice(dot).toLowerCase() : '';

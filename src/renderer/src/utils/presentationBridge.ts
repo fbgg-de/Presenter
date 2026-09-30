@@ -426,9 +426,28 @@ export async function sendStage(id: string, payload: StageOverlayPayload): Promi
   }
 }
 
+/** Who draws the stage overlay besides the windows: the operator's preview monitors. */
+const stageListeners = new Set<() => void>();
+
+/** Follow the stage overlay as it is broadcast (for `useSyncExternalStore`). */
+export const subscribeStage = (listener: () => void): (() => void) => {
+  stageListeners.add(listener);
+  return () => {
+    stageListeners.delete(listener);
+  };
+};
+
+/** The stage overlay as last broadcast. */
+export const getBroadcastStage = (): StageOverlayPayload => lastBroadcastStage;
+
+/** What a window of `groupId` shows of `payload` — a preview of that group's screens shows the same. */
+export const stagePayloadForGroup = (payload: StageOverlayPayload, groupId: number | undefined): StageOverlayPayload =>
+  stagePayloadForWindow(payload, { screenGroupId: groupId } as WindowConfig);
+
 /** Push the stage overlay to every open window. */
 export async function broadcastStage(payload: StageOverlayPayload): Promise<void> {
   lastBroadcastStage = payload;
+  stageListeners.forEach((listener) => listener());
   for (const [id] of openWindows) {
     void sendStage(id, payload);
   }

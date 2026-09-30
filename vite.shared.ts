@@ -4,7 +4,7 @@
 import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import { execSync } from 'child_process';
-import type { UserConfig } from 'vite';
+import type { Plugin, Rolldown, UserConfig } from 'vite';
 
 const git = (args: string) =>
   execSync(`git ${args}`, { cwd: __dirname, stdio: ['ignore', 'pipe', 'ignore'] })
@@ -33,7 +33,8 @@ export const appBuildDefines = (() => {
 
 /**
  * Packages pptx-vanilla-viewer imports for features the app leaves off, resolved to an empty module:
- * - lazily, and not installed: 3D charts (`three`), rendering under Node, collaboration (`yjs`);
+ * - lazily, and not installed or not wanted: 3D charts (`three`), rendering under Node, live
+ *   collaboration (`yjs` and its `y-websocket` / `y-webrtc` providers, ~200 kB never started);
  * - `pptx-viewer-mcp`, its AI assistant's tools. It is imported up front and brings a second copy
  *   of the PowerPoint core, zod and an EMF converter — about 3 MB of the renderer chunk. The tools
  *   are only stored at load, never called without the assistant. Its `/schemas` stay real: they
@@ -46,9 +47,50 @@ const STUBBED = [
   'three',
   '@napi-rs/canvas',
   'yjs',
+  'y-websocket',
+  'y-webrtc',
   'pptx-viewer-mcp',
 ];
 const exactly = (id: string) => new RegExp(`^${id.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}$`);
+
+/**
+ * Build warnings the renderer drops: names imported from the stub above. It exports nothing on
+ * purpose — the viewer only stores its assistant's tools, and never starts collaboration — so
+ * each of those ~60 names being undefined is the point, not a mistake. Everything else is shown.
+ */
+export const rendererOnWarn: NonNullable<Rolldown.InputOptions['onwarn']> = (warning, warn) => {
+  if (warning.code === 'IMPORT_IS_UNDEFINED' && warning.message.includes('optionalPeerStub')) return;
+  warn(warning);
+};
+
+/**
+ * The largest a renderer chunk may grow (minified, kB) before the build says so — except the
+ * PowerPoint viewer: one lazy chunk of ~6.5 MB, loaded only when a deck opens, and not something
+ * a split would make smaller. Vite's own check cannot leave one chunk out, so it is set out of
+ * reach (`chunkSizeWarningLimit: CHUNK_CHECK_OFF`) and this plugin checks instead.
+ */
+const CHUNK_LIMIT_KB = 800;
+export const CHUNK_CHECK_OFF = Number.MAX_SAFE_INTEGER;
+export const chunkSizeCheck = (): Plugin => {
+  // The desktop build keeps its renderer unminified, so its sizes say nothing about download size.
+  let minified = true;
+  return {
+    name: 'chunk-size-check',
+    apply: 'build',
+    configResolved(config) {
+      minified = config.build.minify !== false;
+    },
+    generateBundle(_options, bundle) {
+      if (!minified) return;
+      for (const file of Object.values(bundle)) {
+        if (file.type !== 'chunk' || file.name === 'pptxDocument') continue;
+        const kb = Buffer.byteLength(file.code) / 1000;
+        if (kb > CHUNK_LIMIT_KB)
+          this.warn(`${file.fileName} is ${Math.round(kb)} kB, over the ${CHUNK_LIMIT_KB} kB a renderer chunk should stay under`);
+      }
+    },
+  };
+};
 
 /** Renderer resolves aliases (shared between Electron and standalone builds). */
 export const rendererAliases = [

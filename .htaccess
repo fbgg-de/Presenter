@@ -25,9 +25,11 @@ RewriteRule ^cache/ - [F,L]
 # Don't rewrite if file or directory exists
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-# Don't rewrite PHP files, assets, OIDC, or special HTML pages
+# Don't rewrite PHP files, assets, installers, OIDC, or special HTML pages (a missing installer
+# is a 404, not the app downloaded under the installer's name)
 RewriteCond %{REQUEST_URI} !\.php$
 RewriteCond %{REQUEST_URI} !^/assets/
+RewriteCond %{REQUEST_URI} !^/app/
 RewriteCond %{REQUEST_URI} !^/oidc
 RewriteCond %{REQUEST_URI} !^/admin\.html
 RewriteCond %{REQUEST_URI} !^/login\.html

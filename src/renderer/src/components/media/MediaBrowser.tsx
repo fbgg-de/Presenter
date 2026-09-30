@@ -61,6 +61,8 @@ import { formatFileSize, formatTime, getMediaBaseUrl, isElectronApp } from '@/ut
 import { useVideoThumbnails } from './useVideoThumbnails';
 import { VideoPreview } from './VideoPreview';
 import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
+import { useMediaFolderConfigured, type MediaFolderIssue } from '@/media/useMediaFolder';
+import { MediaFolderNotice } from '@/components/media/MediaFolderNotice';
 import { nextcloudFileUrl, nextcloudMediaActive, nextcloudPath, useNextcloud } from '@/nextcloud/connection';
 import { listFolder, uploadFile } from '@/nextcloud/relay';
 import { stillWhileClosed } from '@/components/common/stillWhileClosed';
@@ -249,6 +251,10 @@ const MediaBrowserBody = ({
   // The web version connected to Nextcloud browses its media folder there instead.
   const nextcloud = useNextcloud();
   const viaNextcloud = !isElectronApp() && nextcloudMediaActive(nextcloud);
+  // With no media folder there is nothing to list: the browser says so and links to the setting.
+  const folderConfigured = useMediaFolderConfigured();
+  /** The listing failed because of the media folder, not a file: shown as such instead of the error. */
+  const [folderIssue, setFolderIssue] = useState<{ issue: MediaFolderIssue; address?: string } | null>(null);
   const mediaBaseUrl = useMemo(
     () => (viaNextcloud ? `nextcloud:${nextcloud?.server}/${nextcloud?.root}` : getMediaBaseUrl(mediaPath)),
     [mediaPath, viaNextcloud, nextcloud?.server, nextcloud?.root],
@@ -274,7 +280,11 @@ const MediaBrowserBody = ({
       const signal = abortRef.current?.signal;
 
       replace ? setLoading(true) : setLoadingMore(true);
-      if (replace) setError(null);
+      if (replace) {
+        setError(null);
+        setFolderIssue(null);
+      }
+      let baseUrl = mediaBaseUrl;
 
       try {
         if (viaNextcloud && nextcloud && nextcloudMediaActive(nextcloud)) {
@@ -314,7 +324,6 @@ const MediaBrowserBody = ({
           setHasMore(false);
           return;
         }
-        let baseUrl = mediaBaseUrl;
         if (isElectronApp() && window.api?.startMediaServer && mediaPath) baseUrl = await window.api.startMediaServer(mediaPath);
         if (signal?.aborted) return;
         const params = new URLSearchParams({
@@ -331,7 +340,7 @@ const MediaBrowserBody = ({
         // 503 → media path not configured / not present on disk.
         if (response.status === 503) {
           if (replace) {
-            setError(LL.MEDIA.CONFIGURE_PATH());
+            setFolderIssue({ issue: 'missing' });
             setDirs([]);
             setFiles([]);
             setHasMore(false);
@@ -385,6 +394,18 @@ const MediaBrowserBody = ({
         setHasMore(data.files.length > 0 && newOffset < data.totalFiles);
       } catch (err) {
         if (signal?.aborted) return;
+        // No answer at all (not an error answer): the media server is not there.
+        const unanswered = err instanceof TypeError || (err instanceof DOMException && err.name === 'TimeoutError');
+        if (!viaNextcloud && unanswered) {
+          let address = baseUrl;
+          try {
+            address = new URL(baseUrl).host;
+          } catch {
+            /* keep the address as configured */
+          }
+          setFolderIssue({ issue: 'unreachable', address });
+          return;
+        }
         setError(err instanceof Error ? err.message : 'Failed to load files');
       } finally {
         if (!signal?.aborted) {
@@ -400,7 +421,7 @@ const MediaBrowserBody = ({
   const folderKey = currentPath.join('/');
   useEffect(() => {
     if (!open || isColor) return;
-    if (!mediaBaseUrl) {
+    if (!mediaBaseUrl || !folderConfigured) {
       setShowUrlInput(true);
       return;
     }
@@ -415,7 +436,7 @@ const MediaBrowserBody = ({
     return () => {
       abortRef.current?.abort();
     };
-  }, [open, isColor, folderKey, mediaBaseUrl, fetchPage]);
+  }, [open, isColor, folderKey, mediaBaseUrl, folderConfigured, fetchPage]);
 
   // Intersection observer for endless scroll
   useEffect(() => {
@@ -919,7 +940,12 @@ const MediaBrowserBody = ({
     );
 
   const renderBody = () => {
+    if (!folderConfigured) return <MediaFolderNotice issue="unset" />;
     if (loading) return renderLoading();
+    if (folderIssue)
+      return (
+        <MediaFolderNotice issue={folderIssue.issue} address={folderIssue.address} onRetry={() => void fetchPage(currentPath, 0, true)} />
+      );
     if (error)
       return (
         <Alert severity="error" action={<Button onClick={() => void fetchPage(currentPath, 0, true)}>{LL.MEDIA.RETRY()}</Button>}>
@@ -959,11 +985,6 @@ const MediaBrowserBody = ({
         {canUpload && !searchQuery && (
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {LL.MEDIA.DROP_HINT()}
-          </Typography>
-        )}
-        {!mediaBaseUrl && (
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            {LL.MEDIA.CONFIGURE_PATH()}
           </Typography>
         )}
         {searchQuery ? (

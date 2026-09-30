@@ -48,7 +48,9 @@ mac:
     - NSDownloadsFolderUsageDescription: Application requests access to the user's Downloads folder.
   notarize: false
 dmg:
-  artifactName: ${name}-${version}.${ext}
+  # "-setup" like the Windows installer: the web build publishes `<name>-<version>-setup.*` from
+  # dist-app/ as /app/presenter-setup.* (see vite.config.ts). Updates come from the zip.
+  artifactName: ${name}-${version}-setup.${ext}
 linux:
   icon: resources/icon.png
   target:

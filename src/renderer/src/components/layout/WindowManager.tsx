@@ -56,6 +56,8 @@ interface WindowManagerProps {
   open: boolean;
   onClose: () => void;
   openWithNew?: boolean;
+  /** The screen group the new window is for (a group's "Add window"); the default group's otherwise. */
+  newWindowGroupId?: number;
   /** Open with this window already selected — the footer's "All settings…" lands here. */
   selectWindowId?: string;
 }
@@ -73,7 +75,7 @@ const draftConfig = (screen?: ScreenInfo, name = 'Presentation'): WindowConfig =
   positionY: screen?.bounds.y ?? 0,
 });
 
-const WindowManagerBody = ({ open, onClose, openWithNew, selectWindowId }: WindowManagerProps) => {
+const WindowManagerBody = ({ open, onClose, openWithNew, newWindowGroupId, selectWindowId }: WindowManagerProps) => {
   const { LL } = useI18nContext();
   const dispatch = useAppDispatch();
   const { trackEvent } = useMetrics();
@@ -90,9 +92,9 @@ const WindowManagerBody = ({ open, onClose, openWithNew, selectWindowId }: Windo
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
 
   const startDraft = useCallback(
-    (screen?: ScreenInfo) => {
+    (screen?: ScreenInfo, screenGroupId?: number) => {
       const existing = rig.windows.length;
-      setDraft(draftConfig(screen, existing === 0 ? 'Presentation' : `Presentation ${existing + 1}`));
+      setDraft({ ...draftConfig(screen, existing === 0 ? 'Presentation' : `Presentation ${existing + 1}`), screenGroupId });
       setSelectedId(null);
     },
     [rig.windows.length],
@@ -100,11 +102,11 @@ const WindowManagerBody = ({ open, onClose, openWithNew, selectWindowId }: Windo
 
   useEffect(() => {
     if (!open) return;
-    if (openWithNew) startDraft(rig.screens.find((s) => s.isPrimary) ?? rig.screens[0]);
+    if (openWithNew) startDraft(rig.screens.find((s) => s.isPrimary) ?? rig.screens[0], newWindowGroupId);
     else if (selectWindowId) setSelectedId(selectWindowId);
     // Only when the drawer opens — re-running on every screen poll would reset the form.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, openWithNew, selectWindowId]);
+  }, [open, openWithNew, newWindowGroupId, selectWindowId]);
 
   const selected = useMemo(() => rig.windows.find((w) => w.id === selectedId), [rig.windows, selectedId]);
   // The row a selection points at can disappear (deleted elsewhere, or an unmanaged window

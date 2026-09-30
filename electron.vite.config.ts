@@ -1,7 +1,15 @@
 ﻿import { resolve } from 'path';
 import { defineConfig } from 'electron-vite';
 import react from '@vitejs/plugin-react';
-import { appBuildDefines, rendererAliases, electronRendererInputs, sharedServerConfig } from './vite.shared';
+import {
+  appBuildDefines,
+  CHUNK_CHECK_OFF,
+  chunkSizeCheck,
+  rendererAliases,
+  electronRendererInputs,
+  rendererOnWarn,
+  sharedServerConfig,
+} from './vite.shared';
 import { errorFallbackPlugin } from './vite.plugin.error-fallback';
 export default defineConfig({
   main: {
@@ -52,9 +60,11 @@ export default defineConfig({
     build: {
       rollupOptions: {
         input: electronRendererInputs,
+        onwarn: rendererOnWarn,
       },
+      chunkSizeWarningLimit: CHUNK_CHECK_OFF,
     },
     server: sharedServerConfig,
-    plugins: [react(), errorFallbackPlugin()],
+    plugins: [react(), errorFallbackPlugin(), chunkSizeCheck()],
   },
 });

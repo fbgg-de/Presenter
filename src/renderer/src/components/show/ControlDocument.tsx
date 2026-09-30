@@ -31,6 +31,8 @@ import { useGetSettings } from '@/store/settingsSlice';
 import { useSlideSelect } from '@/hooks/useSlideSelect';
 import { documentFileOf } from '@/presentation/itemContent';
 import { probeMediaUrl, type MediaProbeStatus } from '@/utils/mediaUrl';
+import { useMediaFolderConfigured } from '@/media/useMediaFolder';
+import { MediaFolderNotice } from '@/components/media/MediaFolderNotice';
 import {
   documentArmHint,
   documentArmingShown,
@@ -159,15 +161,13 @@ const OpenError = ({ name, url, message, onRetry }: { name: string; url?: string
   const { LL } = useI18nContext();
   const D = LL.DOCUMENT;
   const reason = useFailureReason(url, true);
+  const configured = useMediaFolderConfigured();
   const address = url ? new URL(url).host : '';
+  // The media folder's fault — none set up, or its server silent — is said as such, with the way to fix it.
+  const folder = !configured ? 'unset' : reason === 'server_down' ? 'unreachable' : undefined;
+  if (folder) return <MediaFolderNotice issue={folder} address={address} onRetry={onRetry} sx={{ gridColumn: '1 / -1' }} />;
   const why =
-    reason === 'server_down'
-      ? D.OPEN_SERVER_DOWN({ address })
-      : reason === 'not_found'
-        ? D.OPEN_NOT_FOUND({ menu: LL.AGENDA_DROP.RELINK_MENU() })
-        : reason === 'ok'
-          ? D.OPEN_UNREADABLE()
-          : undefined;
+    reason === 'not_found' ? D.OPEN_NOT_FOUND({ menu: LL.AGENDA_DROP.RELINK_MENU() }) : reason === 'ok' ? D.OPEN_UNREADABLE() : undefined;
   return (
     <Alert
       severity="error"

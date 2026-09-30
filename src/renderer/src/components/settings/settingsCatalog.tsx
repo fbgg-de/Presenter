@@ -348,18 +348,24 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
           },
         ],
       },
-      {
-        id: 'media',
-        title: S.MEDIA(),
-        settings: [
-          {
-            key: 'mediaPath',
-            label: O.MEDIA_PATH.TITLE(),
-            description: O.MEDIA_PATH.DESCRIPTION(),
-            control: { kind: 'path' },
-          },
-        ],
-      },
+      // Desktop app only: a browser cannot read a folder — its media comes from Nextcloud
+      // (Connections → Nextcloud).
+      ...(ctx.isElectron
+        ? [
+            {
+              id: 'media',
+              title: S.MEDIA(),
+              settings: [
+                {
+                  key: 'mediaPath' as const,
+                  label: O.MEDIA_PATH.TITLE(),
+                  description: O.MEDIA_PATH.DESCRIPTION(),
+                  control: { kind: 'path' as const },
+                },
+              ],
+            },
+          ]
+        : []),
       {
         id: 'bible',
         title: S.BIBLE(),

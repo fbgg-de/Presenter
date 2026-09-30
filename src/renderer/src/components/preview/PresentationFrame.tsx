@@ -5,11 +5,15 @@
  * re-implemented the drawing would never quite match. Instead the actual `presentation.html` runs
  * in an iframe at the output's full resolution, scaled down to the box — exactly what a window of
  * that size shows. `?preview=1` keeps it silent and stops it from announcing itself as an output.
+ *
+ * Stage overlays (messages, timers, the clock) travel apart from the slide, as they do to the
+ * windows; given `overlayGroupId`, the frame gets what a window of that group gets.
  */
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Box } from '@mui/material';
 import type { PresentationContent } from '@/presentation/types';
 import type { RigWindow } from '@/hooks/usePresentationWindows';
+import { getBroadcastStage, stagePayloadForGroup, subscribeStage } from '@/utils/presentationBridge';
 
 export const PREVIEW_PAGE_URL = './presentation.html?preview=1';
 
@@ -26,8 +30,11 @@ export const PresentationFrame = memo(function PresentationFrame({
   width = 1920,
   height = 1080,
   title,
+  overlayGroupId,
 }: {
   content: PresentationContent | undefined;
+  /** The screen group whose stage overlays the picture shows, as its windows do; none when omitted. */
+  overlayGroupId?: number;
   /** The output's resolution; text and layout are drawn at this size, then scaled. */
   width?: number;
   height?: number;
@@ -51,6 +58,16 @@ export const PresentationFrame = memo(function PresentationFrame({
     if (loads === 0 || !content) return;
     frameRef.current?.contentWindow?.postMessage({ type: 'UPDATE_PRESENTATION', props: { content } }, '*');
   }, [loads, content]);
+
+  const stage = useSyncExternalStore(subscribeStage, getBroadcastStage);
+  const overlay = useMemo(
+    () => (overlayGroupId === undefined ? undefined : stagePayloadForGroup(stage, overlayGroupId)),
+    [stage, overlayGroupId],
+  );
+  useEffect(() => {
+    if (loads === 0 || !overlay) return;
+    frameRef.current?.contentWindow?.postMessage({ type: 'UPDATE_STAGE', payload: overlay }, '*');
+  }, [loads, overlay]);
 
   const scale = boxWidth > 0 ? boxWidth / width : 0;
 

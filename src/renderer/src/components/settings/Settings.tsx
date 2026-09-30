@@ -1,7 +1,7 @@
 import { NextcloudSection } from '@/components/settings/NextcloudSection';
 import { SpotifySection } from './SpotifySection';
 import { ChurchToolsSection } from './ChurchToolsSection';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Divider,
@@ -24,6 +24,8 @@ import { alpha } from '@mui/material/styles';
 import type { SvgIconComponent } from '@mui/icons-material';
 import { Close as CloseIcon, Search as SearchIcon, Clear as ClearIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
+import type { SettingsTarget } from '@/components/settings/openSettings';
+import { keyframes } from '@emotion/react';
 import { useGetSettings } from '@/store/settingsSlice';
 import { KeyboardMappingEditor } from '@/components/settings/KeyboardMappingEditor';
 import { exportSettings, importSettings, applyImportedSettings, type SettingsDiff } from '@/utils/settingsExport';
@@ -57,7 +59,11 @@ const NAV_WIDTH = 250;
  * right, and a search that cuts across both. What it can show comes from the catalog
  * (`settingsCatalog.tsx`) — this file only decides how it is laid out and searched.
  */
-const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void }) => {
+/**
+ * `target`: opened from a link elsewhere ("Set up media folder") — on that category, scrolled to the
+ * section, which flashes once. The sidebar remounts the drawer for each such link.
+ */
+const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void; target?: SettingsTarget }) => {
   const { LL } = useI18nContext();
   const theme = useTheme();
   const settings = useGetSettings();
@@ -65,7 +71,17 @@ const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void }
   const stacked = useMediaQuery(theme.breakpoints.down('md'));
 
   const [query, setQuery] = useState('');
-  const [activeCategoryId, setActiveCategoryId] = useState('general');
+  const [activeCategoryId, setActiveCategoryId] = useState(props.target?.category ?? 'general');
+  const targetSection = props.target?.section;
+  useEffect(() => {
+    if (!props.open || !targetSection) return;
+    // Once the drawer has started sliding in and the category is drawn.
+    const timer = setTimeout(
+      () => document.getElementById(`settings-section-${targetSection}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }),
+      150,
+    );
+    return () => clearTimeout(timer);
+  }, [props.open, targetSection]);
   const [companionOpen, setCompanionOpen] = useState(false);
   const [desktopAppModalOpen, setDesktopAppModalOpen] = useState(false);
   /** Pending settings import — reviewed in a diff dialog before anything is applied. */
@@ -109,7 +125,9 @@ const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void }
   const activeCategory = categories.find((category) => category.id === activeCategoryId) ?? categories[0];
 
   return (
-    <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right">
+    // On the dialogs' layer, not below it: opened from a link inside one (the media browser), it has to
+    // come up over it — mounted last, it does, and its own dialogs still open above it.
+    <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right" sx={{ zIndex: (theme) => theme.zIndex.modal }}>
       <CompanionHelper open={companionOpen} onClose={() => setCompanionOpen(false)} />
       <DesktopAppDownloadModal open={desktopAppModalOpen} onClose={() => setDesktopAppModalOpen(false)} />
       <SettingsImportReview
@@ -176,7 +194,7 @@ const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void }
               ))}
             </Tabs>
             <Box sx={{ flex: 1, overflow: 'auto', px: 2, py: 2 }}>
-              <CategoryPanel category={activeCategory} showHeading={false} />
+              <CategoryPanel category={activeCategory} showHeading={false} highlight={targetSection} />
             </Box>
           </Stack>
         ) : (
@@ -207,7 +225,7 @@ const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void }
               })}
             </List>
             <Box sx={{ flex: 1, overflow: 'auto', px: 3, py: 2 }}>
-              <CategoryPanel category={activeCategory} showHeading />
+              <CategoryPanel category={activeCategory} showHeading highlight={targetSection} />
             </Box>
           </Stack>
         )}
@@ -237,7 +255,7 @@ const AppVersion = () => {
 };
 
 /** One category: its heading, then each of its sections. */
-const CategoryPanel = ({ category, showHeading }: { category: SettingsCategory; showHeading: boolean }) => {
+const CategoryPanel = ({ category, showHeading, highlight }: { category: SettingsCategory; showHeading: boolean; highlight?: string }) => {
   const { LL } = useI18nContext();
   const sections = category.sections;
 
@@ -261,7 +279,7 @@ const CategoryPanel = ({ category, showHeading }: { category: SettingsCategory; 
           {LL.SETTINGS.NOTHING_HERE()}
         </Typography>
       ) : (
-        sections.map((section) => <SectionBlock key={section.id} section={section} />)
+        sections.map((section) => <SectionBlock key={section.id} section={section} highlighted={section.id === highlight} />)
       )}
     </Stack>
   );
@@ -271,8 +289,25 @@ const CategoryPanel = ({ category, showHeading }: { category: SettingsCategory; 
  * One section as a card: a header (title and what the section is for) over its rows, the rows
  * separated by hairlines. Cards chunk a long category into pieces the eye can find again.
  */
-const SectionBlock = ({ section }: { section: SettingsSection }) => (
-  <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.5, bgcolor: 'background.paper', overflow: 'hidden' }}>
+/** The section a link opened Settings at, pointed out once. */
+const flash = keyframes`
+  0%, 60% { box-shadow: 0 0 0 2px var(--flash-color); }
+  100% { box-shadow: 0 0 0 2px transparent; }
+`;
+
+const SectionBlock = ({ section, highlighted }: { section: SettingsSection; highlighted?: boolean }) => (
+  <Box
+    id={`settings-section-${section.id}`}
+    sx={(theme) => ({
+      border: 1,
+      borderColor: 'divider',
+      borderRadius: 1.5,
+      bgcolor: 'background.paper',
+      overflow: 'hidden',
+      scrollMarginTop: 16,
+      ...(highlighted && { '--flash-color': theme.palette.primary.main, animation: `${flash} 2.4s ease-out` }),
+    })}
+  >
     {(section.title || section.description) && (
       <Box sx={{ px: 2, pt: 1.5, pb: 1, bgcolor: 'action.hover', borderBottom: 1, borderColor: 'divider' }}>
         {section.title && (

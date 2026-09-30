@@ -52,6 +52,7 @@ const Monitor = ({
   guides,
   title,
   empty,
+  overlayGroupId,
 }: {
   tally: string;
   label: string;
@@ -63,10 +64,12 @@ const Monitor = ({
   guides: boolean;
   title: string;
   empty: string;
+  /** The screen group whose stage overlays (messages, timers, clock) the monitor shows. */
+  overlayGroupId?: number;
 }) => (
   <MonitorFrame tally={tally} label={label} labelHint={labelHint} info={info} badges={badges}>
     {content ? (
-      <PresentationFrame content={content} width={size.width} height={size.height} title={title} />
+      <PresentationFrame content={content} width={size.width} height={size.height} title={title} overlayGroupId={overlayGroupId} />
     ) : (
       <Stack sx={{ aspectRatio: `${size.width} / ${size.height}`, alignItems: 'center', justifyContent: 'center' }}>
         <Typography variant="caption" sx={{ color: 'rgba(233,236,239,0.5)', px: 2, textAlign: 'center' }}>
@@ -262,6 +265,7 @@ export const PreviewPanel = () => {
           guides={operatorPreviewGuides}
           title={P.PROGRAM()}
           empty={P.NO_ITEM()}
+          overlayGroupId={group?.id}
         />
       )}
 
@@ -273,6 +277,7 @@ export const PreviewPanel = () => {
         size={size}
         guides={operatorPreviewGuides}
         title={P.TITLE()}
+        overlayGroupId={group?.id}
         empty={itemCount === 0 ? P.NO_ITEM() : P.END_OF_SHOW()}
       />
 

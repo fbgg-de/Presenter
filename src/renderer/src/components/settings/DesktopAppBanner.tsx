@@ -1,5 +1,17 @@
 import { useState, ReactNode, useCallback } from 'react';
-import { Alert, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Snackbar, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Button,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Skeleton,
+  Snackbar,
+  Stack,
+  Typography,
+} from '@mui/material';
 import {
   Download as DownloadIcon,
   CheckCircle as CheckIcon,
@@ -9,29 +21,30 @@ import {
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useUpdateSetting, useGetSettings } from '@/store/settingsSlice';
-import { DetectedOs, detectOs, isElectronApp } from '@/utils';
-
-/** Path relative to the web root where the installer lives. */
-const INSTALLER_URLS: Record<DetectedOs, string | null> = {
-  windows: '/app/presenter-setup.exe',
-  macos: null, // not yet available
-  linux: null, // not yet available
-  unknown: null,
-};
+import { DetectedOs, detectOs, formatFileSize, isElectronApp } from '@/utils';
+import { useGetInstallersQuery, type Installer } from '@/api/installers.api';
 
 interface OsCardProps {
   label: string;
   icon: ReactNode;
   isCurrent: boolean;
-  url: string | null;
+  /** The installer the server has for this system; undefined when it has none. */
+  installer?: Installer;
+  /** The server has not said yet which installers it has. */
+  loading?: boolean;
   unavailableLabel: string;
   downloadLabel: string;
+  /** The badge on the card of the system this browser runs on. */
+  yourOsLabel: string;
 }
 
 /** Compact vertical OS card for the download modal row. */
-const OsCard = ({ label, icon, isCurrent, url, unavailableLabel, downloadLabel }: OsCardProps) => (
+const OsCard = ({ label, icon, isCurrent, installer, loading, unavailableLabel, downloadLabel, yourOsLabel }: OsCardProps) => (
   <Stack
     spacing={1}
+    // Gap, not margins: the absolutely placed "Your OS" badge would otherwise count as the first
+    // child and push the card's icon down, out of line with the other cards.
+    useFlexGap
     sx={{
       alignItems: 'center',
       flex: 1,
@@ -47,7 +60,7 @@ const OsCard = ({ label, icon, isCurrent, url, unavailableLabel, downloadLabel }
       <Chip
         size="small"
         icon={<CheckIcon />}
-        label="Your OS"
+        label={yourOsLabel}
         color="primary"
         variant="filled"
         sx={{ position: 'absolute', top: -12, fontSize: '0.65rem', height: 20 }}
@@ -63,10 +76,25 @@ const OsCard = ({ label, icon, isCurrent, url, unavailableLabel, downloadLabel }
     >
       {label}
     </Typography>
-    {url ? (
-      <Button size="small" variant={isCurrent ? 'contained' : 'outlined'} startIcon={<DownloadIcon />} href={url} download fullWidth>
-        {downloadLabel}
-      </Button>
+    {loading ? (
+      <Skeleton variant="rounded" sx={{ width: '100%', height: 30 }} />
+    ) : installer ? (
+      <>
+        <Button
+          size="small"
+          variant={isCurrent ? 'contained' : 'outlined'}
+          startIcon={<DownloadIcon />}
+          href={installer.url}
+          download
+          fullWidth
+        >
+          {downloadLabel}
+        </Button>
+        {/* How big, and from when — an old upload shows at a glance. */}
+        <Typography variant="caption" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+          {formatFileSize(installer.size)} · {new Date(installer.modified).toLocaleDateString()}
+        </Typography>
+      </>
     ) : (
       <Typography
         variant="caption"
@@ -95,6 +123,9 @@ interface DesktopAppDownloadModalProps {
 export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopAppDownloadModalProps) => {
   const { LL } = useI18nContext();
   const os = detectOs();
+  // What the server has in /app, asked each time the dialog opens: an upload shows without a reload.
+  const { data, isFetching } = useGetInstallersQuery(undefined, { skip: !open, refetchOnMountOrArgChange: true });
+  const installerOf = (o: DetectedOs) => data?.installers.find((installer) => installer.os === o);
 
   const osLabel = (o: DetectedOs) => {
     switch (o) {
@@ -127,25 +158,31 @@ export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopApp
               label={LL.DESKTOP_APP.OS_WINDOWS()}
               icon={<WindowsIcon color={os === 'windows' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
               isCurrent={os === 'windows'}
-              url={INSTALLER_URLS.windows}
+              installer={installerOf('windows')}
+              loading={isFetching && !data}
               unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
+              yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
               downloadLabel={LL.DESKTOP_APP.DOWNLOAD_WINDOWS()}
             />
             <OsCard
               label={LL.DESKTOP_APP.OS_MACOS()}
               icon={<MacIcon color={os === 'macos' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
               isCurrent={os === 'macos'}
-              url={INSTALLER_URLS.macos}
+              installer={installerOf('macos')}
+              loading={isFetching && !data}
               unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
-              downloadLabel={LL.DESKTOP_APP.DOWNLOAD_WINDOWS()}
+              yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
+              downloadLabel={LL.DESKTOP_APP.DOWNLOAD_MACOS()}
             />
             <OsCard
               label={LL.DESKTOP_APP.OS_LINUX()}
               icon={<LinuxIcon color={os === 'linux' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
               isCurrent={os === 'linux'}
-              url={INSTALLER_URLS.linux}
+              installer={installerOf('linux')}
+              loading={isFetching && !data}
               unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
-              downloadLabel={LL.DESKTOP_APP.DOWNLOAD_WINDOWS()}
+              yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
+              downloadLabel={LL.DESKTOP_APP.DOWNLOAD_LINUX()}
             />
           </Stack>
         </Stack>
