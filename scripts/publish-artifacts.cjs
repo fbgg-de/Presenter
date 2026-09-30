@@ -28,6 +28,7 @@ const { CancellationToken } = require('builder-util-runtime');
 const { GitHubPublisher } = require('electron-publish');
 
 const { packageArtifacts, versionOf, repoRoot } = require('./package-artifacts.cjs');
+const { preflightGitHubToken } = require('./preflight-github-token.cjs');
 
 const OUT_DIR = join(repoRoot, 'dist-app');
 
@@ -48,8 +49,7 @@ function githubOptions() {
 }
 
 async function main() {
-  if (!dryRun && !process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
-    console.error('GH_TOKEN (or GITHUB_TOKEN) must be set — the same token `publish:win` uses.');
+  if (!dryRun && !(await preflightGitHubToken())) {
     process.exit(1);
   }
 

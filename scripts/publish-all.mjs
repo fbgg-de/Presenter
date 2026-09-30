@@ -73,9 +73,12 @@ function run(label, command, args, env = {}) {
 const targets = requestedTargets();
 const results = [];
 
-if (!dryRun && !process.env.GH_TOKEN && !process.env.GITHUB_TOKEN) {
-  console.error('GH_TOKEN (or GITHUB_TOKEN) must be set before publishing.');
-  process.exit(1);
+// Before the build, not after: a bad token is otherwise only discovered by the upload, once
+// a full platform build has already been paid for.
+if (!dryRun) {
+  const { preflightGitHubToken } = require('./preflight-github-token.cjs');
+  console.log('\n\x1b[1m━━ GitHub token ━━\x1b[0m');
+  if (!(await preflightGitHubToken())) process.exit(1);
 }
 
 // Decided before anything runs: a platform that cannot be built here must not drag the
