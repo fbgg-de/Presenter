@@ -7,12 +7,14 @@
  */
 import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
 
-export type MediaFileKind = 'image' | 'video' | 'audio';
+/** `document`: PDF and PowerPoint files, which become document entries (see `document/document.ts`). */
+export type MediaFileKind = 'image' | 'video' | 'audio' | 'document';
 
 const EXTENSIONS: Record<MediaFileKind, string[]> = {
   image: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'],
   video: ['.mp4', '.webm', '.mov', '.avi', '.mkv'],
   audio: ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg'],
+  document: ['.pdf', '.pptx', '.ppsx'],
 };
 
 /** Lyric files the agenda imports as songs. */

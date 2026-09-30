@@ -1,6 +1,7 @@
 import type { ResolvedStyle } from '@/utils/styleUtils';
 import type { CuePacket } from '@/media/types';
 import type { StageLayoutSettings } from '@/screens/types';
+import type { DocumentKind } from '@/document/document';
 
 /**
  * Display mode for a presentation window.
@@ -12,7 +13,18 @@ export type DisplayMode = 'normal' | 'stream';
 /**
  * Type of content being displayed.
  */
-export type ContentType = 'song' | 'bible_verse' | 'media' | 'empty';
+export type ContentType = 'song' | 'bible_verse' | 'media' | 'document' | 'empty';
+
+/** A document page on screen: every window opens the file itself and shows the page it is told. */
+export interface PresentationDocument {
+  kind: DocumentKind;
+  url: string;
+  page: number;
+  /** Click builds shown on the page. */
+  step: number;
+  /** The entry's name, for stage screens. */
+  title?: string;
+}
 
 /**
  * A single line with optional language tag.
@@ -104,6 +116,11 @@ export interface PresentationContent {
 
   /** Video loop */
   mediaLoop?: boolean;
+
+  /** The document page when `contentType` is 'document'. */
+  document?: PresentationDocument;
+  /** Documents likely on screen next (the entry open in the operator, the one after the live one), opened ahead. */
+  documentsAhead?: { kind: DocumentKind; url: string }[];
 
   // ── Bible fields ──
 

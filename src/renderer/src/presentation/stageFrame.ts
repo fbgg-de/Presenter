@@ -3,6 +3,7 @@
  * operator's preview tile can build: title, key, the arrangement, and the current and next
  * section as plain primary-language lines.
  */
+import type { DocumentKind } from '@/document/document';
 import type { PresentationContent, PresentationLine } from './types';
 
 export interface StageFrame {
@@ -17,6 +18,8 @@ export interface StageFrame {
   next?: { name: string; lines: string[] };
   /** Text cleared by the operator: the frame stays, the lyrics go. */
   textHidden: boolean;
+  /** A PDF or PowerPoint: the stage draws its pages instead of text; `sections` are its page numbers. */
+  document?: { kind: DocumentKind; url: string; page: number; nextPage?: number };
 }
 
 /** Lines of the song's own language — translations would only crowd a stage screen. */
@@ -27,6 +30,21 @@ const primaryLines = (lines: PresentationLine[], anchor?: string): string[] => {
 };
 
 export function stageFrameFromContent(content: PresentationContent): StageFrame {
+  const doc = content.document;
+  if (doc) {
+    // Steps are named "3", "3.1", …; the stage goes by pages, the ones left out already gone.
+    const pages = [...new Set(content.blocks.map((block) => Number(block.name.split('.')[0]) - 1))];
+    const at = pages.indexOf(doc.page);
+    return {
+      kind: 'document',
+      title: doc.title,
+      sections: pages.map((page) => String(page + 1)),
+      activeIndex: at,
+      current: [],
+      textHidden: false,
+      document: { kind: doc.kind, url: doc.url, page: doc.page, nextPage: at >= 0 ? pages[at + 1] : undefined },
+    };
+  }
   const blocks = content.contentType === 'song' || content.contentType === 'bible_verse' ? content.blocks : [];
   const anchor = content.songLanguages?.[0];
   const current = blocks[content.activeBlockIndex];

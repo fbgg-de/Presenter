@@ -5,6 +5,7 @@ import { LookPill } from '@/components/operator/LookPill';
 import { activeVersionOf, mediaItemDataOf } from '@/media/mediaItem';
 import { usePlaybacks } from '@/media/playback';
 import { playbackKeyOf } from '@/media/useMediaHost';
+import { documentSummary } from '@/document/document';
 
 /**
  * Pills under an image or video entry of the agenda: Background for the background role, the
@@ -32,6 +33,16 @@ export const MediaItemBadges = ({ item, index, inverted }: { item: ShowItem; ind
       {pills.map((pill) => (
         <LookPill key={pill.label} kind={pill.kind} label={pill.label} inverted={inverted} />
       ))}
+    </Stack>
+  );
+};
+
+/** The pill under a PDF or PowerPoint entry of the agenda. */
+export const DocumentItemBadges = ({ item, inverted }: { item: ShowItem; inverted?: boolean }) => {
+  const { LL } = useI18nContext();
+  return (
+    <Stack direction="row" sx={{ mt: 0.25 }}>
+      <LookPill kind="plain" label={documentSummary(LL, item)} inverted={inverted} />
     </Stack>
   );
 };

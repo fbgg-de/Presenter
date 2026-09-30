@@ -15,8 +15,6 @@
  */
 import { useMemo } from 'react';
 import { Chip, Stack, Tooltip } from '@mui/material';
-import { alpha } from '@mui/material/styles';
-import { keyframes } from '@emotion/react';
 import { Logout, MusicNote, Pause, PlayArrow, Repeat } from '@mui/icons-material';
 import { useAppSelector } from '@/store';
 import { useGetShow } from '@/store/showSlice';
@@ -27,6 +25,7 @@ import { useMediaLabels } from './labels';
 import { commandPlayback, type Playback } from './playback';
 import { REGION_INK, type CueTransport, type MediaCue, type MediaRegion } from './types';
 import { formatTime } from '@/utils';
+import { armableChipSx } from './armableChip';
 
 /** Where each of a cue's regions points in the song, by region id; `clear` blanks the slide. */
 function useLyricMap(cue: MediaCue): { names: Record<string, string | 'clear'>; stale: boolean } {
@@ -75,49 +74,14 @@ const regionState = (region: MediaRegion, transport: CueTransport, time: number)
 /** Section, looping section or pause — the three the timeline draws in its own colours. */
 const lookOf = (region: MediaRegion) => (region.kind === 'pause' ? 'pause' : isLoop(region) ? 'loop' : 'section');
 
-/**
- * A chip in its kind's colour, as the waveform editor draws the same region. Armed is filled, with
- * a solid border and its icon lit; disarmed is empty, dashed and grey, so the difference reads at
- * a glance for every kind. What holds the clock right now gets a heavier fill and a 2px border of
- * the *same* hue.
- */
-/**
- * A hold that is holding the video, or a loop that is repeating, changes what the video does next —
- * so its chip pulses between its fill and a brighter one until it lets go.
- */
-const pulse = (tint: string) => keyframes`
-  0%, 100% { background-color: ${alpha(tint, 0.45)}; box-shadow: 0 0 0 0 ${alpha(tint, 0)}; }
-  50% { background-color: ${alpha(tint, 0.85)}; box-shadow: 0 0 8px 1px ${alpha(tint, 0.65)}; }
-`;
-
-const chipSx = (region: MediaRegion, state: ReturnType<typeof regionState>) => {
-  const held = state === 'playing' || state === 'active' || state === 'paused';
-  const off = state === 'off';
-  const tint = REGION_INK[lookOf(region)];
-  const fill = held ? 0.45 : off ? 0 : 0.26;
-  return {
-    // Square with a small radius, like the buttons beside it — not a pill.
-    borderRadius: 1,
-    height: 26,
-    flexShrink: 0,
-    maxWidth: 200,
-    border: held || state === 'next' ? 2 : 1,
-    borderColor: off ? alpha(tint, 0.55) : tint,
-    // Dashed = disarmed (as in the editor), dotted = queued to run after the current loop.
-    borderStyle: off ? 'dashed' : state === 'next' ? 'dotted' : 'solid',
-    bgcolor: alpha(tint, fill),
-    color: off ? 'text.disabled' : 'text.primary',
-    fontWeight: held ? 600 : 400,
-    '& .MuiChip-icon, & .MuiChip-deleteIcon': { color: off ? 'text.disabled' : tint },
-    '&:hover': { bgcolor: alpha(tint, fill + 0.12) },
-    ...(state === 'paused' || state === 'active'
-      ? {
-          animation: `${pulse(tint)} 1.1s ease-in-out infinite`,
-          '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-        }
-      : {}),
-  } as const;
-};
+/** A chip in its kind's colour, as the waveform editor draws the same region; a hold or a running loop pulses. */
+const chipSx = (region: MediaRegion, state: ReturnType<typeof regionState>) =>
+  armableChipSx(REGION_INK[lookOf(region)], {
+    off: state === 'off',
+    held: state === 'playing' || state === 'active' || state === 'paused',
+    next: state === 'next',
+    pulse: state === 'paused' || state === 'active',
+  });
 
 /**
  * Every region of a running entry, as chips. Disarmed ones are dimmed rather than hidden, so how

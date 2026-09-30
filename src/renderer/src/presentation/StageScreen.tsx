@@ -6,6 +6,9 @@
  * - **Countdown** — one huge number (the clock until timers arrive) with the item title.
  * - **Lyrics** — only the words, as large as they fit, under a slim header.
  *
+ * A PDF or PowerPoint shows its pages instead of words, fully built, and the Speaker layout adds
+ * the page's speaker notes. The window opens the file itself (shared with anything else in it).
+ *
  * The palette is fixed and high-contrast rather than the audience theme, digits are monospace so
  * they never jitter, and lyrics are fitted to their box instead of sized by a theme. Every size is
  * a fraction of the component's own measured height, so the same component draws a full stage
@@ -15,6 +18,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { StageLayoutSettings } from '@/screens/types';
 import { STAGE_MONO_FONT, type StageOverlayPayload } from '@/stage/types';
+import { takeDocument, type OpenedDocument } from '@/document/openDocument';
 import { StageOverlay } from './StageOverlay';
 import type { StageFrame } from './stageFrame';
 
@@ -164,6 +168,62 @@ const FitText = ({
   );
 };
 
+/** This window's copy of the frame's document, once it is open. */
+const useStageDocument = (file: StageFrame['document']): OpenedDocument | undefined => {
+  const [state, setState] = useState<{ url?: string; doc?: OpenedDocument }>({});
+  const kind = file?.kind;
+  const url = file?.url;
+  useEffect(() => {
+    if (!kind || !url) return;
+    let cancelled = false;
+    const lease = takeDocument(kind, url);
+    lease.opened.then(
+      (doc) => !cancelled && setState({ url, doc }),
+      () => {},
+    );
+    return () => {
+      cancelled = true;
+      lease.release();
+    };
+  }, [kind, url]);
+  return url && state.url === url ? state.doc : undefined;
+};
+
+/**
+ * A page, fully built, fitted to its box. Each drawing goes into a layer of its own and replaces
+ * the old one only when it is done, so quick steps never flash empty or end on an older page.
+ */
+const PagePicture = ({ doc, page, dim = false }: { doc: OpenedDocument; page: number; dim?: boolean }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const box = ref.current;
+    if (!box) return;
+    let latest = 0;
+    let drawn = '';
+    const draw = () => {
+      const size = `${box.clientWidth}x${box.clientHeight}`;
+      if (!box.clientWidth || size === drawn) return;
+      drawn = size;
+      const token = ++latest;
+      const layer = document.createElement('div');
+      layer.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center';
+      box.appendChild(layer);
+      void doc
+        .drawPage(page, layer)
+        .catch(() => {})
+        .then(() => {
+          if (token !== latest) return layer.remove();
+          for (const old of [...box.children]) if (old !== layer) old.remove();
+        });
+    };
+    const observer = new ResizeObserver(draw);
+    observer.observe(box);
+    draw();
+    return () => observer.disconnect();
+  }, [doc, page]);
+  return <div ref={ref} style={{ position: 'relative', flex: 1, minHeight: 0, minWidth: 0, opacity: dim ? 0.7 : 1 }} />;
+};
+
 export const StageScreen = ({
   frame,
   settings,
@@ -182,7 +242,18 @@ export const StageScreen = ({
   const scale = TEXT_SCALE[settings.textSize] ?? 1;
   const lyrics = frame.textHidden ? [] : frame.current;
   const current = frame.sections[frame.activeIndex];
-  const position = current ? `${current} · ${frame.activeIndex + 1}/${frame.sections.length}` : undefined;
+  const position = !current
+    ? undefined
+    : frame.document
+      ? `${frame.activeIndex + 1}/${frame.sections.length}`
+      : `${current} · ${frame.activeIndex + 1}/${frame.sections.length}`;
+  const doc = useStageDocument(frame.document);
+  const nextPage = frame.document?.nextPage;
+  const nextName = frame.document ? (nextPage !== undefined ? String(nextPage + 1) : undefined) : frame.next?.name;
+  /** A page of the document, or nothing while it opens (or past the last page). */
+  const page = (at: number | undefined, dim = false) =>
+    doc && at !== undefined ? <PagePicture doc={doc} page={at} dim={dim} /> : <div style={{ flex: 1 }} />;
+  const notes = frame.document && doc ? (doc.notes[frame.document.page] ?? '').trim() : '';
 
   const sectionLabel = (text: ReactNode, color = PALETTE.accent): ReactNode => (
     <div
@@ -280,6 +351,8 @@ export const StageScreen = ({
       }}
     >
       {frame.sections.map((name, index) => {
+        // A long deck shows the pages around the current one.
+        if (frame.document && (index < frame.activeIndex - 4 || index > frame.activeIndex + 14)) return null;
         const chip: CSSProperties =
           index === frame.activeIndex
             ? { background: PALETTE.accent, color: '#111' }
@@ -300,7 +373,7 @@ export const StageScreen = ({
               ...chip,
             }}
           >
-            {abbreviate(name)}
+            {frame.document ? name : abbreviate(name)}
           </span>
         );
       })}
@@ -312,7 +385,7 @@ export const StageScreen = ({
 
   switch (settings.layout) {
     case 'speaker': {
-      const card = (label: string, lines: string[], live: boolean) => (
+      const card = (label: string, lines: string[], live: boolean, picture?: ReactNode) => (
         <div
           style={{
             flex: 1,
@@ -327,15 +400,43 @@ export const StageScreen = ({
           }}
         >
           {sectionLabel(label, live ? '#FF8A8E' : PALETTE.faint)}
-          <FitText lines={lines} max={px(0.085 * scale)} min={px(0.02)} align="center" color={live ? PALETTE.text : PALETTE.dim} />
+          {picture ?? (
+            <FitText lines={lines} max={px(0.085 * scale)} min={px(0.02)} align="center" color={live ? PALETTE.text : PALETTE.dim} />
+          )}
+        </div>
+      );
+      const cards = (
+        <div style={{ flex: notes ? 1.3 : 1, minHeight: 0, display: 'flex', gap: u(0.03) }}>
+          {card(position ?? '', lyrics, true, frame.document && page(frame.document.page))}
+          {settings.next &&
+            card(
+              nextName ? `▸ ${nextName}` : '—',
+              frame.textHidden ? [] : (frame.next?.lines ?? []),
+              false,
+              frame.document && page(nextPage, true),
+            )}
         </div>
       );
       body = (
         <>
           {header}
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: u(0.03), padding: u(0.04) }}>
-            {card(position ?? '', lyrics, true)}
-            {settings.next && card(frame.next ? `▸ ${frame.next.name}` : '—', frame.textHidden ? [] : (frame.next?.lines ?? []), false)}
+          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: u(0.03), padding: u(0.04) }}>
+            {cards}
+            {/* The speaker's notes for the page on screen, as large as they fit. */}
+            {notes && (
+              <div
+                style={{
+                  flex: 1,
+                  minHeight: 0,
+                  display: 'flex',
+                  padding: `${u(0.02)} ${u(0.03)}`,
+                  borderRadius: u(0.018),
+                  background: PALETTE.panel,
+                }}
+              >
+                <FitText lines={notes.split(/\r?\n/)} max={px(0.06 * scale)} min={px(0.018)} weight={500} />
+              </div>
+            )}
           </div>
         </>
       );
@@ -382,7 +483,7 @@ export const StageScreen = ({
         <>
           {header}
           <div style={{ flex: 1, minHeight: 0, display: 'flex', padding: `${u(0.04)} ${u(0.06)}` }}>
-            <FitText lines={lyrics} max={px(0.15 * scale)} min={px(0.03)} align="center" />
+            {frame.document ? page(frame.document.page) : <FitText lines={lyrics} max={px(0.15 * scale)} min={px(0.03)} align="center" />}
           </div>
         </>
       );
@@ -406,7 +507,7 @@ export const StageScreen = ({
               }}
             >
               {position && sectionLabel(position)}
-              <FitText lines={lyrics} max={px(0.11 * scale)} min={px(0.025)} />
+              {frame.document ? page(frame.document.page) : <FitText lines={lyrics} max={px(0.11 * scale)} min={px(0.025)} />}
             </div>
             {settings.next && (
               <div
@@ -421,14 +522,18 @@ export const StageScreen = ({
                   borderLeft: `${u(0.003)} solid rgba(255, 255, 255, 0.12)`,
                 }}
               >
-                {sectionLabel(frame.next ? `▸ ${frame.next.name}` : '▸ —')}
-                <FitText
-                  lines={frame.textHidden ? [] : (frame.next?.lines ?? [])}
-                  max={px(0.06 * scale)}
-                  min={px(0.02)}
-                  color={PALETTE.dim}
-                  weight={600}
-                />
+                {sectionLabel(nextName ? `▸ ${nextName}` : '▸ —')}
+                {frame.document ? (
+                  page(nextPage, true)
+                ) : (
+                  <FitText
+                    lines={frame.textHidden ? [] : (frame.next?.lines ?? [])}
+                    max={px(0.06 * scale)}
+                    min={px(0.02)}
+                    color={PALETTE.dim}
+                    weight={600}
+                  />
+                )}
               </div>
             )}
           </div>

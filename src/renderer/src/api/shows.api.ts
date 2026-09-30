@@ -2,7 +2,8 @@ import { presenterApi } from './base.api';
 import type { ApiSuccess } from './base.api';
 import type { MediaItemData } from '@/media/mediaItem';
 
-export type ShowItemType = 'song' | 'media' | 'bible_verse';
+/** `document`: a PDF or PowerPoint file in the media folder (`mediaPath`), stepped page by page. */
+export type ShowItemType = 'song' | 'media' | 'bible_verse' | 'document';
 /** `audio` plays on the operator's computer only and is never sent to a presentation window. */
 export type MediaSubType = 'image' | 'video' | 'color' | 'audio' | 'slideshow';
 
@@ -76,6 +77,21 @@ export type ShowItem = {
    * before it existed only carry `mediaPath` and the display fields above.
    */
   media?: MediaItemData;
+  /** Document entries: click builds per page, read from the file (see `document/document.ts`). */
+  documentBuilds?: number[];
+  /** Document entries: pages left out of the show, by their number in the file (0-based). */
+  documentHidden?: number[];
+  /** Document entries: the file's version ("Last-Modified|size") the entry shows, to notice it changing. */
+  documentVersion?: string;
+  /** Document entries: how often the file was reloaded. Part of its URL, so every window opens it anew. */
+  documentRevision?: number;
+  /** Document entries: how long each page stays by the file's own timing (PowerPoint's "After"), ms; null for none. */
+  documentTimings?: (number | null)[];
+  /**
+   * Document entries: pages turning by themselves (see `document/autoAdvance.ts`). `armed` pages
+   * turn after their time, the others wait for the operator; `paused` holds every one of them.
+   */
+  documentAdvance?: { paused?: boolean; armed?: number[]; seconds?: number; loop?: boolean };
   bibleRef?: string;
   bibleTranslation?: string;
   bibleFormattedSegments?: { start: number; end: number; bold: boolean }[];

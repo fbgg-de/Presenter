@@ -7,6 +7,7 @@ import {
   Palette as PaletteIcon,
   Audiotrack as AudioIcon,
   Collections as SlideshowIcon,
+  Slideshow as DocumentIcon,
 } from '@mui/icons-material';
 import type { SvgIconComponent } from '@mui/icons-material';
 import type { ShowItemType, MediaSubType } from '@/api/shows.api';
@@ -20,6 +21,7 @@ const ICON_MAP: Record<string, SvgIconComponent> = {
   MenuBook: MenuBookIcon,
   Videocam: VideocamIcon,
   Palette: PaletteIcon,
+  Slideshow: DocumentIcon,
 };
 
 /** Default colors per show item type */
@@ -27,6 +29,7 @@ export const DEFAULT_ITEM_COLORS: Record<ShowItemType, string> = {
   song: DEFAULT_SONG_ITEM_COLOR,
   media: DEFAULT_MEDIA_ITEM_COLOR,
   bible_verse: DEFAULT_BIBLE_ITEM_COLOR,
+  document: DEFAULT_MEDIA_ITEM_COLOR,
 };
 
 /** Default icon names per show item type */
@@ -35,6 +38,7 @@ export const DEFAULT_ITEM_ICONS: Record<ShowItemType, string> = {
   song: 'Lyrics',
   media: 'Image',
   bible_verse: 'MenuBook',
+  document: 'Slideshow',
 };
 
 /**

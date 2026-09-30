@@ -156,7 +156,7 @@ export const MusicianSidebar = ({
         return song?.title ?? `Song #${item.songNumber}`;
       }
       if (item.type === 'bible_verse') return item.bibleRef || item.label || 'Bible';
-      if (item.type === 'media') return item.label || 'Media';
+      if (item.type === 'media' || item.type === 'document') return item.label || 'Media';
       return `Item ${index + 1}`;
     },
     [songs],

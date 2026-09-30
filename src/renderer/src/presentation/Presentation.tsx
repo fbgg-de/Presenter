@@ -23,6 +23,8 @@ import { StageOverlay } from '@/presentation/StageOverlay';
 import { StageScreen } from '@/presentation/StageScreen';
 import { stageFrameFromContent } from '@/presentation/stageFrame';
 import { MediaStack } from '@/media/CueMedia';
+import { DocumentContent } from '@/presentation/DocumentContent';
+import { warmDocuments } from '@/presentation/screenDocuments';
 
 /**
  * Legacy props interface — kept for backward compatibility.
@@ -172,6 +174,14 @@ export const Presentation = (props: PresentationProps) => {
     }
   }, [content?.isBlack]);
 
+  // PDFs and PowerPoints the operator expects next are opened now, so going live does not wait.
+  const documentsAhead = content?.documentsAhead;
+  const documentsAheadSig = documentsAhead?.map((file) => file.url).join('|');
+  useEffect(() => {
+    warmDocuments(documentsAhead);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the list is new on every broadcast
+  }, [documentsAheadSig]);
+
   // Detect content changes for cross-fade
   const lastContentRef = useRef<PresentationContent | null>(null);
   useEffect(() => {
@@ -292,6 +302,10 @@ export const Presentation = (props: PresentationProps) => {
       case 'bible_verse':
         return <BibleVerseContent content={content} textStyle={textCss} />;
 
+      case 'document':
+        // Drawn full-bleed below, outside the theme's text padding.
+        return null;
+
       case 'song':
       default: {
         if (content.displayMode === 'stream') {
@@ -351,6 +365,9 @@ export const Presentation = (props: PresentationProps) => {
           the text layer (zIndex 1) stays on top. A hidden background arrives invisible and fades in its layer. */}
       <MediaStack packets={content.media?.background ? [content.media.background] : []} zIndex={0} />
       <MediaStack packets={content.media?.contents ?? []} zIndex={0} />
+
+      {/* A document page covers the screen like media content, letterboxed on the group's look. */}
+      {content.contentType === 'document' && content.document && <DocumentContent document={content.document} />}
 
       {/* Content layer */}
       <div

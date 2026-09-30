@@ -2290,6 +2290,14 @@ type RootTranslation = {
 		 */
 		ADD_MEDIA_HINT: string
 		/**
+		 * A​d​d​ ​P​D​F​ ​/​ ​P​o​w​e​r​P​o​i​n​t
+		 */
+		ADD_DOCUMENT: string
+		/**
+		 * I​t​s​ ​p​a​g​e​s​ ​s​t​e​p​ ​l​i​k​e​ ​s​o​n​g​ ​s​l​i​d​e​s​,​ ​P​o​w​e​r​P​o​i​n​t​ ​a​n​i​m​a​t​i​o​n​s​ ​i​n​c​l​u​d​e​d
+		 */
+		ADD_DOCUMENT_HINT: string
+		/**
 		 * A​d​d​ ​b​a​c​k​g​r​o​u​n​d
 		 */
 		ADD_BACKGROUND: string
@@ -2362,7 +2370,7 @@ type RootTranslation = {
 		 */
 		EMPTY_HINT_BODY: string
 		/**
-		 * C​l​i​c​k​ ​t​o​ ​i​m​p​o​r​t​ ​.​t​x​t​ ​o​r​ ​.​s​n​g​ ​s​o​n​g​ ​f​i​l​e​s​,​ ​o​r​ ​d​r​o​p​ ​s​o​n​g​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​a​u​d​i​o​ ​h​e​r​e
+		 * C​l​i​c​k​ ​t​o​ ​i​m​p​o​r​t​ ​.​t​x​t​ ​o​r​ ​.​s​n​g​ ​s​o​n​g​ ​f​i​l​e​s​,​ ​o​r​ ​d​r​o​p​ ​s​o​n​g​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​a​u​d​i​o​,​ ​P​D​F​s​ ​a​n​d​ ​P​o​w​e​r​P​o​i​n​t​s​ ​h​e​r​e
 		 */
 		EMPTY_HINT_DROP: string
 		/**
@@ -2486,6 +2494,10 @@ type RootTranslation = {
 		 */
 		SEARCH_VIDEOS: string
 		/**
+		 * S​e​a​r​c​h​ ​p​r​e​s​e​n​t​a​t​i​o​n​s​.​.​.
+		 */
+		SEARCH_PRESENTATIONS: string
+		/**
 		 * C​o​n​f​i​g​u​r​e​ ​a​ ​m​e​d​i​a​ ​d​i​r​e​c​t​o​r​y​ ​i​n​ ​S​e​t​t​i​n​g​s​ ​→​ ​E​l​e​c​t​r​o​n​ ​→​ ​M​e​d​i​a​ ​P​a​t​h
 		 */
 		CONFIGURE_PATH: string
@@ -2550,6 +2562,10 @@ type RootTranslation = {
 		 */
 		VIDEOS: string
 		/**
+		 * P​D​F​ ​&​ ​P​o​w​e​r​P​o​i​n​t
+		 */
+		PRESENTATIONS: string
+		/**
 		 * G​r​i​d​ ​v​i​e​w
 		 */
 		VIEW_GRID: string
@@ -2612,7 +2628,7 @@ type RootTranslation = {
 		 */
 		UPLOAD: string
 		/**
-		 * C​o​p​y​ ​i​m​a​g​e​s​ ​o​r​ ​v​i​d​e​o​s​ ​f​r​o​m​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​ ​i​n​t​o​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​f​o​l​d​e​r
+		 * C​o​p​y​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​P​D​F​s​ ​o​r​ ​P​o​w​e​r​P​o​i​n​t​s​ ​f​r​o​m​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​ ​i​n​t​o​ ​t​h​e​ ​c​u​r​r​e​n​t​ ​f​o​l​d​e​r
 		 */
 		UPLOAD_HINT: string
 		/**
@@ -2621,7 +2637,7 @@ type RootTranslation = {
 		 */
 		DROP_HERE: RequiredParams<'folder'>
 		/**
-		 * D​r​a​g​ ​i​m​a​g​e​s​ ​o​r​ ​v​i​d​e​o​s​ ​h​e​r​e​ ​t​o​ ​c​o​p​y​ ​t​h​e​m​ ​i​n​t​o​ ​t​h​i​s​ ​f​o​l​d​e​r​.
+		 * D​r​a​g​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​P​D​F​s​ ​o​r​ ​P​o​w​e​r​P​o​i​n​t​s​ ​h​e​r​e​ ​t​o​ ​c​o​p​y​ ​t​h​e​m​ ​i​n​t​o​ ​t​h​i​s​ ​f​o​l​d​e​r​.
 		 */
 		DROP_HINT: string
 		/**
@@ -2630,7 +2646,7 @@ type RootTranslation = {
 		 */
 		UPLOAD_DONE: RequiredParams<'count'>
 		/**
-		 * {​c​o​u​n​t​}​ ​s​k​i​p​p​e​d​ ​(​o​n​l​y​ ​i​m​a​g​e​s​ ​a​n​d​ ​v​i​d​e​o​s​,​ ​n​o​ ​f​o​l​d​e​r​s​)
+		 * {​c​o​u​n​t​}​ ​s​k​i​p​p​e​d​ ​(​o​n​l​y​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​P​D​F​s​ ​a​n​d​ ​P​o​w​e​r​P​o​i​n​t​s​,​ ​n​o​ ​f​o​l​d​e​r​s​)
 		 * @param {number} count
 		 */
 		UPLOAD_SKIPPED: RequiredParams<'count'>
@@ -5170,6 +5186,11 @@ type RootTranslation = {
 		 */
 		COUNT_IMAGES: RequiredParams<'count'>
 		/**
+		 * {​c​o​u​n​t​}​ ​p​r​e​s​e​n​t​a​t​i​o​n​{​{​s​}​}
+		 * @param {number} count
+		 */
+		COUNT_DOCUMENTS: RequiredParams<'count'>
+		/**
 		 * {​c​o​u​n​t​}​ ​s​l​i​d​e​s​h​o​w​{​{​s​}​}
 		 * @param {number} count
 		 */
@@ -5714,7 +5735,7 @@ type RootTranslation = {
 		 */
 		ONE_SLIDESHOW: string
 		/**
-		 * D​r​o​p​ ​s​o​n​g​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​o​r​ ​a​u​d​i​o​ ​t​o​ ​a​d​d​ ​t​h​e​m​ ​h​e​r​e
+		 * D​r​o​p​ ​s​o​n​g​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​a​u​d​i​o​,​ ​P​D​F​s​ ​o​r​ ​P​o​w​e​r​P​o​i​n​t​s​ ​t​o​ ​a​d​d​ ​t​h​e​m​ ​h​e​r​e
 		 */
 		DROP_HINT: string
 		/**
@@ -5722,7 +5743,7 @@ type RootTranslation = {
 		 */
 		LOCKED: string
 		/**
-		 * {​c​o​u​n​t​}​ ​f​i​l​e​{​{​s​}​}​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​a​d​d​e​d​:​ ​o​n​l​y​ ​s​o​n​g​ ​f​i​l​e​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​ ​a​n​d​ ​a​u​d​i​o​ ​a​r​e​ ​s​u​p​p​o​r​t​e​d​.
+		 * {​c​o​u​n​t​}​ ​f​i​l​e​{​{​s​}​}​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​a​d​d​e​d​:​ ​o​n​l​y​ ​s​o​n​g​ ​f​i​l​e​s​,​ ​i​m​a​g​e​s​,​ ​v​i​d​e​o​s​,​ ​a​u​d​i​o​,​ ​P​D​F​ ​a​n​d​ ​P​o​w​e​r​P​o​i​n​t​ ​(​.​p​p​t​x​)​ ​a​r​e​ ​s​u​p​p​o​r​t​e​d​.​ ​S​a​v​e​ ​o​t​h​e​r​ ​p​r​e​s​e​n​t​a​t​i​o​n​s​ ​a​s​ ​P​D​F​ ​f​i​r​s​t​.
 		 * @param {number} count
 		 */
 		UNSUPPORTED: RequiredParams<'count'>
@@ -5836,6 +5857,159 @@ type RootTranslation = {
 		 * U​s​e​ ​t​h​i​s​ ​f​i​l​e
 		 */
 		RELINK_USE: string
+	}
+	DOCUMENT: {
+		/**
+		 * P​r​e​s​e​n​t​a​t​i​o​n
+		 */
+		DOCUMENT: string
+		/**
+		 * O​p​e​n​i​n​g​ ​t​h​e​ ​f​i​l​e​…
+		 */
+		LOADING: string
+		/**
+		 * T​h​e​ ​f​i​l​e​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​o​p​e​n​e​d​:​ ​{​m​e​s​s​a​g​e​}
+		 * @param {string} message
+		 */
+		OPEN_FAILED: RequiredParams<'message'>
+		/**
+		 * {​p​a​g​e​}​ ​·​ ​c​l​i​c​k​ ​{​s​t​e​p​}​ ​o​f​ ​{​b​u​i​l​d​s​}
+		 * @param {number} builds
+		 * @param {number} page
+		 * @param {number} step
+		 */
+		BUILD: RequiredParams<'builds' | 'page' | 'step'>
+		/**
+		 * {​c​o​u​n​t​}​ ​c​l​i​c​k​{​{​s​}​}
+		 * @param {number} count
+		 */
+		BUILDS: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​p​a​g​e​{​{​s​}​}
+		 * @param {number} count
+		 */
+		PAGES: RequiredParams<'count'>
+		/**
+		 * {​c​o​u​n​t​}​ ​s​l​i​d​e​{​{​s​}​}
+		 * @param {number} count
+		 */
+		SLIDES: RequiredParams<'count'>
+		/**
+		 * T​h​i​s​ ​f​i​l​e​ ​w​a​s​ ​c​h​a​n​g​e​d​ ​i​n​ ​t​h​e​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​—​ ​c​l​i​c​k​ ​t​o​ ​l​o​a​d​ ​t​h​e​ ​n​e​w​ ​v​e​r​s​i​o​n
+		 */
+		FILE_CHANGED: string
+		/**
+		 * l​e​f​t​ ​o​u​t
+		 */
+		HIDDEN: string
+		/**
+		 * {​c​o​u​n​t​}​ ​l​e​f​t​ ​o​u​t
+		 * @param {number} count
+		 */
+		HIDDEN_COUNT: RequiredParams<'count'>
+		/**
+		 * L​e​a​v​e​ ​t​h​i​s​ ​p​a​g​e​ ​o​u​t​ ​o​f​ ​t​h​e​ ​s​h​o​w
+		 */
+		HIDE_PAGE: string
+		/**
+		 * S​h​o​w​ ​t​h​i​s​ ​p​a​g​e​ ​a​g​a​i​n
+		 */
+		SHOW_PAGE: string
+		/**
+		 * N​o​t​ ​i​n​s​t​a​l​l​e​d​ ​o​n​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​:​ ​{​f​o​n​t​s​}​.​ ​T​e​x​t​ ​i​n​ ​t​h​e​s​e​ ​f​o​n​t​s​ ​i​s​ ​s​h​o​w​n​ ​i​n​ ​a​n​o​t​h​e​r​ ​f​o​n​t​.
+		 * @param {string} fonts
+		 */
+		MISSING_FONTS: RequiredParams<'fonts'>
+		/**
+		 * L​e​t​ ​t​h​e​ ​a​r​m​e​d​ ​p​a​g​e​s​ ​t​u​r​n​ ​b​y​ ​t​h​e​m​s​e​l​v​e​s
+		 */
+		AUTO_START: string
+		/**
+		 * A​r​m​ ​e​v​e​r​y​ ​p​a​g​e​ ​a​n​d​ ​l​e​t​ ​t​h​e​m​ ​t​u​r​n​ ​b​y​ ​t​h​e​m​s​e​l​v​e​s
+		 */
+		AUTO_START_ALL: string
+		/**
+		 * H​o​l​d​:​ ​a​r​m​e​d​ ​p​a​g​e​s​ ​w​a​i​t​ ​u​n​t​i​l​ ​y​o​u​ ​l​e​t​ ​t​h​e​m​ ​g​o​ ​o​n
+		 */
+		AUTO_STOP: string
+		/**
+		 * {​n​a​m​e​}​ ​·​ ​t​u​r​n​e​d​ ​b​y​ ​h​a​n​d
+		 * @param {string} name
+		 */
+		AUTO_OFF: RequiredParams<'name'>
+		/**
+		 * {​n​a​m​e​}​ ​·​ ​h​e​l​d
+		 * @param {string} name
+		 */
+		AUTO_HELD: RequiredParams<'name'>
+		/**
+		 * T​u​r​n​s​ ​t​o​ ​t​h​e​ ​n​e​x​t​ ​p​a​g​e​ ​a​f​t​e​r​ ​{​s​e​c​o​n​d​s​}​ ​s
+		 * @param {number} seconds
+		 */
+		ADVANCE_AFTER: RequiredParams<'seconds'>
+		/**
+		 * t​i​m​e​ ​s​e​t​ ​i​n​ ​P​o​w​e​r​P​o​i​n​t
+		 */
+		ADVANCE_FILE: string
+		/**
+		 * A​r​m​e​d​ ​·​ ​c​l​i​c​k​ ​t​o​ ​d​i​s​a​r​m
+		 */
+		ADVANCE_ARMED: string
+		/**
+		 * O​f​f​ ​·​ ​c​l​i​c​k​ ​t​o​ ​a​r​m
+		 */
+		ADVANCE_DISARMED: string
+		/**
+		 * A​r​m​ ​a​l​l
+		 */
+		ARM_ALL: string
+		/**
+		 * E​v​e​r​y​ ​p​a​g​e​ ​t​u​r​n​s​ ​t​o​ ​t​h​e​ ​n​e​x​t​ ​b​y​ ​i​t​s​e​l​f
+		 */
+		ARM_ALL_HINT: string
+		/**
+		 * D​i​s​a​r​m​ ​a​l​l
+		 */
+		DISARM_ALL: string
+		/**
+		 * E​v​e​r​y​ ​p​a​g​e​ ​w​a​i​t​s​ ​f​o​r​ ​y​o​u
+		 */
+		DISARM_ALL_HINT: string
+		/**
+		 * P​a​g​e​s​ ​t​u​r​n​i​n​g​ ​b​y​ ​t​h​e​m​s​e​l​v​e​s​:​ ​{​a​r​m​e​d​}​ ​o​f​ ​{​p​a​g​e​s​}
+		 * @param {number} armed
+		 * @param {number} pages
+		 */
+		ARMED_COUNT: RequiredParams<'armed' | 'pages'>
+		/**
+		 * {​n​a​m​e​}​ ​·​ ​n​e​x​t​ ​i​n​ ​{​s​e​c​o​n​d​s​}​ ​s
+		 * @param {string} name
+		 * @param {number} seconds
+		 */
+		AUTO_NEXT: RequiredParams<'name' | 'seconds'>
+		/**
+		 * {​n​a​m​e​}​ ​·​ ​l​a​s​t​ ​p​a​g​e
+		 * @param {string} name
+		 */
+		AUTO_END: RequiredParams<'name'>
+		/**
+		 * {​s​e​c​o​n​d​s​}​ ​s​ ​p​e​r​ ​p​a​g​e
+		 * @param {number} seconds
+		 */
+		PER_PAGE: RequiredParams<'seconds'>
+		/**
+		 * H​o​w​ ​l​o​n​g​ ​a​ ​p​a​g​e​ ​s​t​a​y​s​:​ ​{​s​e​c​o​n​d​s​}​ ​s
+		 * @param {number} seconds
+		 */
+		PER_PAGE_HINT: RequiredParams<'seconds'>
+		/**
+		 * p​a​g​e​s​ ​t​i​m​e​d​ ​i​n​ ​P​o​w​e​r​P​o​i​n​t​ ​k​e​e​p​ ​t​h​e​i​r​ ​o​w​n​ ​t​i​m​e
+		 */
+		FILE_TIMINGS: string
+		/**
+		 * A​f​t​e​r​ ​t​h​e​ ​l​a​s​t​ ​p​a​g​e​,​ ​s​t​a​r​t​ ​a​g​a​i​n​ ​f​r​o​m​ ​t​h​e​ ​f​i​r​s​t
+		 */
+		LOOP_HINT: string
 	}
 	PREVIEW: {
 		/**
@@ -13177,6 +13351,14 @@ export type TranslationFunctions = {
 		 */
 		ADD_MEDIA_HINT: () => LocalizedString
 		/**
+		 * Add PDF / PowerPoint
+		 */
+		ADD_DOCUMENT: () => LocalizedString
+		/**
+		 * Its pages step like song slides, PowerPoint animations included
+		 */
+		ADD_DOCUMENT_HINT: () => LocalizedString
+		/**
 		 * Add background
 		 */
 		ADD_BACKGROUND: () => LocalizedString
@@ -13245,7 +13427,7 @@ export type TranslationFunctions = {
 		 */
 		EMPTY_HINT_BODY: () => LocalizedString
 		/**
-		 * Click to import .txt or .sng song files, or drop songs, images, videos and audio here
+		 * Click to import .txt or .sng song files, or drop songs, images, videos, audio, PDFs and PowerPoints here
 		 */
 		EMPTY_HINT_DROP: () => LocalizedString
 		/**
@@ -13369,6 +13551,10 @@ export type TranslationFunctions = {
 		 */
 		SEARCH_VIDEOS: () => LocalizedString
 		/**
+		 * Search presentations...
+		 */
+		SEARCH_PRESENTATIONS: () => LocalizedString
+		/**
 		 * Configure a media directory in Settings → Electron → Media Path
 		 */
 		CONFIGURE_PATH: () => LocalizedString
@@ -13433,6 +13619,10 @@ export type TranslationFunctions = {
 		 */
 		VIDEOS: () => LocalizedString
 		/**
+		 * PDF & PowerPoint
+		 */
+		PRESENTATIONS: () => LocalizedString
+		/**
 		 * Grid view
 		 */
 		VIEW_GRID: () => LocalizedString
@@ -13493,7 +13683,7 @@ export type TranslationFunctions = {
 		 */
 		UPLOAD: () => LocalizedString
 		/**
-		 * Copy images or videos from this computer into the current folder
+		 * Copy images, videos, PDFs or PowerPoints from this computer into the current folder
 		 */
 		UPLOAD_HINT: () => LocalizedString
 		/**
@@ -13501,7 +13691,7 @@ export type TranslationFunctions = {
 		 */
 		DROP_HERE: (arg: { folder: string }) => LocalizedString
 		/**
-		 * Drag images or videos here to copy them into this folder.
+		 * Drag images, videos, PDFs or PowerPoints here to copy them into this folder.
 		 */
 		DROP_HINT: () => LocalizedString
 		/**
@@ -13509,7 +13699,7 @@ export type TranslationFunctions = {
 		 */
 		UPLOAD_DONE: (arg: { count: number }) => LocalizedString
 		/**
-		 * {count} skipped (only images and videos, no folders)
+		 * {count} skipped (only images, videos, PDFs and PowerPoints, no folders)
 		 */
 		UPLOAD_SKIPPED: (arg: { count: number }) => LocalizedString
 		/**
@@ -16007,6 +16197,10 @@ export type TranslationFunctions = {
 		 */
 		COUNT_IMAGES: (arg: { count: number }) => LocalizedString
 		/**
+		 * {count} presentation{{s}}
+		 */
+		COUNT_DOCUMENTS: (arg: { count: number }) => LocalizedString
+		/**
 		 * {count} slideshow{{s}}
 		 */
 		COUNT_SLIDESHOWS: (arg: { count: number }) => LocalizedString
@@ -16523,7 +16717,7 @@ export type TranslationFunctions = {
 		 */
 		ONE_SLIDESHOW: () => LocalizedString
 		/**
-		 * Drop songs, images, videos or audio to add them here
+		 * Drop songs, images, videos, audio, PDFs or PowerPoints to add them here
 		 */
 		DROP_HINT: () => LocalizedString
 		/**
@@ -16531,7 +16725,7 @@ export type TranslationFunctions = {
 		 */
 		LOCKED: () => LocalizedString
 		/**
-		 * {count} file{{s}} could not be added: only song files, images, videos and audio are supported.
+		 * {count} file{{s}} could not be added: only song files, images, videos, audio, PDF and PowerPoint (.pptx) are supported. Save other presentations as PDF first.
 		 */
 		UNSUPPORTED: (arg: { count: number }) => LocalizedString
 		/**
@@ -16634,6 +16828,140 @@ export type TranslationFunctions = {
 		 * Use this file
 		 */
 		RELINK_USE: () => LocalizedString
+	}
+	DOCUMENT: {
+		/**
+		 * Presentation
+		 */
+		DOCUMENT: () => LocalizedString
+		/**
+		 * Opening the file…
+		 */
+		LOADING: () => LocalizedString
+		/**
+		 * The file could not be opened: {message}
+		 */
+		OPEN_FAILED: (arg: { message: string }) => LocalizedString
+		/**
+		 * {page} · click {step} of {builds}
+		 */
+		BUILD: (arg: { builds: number, page: number, step: number }) => LocalizedString
+		/**
+		 * {count} click{{s}}
+		 */
+		BUILDS: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} page{{s}}
+		 */
+		PAGES: (arg: { count: number }) => LocalizedString
+		/**
+		 * {count} slide{{s}}
+		 */
+		SLIDES: (arg: { count: number }) => LocalizedString
+		/**
+		 * This file was changed in the media folder — click to load the new version
+		 */
+		FILE_CHANGED: () => LocalizedString
+		/**
+		 * left out
+		 */
+		HIDDEN: () => LocalizedString
+		/**
+		 * {count} left out
+		 */
+		HIDDEN_COUNT: (arg: { count: number }) => LocalizedString
+		/**
+		 * Leave this page out of the show
+		 */
+		HIDE_PAGE: () => LocalizedString
+		/**
+		 * Show this page again
+		 */
+		SHOW_PAGE: () => LocalizedString
+		/**
+		 * Not installed on this computer: {fonts}. Text in these fonts is shown in another font.
+		 */
+		MISSING_FONTS: (arg: { fonts: string }) => LocalizedString
+		/**
+		 * Let the armed pages turn by themselves
+		 */
+		AUTO_START: () => LocalizedString
+		/**
+		 * Arm every page and let them turn by themselves
+		 */
+		AUTO_START_ALL: () => LocalizedString
+		/**
+		 * Hold: armed pages wait until you let them go on
+		 */
+		AUTO_STOP: () => LocalizedString
+		/**
+		 * {name} · turned by hand
+		 */
+		AUTO_OFF: (arg: { name: string }) => LocalizedString
+		/**
+		 * {name} · held
+		 */
+		AUTO_HELD: (arg: { name: string }) => LocalizedString
+		/**
+		 * Turns to the next page after {seconds} s
+		 */
+		ADVANCE_AFTER: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * time set in PowerPoint
+		 */
+		ADVANCE_FILE: () => LocalizedString
+		/**
+		 * Armed · click to disarm
+		 */
+		ADVANCE_ARMED: () => LocalizedString
+		/**
+		 * Off · click to arm
+		 */
+		ADVANCE_DISARMED: () => LocalizedString
+		/**
+		 * Arm all
+		 */
+		ARM_ALL: () => LocalizedString
+		/**
+		 * Every page turns to the next by itself
+		 */
+		ARM_ALL_HINT: () => LocalizedString
+		/**
+		 * Disarm all
+		 */
+		DISARM_ALL: () => LocalizedString
+		/**
+		 * Every page waits for you
+		 */
+		DISARM_ALL_HINT: () => LocalizedString
+		/**
+		 * Pages turning by themselves: {armed} of {pages}
+		 */
+		ARMED_COUNT: (arg: { armed: number, pages: number }) => LocalizedString
+		/**
+		 * {name} · next in {seconds} s
+		 */
+		AUTO_NEXT: (arg: { name: string, seconds: number }) => LocalizedString
+		/**
+		 * {name} · last page
+		 */
+		AUTO_END: (arg: { name: string }) => LocalizedString
+		/**
+		 * {seconds} s per page
+		 */
+		PER_PAGE: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * How long a page stays: {seconds} s
+		 */
+		PER_PAGE_HINT: (arg: { seconds: number }) => LocalizedString
+		/**
+		 * pages timed in PowerPoint keep their own time
+		 */
+		FILE_TIMINGS: () => LocalizedString
+		/**
+		 * After the last page, start again from the first
+		 */
+		LOOP_HINT: () => LocalizedString
 	}
 	PREVIEW: {
 		/**

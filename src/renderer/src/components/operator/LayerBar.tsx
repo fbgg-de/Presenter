@@ -4,7 +4,8 @@
  *
  * - **Background** — the background entries running, each on its screen groups, and Hide background.
  * - **Slides** — the item and section on screen, which groups show text and which do not.
- * - **Media** — the content entries running (images and videos from the agenda).
+ * - **Media** — the content entries running (images and videos from the agenda), and the live PDF or
+ *   PowerPoint with its pages turning by themselves or by hand.
  * - **Audio** — every audio item playing or paused part-way, whichever entry is open, with Fade.
  * - **Overlays** — the stage cues running.
  *
@@ -18,7 +19,21 @@
  * A layer gets its full row back the moment something runs on it.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Box, Button, ButtonBase, IconButton, Stack, Tooltip, Typography, useMediaQuery } from '@mui/material';
+import {
+  Box,
+  Button,
+  ButtonBase,
+  Chip,
+  IconButton,
+  ListItemIcon,
+  ListItemText,
+  Menu,
+  MenuItem,
+  Stack,
+  Tooltip,
+  Typography,
+  useMediaQuery,
+} from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import {
   Audiotrack as AudioLayerIcon,
@@ -27,6 +42,9 @@ import {
   TrendingDown as FadeIcon,
   Pause as PauseIcon,
   PlayArrow as PlayIcon,
+  Slideshow as DocumentIcon,
+  TimerOffOutlined as DisarmIcon,
+  TimerOutlined as TimerIcon,
   Stop as StopIcon,
   Tune as SetupIcon,
   VisibilityOff as HiddenIcon,
@@ -41,12 +59,31 @@ import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { useActiveLook } from '@/hooks/useActiveLook';
 import { useSlideSelect } from '@/hooks/useSlideSelect';
 import { versePages } from '@/utils/itemBlocks';
+import {
+  documentAdvanceOf,
+  documentArmHint,
+  documentArmingShown,
+  documentStepDurations,
+  documentStepName,
+  documentSteps,
+} from '@/document/document';
+import { useAdvanceClock, useDocumentArming } from '@/document/autoAdvance';
+import { armableChipSx } from '@/media/armableChip';
 import { useStageStatus } from '@/hooks/useStageEngine';
 import { normaliseScreenGroupData } from '@/screens/types';
 import { BackgroundThumb } from '@/components/look/BackgroundThumb';
 import { PlaybackButtons } from '@/components/media/PlaybackButtons';
 import { MasterSpeedControl, SpeedControl } from '@/components/media/SpeedControl';
-import { LiveTime, PLAYHEAD, Scrubber, Timecode, TRANSPORT_ACTIVE, TransportButton, TransportCluster } from '@/components/media/Transport';
+import {
+  LiveTime,
+  PLAYHEAD,
+  Scrubber,
+  Timecode,
+  TRANSPORT_ACTIVE,
+  TransportButton,
+  TransportCluster,
+  useTick,
+} from '@/components/media/Transport';
 import { StageTransport } from '@/components/stage/StageTransport';
 import { StagePanel } from '@/components/stage/StagePanel';
 import { useShortcut, withShortcut } from '@/hooks/useShortcut';
@@ -87,7 +124,8 @@ import {
   armedRegions,
 } from '@/media/mediaItem';
 import { goMedia, groupBackgroundIndexes, groupContentIndexes, nextMediaIndexes, playbackKeyOf, startItem } from '@/media/useMediaHost';
-import { useGetShow } from '@/store/showSlice';
+import { updateShowItem, useGetShow } from '@/store/showSlice';
+import type { ShowItem } from '@/api/shows.api';
 import { DEFAULT_GROUP_ID } from '@/utils/showGroups';
 import { sectionColor } from '@/utils/sectionColor';
 
@@ -450,6 +488,119 @@ const AudioTrackLine = ({ track, fadeSeconds }: { track: AudioTrackState; fadeSe
   );
 };
 
+/** Seconds per page offered for a document turning by itself. */
+const PAGE_SECONDS = [3, 5, 8, 10, 15, 20, 30, 45, 60];
+
+/**
+ * The live PDF or PowerPoint, drawn like a slideshow. The pages armed in its cards turn by
+ * themselves; play and pause let them run or hold them all (with nothing armed, play arms every
+ * page). The line says when the next turn comes, the strip is the deck — a stretch per step, the
+ * armed ones tinted — to jump in, and the seconds per page and loop are one click away. Pages
+ * timed in PowerPoint keep their own time. It edits the entry itself, so a deck set to run by
+ * itself does so again the next time it is live.
+ */
+const DocumentLine = ({ item, itemIndex }: { item: ShowItem; itemIndex: number }) => {
+  const { LL } = useI18nContext();
+  const D = LL.DOCUMENT;
+  const dispatch = useAppDispatch();
+  const { goLive } = useSlideSelect();
+  const { activeBlockIndex } = useGetPresentationSettings('activeBlockIndex');
+  const clock = useAdvanceClock();
+  const now = useTick(!!clock?.dueAt, 250);
+  const [secondsMenu, setSecondsMenu] = useState<HTMLElement | null>(null);
+  const { running, armed, seconds, loop } = documentAdvanceOf(item);
+  const steps = documentSteps(item.documentBuilds, item.documentHidden);
+  const durations = documentStepDurations(item);
+  const ours = clock?.itemIndex === itemIndex ? clock : undefined;
+  const block = ours?.block ?? activeBlockIndex;
+  const ms = durations[block];
+  // The strip counts steps, not seconds: a page waiting for the operator has no length in time.
+  // The tick can be older than a step that just began.
+  const at = Math.max(now, ours?.startedAt ?? 0);
+  const position = block + (ours?.dueAt && ms ? Math.min(1, (at - ours.startedAt) / ms) : 0);
+  const name = steps[block] ? documentStepName(steps[block]) : '';
+  const turning = running && armed.length > 0;
+  const detail =
+    armed.length && !running
+      ? D.AUTO_HELD({ name })
+      : ours?.dueAt
+        ? D.AUTO_NEXT({ name, seconds: Math.max(0, Math.ceil((ours.dueAt - at) / 1000)) })
+        : ms != null
+          ? D.AUTO_END({ name })
+          : D.AUTO_OFF({ name });
+  const set = (advance: NonNullable<ShowItem['documentAdvance']>) =>
+    dispatch(updateShowItem({ index: itemIndex, item: { documentAdvance: { ...item.documentAdvance, ...advance } } }));
+  const play = () =>
+    armed.length ? set({ paused: running }) : set({ paused: false, armed: (item.documentBuilds ?? [0]).map((_, page) => page) });
+  const armedSteps = durations.flatMap((duration, index) =>
+    duration == null
+      ? []
+      : [{ id: String(index), kind: 'section' as const, name: documentStepName(steps[index]), start: index, end: index + 1 }],
+  );
+
+  return (
+    <Stack direction="row" spacing={1.25} sx={{ alignItems: 'center', minWidth: 0, py: 0.5 }}>
+      <Stack
+        sx={{
+          width: 56,
+          aspectRatio: '16/9',
+          flexShrink: 0,
+          borderRadius: 0.75,
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: alpha(LAYER_COLORS.media, turning ? 0.22 : 0.08),
+          outline: 1,
+          outlineColor: turning ? alpha(PLAYHEAD, 0.7) : 'divider',
+        }}
+      >
+        <DocumentIcon sx={{ fontSize: 18, color: LAYER_COLORS.media }} />
+      </Stack>
+      <EntryName name={item.label || D.DOCUMENT()} detail={detail} tone={ours?.dueAt ? TRANSPORT_ACTIVE : undefined} />
+      <TransportCluster>
+        <TransportButton primary label={turning ? D.AUTO_STOP() : armed.length ? D.AUTO_START() : D.AUTO_START_ALL()} onClick={play}>
+          {turning ? <PauseIcon /> : <PlayIcon />}
+        </TransportButton>
+      </TransportCluster>
+      <Scrubber
+        time={position}
+        duration={steps.length}
+        regions={armedSteps}
+        ticks={steps.map((_, index) => index)}
+        onSeek={(at) => goLive(itemIndex, Math.min(steps.length - 1, Math.floor(at)))}
+      />
+      <TransportCluster>
+        <TransportButton
+          autoWidth
+          label={item.documentTimings ? `${D.PER_PAGE_HINT({ seconds })} · ${D.FILE_TIMINGS()}` : D.PER_PAGE_HINT({ seconds })}
+          onClick={(event) => setSecondsMenu(event.currentTarget)}
+        >
+          <Typography component="span" sx={{ fontSize: 12, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+            {seconds} s
+          </Typography>
+        </TransportButton>
+        <TransportButton active={loop} label={D.LOOP_HINT()} onClick={() => set({ loop: !loop })}>
+          <LoopIcon />
+        </TransportButton>
+      </TransportCluster>
+      <Menu anchorEl={secondsMenu} open={!!secondsMenu} onClose={() => setSecondsMenu(null)}>
+        {PAGE_SECONDS.map((value) => (
+          <MenuItem
+            key={value}
+            dense
+            selected={value === seconds}
+            onClick={() => {
+              set({ seconds: value });
+              setSecondsMenu(null);
+            }}
+          >
+            {D.PER_PAGE({ seconds: value })}
+          </MenuItem>
+        ))}
+      </Menu>
+    </Stack>
+  );
+};
+
 /**
  * The live item's slides in their order, as chips drawn like a media entry's sections: the one on
  * screen filled, the rest outlined. A click puts that slide on screen, so jumping to the last
@@ -459,26 +610,50 @@ const AudioTrackLine = ({ track, fadeSeconds }: { track: AudioTrackState; fadeSe
 const BlockStrip = ({
   slides,
 }: {
-  /** Each chip: the slide index it goes to, its name, and the mark before the name (number or ©). */
-  slides: { index: number; name: string; mark: string }[];
+  /**
+   * Each chip: the slide index it goes to, its name, and the mark before the name (number or ©;
+   * none for a document's steps, whose name is their number). A document step that can turn by
+   * itself carries `arm`: the chip is drawn armed or not like a video's regions, and the timer at
+   * its end switches it — a click on the chip still jumps, as on every other slide.
+   */
+  slides: { index: number; name: string; mark: string; arm?: { armed: boolean; hint: string; onToggle: () => void } }[];
 }) => {
   const { LL } = useI18nContext();
   const { activeItemIndex, activeBlockIndex: active } = useGetPresentationSettings('activeItemIndex', 'activeBlockIndex');
   const { goLive } = useSlideSelect();
   const onJump = (index: number) => goLive(activeItemIndex, index);
-  const currentRef = useRef<HTMLButtonElement | null>(null);
+  const stripRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    currentRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    stripRef.current?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }, [active]);
   return (
-    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, overflowX: 'auto', pb: 0.5 }}>
-      {slides.map(({ index, name, mark }) => {
+    <Stack ref={stripRef} direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0, overflowX: 'auto', pb: 0.5 }}>
+      {slides.map(({ index, name, mark, arm }) => {
         const current = index === active;
         const tint = sectionColor(name) ?? LAYER_COLORS.slides;
+        const jumpHint = LL.OPERATOR.JUMP_TO_SLIDE({ name, index: index + 1 });
+        if (arm)
+          return (
+            <Tooltip key={index} title={jumpHint}>
+              <Chip
+                size="small"
+                variant="outlined"
+                aria-current={current ? 'true' : undefined}
+                label={name}
+                onClick={() => onJump(index)}
+                onDelete={arm.onToggle}
+                deleteIcon={
+                  <Tooltip title={arm.hint} slotProps={{ tooltip: { sx: { whiteSpace: 'pre-line' } } }}>
+                    <TimerIcon aria-label={arm.hint} aria-pressed={arm.armed} />
+                  </Tooltip>
+                }
+                sx={{ ...armableChipSx(tint, { off: !arm.armed, held: current }), fontSize: 12.5, fontVariantNumeric: 'tabular-nums' }}
+              />
+            </Tooltip>
+          );
         return (
-          <Tooltip key={index} title={LL.OPERATOR.JUMP_TO_SLIDE({ name, index: index + 1 })}>
+          <Tooltip key={index} title={jumpHint}>
             <ButtonBase
-              ref={current ? currentRef : undefined}
               aria-current={current ? 'true' : undefined}
               onClick={() => onJump(index)}
               sx={{
@@ -498,9 +673,11 @@ const BlockStrip = ({
                 '&:hover': { bgcolor: alpha(tint, current ? 0.55 : 0.28) },
               }}
             >
-              <Box component="span" sx={{ fontFamily: 'monospace', fontSize: 10.5, color: current ? 'text.primary' : 'text.secondary' }}>
-                {mark}
-              </Box>
+              {mark && (
+                <Box component="span" sx={{ fontFamily: 'monospace', fontSize: 10.5, color: current ? 'text.primary' : 'text.secondary' }}>
+                  {mark}
+                </Box>
+              )}
               <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {name}
               </Box>
@@ -509,6 +686,46 @@ const BlockStrip = ({
         );
       })}
     </Stack>
+  );
+};
+
+/**
+ * By the slides row's name while a PDF or PowerPoint is live, as the media row has its speed: how
+ * many of its pages turn by themselves, and arming or disarming all of them at once.
+ */
+const DocumentArmButton = ({ item, itemIndex }: { item: ShowItem; itemIndex: number }) => {
+  const { LL } = useI18nContext();
+  const D = LL.DOCUMENT;
+  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const { armedCount, shownCount, armAll, disarmAll } = useDocumentArming(item, itemIndex);
+  const pick = (action: () => void) => () => {
+    action();
+    setAnchor(null);
+  };
+  return (
+    <>
+      <TransportButton
+        label={D.ARMED_COUNT({ armed: armedCount, pages: shownCount })}
+        active={armedCount > 0}
+        onClick={(event) => setAnchor(event.currentTarget)}
+      >
+        {armedCount > 0 ? <TimerIcon /> : <DisarmIcon />}
+      </TransportButton>
+      <Menu anchorEl={anchor} open={!!anchor} onClose={() => setAnchor(null)}>
+        <MenuItem dense disabled={armedCount === shownCount} onClick={pick(armAll)}>
+          <ListItemIcon>
+            <TimerIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={D.ARM_ALL()} secondary={D.ARM_ALL_HINT()} />
+        </MenuItem>
+        <MenuItem dense disabled={armedCount === 0} onClick={pick(disarmAll)}>
+          <ListItemIcon>
+            <DisarmIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={D.DISARM_ALL()} secondary={D.DISARM_ALL_HINT()} />
+        </MenuItem>
+      </Menu>
+    </>
   );
 };
 
@@ -541,7 +758,12 @@ export const LayerBar = () => {
   const O = LL.OPERATOR;
   const M = LL.MEDIA_ITEM;
   const dispatch = useAppDispatch();
-  const { isTextHidden, videoVisible, mediaVisible } = useGetPresentationSettings('isTextHidden', 'videoVisible', 'mediaVisible');
+  const { isTextHidden, videoVisible, mediaVisible, activeItemIndex } = useGetPresentationSettings(
+    'isTextHidden',
+    'videoVisible',
+    'mediaVisible',
+    'activeItemIndex',
+  );
   const audioMuted = useAudioMuted();
   const shiftHeld = useShiftHeld();
   const { hideTransitionMode, hideTransitionDuration, audioFadeOutSeconds } = useGetSettings(
@@ -557,15 +779,33 @@ export const LayerBar = () => {
   const { item, song, blocks, copyrightIndex } = useActiveLook();
   // Rows switched off in Settings → Presentation.
   const shown = useLayerRowShown();
-  // The slides the Slides row lists: a song's sections and its credits slide, a verse's pages.
+  // The slides the Slides row lists: a song's sections and its credits slide, a verse's pages, a
+  // document's pages and their builds ("3", "3.1").
+  const isDocument = item?.type === 'document';
+  const arming = useDocumentArming(isDocument ? item : undefined, activeItemIndex);
   const slideNames = song
     ? blocks.map((block) => block.name)
     : item?.type === 'bible_verse'
       ? versePages(item).map((page) => page.name)
       : [];
-  const stripSlides = [
+  const stripSlides: Parameters<typeof BlockStrip>[0]['slides'] = [
     ...slideNames.map((name, index) => ({ index, name, mark: String(index + 1) })),
     ...(song && copyrightIndex !== undefined ? [{ index: copyrightIndex, name: O.COPYRIGHT_SLIDE(), mark: '©' }] : []),
+    // A document's steps ("3", "3.1"), with their auto-turn once the deck uses it.
+    ...(isDocument
+      ? documentSteps(item.documentBuilds, item.documentHidden).map((step, index) => ({
+          index,
+          name: documentStepName(step),
+          mark: '',
+          arm: documentArmingShown(item)
+            ? {
+                armed: arming.armed.includes(step.page),
+                hint: documentArmHint(LL, item, step.page),
+                onToggle: () => arming.toggle(step.page),
+              }
+            : undefined,
+        }))
+      : []),
   ];
   // The stage overlay setup, opened on one layer (a click on its name) or on the list.
   const [stagePanel, setStagePanel] = useState<{ open: boolean; layerId?: number }>({ open: false });
@@ -611,7 +851,7 @@ export const LayerBar = () => {
   const stageRunning = stage.statuses.some((s) => s.layer.enabled && s.cueCount > 0);
   const folded = {
     background: compact && backgrounds.length === 0 && groupBackgrounds.length === 0,
-    media: compact && contents.length === 0,
+    media: compact && contents.length === 0 && !isDocument,
     audio: compact && audioTracks.length === 0,
     overlays: compact && !stageRunning,
   };
@@ -767,13 +1007,16 @@ export const LayerBar = () => {
             layer="slides"
             compact={compact}
             action={
-              <LayerHideButton
-                shiftHeld={shiftHeld}
-                hidden={isTextHidden}
-                onToggle={() => dispatch(toggleTextHidden())}
-                hint={isTextHidden ? O.SHOW_TEXT() : O.HIDE_TEXT()}
-                shortcut={textKey}
-              />
+              <>
+                {isDocument && <DocumentArmButton item={item} itemIndex={activeItemIndex} />}
+                <LayerHideButton
+                  shiftHeld={shiftHeld}
+                  hidden={isTextHidden}
+                  onToggle={() => dispatch(toggleTextHidden())}
+                  hint={isTextHidden ? O.SHOW_TEXT() : O.HIDE_TEXT()}
+                  shortcut={textKey}
+                />
+              </>
             }
           >
             {/* Just the jump buttons: title and section are already on the slide grid above. */}
@@ -798,8 +1041,9 @@ export const LayerBar = () => {
 
         {shown('media') && !folded.media && (
           <LayerRow name={M.LAYER()} layer="media" compact={compact} action={mediaActions}>
-            {contents.length > 0 ? (
+            {contents.length > 0 || isDocument ? (
               <Stack spacing={0.25} sx={{ flex: 1, minWidth: 0, py: 0.25, opacity: mediaVisible ? 1 : 0.6 }}>
+                {isDocument && item && <DocumentLine item={item} itemIndex={activeItemIndex} />}
                 {contents.map((playback) => (
                   <PlaybackLine key={playback.key} playback={playback} screensLabel={screensLabel(playback)} fadeMs={fadeMs} />
                 ))}

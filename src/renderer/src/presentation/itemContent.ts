@@ -12,6 +12,8 @@ import type { ResolvedStyle } from '@/utils/styleUtils';
 import { resolveNextLinePreview } from '@/utils/styleUtils';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import { versePages } from '@/utils/itemBlocks';
+import { resolveMediaUrl } from '@/utils/mediaUrl';
+import { documentKindOf, documentStepName, documentSteps, type DocumentKind } from '@/document/document';
 import type { ContentType, PresentationBlock, PresentationContent, PresentationLine } from './types';
 
 /** The part of a song the content needs. */
@@ -32,6 +34,8 @@ export interface ItemContentParts {
   authors?: string;
   licenseNumber?: number;
   songLanguages?: string[];
+  /** The file of a document entry; its blocks are its steps (see `document/document.ts`). */
+  document?: { kind: DocumentKind; url: string };
 }
 
 /**
@@ -45,6 +49,19 @@ export const parseSongLines = (rawLines: string[]): PresentationLine[] =>
     return match ? { text: match[2], language: match[1].toUpperCase() } : { text: line };
   });
 
+/** The file of a document entry, when it is one the screens can open. */
+export function documentFileOf(item: ShowItem | undefined): ItemContentParts['document'] {
+  if (item?.type !== 'document') return undefined;
+  const kind = documentKindOf(item.mediaPath ?? '');
+  const file = resolveMediaUrl(item.mediaPath);
+  if (!kind || !file) return undefined;
+  if (!item.documentRevision) return { kind, url: file };
+  // A reloaded file gets a new address: every window opens it anew, past its own and the HTTP cache.
+  const url = new URL(file);
+  url.searchParams.set('r', String(item.documentRevision));
+  return { kind, url: url.toString() };
+}
+
 /** The item's type, slides and song details — everything that does not change with the slide. */
 export function itemContentParts(item: ShowItem | undefined, song: ContentSong | undefined, orderName: string): ItemContentParts {
   let contentType: ContentType = 'empty';
@@ -53,6 +70,7 @@ export function itemContentParts(item: ShowItem | undefined, song: ContentSong |
   let copyright: string | undefined;
   let authors: string | undefined;
   let songLanguages: string[] | undefined;
+  let document: ItemContentParts['document'];
 
   if (item) {
     switch (item.type) {
@@ -108,11 +126,20 @@ export function itemContentParts(item: ShowItem | undefined, song: ContentSong |
         // no text, like a song between slides.
         contentType = item.mediaSubType === 'color' ? 'media' : 'song';
         break;
+
+      case 'document': {
+        // One block per step: "3", then "3.1", "3.2" for its builds.
+        blocks = documentSteps(item.documentBuilds, item.documentHidden).map((step) => ({ name: documentStepName(step), lines: [] }));
+        document = documentFileOf(item);
+        // A file that cannot be resolved leaves the screens on the group's look, like an empty media entry.
+        contentType = document ? 'document' : 'song';
+        break;
+      }
     }
   }
 
   const licenseNumber = song ? (song.account ?? undefined) : undefined;
-  return { contentType, blocks, title, copyright, authors, licenseNumber, songLanguages };
+  return { contentType, blocks, title, copyright, authors, licenseNumber, songLanguages, document };
 }
 
 /**
@@ -188,6 +215,11 @@ export function contentForItem(parts: ItemContentParts, at: ContentPlacement): P
     mediaLoop: item?.mediaLoop,
     bibleRef: item?.bibleRef,
     bibleTranslation: item?.bibleTranslation,
+    document: parts.document && {
+      ...parts.document,
+      ...(documentSteps(item?.documentBuilds, item?.documentHidden)[at.blockIndex] ?? { page: 0, step: 0 }),
+      title: item?.label,
+    },
     nextBlockPreviewLines: nextBlockPreviewLines(parts, at.blockIndex, at.style, at.nextLinePreview),
     transitionMode: at.transitionMode,
     transitionDuration: at.transitionDuration,

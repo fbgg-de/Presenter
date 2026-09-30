@@ -84,7 +84,25 @@ eq('saving copies: editing the show does not change it', ((order[1].songNumber =
 order[1].songNumber = 7;
 eq('a saved media entry belongs to no group', L.mediaLibraryData(order[2]).items[0].groupId, undefined);
 eq('the files an entry uses', L.mediaPathsOf(saved.items), ['Worship/clouds.mp4', 'pads/G.mp3']);
-eq('what it is made of', L.summariseItems(order), { songs: 2, videos: 1, images: 0, slideshows: 0, audio: 1, verses: 1 });
+eq('what it is made of', L.summariseItems(order), { songs: 2, videos: 1, images: 0, slideshows: 0, audio: 1, verses: 1, documents: 0 });
+
+// A PDF or PowerPoint entry: its file counts, and a copy watches the file afresh.
+const deck = {
+  id: 'p',
+  type: 'document',
+  mediaPath: 'Talks/Deck.pptx',
+  documentBuilds: [0, 2],
+  documentHidden: [1],
+  documentVersion: 'v1',
+  documentRevision: 2,
+};
+eq('a document is counted and its file checked', [L.summariseItems([deck]).documents, L.mediaPathsOf([deck])], [1, ['Talks/Deck.pptx']]);
+const deckCopy = L.copyItems([deck], 'g')[0];
+eq(
+  'a copied document keeps its pages, not its file version',
+  [deckCopy.documentBuilds, deckCopy.documentHidden, deckCopy.documentVersion, deckCopy.documentRevision],
+  [[0, 2], [1], undefined, undefined],
+);
 
 // ── Adding a copy ─────────────────────────────────────────────────────────────
 

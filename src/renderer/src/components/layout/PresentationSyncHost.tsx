@@ -1,5 +1,6 @@
 import { usePresentationSync } from '@/hooks/usePresentationSync';
 import { MediaAudio } from '@/media/useMediaHost';
+import { useDocumentAutoAdvance } from '@/document/autoAdvance';
 
 /**
  * Tiny null-rendering component that hosts the heavy `usePresentationSync`
@@ -15,6 +16,8 @@ import { MediaAudio } from '@/media/useMediaHost';
  */
 const PresentationSyncHost = () => {
   usePresentationSync();
+  // Timed PDF and PowerPoint pages turn here, with the rest of what drives the screens.
+  useDocumentAutoAdvance();
   return <MediaAudio />;
 };
 

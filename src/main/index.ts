@@ -1064,7 +1064,7 @@ app.whenReady().then(async () => {
     const win = BrowserWindow.fromWebContents(event.sender) ?? undefined;
     const result = await dialog.showOpenDialog(win as BrowserWindow, {
       properties: ['openFile', 'multiSelections'],
-      filters: [{ name: 'Images, videos & audio', extensions: [...IMPORTABLE_EXTS].map((ext) => ext.slice(1)) }],
+      filters: [{ name: 'Media & presentations', extensions: [...IMPORTABLE_EXTS].map((ext) => ext.slice(1)) }],
     });
     return result.canceled ? [] : result.filePaths;
   });

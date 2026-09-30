@@ -144,19 +144,20 @@ const LibraryRow = ({
     summary.slideshows && B.COUNT_SLIDESHOWS({ count: summary.slideshows }),
     summary.audio && B.COUNT_AUDIO({ count: summary.audio }),
     summary.verses && B.COUNT_VERSES({ count: summary.verses }),
+    summary.documents && B.COUNT_DOCUMENTS({ count: summary.documents }),
   ].filter(Boolean);
   const contents = row.data.items
     .map((item) =>
       item.type === 'song' && item.songNumber != null
         ? songTitle(item.songNumber)
-        : item.type === 'media'
+        : item.type === 'media' || item.type === 'document'
           ? mediaItemLabel(item)
           : item.label || item.bibleRef,
     )
     .filter(Boolean)
     .join(' · ');
   const single = row.kind === 'media' ? row.data.items[0] : undefined;
-  const Icon = single ? getShowItemIcon('media', single.mediaSubType) : GroupIcon;
+  const Icon = single ? getShowItemIcon(single.type, single.mediaSubType) : GroupIcon;
 
   return (
     <Stack
@@ -298,7 +299,7 @@ const LibraryDialogBody = ({
       const seen = new Set<string>();
       for (const entry of past) {
         for (const item of entry.items) {
-          if (item.type !== 'media' || item.mediaSubType === 'color') continue;
+          if ((item.type !== 'media' && item.type !== 'document') || item.mediaSubType === 'color') continue;
           const key = mediaPathsOf([item]).join('|');
           if (!key || seen.has(key)) continue;
           seen.add(key);

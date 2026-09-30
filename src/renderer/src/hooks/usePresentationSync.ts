@@ -15,7 +15,8 @@ import {
 } from '@/utils/presentationBridge';
 import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import type { PresentationContent } from '@/presentation/types';
-import { contentForItem, itemContentParts } from '@/presentation/itemContent';
+import { contentForItem, documentFileOf, itemContentParts } from '@/presentation/itemContent';
+import { warmDocument } from '@/document/openDocument';
 import type { ResolvedStyle } from '@/utils/styleUtils';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { lookInputFor, lookVariesByGroup, resolveLook, type LookInput } from '@/look/resolveLook';
@@ -417,8 +418,9 @@ export const usePresentationSync = (): void => {
     if (lastMidiSyncAt > 0) dispatch(setWsMidiSyncAt(lastMidiSyncAt));
   }, [lastMidiSyncAt, dispatch]);
 
-  const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden, videoVisible, mediaVisible } =
+  const { activeItemIndex, activeBlockIndex, activeLineIndex, isBlack, isTextHidden, videoVisible, mediaVisible, openItemIndex } =
     useGetPresentationSettings(
+      'openItemIndex',
       'activeItemIndex',
       'activeBlockIndex',
       'activeLineIndex',
@@ -450,6 +452,20 @@ export const usePresentationSync = (): void => {
 
   // Get the active show item
   const activeItem = currentShow?.order?.[activeItemIndex];
+
+  // PDFs and PowerPoints the screens will likely show next — the entry open here and the one after
+  // the live one. Every window opens them ahead (see warmDocument), so going live does not wait.
+  const documentsAhead = useMemo(() => {
+    const order = currentShow?.order ?? [];
+    const files = [openItemIndex ?? -1, activeItemIndex + 1].map((index) => documentFileOf(order[index]));
+    return files.filter((file, i): file is NonNullable<typeof file> => !!file && files.findIndex((f) => f?.url === file.url) === i);
+  }, [currentShow?.order, openItemIndex, activeItemIndex]);
+  const documentsAheadSig = documentsAhead.map((file) => file.url).join('|');
+  // Here too, for the entry's page cards.
+  useEffect(() => {
+    for (const file of documentsAhead) warmDocument(file.kind, file.url);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the signature stands for the list
+  }, [documentsAheadSig]);
 
   // Resolve the song's active order
   const currentSongNumber = activeItem?.type === 'song' ? activeItem.songNumber : undefined;
@@ -594,6 +610,7 @@ export const usePresentationSync = (): void => {
     transitionMode,
     transitionDuration,
     agenda,
+    documentsAhead,
   });
   broadcastRef.current = {
     parts,
@@ -609,6 +626,7 @@ export const usePresentationSync = (): void => {
     transitionMode,
     transitionDuration,
     agenda,
+    documentsAhead,
   };
 
   // A cheap content-identity hash (changes only when actual style values change).
@@ -658,7 +676,7 @@ export const usePresentationSync = (): void => {
         licenseLabel: LL.AUTH.LICENSE(),
       });
 
-      broadcastContent(content);
+      broadcastContent(cb.documentsAhead.length ? { ...content, documentsAhead: cb.documentsAhead } : content);
 
       // Broadcast musician_sync via WebSocket relay server
       // Include the current block's name and text lines so viewer clients
@@ -669,20 +687,22 @@ export const usePresentationSync = (): void => {
       // partial-state merge overwrites a previous song title when a media/bible item
       // becomes active (songTitle alone is undefined for non-songs and would persist).
       const itemTitle =
-        cb.contentType === 'song'
-          ? (cb.title ?? (cb.activeItem?.type === 'media' ? cb.activeItem.label : undefined) ?? '')
-          : cb.contentType === 'bible_verse'
-            ? cb.activeItem?.bibleRef || cb.activeItem?.label || 'Bible'
-            : cb.contentType === 'media'
-              ? cb.activeItem?.label ||
-                (cb.activeItem?.mediaSubType === 'color'
-                  ? 'Color'
-                  : cb.activeItem?.mediaSubType === 'video'
-                    ? 'Video'
-                    : cb.activeItem?.mediaSubType === 'image'
-                      ? 'Image'
-                      : 'Media')
-              : '';
+        cb.activeItem?.type === 'document'
+          ? cb.activeItem.label || ''
+          : cb.contentType === 'song'
+            ? (cb.title ?? (cb.activeItem?.type === 'media' ? cb.activeItem.label : undefined) ?? '')
+            : cb.contentType === 'bible_verse'
+              ? cb.activeItem?.bibleRef || cb.activeItem?.label || 'Bible'
+              : cb.contentType === 'media'
+                ? cb.activeItem?.label ||
+                  (cb.activeItem?.mediaSubType === 'color'
+                    ? 'Color'
+                    : cb.activeItem?.mediaSubType === 'video'
+                      ? 'Video'
+                      : cb.activeItem?.mediaSubType === 'image'
+                        ? 'Image'
+                        : 'Media')
+                : '';
 
       // Passive instances stay quiet. Their state is not wrong for them — it is simply not
       // the show anyone is watching, and publishing it overwrites the relay's cached state
@@ -729,7 +749,7 @@ export const usePresentationSync = (): void => {
     // Deduplicate scheduling using a lightweight key (includes styleHash so style
     // edits actually re-broadcast and apply immediately).
     const ai = b.activeItem;
-    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${mediaVisible}|${b.blocks.length}|${b.nextLinePreview}|${ai?.mediaColor}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${masterRate}|${showLicenseNumber}|${LL.AUTH.LICENSE()}|${b.agenda.map((a) => a.label).join('~')}`;
+    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${mediaVisible}|${b.blocks.length}|${b.nextLinePreview}|${ai?.mediaColor}|${b.parts.document?.url}|${documentsAheadSig}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${masterRate}|${showLicenseNumber}|${LL.AUTH.LICENSE()}|${b.agenda.map((a) => a.label).join('~')}`;
     const key = contentKey + mediaSig;
     if (key === lastKeyRef.current) return;
     lastKeyRef.current = key;
@@ -760,6 +780,7 @@ export const usePresentationSync = (): void => {
     windowStylesSig,
     // A colour entry's colour can be edited while it is on screen.
     activeItem?.mediaColor,
+    documentsAheadSig,
     forceBroadcastCount,
     // Remote-control permission changes must rebroadcast the allowed list immediately.
     remoteCommandsSig,

@@ -3,7 +3,7 @@
  *
  * - Lyric files (.sng, CCLI .txt) are imported as songs, as before.
  * - Images, videos and audio become media items in the group they are dropped on — after the entry
- *   under the pointer, else at the end of that group.
+ *   under the pointer, else at the end of that group. PDFs and PowerPoints become document entries.
  * - In the desktop app a file inside the media folder is referenced by its relative path; files
  *   from anywhere else are copied into a folder of the media folder first, chosen in a dialog.
  * - In the browser a file's location is unknown: with a Nextcloud connection it is uploaded into a
@@ -135,14 +135,19 @@ export function useAgendaFileDrop({
 
   const insertEntries = (entries: { kind: MediaFileKind; path: string }[], target: DropTarget) => {
     if (entries.length === 0) return;
-    const items: ShowItem[] = entries.map(({ kind, path }) => ({
-      type: 'media',
-      mediaSubType: kind,
-      mediaPath: path,
-      label: mediaLabelOf(path),
-      // Images and videos start as content on the screens that show media items.
-      ...(kind === 'audio' ? {} : { media: newMediaItemData(kind, path, { groups: screenGroups }) }),
-    }));
+    const items: ShowItem[] = entries.map(({ kind, path }) =>
+      // PDFs and PowerPoints step page by page; their builds are read when the entry is opened.
+      kind === 'document'
+        ? { type: 'document', mediaPath: path, label: mediaLabelOf(path) }
+        : {
+            type: 'media',
+            mediaSubType: kind,
+            mediaPath: path,
+            label: mediaLabelOf(path),
+            // Images and videos start as content on the screens that show media items.
+            ...(kind === 'audio' ? {} : { media: newMediaItemData(kind, path, { groups: screenGroups }) }),
+          },
+    );
     dispatch(insertItemsIntoGroup({ items, groupId: target.groupId, afterIndex: target.afterIndex }));
   };
 

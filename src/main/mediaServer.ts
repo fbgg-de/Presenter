@@ -8,10 +8,14 @@ import { createReadStream } from 'fs';
 import { stat, readdir, copyFile, mkdir, constants as fsConstants } from 'fs/promises';
 
 /**
- * What the media browser can show, and so what an import accepts. `.ogg` is left out on
- * purpose: it is served as audio, so a copied `.ogg` would never appear under Videos.
+ * What the media browser can show, and so what an import accepts — PDFs and PowerPoints included,
+ * which become document entries. `.ogg` is left out on purpose: it is served as audio, so a
+ * copied `.ogg` would never appear under Videos.
  */
 export const IMPORTABLE_EXTS = new Set([
+  '.pdf',
+  '.pptx',
+  '.ppsx',
   '.jpg',
   '.jpeg',
   '.png',
@@ -72,10 +76,16 @@ const MIME_TYPES: Record<string, string> = {
   '.aac': 'audio/aac',
   '.flac': 'audio/flac',
   '.pdf': 'application/pdf',
+  '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  '.ppsx': 'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
 };
 
-// Extensions included in folder listings (no PDFs in media browser)
+/** PDFs and PowerPoints: listed under `type=document`, their MIME types being `application/…`. */
+const DOCUMENT_EXTS = new Set(['.pdf', '.pptx', '.ppsx']);
+
+// Extensions included in folder listings
 const LISTABLE_EXTS = new Set([
+  ...DOCUMENT_EXTS,
   '.jpg',
   '.jpeg',
   '.png',
@@ -386,8 +396,9 @@ export class LocalMediaServer {
         const type = url.searchParams.get('type');
         const query = (url.searchParams.get('q') || '').toLocaleLowerCase();
         const files = listing.files.filter(({ name }) => {
-          const mime = MIME_TYPES[extname(name).toLowerCase()] || '';
-          return (!type || mime.startsWith(type + '/')) && name.toLocaleLowerCase().includes(query);
+          const ext = extname(name).toLowerCase();
+          const kind = DOCUMENT_EXTS.has(ext) ? 'document' : (MIME_TYPES[ext] || '').split('/')[0];
+          return (!type || kind === type) && name.toLocaleLowerCase().includes(query);
         });
         // Sorting has to happen before slicing, otherwise every page is only sorted within itself.
         const sort = url.searchParams.get('sort');
@@ -480,7 +491,9 @@ export class LocalMediaServer {
       res.writeHead(200, {
         'Content-Length': fileStat.size,
         'Content-Type': mimeType,
-        'Cache-Control': 'public, max-age=3600',
+        // A PDF or PowerPoint is edited and saved again during the week; an hour-old copy
+        // from the browser's cache would be the previous version.
+        'Cache-Control': DOCUMENT_EXTS.has(ext) ? 'no-cache' : 'public, max-age=3600',
         'Accept-Ranges': 'bytes',
       });
 

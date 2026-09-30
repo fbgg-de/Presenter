@@ -53,6 +53,7 @@ import {
   InstallDesktop as DesktopAppIcon,
   Wallpaper as BackgroundIcon,
   Collections as SlideshowIcon,
+  Slideshow as DocumentIcon,
   ContentCopy as CopyIcon,
 } from '@mui/icons-material';
 import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
@@ -120,6 +121,7 @@ import { useMetrics } from '@/hooks/useMetrics';
 import { useCcliSongImport } from '@/hooks/useCcliSongImport';
 import { useImportLanguage } from '@/hooks/useImportLanguage';
 import { useSongUpdatePoller } from '@/hooks/useSongUpdatePoller';
+import { useDocumentFileWatch } from '@/document/useDocumentFileWatch';
 import { useGetMusicianSettings } from '@/store/musicianSlice';
 import { loadShowSongs } from '@/store/songsSlice';
 import { StyleEditor } from '@/components/style/StyleEditor';
@@ -128,13 +130,14 @@ import { useAgendaFileDrop } from '@/components/agenda/useAgendaFileDrop';
 import { RelinkMediaDialog } from '@/components/agenda/RelinkMediaDialog';
 import { MissingMediaFileIcon } from '@/components/agenda/MissingMediaFileIcon';
 import { AgendaAudioButton } from '@/components/agenda/AgendaAudioButton';
-import { MediaItemBadges } from '@/components/agenda/MediaItemBadges';
+import { DocumentItemBadges, MediaItemBadges } from '@/components/agenda/MediaItemBadges';
 import { MediaHoverPreview } from '@/components/agenda/MediaHoverPreview';
 import { GroupSettingsDialog } from '@/components/agenda/GroupSettingsDialog';
 import { useAppEvent } from '@/utils/appEvents';
 import { useShortcut, withShortcut } from '@/hooks/useShortcut';
 import { useLibraryActions } from '@/components/library/useLibraryActions';
 import { mediaItemLabel, newMediaItemData, newSlideshowData, type MediaRole } from '@/media/mediaItem';
+import { mediaLabelOf } from '@/media/mediaFiles';
 import { genItemId } from '@/utils/showGroups';
 import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { WindowManager } from '@/components/layout/WindowManager';
@@ -149,7 +152,7 @@ export interface SidebarHandle {
   openShowSwitcher: () => void;
   openSearch: () => void;
   openAddMenu: (anchor: HTMLElement) => void;
-  openMediaBrowser: (subType?: 'image' | 'video') => void;
+  openMediaBrowser: (subType?: 'image' | 'video' | 'document') => void;
   openBiblePicker: () => void;
 }
 
@@ -222,7 +225,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
   const [openSongLibrary, _setOpenSongLibrary] = useState(false);
   const [openBiblePicker, _setOpenBiblePicker] = useState(false);
   const [openMediaBrowser, _setOpenMediaBrowser] = useState(false);
-  const [mediaBrowserPickType, setMediaBrowserPickType] = useState<'image' | 'video' | 'any'>('any');
+  const [mediaBrowserPickType, setMediaBrowserPickType] = useState<'image' | 'video' | 'document' | 'any'>('any');
   const [songToEdit, _setSongToEdit] = useState<ISong>();
   const [styleEditorOpen, setStyleEditorOpen] = useState(false);
   /** When set, the StyleEditor opens directly in edit view for this style (direct edit from item menus). */
@@ -247,6 +250,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
   // While following remote commands nobody is at this screen to confirm, so adopt them directly.
   const { midiTrackingMaster } = useGetMusicianSettings();
   const { updatedSongNumbers, reloadSong } = useSongUpdatePoller({ autoReload: midiTrackingMaster === 'midi' });
+  const { changed: changedDocuments, reload: reloadDocument } = useDocumentFileWatch();
   const [fetchSong] = useLazyGetSongQuery();
 
   // Add menu
@@ -263,7 +267,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
     openShowSwitcher: () => setOpenShowSwitcher(true),
     openSearch: () => openSearch(),
     openAddMenu: (anchor: HTMLElement) => setAddMenuAnchor(anchor),
-    openMediaBrowser: (subType?: 'image' | 'video') => {
+    openMediaBrowser: (subType?: 'image' | 'video' | 'document') => {
       setMediaBrowserPickType(subType ?? 'any');
       setOpenMediaBrowser(true);
     },
@@ -480,22 +484,33 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
     noteAdded(LL.SHOW_ITEMS.SLIDESHOW());
   };
 
-  const handleMediaAdd = (mediaSubType: MediaSubType, mediaPath?: string, mediaColor?: string, label?: string) => {
+  const handleMediaAdd = (mediaSubType: MediaSubType | 'document', mediaPath?: string, mediaColor?: string, label?: string) => {
     const id = genItemId();
     dispatch(
-      addShowItem({
-        id,
-        type: 'media',
-        mediaSubType,
-        mediaColor,
-        mediaPath,
-        ...((mediaSubType === 'image' || mediaSubType === 'video') && mediaPath
-          ? { media: newMediaItemData(mediaSubType, mediaPath, { groups: screenGroups, role: mediaAddRole }) }
-          : {}),
-        // A name given on add wins; otherwise the path/color doubles as the label.
-        label: label || (mediaSubType === 'color' ? mediaColor : mediaPath),
-        groupId: addTargetGroup,
-      }),
+      addShowItem(
+        mediaSubType === 'document'
+          ? // A PDF or PowerPoint, named like a dropped one: without the extension.
+            {
+              id,
+              type: 'document',
+              mediaPath,
+              label: label ? label.replace(/\.(pdf|pptx|ppsx)$/i, '') : mediaLabelOf(mediaPath ?? ''),
+              groupId: addTargetGroup,
+            }
+          : {
+              id,
+              type: 'media',
+              mediaSubType,
+              mediaColor,
+              mediaPath,
+              ...((mediaSubType === 'image' || mediaSubType === 'video') && mediaPath
+                ? { media: newMediaItemData(mediaSubType, mediaPath, { groups: screenGroups, role: mediaAddRole }) }
+                : {}),
+              // A name given on add wins; otherwise the path/color doubles as the label.
+              label: label || (mediaSubType === 'color' ? mediaColor : mediaPath),
+              groupId: addTargetGroup,
+            },
+      ),
     );
     trackEvent('media_added', 'media', mediaPath || mediaColor);
     noteAdded(label || mediaPath || mediaColor || '');
@@ -647,6 +662,8 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
       case 'media':
         if (item.mediaSubType === 'color') return item.label || item.mediaColor || LL.MEDIA.COLOR();
         return item.label || item.mediaPath || LL.MEDIA.IMAGE();
+      case 'document':
+        return item.label || item.mediaPath || LL.DOCUMENT.DOCUMENT();
       default:
         return `Item ${index + 1}`;
     }
@@ -761,6 +778,8 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
                   item.type === 'media' &&
                   (item.mediaSubType === 'image' || item.mediaSubType === 'video' || item.mediaSubType === 'slideshow') ? (
                     <MediaItemBadges item={item} index={i} inverted={active} />
+                  ) : item.type === 'document' ? (
+                    <DocumentItemBadges item={item} inverted={active} />
                   ) : undefined
                 }
                 slotProps={{
@@ -820,12 +839,27 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
                     </IconButton>
                   </Tooltip>
                 )}
+                {/* The PDF or PowerPoint was saved again since the entry loaded it */}
+                {item.type === 'document' && item.mediaPath && changedDocuments[item.mediaPath] && (
+                  <Tooltip title={LL.DOCUMENT.FILE_CHANGED()}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        reloadDocument(item.mediaPath!);
+                      }}
+                      sx={{ p: 0.25 }}
+                    >
+                      <SyncIcon fontSize="small" color="warning" />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 {/* Audio plays from the row, without opening the entry */}
                 {item.type === 'media' && item.mediaSubType === 'audio' && item.mediaPath && (
                   <AgendaAudioButton item={item} inverted={active} />
                 )}
                 {/* The media file is not where the entry points */}
-                {item.type === 'media' && item.mediaPath && item.mediaSubType !== 'color' && (
+                {(item.type === 'media' || item.type === 'document') && item.mediaPath && item.mediaSubType !== 'color' && (
                   <MissingMediaFileIcon path={item.mediaPath} inverted={active} />
                 )}
                 {/* Context menu button — every entry in it edits the show, so it is gone in Live */}
@@ -1087,7 +1121,13 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
         item={relinkIndex >= 0 ? showItems[relinkIndex] : undefined}
         onClose={() => setRelinkIndex(-1)}
         onRelink={(mediaPath, mediaSubType) => {
-          dispatch(updateShowItem({ index: relinkIndex, item: { mediaPath, mediaSubType } }));
+          dispatch(
+            updateShowItem({
+              index: relinkIndex,
+              // A document found elsewhere is the file as it is now; its change watch starts over.
+              item: mediaSubType ? { mediaPath, mediaSubType } : { mediaPath, documentVersion: undefined },
+            }),
+          );
           setRelinkIndex(-1);
         }}
       />
@@ -1161,6 +1201,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
         }}
         onAdd={handleMediaAdd}
         pickType={mediaAddRole === 'background' ? 'any' : mediaBrowserPickType}
+        allowDocuments={mediaAddRole !== 'background'}
       />
       <StyleEditor
         open={styleEditorOpen}
@@ -1276,6 +1317,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
         <MenuItem
           onClick={() => {
             setAddMenuAnchor(null);
+            setMediaBrowserPickType('any');
             setOpenMediaBrowser(true);
           }}
         >
@@ -1283,6 +1325,18 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
             <ImageIcon fontSize="small" sx={{ color: DEFAULT_MEDIA_ITEM_COLOR }} />
           </ListItemIcon>
           <ListItemText primary={LL.SHOW_ITEMS.ADD_MEDIA()} secondary={LL.SHOW_ITEMS.ADD_MEDIA_HINT()} />
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            setAddMenuAnchor(null);
+            setMediaBrowserPickType('document');
+            setOpenMediaBrowser(true);
+          }}
+        >
+          <ListItemIcon>
+            <DocumentIcon fontSize="small" sx={{ color: DEFAULT_MEDIA_ITEM_COLOR }} />
+          </ListItemIcon>
+          <ListItemText primary={LL.SHOW_ITEMS.ADD_DOCUMENT()} secondary={LL.SHOW_ITEMS.ADD_DOCUMENT_HINT()} />
         </MenuItem>
         <MenuItem
           onClick={() => {
@@ -1526,8 +1580,8 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
-        {/* Rename (media only — songs/verses take their label from the source) */}
-        {menuItem?.type === 'media' && (
+        {/* Rename (media and documents — songs/verses take their label from the source) */}
+        {(menuItem?.type === 'media' || menuItem?.type === 'document') && (
           <MenuItem
             onClick={() => {
               setRenameIndex(itemMenuIndex);
@@ -1541,7 +1595,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
           </MenuItem>
         )}
         {/* Keep this media entry in the library */}
-        {menuItem?.type === 'media' && menuItem.mediaSubType !== 'color' && (
+        {(menuItem?.type === 'media' || menuItem?.type === 'document') && menuItem.mediaSubType !== 'color' && (
           <MenuItem
             onClick={() => {
               if (menuItem) library.saveItem(menuItem);
@@ -1555,7 +1609,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
           </MenuItem>
         )}
         {/* Find a media file that moved */}
-        {menuItem?.type === 'media' && !!menuItem.mediaPath && menuItem.mediaSubType !== 'color' && (
+        {(menuItem?.type === 'media' || menuItem?.type === 'document') && !!menuItem.mediaPath && menuItem.mediaSubType !== 'color' && (
           <MenuItem
             onClick={() => {
               setRelinkIndex(itemMenuIndex);

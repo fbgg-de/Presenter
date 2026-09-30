@@ -30,6 +30,7 @@ export const mediaLibraryData = (item: ShowItem): LibraryData => ({ items: [clon
 export function mediaPathsOf(items: ShowItem[]): string[] {
   const paths = new Set<string>();
   for (const item of items) {
+    if (item.type === 'document' && item.mediaPath) paths.add(item.mediaPath);
     if (item.type !== 'media') continue;
     for (const version of item.media?.versions ?? []) for (const source of version.sources) paths.add(source.path);
     if (!item.media && item.mediaPath) paths.add(item.mediaPath);
@@ -44,13 +45,16 @@ export interface LibrarySummary {
   slideshows: number;
   audio: number;
   verses: number;
+  /** PDFs and PowerPoints. */
+  documents: number;
 }
 
 export function summariseItems(items: ShowItem[]): LibrarySummary {
-  const summary: LibrarySummary = { songs: 0, videos: 0, images: 0, slideshows: 0, audio: 0, verses: 0 };
+  const summary: LibrarySummary = { songs: 0, videos: 0, images: 0, slideshows: 0, audio: 0, verses: 0, documents: 0 };
   for (const item of items) {
     if (item.type === 'song') summary.songs++;
     else if (item.type === 'bible_verse') summary.verses++;
+    else if (item.type === 'document') summary.documents++;
     else if (item.mediaSubType === 'video') summary.videos++;
     else if (item.mediaSubType === 'image') summary.images++;
     else if (item.mediaSubType === 'slideshow') summary.slideshows++;
@@ -68,6 +72,9 @@ export function copyItems(items: ShowItem[], groupId: string): ShowItem[] {
   const copies = items.map((item) => {
     const copy = clone(item);
     const id = newId('i_');
+    // A copied PDF or PowerPoint shows the file as it is now: its change watch starts over.
+    delete copy.documentVersion;
+    delete copy.documentRevision;
     if (item.id) idMap.set(item.id, id);
     return { ...copy, id, groupId };
   });

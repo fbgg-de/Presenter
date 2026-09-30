@@ -31,11 +31,31 @@ export const appBuildDefines = (() => {
   };
 })();
 
+/**
+ * Packages pptx-vanilla-viewer imports for features the app leaves off, resolved to an empty module:
+ * - lazily, and not installed: 3D charts (`three`), rendering under Node, collaboration (`yjs`);
+ * - `pptx-viewer-mcp`, its AI assistant's tools. It is imported up front and brings a second copy
+ *   of the PowerPoint core, zod and an EMF converter — about 3 MB of the renderer chunk. The tools
+ *   are only stored at load, never called without the assistant. Its `/schemas` stay real: they
+ *   are read at load.
+ * Matched exactly, so a stub never swallows a subpath.
+ */
+const STUBBED = [
+  'three/examples/jsm/controls/OrbitControls.js',
+  'three/examples/jsm/loaders/GLTFLoader.js',
+  'three',
+  '@napi-rs/canvas',
+  'yjs',
+  'pptx-viewer-mcp',
+];
+const exactly = (id: string) => new RegExp(`^${id.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')}$`);
+
 /** Renderer resolves aliases (shared between Electron and standalone builds). */
-export const rendererAliases: Record<string, string> = {
-  '@': resolve(__dirname, 'src/renderer/src'),
-  '@renderer': resolve(__dirname, 'src/renderer/src'),
-};
+export const rendererAliases = [
+  { find: '@', replacement: resolve(__dirname, 'src/renderer/src') },
+  { find: '@renderer', replacement: resolve(__dirname, 'src/renderer/src') },
+  ...STUBBED.map((id) => ({ find: exactly(id), replacement: resolve(__dirname, 'src/renderer/src/document/optionalPeerStub.ts') })),
+];
 
 /** Renderer rollup input entries for the full web build (all pages). */
 export const rendererInputs: Record<string, string> = {

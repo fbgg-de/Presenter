@@ -5,6 +5,7 @@
  */
 import type { ShowItem } from '@/api/shows.api';
 import { SONG_BLOCK_SEPARATOR } from '@/song';
+import { documentSteps } from '@/document/document';
 
 export interface ItemBlock {
   name: string;
@@ -32,10 +33,12 @@ export const versePages = (item: ShowItem): ItemBlock[] => {
 
 /**
  * How many blocks the item steps through. Songs count every block of the arrangement including
- * the copyright slide (as navigation always has); verses count their pages; media has none.
+ * the copyright slide (as navigation always has); verses count their pages; documents their pages
+ * and click builds; media has none.
  */
 export const navigableBlockCount = (item: ShowItem | undefined, song: BlockSource | undefined, orderName: string): number => {
   if (song) return song.getBlocks(orderName).length;
   if (item?.type === 'bible_verse') return versePages(item).length;
+  if (item?.type === 'document') return documentSteps(item.documentBuilds, item.documentHidden).length;
   return 0;
 };

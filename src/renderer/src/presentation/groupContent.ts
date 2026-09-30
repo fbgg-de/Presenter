@@ -39,6 +39,7 @@ export function applyScreenGroup(
   // The window's screen group decides everything it shows; no group shows everything.
   const layers = layersForGroup(groups, groupId);
   const display = groupDisplay(groups, groupId);
+  const stageLayout = stageLayoutForGroup(groups, groupId);
   const hideBackground = !!(content.hideBackground || layers?.background === false);
   const hideText = !!(
     content.hideText ||
@@ -48,15 +49,18 @@ export function applyScreenGroup(
 
   const merged: PresentationContent = {
     ...content,
-    // A group without media items shows nothing while a colour entry is active, rather than the colour.
-    contentType: layers?.media === false && content.contentType === 'media' ? 'empty' : content.contentType,
+    // A group without media items shows nothing while a colour entry or a document is active.
+    contentType:
+      layers?.media === false && (content.contentType === 'media' || content.contentType === 'document') ? 'empty' : content.contentType,
     displayMode: display.displayMode,
     streamLines: display.streamLines ?? content.streamLines,
     windowName: extras.windowName || content.windowName,
     hideText,
     hideBackground,
+    // A stage screen draws document pages whatever the group's media switch says.
+    documentsAhead: layers?.media === false && !stageLayout ? undefined : content.documentsAhead,
     // A Stage group's windows draw the stage screen instead of the audience theme.
-    stageLayout: stageLayoutForGroup(groups, groupId),
+    stageLayout,
   };
 
   // A group with a different look gets its own complete style. It replaces the broadcast style

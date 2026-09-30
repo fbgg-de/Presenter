@@ -33,6 +33,7 @@ import {
   CreateNewFolderOutlined as NewFolderIcon,
   Folder as FolderIcon,
   Image as ImageIcon,
+  Slideshow as DocumentIcon,
   Videocam as VideoIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -44,7 +45,7 @@ export interface FileToCopy {
   kind: MediaFileKind;
 }
 
-const KIND_ICON = { image: ImageIcon, video: VideoIcon, audio: AudioIcon } as const;
+const KIND_ICON = { image: ImageIcon, video: VideoIcon, audio: AudioIcon, document: DocumentIcon } as const;
 
 export const CopyToMediaFolderDialog = ({
   open,

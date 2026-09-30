@@ -37,6 +37,11 @@ interface SlideCardProps {
   aspectRatio?: string;
   /** Draws the card's content instead of background and text — a media preview. */
   children?: ReactNode;
+  /**
+   * Sits in the footer between the number and the name — a document page's auto-turn. Anything in
+   * it with the class `on-card-hover` shows only while the card is hovered or it has focus.
+   */
+  footerBadge?: ReactNode;
 }
 
 /** One slide, drawn the way the audience screen shows it. Re-renders only when its own props change. */
@@ -55,6 +60,7 @@ export const SlideCard = memo(function SlideCard({
   forwardRef,
   aspectRatio = '16/9',
   children,
+  footerBadge,
 }: SlideCardProps) {
   const { measureRef, scale, size } = usePreviewScale();
   // The theme's font, colours and alignment — but not its size: the operator has to read the slide
@@ -94,7 +100,11 @@ export const SlideCard = memo(function SlideCard({
   }, [size.width, size.height, lines, textCss, selected, activeLineIndex]);
 
   return (
-    <Stack spacing={0.5} ref={forwardRef} sx={{ minWidth: 0 }}>
+    <Stack
+      spacing={0.5}
+      ref={forwardRef}
+      sx={{ minWidth: 0, '& .on-card-hover': { opacity: 0 }, '&:hover .on-card-hover, & .on-card-hover:focus-visible': { opacity: 1 } }}
+    >
       <Box
         ref={measureRef}
         onClick={() => onBlockClick?.(blockIndex)}
@@ -185,6 +195,7 @@ export const SlideCard = memo(function SlideCard({
         >
           {label}
         </Typography>
+        {footerBadge}
         <Typography
           variant="caption"
           noWrap

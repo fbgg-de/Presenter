@@ -44,6 +44,7 @@ const cachedSongNumbers = (): Set<string> => {
 };
 
 const mediaPathsOf = (item: ShowItem): string[] => {
+  if (item.type === 'document') return item.mediaPath ? [item.mediaPath] : [];
   if (item.type !== 'media') return [];
   const data = mediaItemDataOf(item);
   const paths = data ? activeVersionOf(data).sources.map((s) => s.path) : [item.mediaPath];

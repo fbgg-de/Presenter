@@ -5,6 +5,7 @@ import {
   Lyrics as MusicNoteIcon,
   Image as ImageIcon,
   Videocam as VideocamIcon,
+  Slideshow as DocumentIcon,
   MenuBook as MenuBookIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -12,6 +13,7 @@ import ControlSong from '@/components/show/ControlSong';
 import ControlBibleVerse from '@/components/show/ControlBibleVerse';
 import ControlMedia from '@/components/show/ControlMedia';
 import ControlAudio from '@/components/show/ControlAudio';
+import ControlDocument from '@/components/show/ControlDocument';
 import { useGetSessionQuery } from '@/api/session.api';
 import { setOpenItemIndex, useGetPresentationSettings, useOpenItem } from '@/store/presentationSlice';
 import { useGetSongs } from '@/store/songsSlice';
@@ -47,7 +49,9 @@ const OpenedBar = ({
       ? ((liveItem.songNumber != null ? songs[liveItem.songNumber]?.title : undefined) ?? '')
       : liveItem.type === 'bible_verse'
         ? liveItem.bibleRef || LL.BIBLE.VERSE()
-        : mediaItemLabel(liveItem);
+        : liveItem.type === 'document'
+          ? liveItem.label || LL.DOCUMENT.DOCUMENT()
+          : mediaItemLabel(liveItem);
   return (
     <Stack
       direction="row"
@@ -92,7 +96,7 @@ const Control = ({
   onOpenBiblePicker,
 }: {
   onOpenSearch?: () => void;
-  onOpenMediaBrowser?: (subType?: 'image' | 'video') => void;
+  onOpenMediaBrowser?: (subType?: 'image' | 'video' | 'document') => void;
   onOpenBiblePicker?: () => void;
 } = {}) => {
   const { LL } = useI18nContext();
@@ -124,6 +128,8 @@ const Control = ({
         ) : (
           <ControlMedia item={activeItem} index={activeItemIndex} />
         );
+      case 'document':
+        return <ControlDocument item={activeItem} index={activeItemIndex} isLive={isLive} />;
       default:
         return <ControlSong index={activeItemIndex} isLive={isLive} />;
     }
@@ -153,6 +159,11 @@ const Control = ({
           <Tooltip title={LL.MEDIA.VIDEO()}>
             <IconButton onClick={() => onOpenMediaBrowser?.('video')} sx={{ color: DEFAULT_MEDIA_ITEM_COLOR }}>
               <VideocamIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={LL.MEDIA.PRESENTATIONS()}>
+            <IconButton onClick={() => onOpenMediaBrowser?.('document')} sx={{ color: DEFAULT_MEDIA_ITEM_COLOR }}>
+              <DocumentIcon />
             </IconButton>
           </Tooltip>
           {bibleEnabled && (

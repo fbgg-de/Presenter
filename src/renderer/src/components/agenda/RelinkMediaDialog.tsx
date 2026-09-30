@@ -1,5 +1,5 @@
 /**
- * A media item whose file is missing: find it again.
+ * A media or document entry whose file is missing: find it again.
  *
  * Files with the same name anywhere in the media folder are offered first — the usual case is a file
  * that was moved to another folder. The media browser remains for picking any other file.
@@ -38,7 +38,8 @@ export const RelinkMediaDialog = ({
   /** The item to relink; the dialog is open while it is set. */
   item: ShowItem | undefined;
   onClose: () => void;
-  onRelink: (mediaPath: string, mediaSubType: MediaSubType) => void;
+  /** `mediaSubType` is undefined for a document entry (PDF, PowerPoint). */
+  onRelink: (mediaPath: string, mediaSubType: MediaSubType | undefined) => void;
 }) => {
   const { LL } = useI18nContext();
   const A = LL.AGENDA_DROP;
@@ -48,6 +49,7 @@ export const RelinkMediaDialog = ({
   const [browsing, setBrowsing] = useState(false);
 
   const name = item?.mediaPath ? fileNameOf(item.mediaPath) : '';
+  const isDocument = item?.type === 'document';
 
   useEffect(() => {
     if (!item) return;
@@ -65,7 +67,7 @@ export const RelinkMediaDialog = ({
     };
   }, [item, name, mediaPath]);
 
-  const apply = (path: string, subType: MediaSubType) => {
+  const apply = (path: string, subType: MediaSubType | undefined) => {
     const url = resolveMediaUrl(path);
     if (url) invalidateMediaProbe(url);
     onRelink(path, subType);
@@ -105,7 +107,7 @@ export const RelinkMediaDialog = ({
           <Button
             variant="contained"
             disabled={!selected || !item}
-            onClick={() => selected && item && apply(selected, item.mediaSubType ?? 'image')}
+            onClick={() => selected && item && apply(selected, isDocument ? undefined : (item.mediaSubType ?? 'image'))}
           >
             {A.RELINK_USE()}
           </Button>
@@ -114,12 +116,14 @@ export const RelinkMediaDialog = ({
       <MediaBrowser
         open={!!item && browsing}
         mode="pick"
+        pickType={isDocument ? 'document' : undefined}
         initialType={item?.mediaSubType === 'video' ? 'video' : 'image'}
         selectLabel={A.RELINK_USE()}
         onClose={() => setBrowsing(false)}
         onAdd={(type, path) => {
           setBrowsing(false);
-          if (path && type !== 'color') apply(path, type);
+          if (!path || type === 'color') return;
+          if (isDocument ? type === 'document' : type !== 'document') apply(path, type === 'document' ? undefined : type);
         }}
       />
     </>

@@ -42,13 +42,14 @@ const bundle = async (entry, out, extra = {}) => {
 // ── File kinds and media-folder paths ─────────────────────────────────────────
 
 const F = await bundle('src/renderer/src/media/mediaFiles.ts', 'files.mjs');
-eq('kinds by extension, any case', ['a.JPG', 'b.mp4', 'c.MP3', 'd.flac', 'e.pdf', 'f.sng'].map(F.mediaKindOf), [
+eq('kinds by extension, any case', ['a.JPG', 'b.mp4', 'c.MP3', 'd.flac', 'e.pdf', 'f.sng', 'g.PPTX'].map(F.mediaKindOf), [
   'image',
   'video',
   'audio',
   'audio',
+  'document',
   undefined,
-  undefined,
+  'document',
 ]);
 eq('song files', [F.isSongFileName('Lied.SNG'), F.isSongFileName('ccli.txt'), F.isSongFileName('x.mp3')], [true, true, false]);
 eq('label drops the extension', F.mediaLabelOf('Worship/2026/intro clouds.mp4'), 'intro clouds');
@@ -186,12 +187,12 @@ mkdirSync(join(root, 'Archive', '2025'), { recursive: true });
 mkdirSync(outside);
 writeFileSync(join(outside, 'clouds.mp4'), 'video-bytes');
 writeFileSync(join(outside, 'pad.mp3'), 'audio');
-writeFileSync(join(outside, 'notes.pdf'), 'pdf');
+writeFileSync(join(outside, 'notes.docx'), 'docx');
 writeFileSync(join(root, 'Worship', 'pad.mp3'), 'other audio'); // same name, different size
 writeFileSync(join(root, 'Archive', '2025', 'Clouds.MP4'), 'old');
 
 const server = new LocalMediaServer(root);
-const first = await server.importFiles([join(outside, 'clouds.mp4'), join(outside, 'pad.mp3'), join(outside, 'notes.pdf')], 'Worship');
+const first = await server.importFiles([join(outside, 'clouds.mp4'), join(outside, 'pad.mp3'), join(outside, 'notes.docx')], 'Worship');
 eq(
   'copied, renamed on a name clash, unsupported skipped',
   first.placed.map((p) => [p.name, p.reused]),
@@ -201,9 +202,9 @@ eq(
   ],
 );
 eq(
-  'the pdf is reported as unsupported',
+  'a Word file is reported as unsupported',
   first.skipped.map((s) => [s.name, s.reason]),
-  [['notes.pdf', 'unsupported']],
+  [['notes.docx', 'unsupported']],
 );
 const again = await server.importFiles([join(outside, 'clouds.mp4')], 'Worship');
 eq(

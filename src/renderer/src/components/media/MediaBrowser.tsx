@@ -35,6 +35,8 @@ import {
   Image as ImageIcon,
   Videocam as VideocamIcon,
   Palette as PaletteIcon,
+  PictureAsPdf as PdfIcon,
+  Slideshow as PresentationIcon,
   Close as CloseIcon,
   Add as AddIcon,
   Search as SearchIcon,
@@ -62,6 +64,7 @@ import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
 import { nextcloudFileUrl, nextcloudMediaActive, nextcloudPath, useNextcloud } from '@/nextcloud/connection';
 import { listFolder, uploadFile } from '@/nextcloud/relay';
 import { stillWhileClosed } from '@/components/common/stillWhileClosed';
+import { documentKindOf } from '@/document/document';
 
 const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
@@ -69,7 +72,15 @@ const PAGE_SIZE = 50;
 const VIEW_KEY = 'mediaBrowser.view';
 const SORT_KEY = 'mediaBrowser.sort';
 
-type BrowseType = 'image' | 'video';
+/** `document`: PDFs and PowerPoints, added as document entries (Add mode only). */
+type BrowseType = 'image' | 'video' | 'document';
+
+const typeOfName = (name: string): BrowseType | null => {
+  const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
+  if (VIDEO_EXTENSIONS.includes(ext)) return 'video';
+  if (IMAGE_EXTENSIONS.includes(ext)) return 'image';
+  return documentKindOf(name) ? 'document' : null;
+};
 type ViewMode = 'grid' | 'list';
 type SortKey = 'name' | 'date' | 'size' | 'duration';
 interface Sort {
@@ -114,10 +125,14 @@ interface MediaBrowserProps {
   open: boolean;
   onClose: () => void;
   mode?: 'add' | 'pick';
-  pickType?: 'image' | 'video' | 'any';
+  /** In Add mode only the tab it opens on; `document` is Add mode only. */
+  pickType?: BrowseType | 'any';
   initialType?: 'image' | 'video';
+  /** Add mode: offer the PDF & PowerPoint tab (not for backgrounds). */
+  allowDocuments?: boolean;
   selectLabel?: string;
-  onAdd: (mediaSubType: MediaSubType, mediaPath?: string, mediaColor?: string, label?: string) => void;
+  /** `document`: a PDF or PowerPoint (Add mode only). */
+  onAdd: (mediaSubType: MediaSubType | 'document', mediaPath?: string, mediaColor?: string, label?: string) => void;
   onPick?: (relativePath: string) => void;
 }
 
@@ -129,24 +144,31 @@ const MediaBrowserBody = ({
   pickType = 'any',
   onPick,
   initialType = 'image',
+  allowDocuments = true,
   selectLabel,
 }: MediaBrowserProps) => {
   const { LL, locale } = useI18nContext();
   const isMobile = useIsMobile();
 
-  // ── Type (images / videos / color) ──
+  // ── Type (images / videos / presentations / color) ──
   const allowedTypes = useMemo(() => {
+    // Finding a PDF or PowerPoint again (relink) shows those only.
+    if (mode === 'pick' && pickType === 'document') return ['document' as const];
     const types: Array<BrowseType | 'color'> = [];
     if (mode === 'add' || pickType !== 'video') types.push('image');
     if (mode === 'add' || pickType !== 'image') types.push('video');
+    if (mode === 'add' && allowDocuments) types.push('document');
     if (mode === 'add') types.push('color');
     return types;
-  }, [mode, pickType]);
+  }, [mode, pickType, allowDocuments]);
   const [chosenType, setChosenType] = useState<BrowseType | 'color'>(initialType);
   // The sidebar reuses one instance for its "add image" and "add video" buttons.
   useEffect(() => {
-    if (open && pickType !== 'any') setChosenType(pickType);
-  }, [open, pickType]);
+    if (!open) return;
+    if (pickType !== 'any') setChosenType(pickType);
+    // PDFs have their own "Add PDF / PowerPoint"; plain "Add Media" starts on pictures again.
+    else setChosenType((type) => (type === 'document' ? initialType : type));
+  }, [open, pickType, initialType]);
   const activeType = allowedTypes.includes(chosenType) ? chosenType : allowedTypes[0];
   const isColor = activeType === 'color';
   const currentType: BrowseType = activeType === 'color' ? 'image' : activeType;
@@ -262,8 +284,7 @@ const MediaBrowserBody = ({
           const query = debouncedSearch.trim().toLowerCase();
           const mapped: MediaFile[] = listing.files
             .map((file): MediaFile | null => {
-              const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
-              const type = VIDEO_EXTENSIONS.includes(ext) ? 'video' : IMAGE_EXTENSIONS.includes(ext) ? 'image' : null;
+              const type = typeOfName(file.name);
               if (!type || type !== currentType) return null;
               if (query && !file.name.toLowerCase().includes(query)) return null;
               const relPath = [...path, file.name].join('/');
@@ -333,15 +354,13 @@ const MediaBrowserBody = ({
         // Map filenames → MediaFile with full relative path
         const mapped: MediaFile[] = [];
         for (const name of data.files) {
-          const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
-          const isVideo = VIDEO_EXTENSIONS.includes(ext);
-          const isImage = IMAGE_EXTENSIONS.includes(ext);
-          if (!isVideo && !isImage) continue;
+          const type = typeOfName(name);
+          if (!type) continue;
           const relPath = [...path, name].join('/');
           mapped.push({
             name,
             path: relPath,
-            type: isVideo ? 'video' : 'image',
+            type,
             url: `${baseUrl}/${relPath.split('/').map(encodeURIComponent).join('/')}`,
             size: meta.get(name)?.size,
             mtime: meta.get(name)?.mtime,
@@ -494,12 +513,10 @@ const MediaBrowserBody = ({
   const handleAddUrl = () => {
     if (!urlInput.trim()) return;
     const pathname = urlInput.trim().split(/[?#]/, 1)[0];
-    const ext = pathname.substring(pathname.lastIndexOf('.')).toLowerCase();
-    const isVideo = VIDEO_EXTENSIONS.includes(ext) || (!IMAGE_EXTENSIONS.includes(ext) && currentType === 'video');
     if (mode === 'pick' && onPick) {
       onPick(urlInput.trim());
     } else {
-      onAdd(isVideo ? 'video' : 'image', urlInput.trim(), undefined, urlName.trim() || undefined);
+      onAdd(typeOfName(pathname) ?? currentType, urlInput.trim(), undefined, urlName.trim() || undefined);
     }
     setUrlInput('');
     setUrlName('');
@@ -516,11 +533,6 @@ const MediaBrowserBody = ({
   const [dragActive, setDragActive] = useState(false);
   /** Enter/leave fire for every child crossed, so only the count reaching zero means "left". */
   const dragDepthRef = useRef(0);
-
-  const typeOfName = (name: string): BrowseType | null => {
-    const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
-    return VIDEO_EXTENSIONS.includes(ext) ? 'video' : IMAGE_EXTENSIONS.includes(ext) ? 'image' : null;
-  };
 
   const importFiles = async (sources: string[]) => {
     if (!canUpload || !sources.length || uploading) return;
@@ -652,7 +664,16 @@ const MediaBrowserBody = ({
   const showDirs = !searchQuery && dirs.length > 0;
 
   const renderThumb = (file: MediaFile, small?: boolean) =>
-    file.type === 'image' ? (
+    file.type === 'document' ? (
+      // An icon: a picture of the first page would load the PowerPoint renderer just to browse.
+      <Box sx={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+        {documentKindOf(file.name) === 'pdf' ? (
+          <PdfIcon sx={{ fontSize: small ? 18 : 48, color: 'grey.500' }} />
+        ) : (
+          <PresentationIcon sx={{ fontSize: small ? 18 : 48, color: 'grey.500' }} />
+        )}
+      </Box>
+    ) : file.type === 'image' ? (
       <Box
         component="img"
         loading="lazy"
@@ -926,6 +947,8 @@ const MediaBrowserBody = ({
       <Stack spacing={1.5} sx={{ height: '100%', minHeight: 240, alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
         {currentType === 'image' ? (
           <BrokenImageIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
+        ) : currentType === 'document' ? (
+          <PresentationIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
         ) : (
           <VideocamIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
         )}
@@ -979,10 +1002,11 @@ const MediaBrowserBody = ({
         .join(' · ')
     : '';
 
-  const typeLabels = { image: LL.MEDIA.IMAGES(), video: LL.MEDIA.VIDEOS(), color: LL.MEDIA.COLOR() };
+  const typeLabels = { image: LL.MEDIA.IMAGES(), video: LL.MEDIA.VIDEOS(), document: LL.MEDIA.PRESENTATIONS(), color: LL.MEDIA.COLOR() };
   const typeIcons = {
     image: <ImageIcon fontSize="small" />,
     video: <VideocamIcon fontSize="small" />,
+    document: <PresentationIcon fontSize="small" />,
     color: <PaletteIcon fontSize="small" />,
   };
 
@@ -1044,7 +1068,13 @@ const MediaBrowserBody = ({
           <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
             <TextField
               size="small"
-              placeholder={currentType === 'image' ? LL.MEDIA.SEARCH_IMAGES() : LL.MEDIA.SEARCH_VIDEOS()}
+              placeholder={
+                currentType === 'image'
+                  ? LL.MEDIA.SEARCH_IMAGES()
+                  : currentType === 'document'
+                    ? LL.MEDIA.SEARCH_PRESENTATIONS()
+                    : LL.MEDIA.SEARCH_VIDEOS()
+              }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               sx={{ flex: '1 1 240px' }}
@@ -1117,7 +1147,7 @@ const MediaBrowserBody = ({
                       ref={fileInputRef}
                       type="file"
                       multiple
-                      accept="image/*,video/*"
+                      accept="image/*,video/*,.pdf,.pptx,.ppsx"
                       hidden
                       onChange={(e) => {
                         void uploadToNextcloud(Array.from(e.target.files ?? []));
@@ -1140,7 +1170,7 @@ const MediaBrowserBody = ({
               <TextField
                 size="small"
                 sx={{ flex: '1 1 300px' }}
-                placeholder={currentType === 'image' ? 'https://example.com/image.jpg' : 'https://example.com/video.mp4'}
+                placeholder={`https://example.com/${currentType === 'image' ? 'image.jpg' : currentType === 'document' ? 'slides.pdf' : 'video.mp4'}`}
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
                 onKeyDown={(e) => {
