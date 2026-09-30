@@ -43,16 +43,48 @@ function publishTarget() {
   return publish;
 }
 
-async function api(path, token) {
+async function api(path, token, { method = 'GET', body } = {}) {
   const response = await fetch(`https://api.github.com${path}`, {
+    method,
     headers: {
       authorization: `Bearer ${token}`,
       accept: 'application/vnd.github+json',
       'user-agent': 'presenter-publish-preflight',
+      ...(body ? { 'content-type': 'application/json' } : {}),
     },
+    ...(body ? { body: JSON.stringify(body) } : {}),
   });
 
   return { status: response.status, body: await response.json().catch(() => ({})) };
+}
+
+/**
+ * Whether the token may actually create a release.
+ *
+ * The `permissions` block on GET /repos describes the *user's* role in the repository, not
+ * what the token carries. A fine-grained PAT missing "Contents: Read and write" still reports
+ * push: true and admin: true, so reading that field predicts nothing — it reported success for
+ * a token that then failed the real upload with 403.
+ *
+ * The dependable check is to do the write. A draft release is invisible and creates no tag,
+ * so this is a no-op when it succeeds and creates nothing when it is refused.
+ */
+async function canCreateReleases(owner, repo, token) {
+  const probe = await api(`/repos/${owner}/${repo}/releases`, token, {
+    method: 'POST',
+    body: { tag_name: `publish-preflight-check-${Date.now()}`, name: 'publish preflight (temporary)', draft: true },
+  });
+
+  if (probe.status !== 201) {
+    return { ok: false, status: probe.status, message: probe.body?.message ?? '' };
+  }
+
+  const cleanup = await api(`/repos/${owner}/${repo}/releases/${probe.body.id}`, token, { method: 'DELETE' });
+  if (cleanup.status !== 204) {
+    console.warn(`  ! left behind a draft release from the preflight check — delete "${probe.body.name}" by hand`);
+  }
+
+  return { ok: true };
 }
 
 function fail(lines) {
@@ -113,14 +145,21 @@ async function preflightGitHubToken() {
     return fail([`Cannot read ${slug} as "${login}": GitHub returned ${access.status}.`, String(access.body?.message ?? '')]);
   }
 
-  if (!access.body?.permissions?.push) {
+  const write = await canCreateReleases(owner, repo, token);
+
+  if (!write.ok) {
     return fail([
-      `"${login}" can see ${slug} but has no write access, so uploading a release asset will 403.`,
-      'Use a token for an account with push rights, or widen the token scope.',
+      `"${login}" cannot create releases in ${slug} — GitHub returned ${write.status}: ${write.message}`,
+      ...(token.startsWith('github_pat_')
+        ? [
+            `${name} is a fine-grained token, so repository role is not enough: the token itself`,
+            `must grant "Contents: Read and write" on ${slug}.`,
+          ]
+        : ['Use a classic token with the `repo` scope, from an account with push access.']),
     ]);
   }
 
-  console.log(`  ✓ ${name} → ${login}, write access to ${slug}${shadowed}`);
+  console.log(`  ✓ ${name} → ${login}, can publish releases to ${slug}${shadowed}`);
   return true;
 }
 
