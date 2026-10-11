@@ -30,7 +30,7 @@ function freePort() {
 /** Poll `url` until it answers anything at all. */
 async function waitForHttp(url, { timeout = 60000, label = url } = {}) {
   const started = Date.now();
-  let last = 'no response yet';
+  let last;
   for (;;) {
     try {
       await fetch(url);

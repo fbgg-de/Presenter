@@ -45,7 +45,7 @@ function loadArchiver() {
   try {
     return require(require.resolve('archiver', { paths: [join(wsServerDir, 'node_modules'), join(repoRoot, 'node_modules')] }));
   } catch (err) {
-    throw new Error(`could not load archiver (expected in ws-server/node_modules after the relay build): ${err.message}`);
+    throw new Error(`could not load archiver (expected in ws-server/node_modules after the relay build): ${err.message}`, { cause: err });
   }
 }
 

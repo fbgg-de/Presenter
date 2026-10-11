@@ -51,6 +51,7 @@ import { useWaveform } from './useWaveform';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { CueSource } from './CueMedia';
 import { Timecode, TransportButton, TransportCluster } from '@/components/media/Transport';
+import { OptionList, OptionSwitch } from '@/components/media/Viewer';
 
 export const cueTime = (seconds: number) => {
   const ms = Math.round(Math.max(0, seconds) * 1000);
@@ -310,16 +311,18 @@ export function CueTimeline({ cue, binding, packet, occurrences, onChange, onCom
           <Typography sx={{ fontFamily: 'monospace', fontSize: 12, color: 'text.secondary' }}>{cueTime(duration)}</Typography>
         </Stack>
       </Stack>
-      <Stack direction="row" sx={{ flexWrap: 'wrap', columnGap: 1, px: 0.5 }}>
-        <FormControlLabel
-          control={<Checkbox size="small" checked={binding.followVideo} onChange={(_, v) => commit(cue, { ...binding, followVideo: v })} />}
+      <OptionList>
+        <OptionSwitch
           label={l('followVideo')}
+          checked={binding.followVideo}
+          onChange={(followVideo) => commit(cue, { ...binding, followVideo })}
         />
-        <FormControlLabel
-          control={<Checkbox checked={binding.followLyrics} onChange={(_, v) => commit(cue, { ...binding, followLyrics: v })} />}
+        <OptionSwitch
           label={l('followLyrics')}
+          checked={binding.followLyrics}
+          onChange={(followLyrics) => commit(cue, { ...binding, followLyrics })}
         />
-      </Stack>
+      </OptionList>
       <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1.5, overflow: 'hidden' }}>
         <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap', gap: 0.25, p: 0.5, borderBottom: 1, borderColor: 'divider' }}>
           <Tooltip title={l('timelineKeys')}>

@@ -1,19 +1,19 @@
 import { SONG_BLOCK_SEPARATOR, SONG_TRANSLATION_LINE_REGEX } from '.';
-import { parseBlockLines, serialiseBlockLines, type LyricPage } from './lyrics';
+import { parseBlockLines, serialiseBlockLines, untaggedDefaultView, type LyricPage } from './lyrics';
 
 /**
  * A whole song as one text, for quick edits across blocks.
  *
  *   # Verse 1
  *   Großer Gott, wir loben dich,
- *   [en] Holy God, we praise thy name,
+ *   [EN] Holy God, we praise thy name,
  *   ---
  *   Vor dir neigt die Erde sich
  *
  *   # Chorus
  *   …
  *
- * `# Name` starts a block, `---` starts a new page inside it, and `[xx]` tags a translation of the
+ * `# Name` starts a block, `---` starts a new page inside it, and `[XX]` tags a translation of the
  * line above — the same syntax as a single block's plain text, with the default language written
  * untagged so the text reads like lyrics. Blank lines at the start and end of a block are
  * formatting between blocks; inside a block they stay, since an empty line is spacing on screen.
@@ -43,8 +43,7 @@ const HEADING_REGEX = /^#(?:\s+(.*?))?\s*$/;
 
 /** The song as text. The default language is written without a tag. */
 export const blocksToSongText = (blocks: SongTextBlock[], languages: string[]): string => {
-  // An empty first code makes the serialiser write primary lines bare, translations stay tagged.
-  const view = languages.length > 0 ? ['', ...languages.slice(1)] : [];
+  const view = untaggedDefaultView(languages);
   return blocks.map((block) => [`# ${block.name}`, ...serialiseBlockLines(block.pages, view)].join('\n')).join('\n\n');
 };
 

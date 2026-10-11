@@ -379,6 +379,11 @@ export class OperatorClient extends BaseClient {
     this.state.activeLineIndex = 0;
     this.emit();
   }
+  /** A line step inside the block (presentationSlice setActiveLineIndex). */
+  setActiveLineIndex(idx) {
+    this.state.activeLineIndex = idx;
+    this.emit();
+  }
   setBlack(value) {
     this.state.isBlack = value;
     this.emit();
@@ -520,6 +525,8 @@ export class MusicianClient extends BaseClient {
     /** Redux mirror of the operator position (operatorItemIndex / operatorActiveBlockIndex). */
     this.operatorItemIndex = 0;
     this.operatorBlockIndex = 0;
+    /** The operator's lyric line, keyed `item:block` (operatorLine in MusicianPage). */
+    this.operatorLine = null;
     this.pendingWsState = null;
     this.operatorSongNumber = undefined;
     this.operatorShowTitle = undefined;
@@ -603,6 +610,18 @@ export class MusicianClient extends BaseClient {
       this.operatorItemIndex = nextItemIndex;
       this.operatorBlockIndex = nextBlockIndex;
     }
+    if (matchesSong && typeof state.activeLineIndex === 'number') {
+      const at = `${nextItemIndex}:${nextBlockIndex}`;
+      const line = state.activeLineIndex;
+      const prev = this.operatorLine;
+      this.operatorLine = { at, line, stepped: line > 0 || (prev?.at === at && prev.stepped) };
+    }
+  }
+
+  /** The line the lyrics view marks (operatorLineHere in MusicianPage, minus the isSynced gate). */
+  get operatorLineHere() {
+    const l = this.operatorLine;
+    return l?.stepped && l.at === `${this.operatorItemIndex}:${this.operatorBlockIndex}` ? l.line : undefined;
   }
 
   get activeItem() {

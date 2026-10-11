@@ -1,4 +1,12 @@
-import { LANGUAGE_CODE_REGEX, SONG_BLOCK_SEPARATOR, SONG_TRANSLATION_LINE_REGEX, type TBlocks } from '.';
+import {
+  LANGUAGE_CODE_REGEX,
+  SONG_BLOCK_SEPARATOR,
+  SONG_TRANSLATION_LINE_REGEX,
+  isPrimaryLine,
+  parseTaggedLine,
+  resolvePrimaryLanguage,
+  type TBlocks,
+} from '.';
 
 /**
  * Block lyrics as the editor sees them: a list of pages, each holding a list of *lyric lines*,
@@ -208,8 +216,16 @@ export const swapPrimaryLanguage = (pages: LyricPage[], from: string | undefined
   }));
 };
 
-/** Plain-text form of a block for the raw editing mode: exactly what is stored, one line per row. */
-export const pagesToRawText = (pages: LyricPage[], languages: string[]): string => serialiseBlockLines(pages, languages).join('\n');
+/**
+ * Language list for text a person reads and types: an empty first code makes the serialiser write
+ * the default language bare, so only translations carry a tag. Parsing reads a bare line as the
+ * default language again, so nothing is lost.
+ */
+export const untaggedDefaultView = (languages: string[]): string[] => (languages.length > 0 ? ['', ...languages.slice(1)] : []);
+
+/** Plain-text form of a block for the raw editing mode, one stored line per row, default language untagged. */
+export const pagesToRawText = (pages: LyricPage[], languages: string[]): string =>
+  serialiseBlockLines(pages, untaggedDefaultView(languages)).join('\n');
 
 /** Inverse of {@link pagesToRawText}. */
 export const rawTextToPages = (text: string, primaryLanguage?: string): LyricPage[] => parseBlockLines(text.split('\n'), primaryLanguage);
@@ -406,4 +422,42 @@ export const inferSongLanguages = (lines: string[]): string[] => {
   }
 
   return hasUntagged ? ['', ...tagged] : tagged;
+};
+
+/**
+ * A song's languages in order: the declared list, then any tag the lyrics use that the list
+ * misses. Without a list it is read off the lyrics, `''` standing for untagged.
+ *
+ * The list drifts from the lyrics whenever a tag is typed in plain text, and a language missing
+ * from it had no editor column and no style slot — its lines were kept but never shown.
+ */
+export const songLanguageOrder = (lines: string[], declared: string[] = []): string[] => {
+  const found = inferSongLanguages(lines);
+  if (declared.length === 0) return found;
+  const order = declared.map((code) => code.toUpperCase());
+  return [...order, ...found.filter((code) => code !== '' && !order.includes(code))];
+};
+
+/**
+ * A block's lines for reading rather than projecting: tags dropped, `hidden` languages left out
+ * and every language but the block's main one `muted`. Untagged lines are `order[0]`. The main
+ * language is the first of `order` still shown that has text in the block, so a block written only
+ * in a translation still reads at full strength.
+ *
+ * `line` is the lyric line a row belongs to, counted the way the operator's line steps count
+ * (`activeLineIndex`): a translation shares the number of the line it translates.
+ */
+export const readerLines = (lines: string[], order: string[], hidden: string[] = []): { text: string; muted: boolean; line: number }[] => {
+  const anchor = resolvePrimaryLanguage(lines, order[0] || undefined);
+  let line = -1;
+  const parsed = lines
+    .map((raw) => {
+      if (isPrimaryLine(raw, anchor)) line += 1;
+      const { language, text } = parseTaggedLine(raw);
+      return { code: language ?? order[0] ?? '', text, line };
+    })
+    .filter((entry) => !hidden.includes(entry.code));
+  const main = order.find((code) => !hidden.includes(code) && parsed.some((entry) => entry.code === code && entry.text.trim() !== ''));
+
+  return parsed.map(({ code, text, line }) => ({ text, line, muted: main !== undefined && code !== main }));
 };

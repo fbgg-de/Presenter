@@ -625,11 +625,18 @@ export const ShowGroupList = ({
       {footer}
 
       {editable && (
-        <Stack direction="row" sx={{ alignItems: 'center' }}>
+        <Stack direction="row" sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
           <Button
             size="small"
             startIcon={<AddIcon />}
-            sx={{ flex: 1, justifyContent: 'flex-start', px: 1.75, color: 'text.secondary', textTransform: 'none' }}
+            sx={{
+              flex: '1 0 auto',
+              justifyContent: 'flex-start',
+              px: 1.75,
+              color: 'text.secondary',
+              textTransform: 'none',
+              whiteSpace: 'nowrap',
+            }}
             onClick={() => setAddOpen(true)}
           >
             {LL.SHOW_GROUPS.ADD()}
@@ -638,7 +645,14 @@ export const ShowGroupList = ({
             <Button
               size="small"
               startIcon={<LibraryIcon />}
-              sx={{ flex: 1, justifyContent: 'flex-start', px: 1.75, color: 'text.secondary', textTransform: 'none' }}
+              sx={{
+                flex: '1 0 auto',
+                justifyContent: 'flex-start',
+                px: 1.75,
+                color: 'text.secondary',
+                textTransform: 'none',
+                whiteSpace: 'nowrap',
+              }}
               onClick={onOpenLibrary}
             >
               {LL.LIBRARY.FROM_LIBRARY()}

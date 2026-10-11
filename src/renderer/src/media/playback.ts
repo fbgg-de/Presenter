@@ -20,7 +20,7 @@
  * follower at once; choosing an own speed for an entry detaches it from the master.
  */
 import { useSyncExternalStore } from 'react';
-import { MAX_RATE, MIN_RATE, advanceCue, clamp, commandCue, initialTransport } from './engine';
+import { MAX_RATE, MIN_RATE, advanceCue, clamp, commandCue, initialTransport, syncTolerance } from './engine';
 import { assignmentFor, hasClock, hasVideo, type MediaRole, type MediaVersion } from './mediaItem';
 import type { CueCommand, CuePacket, CueTransport } from './types';
 
@@ -65,7 +65,8 @@ export interface Playback extends PlaybackEntry {
 const playbacks = new Map<string, Playback>();
 let orderCounter = 0;
 let snapshot: Playback[] = [];
-let lastTick = performance.now();
+// Date.now(), like every `at`: the output windows extrapolate with it, so the clock must not mix in another.
+let lastTick = Date.now();
 const listeners = new Set<() => void>();
 /** Running-time readouts: told about four times a second while something plays (see `usePlaybackClock`). */
 const clockListeners = new Set<() => void>();
@@ -173,7 +174,7 @@ const session = (key: string) => `${key}/${Date.now().toString(36)}${Math.random
 
 /** Advance every clock to now. */
 export function tickPlaybacks(): void {
-  const now = performance.now();
+  const now = Date.now();
   const seconds = Math.max(0, (now - lastTick) / 1000);
   lastTick = now;
   let anyPlaying = false;
@@ -391,6 +392,7 @@ export const packetOf = (playback: Playback, groupId: number | undefined, visibl
   assignment: assignmentFor(playback.cue, groupId),
   visible,
   fadeMs: playback.fadeMs,
+  syncTolerance: syncTolerance(),
 });
 
 export interface ScreenMedia {

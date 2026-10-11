@@ -14,6 +14,8 @@
  * The draw tool is selected by default when edit mode is activated.
  */
 import {
+  lazy,
+  Suspense,
   useState,
   useRef,
   useCallback,
@@ -59,12 +61,13 @@ import {
   EmojiSymbols as IconToolIcon,
   AutoFixHigh as EraserIcon,
   Download as DownloadIcon,
+  HighlightAlt as PageEditIcon,
   CloudUpload as UploadIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { getPdfPageWidth } from '@/utils/pdfOcgExport';
-import { exportPdfWithAnnotations, type ExportLayerData } from '@/utils/pdfOcgExport';
+// pdf-lib is imported on demand (page width, export, page editor), never with the page itself.
+import type { ExportLayerData } from '@/utils/pdfOcgExport';
 import { PdfLayerViewer } from '@/components/pdf/PdfLayerViewer';
 import { loadSvgImage, drawSvgIconOnCanvas, ICON_BASE_SIZE } from '@/utils/iconPaths';
 import {
@@ -78,6 +81,9 @@ import {
 } from '@/api/pdfAnnotations.api';
 import { useListPdfIconsQuery, useUploadPdfIconMutation, useDeletePdfIconMutation, type PdfIconDto } from '@/api/pdfIcons.api';
 import { ANNOTATION_COLORS } from '@/theme';
+
+/** The page editor — and pdf-lib with it — loads only when someone opens it. */
+const PdfPageEditor = lazy(() => import('./pageEdit/PdfPageEditor'));
 
 export type AnnotationTool = 'draw' | 'text' | 'highlight' | 'icon' | 'eraser' | 'none';
 
@@ -244,6 +250,7 @@ export const PdfAnnotationToolbar = ({
   /** ID of the text annotation currently being edited via double-click */
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+  const [pageEditorOpen, setPageEditorOpen] = useState(false);
   const [selectedIconFilename, setSelectedIconFilename] = useState<string | null>(null);
   const [iconSize, setIconSize] = useState(ICON_BASE_SIZE);
   const canvasRefs = useRef<Map<number, HTMLCanvasElement>>(new Map());
@@ -366,7 +373,7 @@ export const PdfAnnotationToolbar = ({
     let cancelled = false;
     fetch(pdfUrl)
       .then((res) => res.arrayBuffer())
-      .then((bytes) => getPdfPageWidth(bytes))
+      .then(async (bytes) => (await import('@/utils/pdfOcgExport')).getPdfPageWidth(bytes))
       .then((pw) => {
         if (!cancelled) setPdfPageWidth(pw);
       })
@@ -1049,6 +1056,7 @@ export const PdfAnnotationToolbar = ({
   const handleDownloadWithAnnotations = useCallback(async () => {
     if (!pdfUrl || !songNumber || !filename) return;
     try {
+      const { exportPdfWithAnnotations } = await import('@/utils/pdfOcgExport');
       const pdfBytes = await fetch(pdfUrl).then((r) => r.arrayBuffer());
       const layerMap = new Map<string, AnnotationEntry[]>();
       for (const dto of allAnnotations) {
@@ -1810,8 +1818,19 @@ export const PdfAnnotationToolbar = ({
                 <DownloadIcon fontSize="small" />
               </IconButton>
             </Tooltip>
+
+            <Tooltip title={LL.PDF_EDIT.OPEN()}>
+              <IconButton size="small" onClick={() => setPageEditorOpen(true)} disabled={!pdfUrl || !filename}>
+                <PageEditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Paper>
         </Stack>
+      )}
+      {pageEditorOpen && pdfUrl && filename && (
+        <Suspense fallback={null}>
+          <PdfPageEditor songNumber={songNumber} filename={filename} pdfUrl={pdfUrl} onClose={() => setPageEditorOpen(false)} />
+        </Suspense>
       )}
       {/* -- Clear confirmation dialog -- */}
       <Dialog open={clearConfirmOpen} onClose={() => setClearConfirmOpen(false)}>

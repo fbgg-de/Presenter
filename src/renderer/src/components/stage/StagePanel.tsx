@@ -26,7 +26,6 @@ import {
   MenuItem,
   Slider,
   Stack,
-  Switch,
   Tab,
   Tabs,
   Tooltip,
@@ -91,7 +90,15 @@ import {
 import { StageOverlay } from '@/presentation/StageOverlay';
 import { ColorSwatchButton } from '@/components/style/ColorPicker';
 import { SectionLabel } from '@/components/operator/SectionLabel';
-import { InspectorRow, InspectorSection, Segmented, ViewerFrame, type LampState } from '@/components/media/Viewer';
+import {
+  InspectorRow,
+  InspectorSection,
+  OptionList,
+  OptionSwitch,
+  Segmented,
+  ViewerFrame,
+  type LampState,
+} from '@/components/media/Viewer';
 import { TransportButton, TransportCluster, TransportDivider, PLAYHEAD } from '@/components/media/Transport';
 import { StageCueEditor, cueKindLabel } from './StageCueEditor';
 import { StageLiveValue } from './StageTransport';
@@ -1129,9 +1136,9 @@ const StagePanelBody = ({ open, onClose, layerId }: { open: boolean; onClose: ()
                           ]}
                         />
                       </InspectorRow>
-                      <InspectorRow label={S.BOLD()}>
-                        <Switch size="small" checked={!!style.bold} onChange={(e) => setStyle({ bold: e.target.checked })} />
-                      </InspectorRow>
+                      <OptionList>
+                        <OptionSwitch label={S.BOLD()} checked={!!style.bold} onChange={(bold) => setStyle({ bold })} />
+                      </OptionList>
                     </InspectorSection>
                     <InspectorSection id="stage-colours" title={S.COLOURS()}>
                       <Swatch label={S.COLOR()} value={style.color} onChange={(color) => setStyle({ color })} />

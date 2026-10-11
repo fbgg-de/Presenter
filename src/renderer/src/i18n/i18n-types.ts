@@ -2117,6 +2117,10 @@ type RootTranslation = {
 		 */
 		EVENT_SYNC_FAILED: string
 		/**
+		 * T​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​a​g​e​n​d​a​ ​i​s​ ​l​o​c​k​e​d​,​ ​s​o​ ​t​h​e​ ​s​o​n​g​s​ ​w​e​r​e​ ​n​o​t​ ​s​y​n​c​e​d
+		 */
+		EVENT_SYNC_LOCKED: string
+		/**
 		 * L​o​a​d​ ​e​a​r​l​i​e​r​ ​e​v​e​n​t​s
 		 */
 		EVENTS_LOAD_EARLIER: string
@@ -5552,6 +5556,14 @@ type RootTranslation = {
 		 */
 		SOUND_HERE: string
 		/**
+		 * O​f​f​:​ ​i​t​ ​s​h​o​w​s​ ​i​t​s​ ​f​i​r​s​t​ ​f​r​a​m​e​ ​a​n​d​ ​w​a​i​t​s​ ​f​o​r​ ​P​l​a​y​.
+		 */
+		AUTOPLAY_HINT: string
+		/**
+		 * P​l​a​y​e​d​ ​f​r​o​m​ ​t​h​i​s​ ​c​o​m​p​u​t​e​r​,​ ​n​o​t​ ​f​r​o​m​ ​t​h​e​ ​s​c​r​e​e​n​s​.
+		 */
+		SOUND_HERE_HINT: string
+		/**
 		 * S​h​o​w​ ​o​n​ ​s​c​r​e​e​n​s
 		 */
 		START: string
@@ -6671,7 +6683,7 @@ type RootTranslation = {
 		 */
 		BADGE_NO_BACKGROUND: string
 		/**
-		 * {​c​o​u​n​t​}​ ​w​i​n
+		 * {​c​o​u​n​t​}​ ​w​i​n​d​o​w​{​{​s​}​}
 		 * @param {number} count
 		 */
 		MONITOR_WINDOWS: RequiredParams<'count'>
@@ -8180,7 +8192,7 @@ type RootTranslation = {
 		 */
 		PRIVACY_DESCRIPTION: string
 		/**
-		 * C​o​l​l​e​c​t​e​d​ ​e​v​e​n​t​s​ ​i​n​c​l​u​d​e​:​ ​f​e​a​t​u​r​e​ ​u​s​a​g​e​ ​(​e​.​g​.​ ​s​o​n​g​s​ ​s​e​l​e​c​t​e​d​,​ ​s​h​o​w​s​ ​o​p​e​n​e​d​,​ ​b​l​o​c​k​s​ ​n​a​v​i​g​a​t​e​d​)​,​ ​U​I​ ​i​n​t​e​r​a​c​t​i​o​n​s​ ​(​e​.​g​.​ ​s​t​y​l​e​ ​c​h​a​n​g​e​s​,​ ​w​i​n​d​o​w​ ​a​c​t​i​o​n​s​)​,​ ​e​r​r​o​r​ ​r​e​p​o​r​t​s​,​ ​a​n​d​ ​a​p​p​ ​l​i​f​e​c​y​c​l​e​ ​e​v​e​n​t​s​ ​(​e​.​g​.​ ​l​o​g​i​n​,​ ​s​t​a​r​t​u​p​)​.​ ​E​a​c​h​ ​e​v​e​n​t​ ​i​s​ ​t​a​g​g​e​d​ ​w​i​t​h​ ​a​n​ ​a​n​o​n​y​m​o​u​s​ ​d​e​v​i​c​e​ ​I​D​.
+		 * C​o​l​l​e​c​t​e​d​ ​e​v​e​n​t​s​ ​i​n​c​l​u​d​e​:​ ​f​e​a​t​u​r​e​ ​u​s​a​g​e​ ​(​e​.​g​.​ ​s​o​n​g​s​ ​s​e​l​e​c​t​e​d​,​ ​s​h​o​w​s​ ​o​p​e​n​e​d​,​ ​b​l​o​c​k​s​ ​n​a​v​i​g​a​t​e​d​)​,​ ​U​I​ ​i​n​t​e​r​a​c​t​i​o​n​s​ ​(​e​.​g​.​ ​s​t​y​l​e​ ​c​h​a​n​g​e​s​,​ ​w​i​n​d​o​w​ ​a​c​t​i​o​n​s​)​,​ ​e​r​r​o​r​ ​r​e​p​o​r​t​s​,​ ​a​n​d​ ​a​p​p​ ​l​i​f​e​c​y​c​l​e​ ​e​v​e​n​t​s​ ​(​e​.​g​.​ ​l​o​g​i​n​,​ ​s​t​a​r​t​u​p​)​.​ ​E​v​e​n​t​s​ ​i​n​c​l​u​d​e​ ​a​n​ ​a​n​o​n​y​m​o​u​s​ ​d​e​v​i​c​e​ ​I​D​,​ ​a​ ​s​e​s​s​i​o​n​ ​I​D​,​ ​t​h​e​ ​a​c​t​i​o​n​ ​o​r​d​e​r​,​ ​a​n​d​ ​t​h​e​ ​a​c​t​i​o​n​ ​t​i​m​e​.​ ​A​ ​s​e​s​s​i​o​n​ ​b​e​l​o​n​g​s​ ​t​o​ ​o​n​e​ ​a​p​p​ ​w​i​n​d​o​w​ ​a​n​d​ ​r​e​s​t​a​r​t​s​ ​a​f​t​e​r​ ​r​e​l​o​a​d​ ​o​r​ ​3​0​ ​m​i​n​u​t​e​s​ ​w​i​t​h​o​u​t​ ​a​ ​r​e​c​o​r​d​e​d​ ​a​c​t​i​o​n​.
 		 */
 		PRIVACY_METRICS_LIST: string
 		/**
@@ -9005,6 +9017,16 @@ type RootTranslation = {
 				 */
 				DESCRIPTION: string
 			}
+			VIDEO_SYNC_TOLERANCE: {
+				/**
+				 * V​i​d​e​o​ ​s​y​n​c​ ​t​o​l​e​r​a​n​c​e​ ​(​s​)
+				 */
+				TITLE: string
+				/**
+				 * H​o​w​ ​f​a​r​ ​a​ ​v​i​d​e​o​ ​o​n​ ​a​n​ ​o​u​t​p​u​t​ ​m​a​y​ ​d​r​i​f​t​ ​f​r​o​m​ ​t​h​e​ ​c​l​o​c​k​ ​b​e​f​o​r​e​ ​i​t​ ​j​u​m​p​s​ ​b​a​c​k​ ​i​n​t​o​ ​p​l​a​c​e​.​ ​S​m​a​l​l​e​r​ ​d​r​i​f​t​ ​i​s​ ​c​o​r​r​e​c​t​e​d​ ​i​n​v​i​s​i​b​l​y​ ​b​y​ ​p​l​a​y​i​n​g​ ​s​l​i​g​h​t​l​y​ ​f​a​s​t​e​r​ ​o​r​ ​s​l​o​w​e​r​;​ ​a​ ​j​u​m​p​ ​i​s​ ​a​ ​s​h​o​r​t​ ​s​t​u​t​t​e​r​.​ ​L​o​w​e​r​ ​k​e​e​p​s​ ​t​h​e​ ​s​c​r​e​e​n​s​ ​t​i​g​h​t​e​r​ ​t​o​g​e​t​h​e​r​ ​b​u​t​ ​j​u​m​p​s​ ​m​o​r​e​ ​o​f​t​e​n​.​ ​0​.​1​ ​t​o​ ​1​,​ ​d​e​f​a​u​l​t​ ​0​.​5​.
+				 */
+				DESCRIPTION: string
+			}
 			AUDIO_FADE_OUT: {
 				/**
 				 * A​u​d​i​o​ ​f​a​d​e​ ​o​u​t​ ​(​s​)
@@ -9208,6 +9230,290 @@ type RootTranslation = {
 		AUDIO_FROM_PREVIEW: string
 	}
 	METRICS: {
+		/**
+		 * A​d​o​p​t​i​o​n
+		 */
+		TAB_ADOPTION: string
+		/**
+		 * R​e​l​i​a​b​i​l​i​t​y
+		 */
+		TAB_RELIABILITY: string
+		/**
+		 * F​e​a​t​u​r​e​ ​a​d​o​p​t​i​o​n​ ​b​y​ ​a​c​c​o​u​n​t
+		 */
+		ADOPTION_MATRIX: string
+		/**
+		 * C​o​m​p​a​r​e​ ​d​e​v​i​c​e​ ​r​e​a​c​h​ ​o​r​ ​e​v​e​n​t​ ​v​o​l​u​m​e​ ​a​c​r​o​s​s​ ​a​c​c​o​u​n​t​s​.​ ​R​e​a​c​h​ ​i​s​ ​t​h​e​ ​s​h​a​r​e​ ​o​f​ ​a​c​t​i​v​e​ ​d​e​v​i​c​e​s​ ​w​i​t​h​ ​a​t​ ​l​e​a​s​t​ ​o​n​e​ ​e​v​e​n​t​ ​f​o​r​ ​t​h​a​t​ ​f​e​a​t​u​r​e​.​ ​C​l​i​c​k​ ​a​ ​c​e​l​l​ ​t​o​ ​f​i​l​t​e​r​.
+		 */
+		ADOPTION_HINT: string
+		/**
+		 * F​i​n​d​ ​a​c​c​o​u​n​t
+		 */
+		FIND_ACCOUNT: string
+		/**
+		 * A​d​o​p​t​i​o​n​ ​m​e​a​s​u​r​e
+		 */
+		MATRIX_MODE: string
+		/**
+		 * D​e​v​i​c​e​ ​r​e​a​c​h​ ​(​%​)
+		 */
+		REACH_PERCENT: string
+		/**
+		 * T​o​p​ ​1​2​ ​f​e​a​t​u​r​e​s
+		 */
+		TOP_FEATURES: string
+		/**
+		 * A​l​l​ ​f​e​a​t​u​r​e​s
+		 */
+		ALL_FEATURES: string
+		/**
+		 * R​e​t​u​r​n​i​n​g​ ​d​e​v​i​c​e​s
+		 */
+		DEVICE_RETENTION: string
+		/**
+		 * C​o​h​o​r​t​s​ ​s​t​a​r​t​ ​w​i​t​h​ ​e​a​c​h​ ​d​e​v​i​c​e​’​s​ ​f​i​r​s​t​ ​a​c​t​i​v​e​ ​w​e​e​k​ ​w​i​t​h​i​n​ ​t​h​e​ ​s​e​l​e​c​t​e​d​ ​r​a​n​g​e​,​ ​n​o​t​ ​i​t​s​ ​f​i​r​s​t​-​e​v​e​r​ ​v​i​s​i​t​.​ ​C​e​l​l​s​ ​s​h​o​w​ ​t​h​e​ ​s​h​a​r​e​ ​r​e​t​u​r​n​i​n​g​ ​i​n​ ​l​a​t​e​r​ ​w​e​e​k​s​.​ ​M​i​s​s​i​n​g​ ​I​D​s​ ​a​r​e​ ​e​x​c​l​u​d​e​d​;​ ​~​ ​m​a​r​k​s​ ​a​n​ ​i​n​c​o​m​p​l​e​t​e​ ​w​e​e​k​.​ ​D​a​t​e​s​ ​u​s​e​ ​s​e​r​v​e​r​ ​r​e​c​e​i​p​t​ ​t​i​m​e​.
+		 */
+		RETENTION_HINT: string
+		/**
+		 * N​o​ ​e​v​e​n​t​s​ ​w​i​t​h​ ​a​ ​k​n​o​w​n​ ​d​e​v​i​c​e​ ​I​D​ ​i​n​ ​t​h​i​s​ ​r​a​n​g​e​.
+		 */
+		NO_KNOWN_DEVICES: string
+		/**
+		 * F​i​r​s​t​ ​a​c​t​i​v​e​ ​w​e​e​k
+		 */
+		COHORT_WEEK: string
+		/**
+		 * W​e​e​k​ ​{​w​e​e​k​}
+		 * @param {number} week
+		 */
+		WEEK_OFFSET: RequiredParams<'week'>
+		/**
+		 * I​n​c​o​m​p​l​e​t​e​ ​w​e​e​k
+		 */
+		PARTIAL_WEEK: string
+		/**
+		 * T​h​i​s​ ​w​e​e​k​ ​h​a​s​ ​n​o​t​ ​b​e​e​n​ ​o​b​s​e​r​v​e​d​ ​y​e​t​.
+		 */
+		NOT_OBSERVED: string
+		/**
+		 * T​h​e​ ​c​u​r​v​e​ ​c​o​m​b​i​n​e​s​ ​f​u​l​l​y​ ​o​b​s​e​r​v​e​d​ ​w​e​e​k​s​ ​o​n​l​y​,​ ​w​e​i​g​h​t​e​d​ ​b​y​ ​c​o​h​o​r​t​ ​s​i​z​e​.​ ​R​e​c​e​n​t​ ​c​o​h​o​r​t​s​ ​c​o​n​t​r​i​b​u​t​e​ ​o​n​l​y​ ​w​h​e​r​e​ ​t​h​e​y​ ​h​a​v​e​ ​a​ ​c​o​m​p​l​e​t​e​ ​w​e​e​k​.
+		 */
+		RETENTION_CURVE_HINT: string
+		/**
+		 * A​c​t​i​v​i​t​y​ ​v​e​r​s​u​s​ ​t​h​e​ ​p​r​e​v​i​o​u​s​ ​p​e​r​i​o​d
+		 */
+		PERIOD_COMPARISON: string
+		/**
+		 * S​e​l​e​c​t​e​d​ ​p​e​r​i​o​d
+		 */
+		CURRENT_PERIOD: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​p​e​r​i​o​d
+		 */
+		PREVIOUS_PERIOD: string
+		/**
+		 * A​c​c​o​u​n​t​ ​a​c​t​i​v​i​t​y​ ​a​n​d​ ​t​r​e​n​d​s
+		 */
+		ACCOUNT_TRENDS: string
+		/**
+		 * C​o​m​p​a​r​e​ ​e​q​u​a​l​-​l​e​n​g​t​h​ ​p​e​r​i​o​d​s​ ​i​m​m​e​d​i​a​t​e​l​y​ ​n​e​x​t​ ​t​o​ ​e​a​c​h​ ​o​t​h​e​r​.​ ​S​p​a​r​k​l​i​n​e​s​ ​i​n​c​l​u​d​e​ ​d​a​y​s​ ​w​i​t​h​o​u​t​ ​a​c​t​i​v​i​t​y​.​ ​A​c​c​o​u​n​t​s​ ​a​c​t​i​v​e​ ​o​n​l​y​ ​i​n​ ​t​h​e​ ​p​r​e​v​i​o​u​s​ ​p​e​r​i​o​d​ ​r​e​m​a​i​n​ ​v​i​s​i​b​l​e​.
+		 */
+		ACCOUNT_TRENDS_HINT: string
+		/**
+		 * N​e​w​ ​a​c​t​i​v​i​t​y
+		 */
+		NEW_ACTIVITY: string
+		/**
+		 * N​o​ ​b​a​s​e​l​i​n​e
+		 */
+		NO_BASELINE: string
+		/**
+		 * D​e​v​i​c​e​s​ ​w​i​t​h​ ​e​r​r​o​r​s
+		 */
+		AFFECTED_DEVICES: string
+		/**
+		 * E​r​r​o​r​s​ ​a​n​d​ ​a​f​f​e​c​t​e​d​ ​d​e​v​i​c​e​s​ ​o​v​e​r​ ​t​i​m​e
+		 */
+		ERROR_TREND: string
+		/**
+		 * D​a​i​l​y​ ​e​r​r​o​r​ ​e​v​e​n​t​s​,​ ​d​i​s​t​i​n​c​t​ ​a​f​f​e​c​t​e​d​ ​d​e​v​i​c​e​s​,​ ​a​n​d​ ​e​r​r​o​r​ ​e​v​e​n​t​s​ ​a​s​ ​a​ ​s​h​a​r​e​ ​o​f​ ​a​l​l​ ​r​e​c​o​r​d​e​d​ ​e​v​e​n​t​s​.​ ​T​h​i​s​ ​i​s​ ​n​o​t​ ​a​ ​c​r​a​s​h​ ​r​a​t​e​ ​p​e​r​ ​s​e​s​s​i​o​n​.
+		 */
+		RELIABILITY_HINT: string
+		/**
+		 * R​e​c​u​r​r​i​n​g​ ​e​r​r​o​r​s
+		 */
+		RECURRING_ISSUES: string
+		/**
+		 * G​r​o​u​p​e​d​ ​b​y​ ​s​o​u​r​c​e​ ​a​n​d​ ​t​h​e​ ​f​i​r​s​t​ ​2​4​0​ ​c​h​a​r​a​c​t​e​r​s​ ​o​f​ ​t​h​e​ ​m​e​s​s​a​g​e​.​ ​D​e​v​i​c​e​ ​c​o​u​n​t​s​ ​e​x​c​l​u​d​e​ ​m​i​s​s​i​n​g​ ​I​D​s​.​ ​R​a​n​k​i​n​g​s​ ​i​n​c​l​u​d​e​ ​e​v​e​r​y​ ​e​r​r​o​r​ ​i​n​ ​t​h​e​ ​s​e​l​e​c​t​e​d​ ​r​a​n​g​e​.
+		 */
+		ISSUES_HINT: string
+		/**
+		 * S​o​u​r​c​e
+		 */
+		ERROR_SOURCE: string
+		/**
+		 * M​e​s​s​a​g​e
+		 */
+		MESSAGE: string
+		/**
+		 * N​o​ ​e​r​r​o​r​ ​e​v​e​n​t​s​ ​r​e​c​o​r​d​e​d​ ​i​n​ ​t​h​i​s​ ​r​a​n​g​e​.
+		 */
+		NO_ERRORS: string
+		/**
+		 * I​n​s​p​e​c​t​ ​e​r​r​o​r​ ​e​v​e​n​t​s
+		 */
+		VIEW_ERROR_EVENTS: string
+		/**
+		 * P​r​e​s​e​n​t​a​t​i​o​n​ ​w​o​r​k​f​l​o​w
+		 */
+		PRESENTATION_FLOW: string
+		/**
+		 * O​b​s​e​r​v​e​d​ ​c​o​n​s​e​c​u​t​i​v​e​ ​w​o​r​k​f​l​o​w​ ​a​c​t​i​o​n​s​ ​i​n​ ​t​h​e​ ​s​a​m​e​ ​a​p​p​-​w​i​n​d​o​w​ ​s​e​s​s​i​o​n​.​ ​O​t​h​e​r​ ​e​v​e​n​t​ ​t​y​p​e​s​ ​a​r​e​ ​s​k​i​p​p​e​d​.​ ​S​e​s​s​i​o​n​s​ ​r​e​s​t​a​r​t​ ​o​n​ ​r​e​l​o​a​d​ ​o​r​ ​a​f​t​e​r​ ​3​0​ ​m​i​n​u​t​e​s​ ​w​i​t​h​o​u​t​ ​a​ ​r​e​c​o​r​d​e​d​ ​a​c​t​i​o​n​.​ ​H​i​s​t​o​r​i​c​a​l​ ​e​v​e​n​t​s​ ​w​i​t​h​o​u​t​ ​s​e​s​s​i​o​n​ ​m​e​t​a​d​a​t​a​ ​a​r​e​ ​e​x​c​l​u​d​e​d​.
+		 */
+		FLOW_HINT: string
+		/**
+		 * L​o​a​d​ ​s​h​o​w
+		 */
+		FLOW_SHOW: string
+		/**
+		 * S​e​l​e​c​t​ ​s​o​n​g
+		 */
+		FLOW_SONG: string
+		/**
+		 * N​a​v​i​g​a​t​e​ ​b​l​o​c​k​s
+		 */
+		FLOW_NAVIGATE: string
+		/**
+		 * O​p​e​n​ ​w​i​n​d​o​w
+		 */
+		FLOW_WINDOW: string
+		/**
+		 * O​p​e​n​ ​p​r​e​s​e​n​t​a​t​i​o​n
+		 */
+		FLOW_PRESENT: string
+		/**
+		 * P​r​e​v​i​o​u​s​ ​w​o​r​k​f​l​o​w​ ​a​c​t​i​o​n
+		 */
+		FLOW_FROM: string
+		/**
+		 * N​e​x​t​ ​w​o​r​k​f​l​o​w​ ​a​c​t​i​o​n
+		 */
+		FLOW_NEXT: string
+		/**
+		 * S​e​s​s​i​o​n​s
+		 */
+		SESSIONS: string
+		/**
+		 * {​c​o​u​n​t​}​ ​o​b​s​e​r​v​e​d​ ​s​e​s​s​i​o​n​s
+		 * @param {number} count
+		 */
+		TRACKED_SESSIONS: RequiredParams<'count'>
+		/**
+		 * {​t​r​a​c​k​e​d​}​ ​o​f​ ​{​t​o​t​a​l​}​ ​w​o​r​k​f​l​o​w​ ​e​v​e​n​t​s​ ​h​a​v​e​ ​s​e​s​s​i​o​n​ ​d​a​t​a
+		 * @param {number} total
+		 * @param {number} tracked
+		 */
+		SESSION_COVERAGE: RequiredParams<'total' | 'tracked'>
+		/**
+		 * C​l​e​a​r​ ​t​h​e​ ​e​v​e​n​t​ ​f​i​l​t​e​r​ ​t​o​ ​s​e​e​ ​t​r​a​n​s​i​t​i​o​n​s​ ​b​e​t​w​e​e​n​ ​d​i​f​f​e​r​e​n​t​ ​a​c​t​i​o​n​s​.
+		 */
+		FLOW_CLEAR_FILTER: string
+		/**
+		 * N​o​ ​s​e​s​s​i​o​n​ ​t​r​a​n​s​i​t​i​o​n​s​ ​r​e​c​o​r​d​e​d​ ​y​e​t​.​ ​T​h​i​s​ ​d​i​a​g​r​a​m​ ​w​i​l​l​ ​p​o​p​u​l​a​t​e​ ​a​s​ ​d​e​v​i​c​e​s​ ​r​u​n​ ​t​h​i​s​ ​v​e​r​s​i​o​n​ ​a​n​d​ ​r​e​c​o​r​d​ ​w​o​r​k​f​l​o​w​ ​a​c​t​i​o​n​s​.
+		 */
+		FLOW_NO_DATA: string
+		/**
+		 * T​h​i​c​k​e​r​ ​l​i​n​e​s​ ​i​n​d​i​c​a​t​e​ ​m​o​r​e​ ​t​r​a​n​s​i​t​i​o​n​s​.​ ​T​h​e​ ​t​a​b​l​e​ ​g​i​v​e​s​ ​e​x​a​c​t​ ​e​v​e​n​t​ ​a​n​d​ ​s​e​s​s​i​o​n​ ​c​o​u​n​t​s​;​ ​t​h​i​s​ ​d​i​a​g​r​a​m​ ​i​s​ ​n​o​t​ ​a​ ​c​o​n​v​e​r​s​i​o​n​ ​f​u​n​n​e​l​.
+		 */
+		FLOW_WIDTH_HINT: string
+		/**
+		 * T​h​e​ ​t​e​n​ ​m​o​s​t​-​u​s​e​d​ ​i​t​e​m​s​ ​i​n​ ​t​h​e​ ​f​u​l​l​ ​s​e​l​e​c​t​e​d​ ​r​a​n​g​e​,​ ​s​e​p​a​r​a​t​e​d​ ​b​y​ ​a​c​c​o​u​n​t​.
+		 */
+		TOP_TEN_HINT: string
+		/**
+		 * L​a​t​e​s​t​ ​o​b​s​e​r​v​e​d​ ​c​h​a​n​g​e​ ​p​e​r​ ​k​n​o​w​n​ ​d​e​v​i​c​e​ ​a​n​d​ ​a​c​c​o​u​n​t​ ​i​n​s​i​d​e​ ​t​h​i​s​ ​r​a​n​g​e​.​ ​T​h​i​s​ ​i​s​ ​n​o​t​ ​a​ ​l​i​v​e​ ​s​e​t​t​i​n​g​s​ ​i​n​v​e​n​t​o​r​y​.
+		 */
+		SETTING_VALUES_HINT: string
+		/**
+		 * T​h​e​ ​l​a​t​e​s​t​ ​3​0​ ​w​i​n​d​o​w​-​o​p​e​n​i​n​g​ ​r​e​c​o​r​d​s​ ​i​n​ ​t​h​i​s​ ​r​a​n​g​e​.​ ​T​h​e​ ​c​o​n​f​i​g​u​r​a​t​i​o​n​ ​c​h​a​r​t​s​ ​a​b​o​v​e​ ​u​s​e​ ​a​l​l​ ​r​e​c​o​r​d​s​.
+		 */
+		RECENT_CONFIGS_HINT: string
+		/**
+		 * D​e​t​a​i​l​s
+		 */
+		DETAILS: string
+		/**
+		 * E​x​p​o​r​t​ ​a​l​l​ ​e​v​e​n​t​s
+		 */
+		EXPORT_ALL: string
+		/**
+		 * P​r​e​p​a​r​i​n​g​ ​e​x​p​o​r​t​:​ ​{​c​o​u​n​t​}​ ​e​v​e​n​t​s​ ​l​o​a​d​e​d​…
+		 * @param {number} count
+		 */
+		EXPORT_PROGRESS: RequiredParams<'count'>
+		/**
+		 * T​h​e​ ​c​o​m​p​l​e​t​e​ ​e​x​p​o​r​t​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​p​r​e​p​a​r​e​d​.​ ​N​o​ ​p​a​r​t​i​a​l​ ​f​i​l​e​ ​w​a​s​ ​d​o​w​n​l​o​a​d​e​d​.​ ​T​r​y​ ​a​g​a​i​n​.
+		 */
+		EXPORT_ERROR: string
+		/**
+		 * U​n​d​e​r​s​t​a​n​d​ ​h​o​w​ ​P​r​e​s​e​n​t​e​r​ ​i​s​ ​u​s​e​d​,​ ​w​h​i​c​h​ ​f​e​a​t​u​r​e​s​ ​r​e​a​c​h​ ​d​e​v​i​c​e​s​,​ ​a​n​d​ ​w​h​e​n​ ​a​c​t​i​v​i​t​y​ ​p​e​a​k​s​.
+		 */
+		SUBTITLE: string
+		/**
+		 * L​a​s​t​ ​{​d​a​y​s​}​ ​d​a​y​s
+		 * @param {number} days
+		 */
+		LAST_DAYS: RequiredParams<'days'>
+		/**
+		 * R​e​s​e​t​ ​f​i​l​t​e​r​s
+		 */
+		RESET_FILTERS: string
+		/**
+		 * C​h​o​o​s​e​ ​a​ ​s​t​a​r​t​ ​d​a​t​e​ ​o​n​ ​o​r​ ​b​e​f​o​r​e​ ​t​h​e​ ​e​n​d​ ​d​a​t​e​.
+		 */
+		INVALID_RANGE: string
+		/**
+		 * M​e​t​r​i​c​s​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​l​o​a​d​e​d​.​ ​T​r​y​ ​r​e​f​r​e​s​h​i​n​g​.
+		 */
+		LOAD_ERROR: string
+		/**
+		 * A​c​r​o​s​s​ ​t​h​e​ ​f​u​l​l​ ​s​e​l​e​c​t​e​d​ ​r​a​n​g​e
+		 */
+		FULL_RANGE: string
+		/**
+		 * D​e​t​a​i​l​e​d​ ​c​h​a​r​t​s​ ​a​n​d​ ​e​x​p​o​r​t​s​ ​b​e​l​o​w​ ​u​s​e​ ​t​h​e​ ​n​e​w​e​s​t​ ​{​l​o​a​d​e​d​}​ ​o​f​ ​{​t​o​t​a​l​}​ ​e​v​e​n​t​s​.​ ​T​h​e​ ​o​v​e​r​v​i​e​w​ ​a​b​o​v​e​ ​i​n​c​l​u​d​e​s​ ​t​h​e​ ​f​u​l​l​ ​r​a​n​g​e​.
+		 * @param {number} loaded
+		 * @param {number} total
+		 */
+		DETAIL_SAMPLE: RequiredParams<'loaded' | 'total'>
+		/**
+		 * A​c​t​i​v​e​ ​d​a​y​s
+		 */
+		ACTIVE_DAYS: string
+		/**
+		 * E​r​r​o​r​ ​e​v​e​n​t​ ​s​h​a​r​e
+		 */
+		ERROR_RATE: string
+		/**
+		 * A​c​t​i​v​i​t​y​ ​p​a​t​t​e​r​n​s
+		 */
+		USAGE_PATTERNS: string
+		/**
+		 * R​e​c​o​r​d​e​d​ ​e​v​e​n​t​s​ ​b​y​ ​w​e​e​k​d​a​y​ ​a​n​d​ ​h​o​u​r​,​ ​u​s​i​n​g​ ​s​e​r​v​e​r​ ​t​i​m​e​.​ ​D​a​r​k​e​r​ ​c​e​l​l​s​ ​m​e​a​n​ ​m​o​r​e​ ​a​c​t​i​v​i​t​y​.
+		 */
+		PATTERNS_HINT: string
+		/**
+		 * F​e​a​t​u​r​e​ ​r​e​a​c​h
+		 */
+		FEATURE_REACH: string
+		/**
+		 * E​v​e​n​t​ ​v​o​l​u​m​e​ ​a​n​d​ ​d​i​s​t​i​n​c​t​ ​d​e​v​i​c​e​s​ ​p​e​r​ ​f​e​a​t​u​r​e​.​ ​D​e​v​i​c​e​s​ ​w​i​t​h​o​u​t​ ​a​n​ ​I​D​ ​a​r​e​ ​e​x​c​l​u​d​e​d​ ​f​r​o​m​ ​r​e​a​c​h​ ​c​o​u​n​t​s​.
+		 */
+		FEATURE_HINT: string
+		/**
+		 * E​v​e​n​t​ ​v​o​l​u​m​e​ ​a​n​d​ ​a​c​t​i​v​e​ ​d​e​v​i​c​e​s​ ​p​e​r​ ​s​e​l​e​c​t​e​d​ ​t​i​m​e​ ​b​u​c​k​e​t​.​ ​D​e​v​i​c​e​s​ ​a​r​e​ ​c​o​u​n​t​e​d​ ​o​n​c​e​ ​w​i​t​h​i​n​ ​e​a​c​h​ ​b​u​c​k​e​t​.
+		 */
+		ACTIVITY_HINT: string
 		/**
 		 * M​e​t​r​i​c​s
 		 */
@@ -9759,6 +10065,19 @@ type RootTranslation = {
 		 */
 		PAGE_ONE: string
 		/**
+		 * {​c​o​u​n​t​}​ ​c​o​l​u​m​n​{​{​s​}​}
+		 * @param {number} count
+		 */
+		LYRICS_COLUMNS: RequiredParams<'count'>
+		/**
+		 * L​y​r​i​c​s
+		 */
+		VIEW_LYRICS: string
+		/**
+		 * D​o​w​n​l​o​a​d​ ​P​D​F
+		 */
+		DOWNLOAD_PDF: string
+		/**
 		 * {​c​o​u​n​t​}​ ​P​D​F​{​{​s​}​}
 		 * @param {number} count
 		 */
@@ -10204,6 +10523,71 @@ type RootTranslation = {
 		 * S​a​v​e​ ​M​a​p​p​i​n​g​s
 		 */
 		SAVE_MAPPINGS: string
+	}
+	PDF_EDIT: {
+		/**
+		 * R​e​a​r​r​a​n​g​e​ ​p​a​g​e​s​ ​—​ ​m​o​v​e​ ​p​a​r​t​s​ ​b​e​t​w​e​e​n​ ​p​a​g​e​s
+		 */
+		OPEN: string
+		/**
+		 * R​e​a​r​r​a​n​g​e​ ​p​a​g​e​s
+		 */
+		TITLE: string
+		/**
+		 * D​r​a​w​ ​a​r​o​u​n​d​ ​a​ ​p​a​r​t​ ​w​i​t​h​ ​t​h​e​ ​l​a​s​s​o​,​ ​t​h​e​n​ ​d​r​a​g​ ​i​t​ ​—​ ​o​n​t​o​ ​a​n​o​t​h​e​r​ ​p​a​g​e​ ​a​s​ ​w​e​l​l​.​ ​N​o​t​e​s​ ​a​n​d​ ​b​l​o​c​k​ ​a​r​e​a​s​ ​m​o​v​e​ ​w​i​t​h​ ​i​t​.
+		 */
+		HINT: string
+		/**
+		 * P​a​g​e​ ​{​n​u​m​b​e​r​}​ ​o​f​ ​{​t​o​t​a​l​}
+		 * @param {number} number
+		 * @param {number} total
+		 */
+		PAGE: RequiredParams<'number' | 'total'>
+		/**
+		 * D​e​l​e​t​e​ ​p​a​g​e
+		 */
+		DELETE_PAGE: string
+		/**
+		 * R​e​m​o​v​e​ ​s​e​l​e​c​t​i​o​n​ ​(​D​e​l​)
+		 */
+		ERASE: string
+		/**
+		 * U​n​d​o​ ​(​C​t​r​l​+​Z​)
+		 */
+		UNDO: string
+		/**
+		 * S​a​v​e​ ​P​D​F
+		 */
+		SAVE: string
+		/**
+		 * T​h​e​ ​P​D​F​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​o​p​e​n​e​d​ ​f​o​r​ ​e​d​i​t​i​n​g​.
+		 */
+		LOAD_FAILED: string
+		/**
+		 * T​h​a​t​ ​c​h​a​n​g​e​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​m​a​d​e​.
+		 */
+		EDIT_FAILED: string
+		/**
+		 * S​a​v​i​n​g​ ​f​a​i​l​e​d​ ​—​ ​t​h​e​ ​P​D​F​ ​o​n​ ​t​h​e​ ​s​e​r​v​e​r​ ​i​s​ ​u​n​c​h​a​n​g​e​d​.
+		 */
+		SAVE_FAILED: string
+		/**
+		 * T​h​e​ ​P​D​F​ ​i​s​ ​s​a​v​e​d​,​ ​b​u​t​ ​{​c​o​u​n​t​}​ ​n​o​t​e​{​{​s​}​}​ ​o​r​ ​b​l​o​c​k​ ​a​r​e​a​{​{​s​}​}​ ​c​o​u​l​d​ ​n​o​t​ ​b​e​ ​m​o​v​e​d​ ​a​l​o​n​g​.
+		 * @param {number} count
+		 */
+		SAVED_PARTLY: RequiredParams<'count'>
+		/**
+		 * D​i​s​c​a​r​d​ ​c​h​a​n​g​e​s​?
+		 */
+		DISCARD_TITLE: string
+		/**
+		 * Y​o​u​r​ ​p​a​g​e​ ​e​d​i​t​s​ ​h​a​v​e​ ​n​o​t​ ​b​e​e​n​ ​s​a​v​e​d​ ​y​e​t​.
+		 */
+		DISCARD_TEXT: string
+		/**
+		 * D​i​s​c​a​r​d
+		 */
+		DISCARD: string
 	}
 	ANNOTATION: {
 		/**
@@ -13274,6 +13658,10 @@ export type TranslationFunctions = {
 		 * Could not sync songs to the ChurchTools event
 		 */
 		EVENT_SYNC_FAILED: () => LocalizedString
+		/**
+		 * The ChurchTools agenda is locked, so the songs were not synced
+		 */
+		EVENT_SYNC_LOCKED: () => LocalizedString
 		/**
 		 * Load earlier events
 		 */
@@ -16633,6 +17021,14 @@ export type TranslationFunctions = {
 		 */
 		SOUND_HERE: () => LocalizedString
 		/**
+		 * Off: it shows its first frame and waits for Play.
+		 */
+		AUTOPLAY_HINT: () => LocalizedString
+		/**
+		 * Played from this computer, not from the screens.
+		 */
+		SOUND_HERE_HINT: () => LocalizedString
+		/**
 		 * Show on screens
 		 */
 		START: () => LocalizedString
@@ -17689,7 +18085,7 @@ export type TranslationFunctions = {
 		 */
 		BADGE_NO_BACKGROUND: () => LocalizedString
 		/**
-		 * {count} win
+		 * {count} window{{s}}
 		 */
 		MONITOR_WINDOWS: (arg: { count: number }) => LocalizedString
 		/**
@@ -19167,7 +19563,7 @@ export type TranslationFunctions = {
 		 */
 		PRIVACY_DESCRIPTION: () => LocalizedString
 		/**
-		 * Collected events include: feature usage (e.g. songs selected, shows opened, blocks navigated), UI interactions (e.g. style changes, window actions), error reports, and app lifecycle events (e.g. login, startup). Each event is tagged with an anonymous device ID.
+		 * Collected events include: feature usage (e.g. songs selected, shows opened, blocks navigated), UI interactions (e.g. style changes, window actions), error reports, and app lifecycle events (e.g. login, startup). Events include an anonymous device ID, a session ID, the action order, and the action time. A session belongs to one app window and restarts after reload or 30 minutes without a recorded action.
 		 */
 		PRIVACY_METRICS_LIST: () => LocalizedString
 		/**
@@ -19979,6 +20375,16 @@ export type TranslationFunctions = {
 				 */
 				DESCRIPTION: () => LocalizedString
 			}
+			VIDEO_SYNC_TOLERANCE: {
+				/**
+				 * Video sync tolerance (s)
+				 */
+				TITLE: () => LocalizedString
+				/**
+				 * How far a video on an output may drift from the clock before it jumps back into place. Smaller drift is corrected invisibly by playing slightly faster or slower; a jump is a short stutter. Lower keeps the screens tighter together but jumps more often. 0.1 to 1, default 0.5.
+				 */
+				DESCRIPTION: () => LocalizedString
+			}
 			AUDIO_FADE_OUT: {
 				/**
 				 * Audio fade out (s)
@@ -20182,6 +20588,282 @@ export type TranslationFunctions = {
 		AUDIO_FROM_PREVIEW: () => LocalizedString
 	}
 	METRICS: {
+		/**
+		 * Adoption
+		 */
+		TAB_ADOPTION: () => LocalizedString
+		/**
+		 * Reliability
+		 */
+		TAB_RELIABILITY: () => LocalizedString
+		/**
+		 * Feature adoption by account
+		 */
+		ADOPTION_MATRIX: () => LocalizedString
+		/**
+		 * Compare device reach or event volume across accounts. Reach is the share of active devices with at least one event for that feature. Click a cell to filter.
+		 */
+		ADOPTION_HINT: () => LocalizedString
+		/**
+		 * Find account
+		 */
+		FIND_ACCOUNT: () => LocalizedString
+		/**
+		 * Adoption measure
+		 */
+		MATRIX_MODE: () => LocalizedString
+		/**
+		 * Device reach (%)
+		 */
+		REACH_PERCENT: () => LocalizedString
+		/**
+		 * Top 12 features
+		 */
+		TOP_FEATURES: () => LocalizedString
+		/**
+		 * All features
+		 */
+		ALL_FEATURES: () => LocalizedString
+		/**
+		 * Returning devices
+		 */
+		DEVICE_RETENTION: () => LocalizedString
+		/**
+		 * Cohorts start with each device’s first active week within the selected range, not its first-ever visit. Cells show the share returning in later weeks. Missing IDs are excluded; ~ marks an incomplete week. Dates use server receipt time.
+		 */
+		RETENTION_HINT: () => LocalizedString
+		/**
+		 * No events with a known device ID in this range.
+		 */
+		NO_KNOWN_DEVICES: () => LocalizedString
+		/**
+		 * First active week
+		 */
+		COHORT_WEEK: () => LocalizedString
+		/**
+		 * Week {week}
+		 */
+		WEEK_OFFSET: (arg: { week: number }) => LocalizedString
+		/**
+		 * Incomplete week
+		 */
+		PARTIAL_WEEK: () => LocalizedString
+		/**
+		 * This week has not been observed yet.
+		 */
+		NOT_OBSERVED: () => LocalizedString
+		/**
+		 * The curve combines fully observed weeks only, weighted by cohort size. Recent cohorts contribute only where they have a complete week.
+		 */
+		RETENTION_CURVE_HINT: () => LocalizedString
+		/**
+		 * Activity versus the previous period
+		 */
+		PERIOD_COMPARISON: () => LocalizedString
+		/**
+		 * Selected period
+		 */
+		CURRENT_PERIOD: () => LocalizedString
+		/**
+		 * Previous period
+		 */
+		PREVIOUS_PERIOD: () => LocalizedString
+		/**
+		 * Account activity and trends
+		 */
+		ACCOUNT_TRENDS: () => LocalizedString
+		/**
+		 * Compare equal-length periods immediately next to each other. Sparklines include days without activity. Accounts active only in the previous period remain visible.
+		 */
+		ACCOUNT_TRENDS_HINT: () => LocalizedString
+		/**
+		 * New activity
+		 */
+		NEW_ACTIVITY: () => LocalizedString
+		/**
+		 * No baseline
+		 */
+		NO_BASELINE: () => LocalizedString
+		/**
+		 * Devices with errors
+		 */
+		AFFECTED_DEVICES: () => LocalizedString
+		/**
+		 * Errors and affected devices over time
+		 */
+		ERROR_TREND: () => LocalizedString
+		/**
+		 * Daily error events, distinct affected devices, and error events as a share of all recorded events. This is not a crash rate per session.
+		 */
+		RELIABILITY_HINT: () => LocalizedString
+		/**
+		 * Recurring errors
+		 */
+		RECURRING_ISSUES: () => LocalizedString
+		/**
+		 * Grouped by source and the first 240 characters of the message. Device counts exclude missing IDs. Rankings include every error in the selected range.
+		 */
+		ISSUES_HINT: () => LocalizedString
+		/**
+		 * Source
+		 */
+		ERROR_SOURCE: () => LocalizedString
+		/**
+		 * Message
+		 */
+		MESSAGE: () => LocalizedString
+		/**
+		 * No error events recorded in this range.
+		 */
+		NO_ERRORS: () => LocalizedString
+		/**
+		 * Inspect error events
+		 */
+		VIEW_ERROR_EVENTS: () => LocalizedString
+		/**
+		 * Presentation workflow
+		 */
+		PRESENTATION_FLOW: () => LocalizedString
+		/**
+		 * Observed consecutive workflow actions in the same app-window session. Other event types are skipped. Sessions restart on reload or after 30 minutes without a recorded action. Historical events without session metadata are excluded.
+		 */
+		FLOW_HINT: () => LocalizedString
+		/**
+		 * Load show
+		 */
+		FLOW_SHOW: () => LocalizedString
+		/**
+		 * Select song
+		 */
+		FLOW_SONG: () => LocalizedString
+		/**
+		 * Navigate blocks
+		 */
+		FLOW_NAVIGATE: () => LocalizedString
+		/**
+		 * Open window
+		 */
+		FLOW_WINDOW: () => LocalizedString
+		/**
+		 * Open presentation
+		 */
+		FLOW_PRESENT: () => LocalizedString
+		/**
+		 * Previous workflow action
+		 */
+		FLOW_FROM: () => LocalizedString
+		/**
+		 * Next workflow action
+		 */
+		FLOW_NEXT: () => LocalizedString
+		/**
+		 * Sessions
+		 */
+		SESSIONS: () => LocalizedString
+		/**
+		 * {count} observed sessions
+		 */
+		TRACKED_SESSIONS: (arg: { count: number }) => LocalizedString
+		/**
+		 * {tracked} of {total} workflow events have session data
+		 */
+		SESSION_COVERAGE: (arg: { total: number, tracked: number }) => LocalizedString
+		/**
+		 * Clear the event filter to see transitions between different actions.
+		 */
+		FLOW_CLEAR_FILTER: () => LocalizedString
+		/**
+		 * No session transitions recorded yet. This diagram will populate as devices run this version and record workflow actions.
+		 */
+		FLOW_NO_DATA: () => LocalizedString
+		/**
+		 * Thicker lines indicate more transitions. The table gives exact event and session counts; this diagram is not a conversion funnel.
+		 */
+		FLOW_WIDTH_HINT: () => LocalizedString
+		/**
+		 * The ten most-used items in the full selected range, separated by account.
+		 */
+		TOP_TEN_HINT: () => LocalizedString
+		/**
+		 * Latest observed change per known device and account inside this range. This is not a live settings inventory.
+		 */
+		SETTING_VALUES_HINT: () => LocalizedString
+		/**
+		 * The latest 30 window-opening records in this range. The configuration charts above use all records.
+		 */
+		RECENT_CONFIGS_HINT: () => LocalizedString
+		/**
+		 * Details
+		 */
+		DETAILS: () => LocalizedString
+		/**
+		 * Export all events
+		 */
+		EXPORT_ALL: () => LocalizedString
+		/**
+		 * Preparing export: {count} events loaded…
+		 */
+		EXPORT_PROGRESS: (arg: { count: number }) => LocalizedString
+		/**
+		 * The complete export could not be prepared. No partial file was downloaded. Try again.
+		 */
+		EXPORT_ERROR: () => LocalizedString
+		/**
+		 * Understand how Presenter is used, which features reach devices, and when activity peaks.
+		 */
+		SUBTITLE: () => LocalizedString
+		/**
+		 * Last {days} days
+		 */
+		LAST_DAYS: (arg: { days: number }) => LocalizedString
+		/**
+		 * Reset filters
+		 */
+		RESET_FILTERS: () => LocalizedString
+		/**
+		 * Choose a start date on or before the end date.
+		 */
+		INVALID_RANGE: () => LocalizedString
+		/**
+		 * Metrics could not be loaded. Try refreshing.
+		 */
+		LOAD_ERROR: () => LocalizedString
+		/**
+		 * Across the full selected range
+		 */
+		FULL_RANGE: () => LocalizedString
+		/**
+		 * Detailed charts and exports below use the newest {loaded} of {total} events. The overview above includes the full range.
+		 */
+		DETAIL_SAMPLE: (arg: { loaded: number, total: number }) => LocalizedString
+		/**
+		 * Active days
+		 */
+		ACTIVE_DAYS: () => LocalizedString
+		/**
+		 * Error event share
+		 */
+		ERROR_RATE: () => LocalizedString
+		/**
+		 * Activity patterns
+		 */
+		USAGE_PATTERNS: () => LocalizedString
+		/**
+		 * Recorded events by weekday and hour, using server time. Darker cells mean more activity.
+		 */
+		PATTERNS_HINT: () => LocalizedString
+		/**
+		 * Feature reach
+		 */
+		FEATURE_REACH: () => LocalizedString
+		/**
+		 * Event volume and distinct devices per feature. Devices without an ID are excluded from reach counts.
+		 */
+		FEATURE_HINT: () => LocalizedString
+		/**
+		 * Event volume and active devices per selected time bucket. Devices are counted once within each bucket.
+		 */
+		ACTIVITY_HINT: () => LocalizedString
 		/**
 		 * Metrics
 		 */
@@ -20731,6 +21413,18 @@ export type TranslationFunctions = {
 		 */
 		PAGE_ONE: () => LocalizedString
 		/**
+		 * {count} column{{s}}
+		 */
+		LYRICS_COLUMNS: (arg: { count: number }) => LocalizedString
+		/**
+		 * Lyrics
+		 */
+		VIEW_LYRICS: () => LocalizedString
+		/**
+		 * Download PDF
+		 */
+		DOWNLOAD_PDF: () => LocalizedString
+		/**
 		 * {count} PDF{{s}}
 		 */
 		PDF_COUNT: (arg: { count: number }) => LocalizedString
@@ -21154,6 +21848,68 @@ export type TranslationFunctions = {
 		 * Save Mappings
 		 */
 		SAVE_MAPPINGS: () => LocalizedString
+	}
+	PDF_EDIT: {
+		/**
+		 * Rearrange pages — move parts between pages
+		 */
+		OPEN: () => LocalizedString
+		/**
+		 * Rearrange pages
+		 */
+		TITLE: () => LocalizedString
+		/**
+		 * Draw around a part with the lasso, then drag it — onto another page as well. Notes and block areas move with it.
+		 */
+		HINT: () => LocalizedString
+		/**
+		 * Page {number} of {total}
+		 */
+		PAGE: (arg: { number: number, total: number }) => LocalizedString
+		/**
+		 * Delete page
+		 */
+		DELETE_PAGE: () => LocalizedString
+		/**
+		 * Remove selection (Del)
+		 */
+		ERASE: () => LocalizedString
+		/**
+		 * Undo (Ctrl+Z)
+		 */
+		UNDO: () => LocalizedString
+		/**
+		 * Save PDF
+		 */
+		SAVE: () => LocalizedString
+		/**
+		 * The PDF could not be opened for editing.
+		 */
+		LOAD_FAILED: () => LocalizedString
+		/**
+		 * That change could not be made.
+		 */
+		EDIT_FAILED: () => LocalizedString
+		/**
+		 * Saving failed — the PDF on the server is unchanged.
+		 */
+		SAVE_FAILED: () => LocalizedString
+		/**
+		 * The PDF is saved, but {count} note{{s}} or block area{{s}} could not be moved along.
+		 */
+		SAVED_PARTLY: (arg: { count: number }) => LocalizedString
+		/**
+		 * Discard changes?
+		 */
+		DISCARD_TITLE: () => LocalizedString
+		/**
+		 * Your page edits have not been saved yet.
+		 */
+		DISCARD_TEXT: () => LocalizedString
+		/**
+		 * Discard
+		 */
+		DISCARD: () => LocalizedString
 	}
 	ANNOTATION: {
 		/**

@@ -7,7 +7,7 @@
  * the transport under it, and the settings as inspector rows.
  */
 import { useCallback, useEffect, useState } from 'react';
-import { Alert, Box, Button, LinearProgress, Slider, Switch, Typography } from '@mui/material';
+import { Alert, Box, Button, LinearProgress, Slider, Typography } from '@mui/material';
 import {
   FirstPage as ToStartIcon,
   FastForward as ForwardIcon,
@@ -52,7 +52,7 @@ import {
   formatTimecode,
   TRANSPORT_ACTIVE,
 } from '@/components/media/Transport';
-import { InspectorRow, InspectorSection, ViewerFrame, type LampState } from '@/components/media/Viewer';
+import { InspectorRow, InspectorSection, OptionList, OptionSwitch, ViewerFrame, type LampState } from '@/components/media/Viewer';
 import { useMediaFolderIssue } from '@/media/useMediaFolder';
 import { MediaFolderNotice } from '@/components/media/MediaFolderNotice';
 
@@ -136,9 +136,9 @@ const ControlAudio = ({ item, index }: { item: ShowItem; index: number }) => {
                   {Math.round((volumeDraft ?? volume) * 100)}%
                 </Typography>
               </InspectorRow>
-              <InspectorRow label={T.LOOP()}>
-                <Switch size="small" checked={loop} onChange={(e) => patch({ mediaLoop: e.target.checked })} />
-              </InspectorRow>
+              <OptionList>
+                <OptionSwitch label={T.LOOP()} checked={loop} onChange={(mediaLoop) => patch({ mediaLoop })} />
+              </OptionList>
               <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 {A.KEEPS_PLAYING()}
               </Typography>

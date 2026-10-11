@@ -22,6 +22,9 @@ Tooling for running and inspecting the app without a real backend.
   `npm run test:ws`. See [ws-sync/README.md](ws-sync/README.md).
 - `lyrics/` — parse/serialise round-trip test for the song editor's lyric-line model, run with
   `npm run test:lyrics`. Pure node, no server needed.
+- `pdf-page-edit/` — the PDF page editor's core: moving a lassoed region between pages (read back
+  with pdf.js), erasing, deleting pages, and carrying annotations and block mappings along. Run
+  with `npm run test:pdf-edit`. Pure node, no server needed.
 - `styles/` — unit tests for the style editor's pure helpers (CSS box shorthand, the custom-CSS
   tokeniser), run with `npm run test:styles`. Pure node, no server needed.
 - `shutdown/` — checks that the app stops itself within its budget when asked (window close,

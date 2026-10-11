@@ -757,6 +757,43 @@ scenario(
   },
 );
 
+// 19 ────────────────────────────────────────────────────────────────────────
+scenario(
+  'The lyrics view follows the operator line by line',
+  'Line steps mark a line on the musician; an operator who never steps marks nothing, and a new block starts clean.',
+  async ({ url, account }) => {
+    const show = makeShow();
+    const operator = await new OperatorClient({ url, account, show }).connect();
+    const musician = await new MusicianClient({ url, account, show, syncMode: 'operator', musicianName: 'Anna' }).connect();
+    const clients = [operator, musician];
+    await quiesce(clients);
+
+    operator.setActiveBlockIndex(0);
+    await quiesce(clients);
+    report.equal('no line marked before the operator steps lines', musician.operatorLineHere, undefined);
+
+    operator.setActiveLineIndex(1);
+    await quiesce(clients);
+    report.equal('a line step marks that line', musician.operatorLineHere, 1);
+
+    operator.setActiveLineIndex(0);
+    await quiesce(clients);
+    report.equal('stepping back to the first line keeps marking', musician.operatorLineHere, 0);
+
+    operator.setActiveBlockIndex(1);
+    await quiesce(clients);
+    report.equal('the next block starts unmarked', musician.operatorLineHere, undefined);
+
+    operator.setActiveLineIndex(1); // stepped in song 101's block 1 …
+    await quiesce(clients);
+    operator.setItemAndBlock(2, 1); // … then song 202's block 1, line 0
+    await quiesce(clients);
+    report.equal('another song at the same block index does not inherit the mark', musician.operatorLineHere, undefined);
+
+    await Promise.all(clients.map((c) => c.close()));
+  },
+);
+
 // ── Runner ──────────────────────────────────────────────────────────────────
 
 async function main() {

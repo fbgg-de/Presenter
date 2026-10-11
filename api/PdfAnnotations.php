@@ -155,10 +155,18 @@ class PdfAnnotations extends RestController
             $color   = $req->params->has('color') ? $req->params->get('color', null, false) : null;
             $opacity = $req->params->has('opacity') ? floatval($req->params->get('opacity', '1', false)) : null;
             $data    = $req->params->has('data') ? json_encode($req->params->getAsArray('data', [])) : null;
+            // Optional: the page editor moves an annotation together with the content under it.
+            $page    = $req->params->has('page') ? intval($req->params->get('page', '1', false)) : null;
 
             $setClauses = ['x = ?', 'y = ?'];
             $types = 'dd';
             $values = [$x, $y];
+
+            if ($page !== null && $page > 0) {
+                $setClauses[] = 'page = ?';
+                $types .= 'i';
+                $values[] = $page;
+            }
 
             if ($color !== null) {
                 $setClauses[] = 'color = ?';

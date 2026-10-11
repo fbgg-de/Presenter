@@ -80,7 +80,7 @@ export const Accounts = () => {
   };
 
   const handleDelete = async () => {
-    if (!deleteDialog.id) return;
+    if (deleteDialog.id === undefined) return;
     try {
       await deleteAccount({ license: deleteDialog.id }).unwrap();
       setDeleteDialog({ open: false });
@@ -90,7 +90,7 @@ export const Accounts = () => {
   };
 
   const handleAssignProvider = async (providerId: number, isDefault: boolean) => {
-    if (!assignDialog.license) return;
+    if (assignDialog.license === undefined) return;
     try {
       await assignProvider({ license: assignDialog.license, provider_id: providerId, is_default: isDefault }).unwrap();
       setAssignDialog({ open: false });
@@ -304,6 +304,7 @@ const AccountDialog = ({
             onSave(account ? { license: formData.license, mail: formData.mail, name: formData.name, active: formData.active } : formData)
           }
           variant="contained"
+          disabled={!account && formData.license < 1}
         >
           {LL.COMMON.SAVE()}
         </Button>

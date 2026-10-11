@@ -7,14 +7,14 @@
  * - **SlideshowSettings** — seconds per image, cut or fade, repeat, as inspector rows.
  */
 import { useState } from 'react';
-import { Box, ButtonBase, IconButton, Slider, Stack, Switch, Tooltip, Typography } from '@mui/material';
+import { Box, ButtonBase, IconButton, Slider, Stack, Tooltip, Typography } from '@mui/material';
 import { AddPhotoAlternateOutlined as AddIcon, Close as RemoveIcon } from '@mui/icons-material';
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, horizontalListSortingStrategy, sortableKeyboardCoordinates, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { MediaBrowser } from '@/components/media/MediaBrowser';
-import { InspectorRow, Segmented } from '@/components/media/Viewer';
+import { InspectorRow, OptionList, OptionSwitch, Segmented } from '@/components/media/Viewer';
 import { PLAYHEAD } from '@/components/media/Transport';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { DEFAULT_SLIDE_SECONDS, type MediaVersion } from '@/media/mediaItem';
@@ -268,9 +268,9 @@ export const SlideshowSettings = ({ version, onChange }: { version: MediaVersion
           onChange={(transition) => onChange({ ...version, slideshow: { ...slideshow, transition } })}
         />
       </InspectorRow>
-      <InspectorRow label={S.REPEAT()}>
-        <Switch size="small" checked={!!version.loop} onChange={(e) => onChange({ ...version, loop: e.target.checked })} />
-      </InspectorRow>
+      <OptionList>
+        <OptionSwitch label={S.REPEAT()} checked={!!version.loop} onChange={(loop) => onChange({ ...version, loop })} />
+      </OptionList>
     </>
   );
 };

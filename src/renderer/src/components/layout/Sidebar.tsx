@@ -140,7 +140,6 @@ import { useLibraryActions } from '@/components/library/useLibraryActions';
 import { mediaItemLabel, newMediaItemData, newSlideshowData, type MediaRole } from '@/media/mediaItem';
 import { AGENDA_FILE_ACCEPT, mediaLabelOf } from '@/media/mediaFiles';
 import { genItemId } from '@/utils/showGroups';
-import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { WindowManager } from '@/components/layout/WindowManager';
 import { SetListManager } from '@/components/setlist/SetListManager';
 import { MUSICAL_KEYS, parseOrderKey } from '@/utils/orderKeyUtils';
@@ -204,7 +203,6 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
   const locked = operatorMode === 'live';
   const searchKey = useShortcut('open_search');
   const { currentShow, isDirty } = useGetShow();
-  const { data: screenGroups = [] } = useGetScreenGroupsQuery();
 
   const dispatch = useAppDispatch();
 
@@ -353,7 +351,10 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
         setSyncMsg(
           eventSync.ok
             ? { severity: 'success', text: LL.SHOWS.EVENT_SYNCED() }
-            : { severity: 'warning', text: LL.SHOWS.EVENT_SYNC_FAILED() },
+            : {
+                severity: 'warning',
+                text: eventSync.reason === 'locked' ? LL.SHOWS.EVENT_SYNC_LOCKED() : LL.SHOWS.EVENT_SYNC_FAILED(),
+              },
         );
       }
     } catch (error) {
@@ -491,7 +492,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
         type: 'media',
         mediaSubType: 'slideshow',
         label: LL.SHOW_ITEMS.SLIDESHOW(),
-        media: newSlideshowData([], { groups: screenGroups }),
+        media: newSlideshowData([]),
         groupId: addTargetGroup,
       }),
     );
@@ -519,7 +520,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
               mediaColor,
               mediaPath,
               ...((mediaSubType === 'image' || mediaSubType === 'video') && mediaPath
-                ? { media: newMediaItemData(mediaSubType, mediaPath, { groups: screenGroups, role: mediaAddRole }) }
+                ? { media: newMediaItemData(mediaSubType, mediaPath, { role: mediaAddRole }) }
                 : {}),
               // A name given on add wins; otherwise the path/color doubles as the label.
               label: label || (mediaSubType === 'color' ? mediaColor : mediaPath),

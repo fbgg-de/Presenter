@@ -12,7 +12,7 @@ for (const name of ['engine', 'framing'])
       compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
     }).outputText,
   );
-const { advanceCue, commandCue, followClock, initialTransport, lyricAt, lyricOccurrences, validateCue } = await import(
+const { advanceCue, commandCue, followClock, initialTransport, lyricAt, lyricOccurrences, setSyncTolerance, syncTolerance, validateCue } = await import(
   pathToFileURL(join(dir, 'engine.mjs'))
 );
 const { frameGeometry } = await import(pathToFileURL(join(dir, 'framing.mjs')));
@@ -237,7 +237,7 @@ test('playback speed: normal speed leaves no field, limits hold, stop keeps the 
   assert.equal(t.time, 0);
 });
 test('following the clock: small drift is nudged, big drift is sought, the speed is kept', () => {
-  assert.deepEqual(followClock(10, 10.01, 1), { playbackRate: 1 });
+  assert.deepEqual(followClock(10, 10.01, 1), { playbackRate: 1, nudge: 0 });
   // 0.2 s behind: play 10 % faster, no seek (a seek would stutter every crop of the video).
   const behind = followClock(10.2, 10, 1);
   assert.equal(behind.seek, undefined);
@@ -247,8 +247,66 @@ test('following the clock: small drift is nudged, big drift is sought, the speed
   assert.equal(ahead.seek, undefined);
   assert.ok(ahead.playbackRate < 1.5 && ahead.playbackRate > 1.5 * 0.9);
   // A seek or a loop wrap: go there.
-  assert.deepEqual(followClock(2, 9.8, 1.25), { seek: 2, playbackRate: 1.25 });
+  assert.deepEqual(followClock(2, 9.8, 1.25), { seek: 2, playbackRate: 1.25, nudge: 0 });
   // A seek aims ahead by the element's seek time (in media time at the playing speed).
-  assert.deepEqual(followClock(2, 9.8, 2, 0.25), { seek: 2.5, playbackRate: 2 });
+  assert.deepEqual(followClock(2, 9.8, 2, 0.25), { seek: 2.5, playbackRate: 2, nudge: 0 });
+});
+test('a correction runs until settled, at one held rate, so the rate does not flip', () => {
+  // Idle: 15 ms off is inside the deadband — leave it alone.
+  assert.deepEqual(followClock(10.015, 10, 1), { playbackRate: 1, nudge: 0 });
+  // 25 ms behind starts a correction: 1 % faster …
+  assert.deepEqual(followClock(10.025, 10, 1), { playbackRate: 1.01, nudge: 0.01 });
+  // … which keeps going inside the deadband instead of stopping at its edge …
+  assert.deepEqual(followClock(10.015, 10, 1, 0, 0.5, 0.01), { playbackRate: 1.01, nudge: 0.01 });
+  // … is raised when the drift grows, never lowered on the way back …
+  assert.equal(followClock(10.06, 10, 1, 0, 0.5, 0.01).nudge, 0.03);
+  assert.equal(followClock(10.025, 10, 1, 0, 0.5, 0.03).nudge, 0.03);
+  // … starts over the other way after an overshoot …
+  assert.equal(followClock(9.98, 10, 1, 0, 0.5, 0.03).nudge, -0.01);
+  // … and ends within 5 ms.
+  assert.deepEqual(followClock(10.004, 10, 1, 0, 0.5, 0.03), { playbackRate: 1, nudge: 0 });
+  // Simulated: drift around the old 20 ms edge with ±3 ms timer jitter. The old rule wrote the rate
+  // 38 times in these 600 ticks and never pulled the drift in; now: start, end.
+  let nudge = 0, rate = 1, writes = 0, drift = 0.021;
+  for (let tick = 0; tick < 600; tick++) {
+    const jitter = ((tick * 7919) % 7) / 1000 - 0.003;
+    const f = followClock(10 + drift + jitter, 10, 1, 0, 0.5, nudge);
+    nudge = f.nudge;
+    if (Math.abs(f.playbackRate - rate) > 0.002) { rate = f.playbackRate; writes++; }
+    drift -= (rate - 1) * 0.016; // the rate pulls the drift in, one 16 ms tick at a time
+  }
+  assert.ok(writes <= 2, `rate written ${writes} times`);
+  assert.ok(Math.abs(drift) < 0.01);
+});
+test('at higher speed the thresholds are real time, and a fresh seek only nudges', () => {
+  // 3×: 45 ms of media is 15 ms late in real time — inside the deadband, left alone.
+  assert.deepEqual(followClock(10.045, 10, 3), { playbackRate: 3, nudge: 0 });
+  // 1.2 s of media behind at 3× is 0.4 s late: nudged, not a seek (a 0.3 s seek would cost 0.9 s).
+  const nudged = followClock(11.2, 10, 3);
+  assert.equal(nudged.seek, undefined);
+  assert.ok(nudged.playbackRate > 3 && nudged.playbackRate <= 3.3 + 1e-9);
+  // 1.8 s of media is 0.6 s late: past the 0.5 s tolerance, sought — aimed ahead by the lead at 3×.
+  assert.deepEqual(followClock(11.8, 10, 3, 0.2), { seek: 12.4, playbackRate: 3, nudge: 0 });
+  // Right after a seek it may not seek again: the most it does is nudge.
+  const fresh = followClock(11.8, 10, 3, 0.2, 0.5, 0, false);
+  assert.equal(fresh.seek, undefined);
+  assert.equal(fresh.nudge, 0.1);
+  assert.ok(Math.abs(fresh.playbackRate - 3.3) < 1e-9);
+});
+test('the sync tolerance decides what is a jump', () => {
+  // 0.8 s behind: nudged at a 1 s tolerance, sought at the default 0.5 s.
+  assert.equal(followClock(10.8, 10, 1, 0, 1).seek, undefined);
+  assert.equal(followClock(10.8, 10, 1).seek, 10.8);
+  // 0.2 s behind at 0.1 s: sought.
+  assert.equal(followClock(10.2, 10, 1, 0, 0.1).seek, 10.2);
+  // The operator's setting is the default, clamped to 0.1–1 s; garbage falls back to 0.5.
+  setSyncTolerance(1);
+  assert.equal(followClock(10.8, 10, 1).seek, undefined);
+  setSyncTolerance(5);
+  assert.equal(syncTolerance(), 1);
+  setSyncTolerance(0);
+  assert.equal(syncTolerance(), 0.1);
+  setSyncTolerance(Number('x'));
+  assert.equal(syncTolerance(), 0.5);
 });
 console.log(`${checks} media cue checks passed`);

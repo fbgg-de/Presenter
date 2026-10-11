@@ -944,11 +944,12 @@ export const LayerBar = () => {
 
   return (
     <Box sx={{ bgcolor: 'background.paper' }}>
-      {/* The name column makes room for the key labels while Shift is held. */}
+      {/* The name column makes room for the key labels while Shift is held, and for a longer
+          translation of a row's name ("Einblendungen") — never narrower than the English one. */}
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: shiftHeld ? '250px minmax(0, 1fr)' : '170px minmax(0, 1fr)',
+          gridTemplateColumns: shiftHeld ? 'minmax(250px, max-content) minmax(0, 1fr)' : 'minmax(170px, max-content) minmax(0, 1fr)',
           transition: (theme) => theme.transitions.create('grid-template-columns', { duration: 120 }),
         }}
       >

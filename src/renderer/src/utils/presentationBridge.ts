@@ -3,6 +3,7 @@ import { WindowConfig } from '@/store/windowSlice';
 import { EMPTY_STAGE_PAYLOAD, stageLayerShownOnWindow, type StageOverlayPayload } from '@/stage/types';
 import { layersForGroup, type ScreenGroupEntity } from '@/screens/types';
 import { applyScreenGroup, groupDisplay } from '@/presentation/groupContent';
+import type { ScreenInfo } from '@/components/layout/ScreenPicker';
 
 interface PresentationWindowEntry {
   id: string;
@@ -655,9 +656,7 @@ export async function unfreezeWindow(windowName: string): Promise<void> {
 /**
  * List available screens (Electron only).
  */
-export async function listScreens(): Promise<
-  Array<{ id: number; label: string; bounds: { x: number; y: number; width: number; height: number }; isPrimary: boolean }>
-> {
+export async function listScreens(): Promise<ScreenInfo[]> {
   if (isElectron()) {
     return window.api.listScreens();
   }
@@ -672,6 +671,13 @@ export async function listScreens(): Promise<
         width: window.screen.width,
         height: window.screen.height,
       },
+      pixels: {
+        x: 0,
+        y: 0,
+        width: Math.round(window.screen.width * window.devicePixelRatio),
+        height: Math.round(window.screen.height * window.devicePixelRatio),
+      },
+      scaleFactor: window.devicePixelRatio,
       isPrimary: true,
     },
   ];

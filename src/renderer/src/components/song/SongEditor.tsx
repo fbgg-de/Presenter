@@ -51,6 +51,7 @@ import {
   resolvePrimaryLanguage,
   seedSongLanguages,
   serialiseBlockLines,
+  songLanguageOrder,
   songTextToBlocks,
 } from '@/song';
 import { useCreateSongMutation, useUpdateSongMutation } from '@/api/songs.api';
@@ -188,14 +189,16 @@ const SongEditorBody = (props: {
     setSongTextDraft(null);
     setPendingRemoval(null);
 
-    // Songs stored before the language list existed are read back off their own tags.
+    // Songs stored before the language list existed are read back off their own tags, and a
+    // stored list gains any tag the lyrics use that it lacks — that text had no column otherwise.
+    const allLines = Object.values(song.blocks).flat();
     const stored = song.languages ?? [];
-    const seeded = stored.length > 0 ? stored : seedSongLanguages(song.blocks, [defaultLanguage, ...accountLanguages]);
+    const seeded =
+      stored.length > 0 ? songLanguageOrder(allLines, stored) : seedSongLanguages(song.blocks, [defaultLanguage, ...accountLanguages]);
 
     // Which language actually anchors the lyric lines. Normally the first of the list, but a
     // song whose list has drifted from its content would otherwise open with an empty first
     // column and every line in the translation slots, so the content wins and the list follows.
-    const allLines = Object.values(song.blocks).flat();
     const anchor = resolvePrimaryLanguage(allLines, seeded[0]);
     const languages = anchor && seeded[0] !== anchor ? [anchor, ...seeded.filter((code) => code !== anchor)] : seeded;
 
@@ -381,7 +384,13 @@ const SongEditorBody = (props: {
 
   const setBlockPages = (index: number, pages: LyricPage[]) => {
     _setBlocks(blocks.map((block, i) => (i === index ? { ...block, pages } : block)));
-    markDirty();
+    // A tag typed in plain text brings its language onto the song, or the line editor would have
+    // no column for it and the screens no slot. (The text tab refuses unknown tags instead.)
+    const added = [...new Set(pages.flatMap((page) => page.lines.flatMap((line) => Object.keys(line.texts))))].filter(
+      (code) => code !== PRIMARY_LANGUAGE_KEY && !languages.includes(code),
+    );
+    if (languages.length > 0 && added.length > 0) handleLanguagesChange([...languages, ...added], []);
+    else markDirty();
   };
 
   const saveSong = async () => {

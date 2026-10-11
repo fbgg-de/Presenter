@@ -1,8 +1,9 @@
 import { useCallback } from 'react';
 import { useRecordMetricMutation } from '@/api/metrics.api';
 import { getSetting } from '@/store/settingsSlice';
-import { enqueueMetric, peekQueue, clearQueue } from '@/utils/metricQueue';
+import { enqueueMetric, flushMetricQueue } from '@/utils/metricQueue';
 import { getDeviceId } from '@/utils/deviceId';
+import { metricSessionContext } from '@/utils/metricSession';
 
 export type MetricEventType =
   | 'song_selected'
@@ -67,7 +68,8 @@ export const useMetrics = () => {
       // When metrics are disabled, only allow the opt-out event itself through
       if (!metricsEnabled && event !== 'metrics_disabled') return;
 
-      const enriched = { device_id: getDeviceId(), ...metadata };
+      const deviceId = getDeviceId();
+      const enriched = { ...metadata, device_id: deviceId, ...metricSessionContext(event, deviceId) };
       const offline = getSetting('offlineMode') as boolean;
       if (offline) {
         enqueueMetric({ event, entity_type: entityType, entity_id: entityId, metadata: enriched });
@@ -84,25 +86,7 @@ export const useMetrics = () => {
   );
 
   /** Flush any queued offline metrics. Safe to call repeatedly. */
-  const flushQueue = useCallback(async () => {
-    const queue = peekQueue();
-    if (queue.length === 0) return;
-    try {
-      await Promise.all(
-        queue.map((m) =>
-          recordMetric({
-            event: m.event,
-            entity_type: m.entity_type,
-            entity_id: m.entity_id,
-            metadata: { ...m.metadata, queued_at: m.queued_at },
-          }),
-        ),
-      );
-      clearQueue();
-    } catch {
-      // Keep queue intact on failure — will retry next time
-    }
-  }, [recordMetric]);
-
+  // unwrap is essential: RTK mutations otherwise resolve even when the request fails.
+  const flushQueue = useCallback(() => flushMetricQueue((payload) => recordMetric(payload).unwrap()), [recordMetric]);
   return { trackEvent, flushQueue };
 };

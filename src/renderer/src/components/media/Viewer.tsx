@@ -8,10 +8,11 @@
  *   the right, so a long list of settings scans as a column instead of a wall of switches.
  */
 import { useState, type ReactNode } from 'react';
-import { Box, ButtonBase, Collapse, Stack, Tooltip, Typography } from '@mui/material';
+import { Box, ButtonBase, Collapse, Stack, Switch, Tooltip, Typography } from '@mui/material';
 import { ExpandMore as ExpandIcon } from '@mui/icons-material';
-import { alpha } from '@mui/material/styles';
+import { alpha, ThemeProvider } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
+import { getTheme } from '@/theme';
 import { PLAYHEAD, TRANSPORT_ACTIVE } from './Transport';
 
 export type LampState = 'live' | 'ready' | 'paused' | 'cleared' | 'fading' | 'off' | 'stopped';
@@ -69,6 +70,12 @@ export const StatusLamp = ({ state }: { state: LampState }) => {
   );
 };
 
+/**
+ * The panel is dark in both modes, like the program monitors — so everything in it takes the dark
+ * theme. In light mode its buttons and timecode used the light theme's dark ink and vanished.
+ */
+const VIEWER_THEME = getTheme('dark');
+
 /** The dark viewer panel: header (lamp, title, right slot), body, then scrubber and transport rows. */
 export const ViewerFrame = ({
   lamp,
@@ -90,43 +97,45 @@ export const ViewerFrame = ({
   /** Under the transport, still inside the frame — a slideshow's filmstrip. */
   below?: ReactNode;
 }) => (
-  <Box
-    sx={{
-      bgcolor: '#101114',
-      border: 1,
-      borderColor: lamp === 'live' ? alpha(PLAYHEAD, 0.55) : 'rgba(255,255,255,0.08)',
-      borderRadius: 1.5,
-      overflow: 'hidden',
-      color: '#e9ecef',
-      boxShadow: lamp === 'live' ? `0 0 0 1px ${alpha(PLAYHEAD, 0.25)}` : 'none',
-    }}
-  >
-    <Stack
-      direction="row"
-      spacing={1}
-      sx={{ alignItems: 'center', px: 1, py: 0.75, borderBottom: 1, borderColor: 'rgba(255,255,255,0.06)', minWidth: 0 }}
+  <ThemeProvider theme={VIEWER_THEME}>
+    <Box
+      sx={{
+        bgcolor: '#101114',
+        border: 1,
+        borderColor: lamp === 'live' ? alpha(PLAYHEAD, 0.55) : 'rgba(255,255,255,0.08)',
+        borderRadius: 1.5,
+        overflow: 'hidden',
+        color: '#e9ecef',
+        boxShadow: lamp === 'live' ? `0 0 0 1px ${alpha(PLAYHEAD, 0.25)}` : 'none',
+      }}
     >
-      <StatusLamp state={lamp} />
-      <Typography noWrap sx={{ fontSize: 13, fontWeight: 600, minWidth: 0 }}>
-        {title}
-      </Typography>
-      {subtitle && (
-        <Typography noWrap sx={{ fontSize: 11, color: 'rgba(233,236,239,0.55)', fontFamily: 'monospace', flexShrink: 0 }}>
-          {subtitle}
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ alignItems: 'center', px: 1, py: 0.75, borderBottom: 1, borderColor: 'rgba(255,255,255,0.06)', minWidth: 0 }}
+      >
+        <StatusLamp state={lamp} />
+        <Typography noWrap sx={{ fontSize: 13, fontWeight: 600, minWidth: 0 }}>
+          {title}
         </Typography>
-      )}
-      <Box sx={{ flex: 1 }} />
-      {headerRight}
-    </Stack>
-    <Box sx={{ bgcolor: '#000' }}>{children}</Box>
-    {scrubber && <Box sx={{ px: 1.25, pt: 1.25, pb: 0.5, display: 'flex' }}>{scrubber}</Box>}
-    {transport && (
-      <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', px: 1.25, pb: 1.25, pt: 0.75 }}>
-        {transport}
+        {subtitle && (
+          <Typography noWrap sx={{ fontSize: 11, color: 'rgba(233,236,239,0.55)', fontFamily: 'monospace', flexShrink: 0 }}>
+            {subtitle}
+          </Typography>
+        )}
+        <Box sx={{ flex: 1 }} />
+        {headerRight}
       </Stack>
-    )}
-    {below && <Box sx={{ borderTop: 1, borderColor: 'rgba(255,255,255,0.06)', px: 1.25, py: 1 }}>{below}</Box>}
-  </Box>
+      <Box sx={{ bgcolor: '#000' }}>{children}</Box>
+      {scrubber && <Box sx={{ px: 1.25, pt: 1.25, pb: 0.5, display: 'flex' }}>{scrubber}</Box>}
+      {transport && (
+        <Stack direction="row" spacing={1} useFlexGap sx={{ alignItems: 'center', flexWrap: 'wrap', px: 1.25, pb: 1.25, pt: 0.75 }}>
+          {transport}
+        </Stack>
+      )}
+      {below && <Box sx={{ borderTop: 1, borderColor: 'rgba(255,255,255,0.06)', px: 1.25, py: 1 }}>{below}</Box>}
+    </Box>
+  </ThemeProvider>
 );
 
 const OPEN_KEY = (id: string) => `presenter_media_inspector_${id}`;
@@ -216,6 +225,92 @@ export const InspectorRow = ({
   >
     <Typography sx={{ fontSize: 12.5, color: 'text.secondary', pt: align === 'start' ? 0.75 : 0 }}>{label}</Typography>
     <Box sx={{ minWidth: 0, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.75 }}>{children}</Box>
+  </Box>
+);
+
+/**
+ * An on/off option: its name (and, if it helps, a line on what it does) on the left, the switch at
+ * the right end — the grammar of a row in Settings — and the whole row toggles it. A lone switch in
+ * the label column reads as a stray control; this reads as a sentence. Controls that only matter
+ * while it is on (a volume) sit under it.
+ *
+ * `dense` is the bare row for small cards and popovers; without it the row is padded for an
+ * `OptionList`, where an inspector section keeps its on/off options together.
+ */
+export const OptionSwitch = ({
+  label,
+  description,
+  hint,
+  checked,
+  onChange,
+  disabled,
+  dense,
+  children,
+}: {
+  label: ReactNode;
+  description?: ReactNode;
+  /** A tooltip on the row — for a reason it is disabled, or detail too long to show. */
+  hint?: ReactNode;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+  dense?: boolean;
+  /** Shown under the row while the option is on. */
+  children?: ReactNode;
+}) => {
+  const row = (
+    <Box>
+      <Stack
+        component="label"
+        direction="row"
+        spacing={1.5}
+        sx={{
+          alignItems: 'center',
+          minHeight: dense ? 32 : 40,
+          px: dense ? 0.5 : 1.25,
+          mx: dense ? -0.5 : 0,
+          py: dense ? 0.25 : 0.6,
+          borderRadius: dense ? 0.75 : 0,
+          cursor: disabled ? 'default' : 'pointer',
+          '&:hover': disabled ? undefined : { bgcolor: 'action.hover' },
+        }}
+      >
+        <Stack sx={{ flex: 1, minWidth: 0, opacity: disabled ? 0.55 : 1 }}>
+          <Typography sx={{ fontSize: dense ? '0.8rem' : 13 }}>{label}</Typography>
+          {description && (
+            <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1.35 }}>
+              {description}
+            </Typography>
+          )}
+        </Stack>
+        <Switch size="small" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      </Stack>
+      {checked && children && (
+        <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 1, px: dense ? 0 : 1.25, pb: 1 }}>{children}</Box>
+      )}
+    </Box>
+  );
+  return hint ? (
+    <Tooltip title={hint} placement="top-start">
+      {row}
+    </Tooltip>
+  ) : (
+    row
+  );
+};
+
+/** A section's on/off options as one framed list, one `OptionSwitch` per row. */
+export const OptionList = ({ children }: { children: ReactNode }) => (
+  <Box
+    sx={{
+      border: 1,
+      borderColor: 'divider',
+      borderRadius: 1,
+      overflow: 'hidden',
+      '& > * + *': { borderTop: 1, borderColor: 'divider' },
+    }}
+  >
+    {children}
   </Box>
 );
 

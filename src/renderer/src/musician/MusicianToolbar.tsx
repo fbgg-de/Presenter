@@ -413,42 +413,44 @@ export const MusicianToolbar = ({
             active={isFullscreen}
           />
 
-          {/* 3. Page spread (per-PDF) */}
-          <SpeedDial
-            ariaLabel="Page display count"
-            sx={speedDialCompactSx}
-            open={pageCountOpen}
-            onOpen={() => setPageCountOpen(true)}
-            onClose={() => setPageCountOpen(false)}
-            direction="left"
-            icon={pageView === 'two-page' ? <LooksTwoIcon fontSize="small" /> : <OnePageIcon fontSize="small" />}
-            FabProps={{ size: 'small', sx: makeSpeedDialFabSx(palette) }}
-          >
-            <SpeedDialAction
-              icon={<OnePageIcon fontSize="small" />}
-              slotProps={{
-                tooltip: { title: LL.MUSICIAN.PAGE_ONE(), placement: 'bottom' },
-                fab: { sx: activeActionFabSx(pageView === 'one-page') },
-              }}
-              onClick={() => {
-                onSetPageView('one-page');
-                setPageCountOpen(false);
-                trackEvent('musician_button_clicked', undefined, undefined, { button: 'page_view', value: 'one-page' });
-              }}
-            />
-            <SpeedDialAction
-              icon={<LooksTwoIcon fontSize="small" />}
-              slotProps={{
-                tooltip: { title: LL.MUSICIAN.PAGE_TWO(), placement: 'bottom' },
-                fab: { sx: activeActionFabSx(pageView === 'two-page') },
-              }}
-              onClick={() => {
-                onSetPageView('two-page');
-                setPageCountOpen(false);
-                trackEvent('musician_button_clicked', undefined, undefined, { button: 'page_view', value: 'two-page' });
-              }}
-            />
-          </SpeedDial>
+          {/* 3. Page spread (per-PDF) — the lyrics view has its own column switch */}
+          {showPdfTools && (
+            <SpeedDial
+              ariaLabel="Page display count"
+              sx={speedDialCompactSx}
+              open={pageCountOpen}
+              onOpen={() => setPageCountOpen(true)}
+              onClose={() => setPageCountOpen(false)}
+              direction="left"
+              icon={pageView === 'two-page' ? <LooksTwoIcon fontSize="small" /> : <OnePageIcon fontSize="small" />}
+              FabProps={{ size: 'small', sx: makeSpeedDialFabSx(palette) }}
+            >
+              <SpeedDialAction
+                icon={<OnePageIcon fontSize="small" />}
+                slotProps={{
+                  tooltip: { title: LL.MUSICIAN.PAGE_ONE(), placement: 'bottom' },
+                  fab: { sx: activeActionFabSx(pageView === 'one-page') },
+                }}
+                onClick={() => {
+                  onSetPageView('one-page');
+                  setPageCountOpen(false);
+                  trackEvent('musician_button_clicked', undefined, undefined, { button: 'page_view', value: 'one-page' });
+                }}
+              />
+              <SpeedDialAction
+                icon={<LooksTwoIcon fontSize="small" />}
+                slotProps={{
+                  tooltip: { title: LL.MUSICIAN.PAGE_TWO(), placement: 'bottom' },
+                  fab: { sx: activeActionFabSx(pageView === 'two-page') },
+                }}
+                onClick={() => {
+                  onSetPageView('two-page');
+                  setPageCountOpen(false);
+                  trackEvent('musician_button_clicked', undefined, undefined, { button: 'page_view', value: 'two-page' });
+                }}
+              />
+            </SpeedDial>
+          )}
 
           {/* 4. PDF management */}
           {isSongItem && activeSongNumber != null && (

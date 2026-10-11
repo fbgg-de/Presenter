@@ -8,7 +8,8 @@
  * every window, and a drag would otherwise send dozens a second for nothing anyone could see.
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Box, ButtonBase, FormControlLabel, Popover, Slider, Stack, Switch, Typography } from '@mui/material';
+import { Box, ButtonBase, Popover, Slider, Stack, Typography } from '@mui/material';
+import { OptionSwitch } from './Viewer';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { MAX_RATE, MIN_RATE, PLAYBACK_RATES, rateOf } from '@/media/engine';
 import { setMasterRate, useMasterRate, usePlaybacks } from '@/media/playback';
@@ -219,15 +220,7 @@ export const SpeedControl = ({
         rate={rate}
         disabled={followsMaster}
         onRate={(next) => onCommand({ type: 'rate', rate: next })}
-        extra={
-          onFollowMaster && (
-            <FormControlLabel
-              sx={{ m: 0 }}
-              control={<Switch size="small" checked={!!followsMaster} onChange={(e) => onFollowMaster(e.target.checked)} />}
-              label={<Typography sx={{ fontSize: 12.5 }}>{T.FOLLOW_MASTER()}</Typography>}
-            />
-          )
-        }
+        extra={onFollowMaster && <OptionSwitch dense label={T.FOLLOW_MASTER()} checked={!!followsMaster} onChange={onFollowMaster} />}
         note={followsMaster && <Typography sx={{ fontSize: 11.5, color: 'text.secondary' }}>{T.FOLLOW_MASTER_HINT()}</Typography>}
       />
     </>

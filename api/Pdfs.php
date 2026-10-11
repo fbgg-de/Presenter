@@ -286,6 +286,14 @@ class Pdfs extends RestController
                 $res->error(400, 'Empty request body');
             }
 
+            // The page editor rewrites a chart in place. Keep the file as it was before its first
+            // rewrite (in a folder the listing skips), so a bad edit can always be undone here.
+            $original = $songPath . '/.originals/' . basename($filename);
+            if (is_file($filePath) && !is_file($original)) {
+                $this->ensureDir(dirname($original));
+                copy($filePath, $original);
+            }
+
             file_put_contents($filePath, $body);
             $res->success(['message' => 'Saved ' . $filename, 'size' => strlen($body)]);
         }

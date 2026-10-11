@@ -110,7 +110,8 @@ export const SongTextEditor = ({ text, languages, defaultBlockName, onChange, on
   /** A translation belongs under the caret's line, so it opens a line below it. */
   const insertTranslation = (code: string) => {
     const end = lineEndAt(caret());
-    const snippet = `\n[${code.toLowerCase()}] `;
+    // Uppercase, like the tags the text is written with — the parser takes either.
+    const snippet = `\n[${code}] `;
     replace(end, end, snippet, [snippet.length, snippet.length]);
   };
 
@@ -125,7 +126,7 @@ export const SongTextEditor = ({ text, languages, defaultBlockName, onChange, on
         <Typography variant="body2">{LL.SONG_EDITOR.TEXT_HELP_BLOCK()}</Typography>
         <Code>{SONG_BLOCK_SEPARATOR}</Code>
         <Typography variant="body2">{LL.SONG_EDITOR.TEXT_HELP_PAGE()}</Typography>
-        <Code>[{(translations[0] ?? 'en').toLowerCase()}] …</Code>
+        <Code>[{translations[0] ?? 'EN'}] …</Code>
         <Typography variant="body2">
           {translations.length > 0
             ? LL.SONG_EDITOR.TEXT_HELP_TRANSLATION({ language: languageName(translations[0], uiLanguage) })
@@ -180,7 +181,7 @@ export const SongTextEditor = ({ text, languages, defaultBlockName, onChange, on
                 key={code}
                 size="small"
                 variant="outlined"
-                label={`[${code.toLowerCase()}]`}
+                label={`[${code}]`}
                 onClick={() => insertTranslation(code)}
                 {...keepFocus}
                 sx={{ fontFamily: 'monospace' }}
@@ -244,7 +245,7 @@ export const SongTextEditor = ({ text, languages, defaultBlockName, onChange, on
                 {[
                   LL.SONG_EDITOR.TEXT_STATUS_BLOCKS({ count: result.blocks.length }),
                   LL.SONG_EDITOR.TEXT_STATUS_SLIDES({ count: result.slides }),
-                  ...(languages.length > 0 ? [languages.map((code) => code.toLowerCase()).join(', ')] : []),
+                  ...(languages.length > 0 ? [languages.join(', ')] : []),
                 ].join(' · ')}
               </Typography>
             </Stack>

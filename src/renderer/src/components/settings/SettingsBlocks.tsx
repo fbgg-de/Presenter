@@ -1,5 +1,5 @@
 import { Button, Chip, MenuItem, Select, Stack, Switch, Typography } from '@mui/material';
-import { Cable as CableIcon, Download as DownloadIcon, FileDownload as ExportIcon, FileUpload as ImportIcon } from '@mui/icons-material';
+import { Cable as CableIcon, FileDownload as ExportIcon, FileUpload as ImportIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useGetStylesQuery } from '@/api/styles.api';
@@ -176,18 +176,6 @@ export const CompanionBlock = ({ onOpen }: { onOpen: () => void }) => {
     <Stack direction="row" sx={{ pt: 0.5 }}>
       <Button variant="outlined" size="small" startIcon={<CableIcon />} onClick={onOpen}>
         {LL.SETTINGS.COMPANION_OPEN()}
-      </Button>
-    </Stack>
-  );
-};
-
-/** Offered in the browser build only — the desktop app already is the desktop app. */
-export const DesktopDownloadBlock = ({ onOpen }: { onOpen: () => void }) => {
-  const { LL } = useI18nContext();
-  return (
-    <Stack direction="row" sx={{ pt: 0.5 }}>
-      <Button variant="outlined" size="small" startIcon={<DownloadIcon />} onClick={onOpen}>
-        {LL.DESKTOP_APP.SETTINGS_DOWNLOAD()}
       </Button>
     </Stack>
   );

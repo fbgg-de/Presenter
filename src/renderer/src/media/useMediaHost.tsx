@@ -28,10 +28,12 @@ import {
   ALL_SCREENS,
   activeVersionOf,
   groupIdOfRole,
+  groupsShowing,
   isVisualMediaItem,
   mediaItemDataOf,
   mediaItemLabel,
   slideshowDuration,
+  type MediaRole,
   type MediaVersion,
 } from './mediaItem';
 import {
@@ -66,18 +68,18 @@ const agendaGroupOf = (item: ShowItem) => item.groupId ?? DEFAULT_GROUP_ID;
 const showGroupOf = (show: Show | null | undefined, agendaGroupId: string): ShowGroup | undefined =>
   show?.groups?.find((group) => group.id === agendaGroupId);
 
-/** Every screen key of the account: each enabled group, and windows without one. */
-const allScreenKeys = (groups: ScreenGroupEntity[]): ScreenKey[] => [
-  ...groups.filter((group) => group.enabled).map((group) => screenKeyOf(group.id)),
+/** Where "all screens" reaches: each enabled group that shows the role's layer, and windows without one. */
+const allScreenKeys = (groups: ScreenGroupEntity[], role: MediaRole): ScreenKey[] => [
+  ...groupsShowing(groups, role).map((group) => screenKeyOf(group.id)),
   screenKeyOf(undefined),
 ];
 
-/** The screens a version shows on. */
-export function screenKeysOf(version: MediaVersion, groups: ScreenGroupEntity[]): ScreenKey[] {
+/** The screens a version of an entry of `role` shows on. */
+export function screenKeysOf(version: MediaVersion, groups: ScreenGroupEntity[], role: MediaRole): ScreenKey[] {
   const keys = new Set<ScreenKey>();
   for (const assignment of version.assignments) {
     if (assignment.sourceId === null) continue;
-    if (assignment.role === ALL_SCREENS) allScreenKeys(groups).forEach((key) => keys.add(key));
+    if (assignment.role === ALL_SCREENS) allScreenKeys(groups, role).forEach((key) => keys.add(key));
     const id = groupIdOfRole(assignment.role);
     if (id !== undefined && groups.some((group) => group.id === id && group.enabled)) keys.add(screenKeyOf(id));
   }
@@ -111,7 +113,7 @@ export function playbackEntryFor(
     agendaIndex: index,
     stackBy: groupMediaSettings(showGroupOf(show, agendaGroupOf(item))).topLayer,
     cue: playableVersion(version),
-    screens: screenKeysOf(version, groups),
+    screens: screenKeysOf(version, groups, data.role),
   };
 }
 
@@ -212,7 +214,7 @@ async function startGroupBackgrounds(show: Show, agendaGroupId: string, groups: 
   for (const index of groupBackgroundIndexes(show, agendaGroupId)) {
     if (index === skipIndex) continue;
     const version = activeVersionOf(mediaItemDataOf(show.order[index])!);
-    const screens = screenKeysOf(version, groups).filter((key) => !claimed.has(key));
+    const screens = screenKeysOf(version, groups, 'background').filter((key) => !claimed.has(key));
     if (!screens.length) continue;
     screens.forEach((key) => claimed.add(key));
     await startItem(show, index, groups, fadeMs);

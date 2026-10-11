@@ -30,6 +30,8 @@ interface PdfViewProps {
   stableResolvedFilename?: string | null;
   availableFilenames?: string[];
   onSelectPdf?: (filename: string) => void;
+  /** Switch this song to the plain lyrics view (the footer's switcher). */
+  onShowLyrics?: () => void;
   onOpenPdfModal?: () => void;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
@@ -256,6 +258,7 @@ export const PdfView = ({
   stableResolvedFilename,
   availableFilenames = [],
   onSelectPdf,
+  onShowLyrics,
   onOpenPdfModal,
   onZoomIn,
   onZoomOut,
@@ -735,6 +738,13 @@ export const PdfView = ({
           resolvedFilename={resolvedFilename}
           availableFilenames={availableFilenames}
           onSelectPdf={onSelectPdf}
+          onShowLyrics={onShowLyrics}
+          pdfUrl={pdfUrl}
+          // "<number> - <song> - <version>.pdf", like the annotated export, so a folder of them sorts.
+          downloadName={[activeSongNumber, activeSongName, resolvedFilename]
+            .filter(Boolean)
+            .join(' - ')
+            .replace(/[/\\?%*:|"<>]/g, '_')}
           onOpenPdfModal={onOpenPdfModal}
           onZoomIn={onZoomIn}
           onZoomOut={onZoomOut}

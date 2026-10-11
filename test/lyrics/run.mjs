@@ -31,8 +31,9 @@ const shim = join(dir, 'index.ts');
  * meant the suite was passing against a format the app no longer used.
  */
 const barrel = readFileSync('src/renderer/src/song/index.ts', 'utf8');
-const lift = (name) => {
-  const match = barrel.match(new RegExp(`^export const ${name} = .*$`, 'm'));
+const lift = (name, multiline = false) => {
+  // A function runs from its declaration to the first `};` at the start of a line.
+  const match = barrel.match(new RegExp(multiline ? `^export const ${name} = [\\s\\S]*?^};$` : `^export const ${name} = .*$`, 'm'));
   if (!match) throw new Error(`test shim: ${name} is no longer declared in song/index.ts`);
   return match[0];
 };
@@ -44,6 +45,9 @@ writeFileSync(
     lift('SONG_BLOCK_SEPARATOR'),
     lift('SONG_TRANSLATION_LINE_REGEX'),
     lift('LANGUAGE_CODE_REGEX'),
+    lift('parseTaggedLine', true),
+    lift('resolvePrimaryLanguage', true),
+    lift('isPrimaryLine', true),
   ].join('\n'),
 );
 
@@ -519,6 +523,45 @@ eq('separators ignored', L.inferSongLanguages(['[EN] One', '---', '', '[DE] Eins
 eq('empty code kept in the filter', S.languagesForStyle([{ slot: 1 }, { slot: 2 }], ['', 'DE']), ['', 'DE']);
 eq('hiding slot 1 still works there', S.languagesForStyle([{ slot: 1, visible: false }, { slot: 2 }], ['', 'DE']), ['DE']);
 eq('a slot the song lacks still drops out', S.languagesForStyle([{ slot: 1 }, { slot: 2 }], ['']), ['']);
+
+// ── Reading view (musician lyrics) ───────────────────────────────────────────
+
+const read = (lines, order, hidden) => L.readerLines(lines, order, hidden).map((l) => (l.muted ? `(${l.text})` : l.text));
+eq('reader drops tags, mutes translations', read(['[DE] Eins', '[EN] One', ''], ['DE', 'EN']), ['Eins', '(One)', '']);
+eq('a hidden language is left out', read(['[DE] Eins', '[EN] One'], ['DE', 'EN'], ['EN']), ['Eins']);
+eq('hiding the default promotes the next', read(['[DE] Eins', '[EN] One'], ['DE', 'EN'], ['DE']), ['One']);
+eq('untagged lines are the default language', read(['Eins', '[EN] One'], ['', 'EN']), ['Eins', '(One)']);
+eq('a translation-only block is not muted', read(['[EN] One', '[EN] Two'], ['DE', 'EN']), ['One', 'Two']);
+eq('order: declared list, then stray tags', L.songLanguageOrder(['[DE] a', '[FR] b'], ['de', 'EN']), ['DE', 'EN', 'FR']);
+eq('order without a list reads the lyrics', L.songLanguageOrder(['a', '[EN] b']), ['', 'EN']);
+eq('a declared list never gains the untagged code', L.songLanguageOrder(['a', '[EN] b'], ['DE']), ['DE', 'EN']);
+// Rows carry the lyric line the operator's line steps count, translations sharing their line's.
+const rows = L.readerLines(['[DE] Eins', '[EN] One', '', '[DE] Zwei', '[EN] Two'], ['DE', 'EN']);
+eq(
+  'rows are numbered by lyric line',
+  rows.map((r) => r.line),
+  [0, 0, 1, 2, 2],
+);
+eq(
+  'numbering survives a hidden default',
+  L.readerLines(['[DE] Eins', '[EN] One', '[DE] Zwei', '[EN] Two'], ['DE', 'EN'], ['DE']).map((r) => r.line),
+  [0, 1],
+);
+eq(
+  'untagged songs number every line',
+  L.readerLines(['a', 'b'], ['']).map((r) => r.line),
+  [0, 1],
+);
+eq(
+  'raw block text writes the default bare',
+  L.pagesToRawText(L.parseBlockLines(['[DE] Eins', '[EN] One'], 'DE'), ['DE', 'EN']),
+  'Eins\n[EN] One',
+);
+eq('raw block text round trips', L.serialiseBlockLines(L.rawTextToPages('Eins\n[EN] One\n[de] Zwei', 'DE'), ['DE', 'EN']), [
+  '[DE] Eins',
+  '[EN] One',
+  '[DE] Zwei',
+]);
 
 // ── Whole song as text ────────────────────────────────────────────────────────
 

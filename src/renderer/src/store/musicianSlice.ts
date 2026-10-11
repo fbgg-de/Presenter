@@ -100,7 +100,15 @@ export interface MusicianState {
    * stays outside the strip's own frame either way. See `MixerChannel`.
    */
   mixerMainMuteAtBottom: boolean;
+  /**
+   * Lyrics view (songs without a PDF), per song number: how many columns, and which of the
+   * song's languages are switched off. Device-local, like the PDF view state. Columns fall
+   * back to `musicianPageView`; every language is shown until switched off.
+   */
+  musicianLyricsBySong: Record<string, MusicianLyricsView>;
 }
+
+export type MusicianLyricsView = { columns?: 1 | 2 | 3; hiddenLanguages?: string[] };
 
 const defaultMusicianSettings: MusicianState = {
   musicianName: '',
@@ -128,6 +136,7 @@ const defaultMusicianSettings: MusicianState = {
   mixerPanelHeight: 0,
   mixerMyStrips: [],
   mixerMainMuteAtBottom: false,
+  musicianLyricsBySong: {},
 };
 
 /**

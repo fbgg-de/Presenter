@@ -4,6 +4,7 @@ import { useMediaHost } from '@/media/useMediaHost';
 import { useLyricFollow } from '@/media/useLyricFollow';
 import { togglePlaybackKey } from '@/media/mediaControls';
 import { getMasterRate, setMasterRate, useMasterRate } from '@/media/playback';
+import { setSyncTolerance } from '@/media/engine';
 import { toggleFocusedAudio } from '@/media/audioPlayers';
 import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import {
@@ -66,6 +67,7 @@ export const usePresentationSync = (): void => {
     hideTransitionMode,
     hideTransitionDuration,
     videoFadeDuration,
+    videoSyncTolerance,
     operatorSyncAuthority,
     deviceId,
   } = useGetSettings(
@@ -81,6 +83,7 @@ export const usePresentationSync = (): void => {
     'hideTransitionMode',
     'hideTransitionDuration',
     'videoFadeDuration',
+    'videoSyncTolerance',
     'operatorSyncAuthority',
     'deviceId',
   );
@@ -555,6 +558,9 @@ export const usePresentationSync = (): void => {
     if (screenGroups) setScreenGroups(screenGroups);
   }, [screenGroups]);
 
+  // Before the broadcast below, which sends it to the windows with every media packet.
+  useEffect(() => setSyncTolerance(videoSyncTolerance), [videoSyncTolerance]);
+
   // Image and video entries play in their own layers (see media/useMediaHost). What they look like
   // right now joins the broadcast key, so a started, paused or ended entry reaches the windows.
   const playbacks = useMediaHost({
@@ -749,7 +755,7 @@ export const usePresentationSync = (): void => {
     // Deduplicate scheduling using a lightweight key (includes styleHash so style
     // edits actually re-broadcast and apply immediately).
     const ai = b.activeItem;
-    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${mediaVisible}|${b.blocks.length}|${b.nextLinePreview}|${ai?.mediaColor}|${b.parts.document?.url}|${documentsAheadSig}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${masterRate}|${showLicenseNumber}|${LL.AUTH.LICENSE()}|${b.agenda.map((a) => a.label).join('~')}`;
+    const contentKey = `${b.contentType}|${activeItemIndex}|${activeBlockIndex}|${activeLineIndex}|${isBlack}|${isTextHidden}|${videoVisible}|${mediaVisible}|${b.blocks.length}|${b.nextLinePreview}|${ai?.mediaColor}|${b.parts.document?.url}|${documentsAheadSig}|${styleHash}|${windowStylesSig}|${remoteCommandsSig}|${masterRate}|${videoSyncTolerance}|${showLicenseNumber}|${LL.AUTH.LICENSE()}|${b.agenda.map((a) => a.label).join('~')}`;
     const key = contentKey + mediaSig;
     if (key === lastKeyRef.current) return;
     lastKeyRef.current = key;
@@ -789,6 +795,7 @@ export const usePresentationSync = (): void => {
     // The credits slide's licence line is switched in settings while a song is on screen,
     // and its label follows the interface language.
     showLicenseNumber,
+    videoSyncTolerance,
     LL,
     // Agenda label/order changes (e.g. song titles loading in) rebroadcast the agenda.
     agenda,

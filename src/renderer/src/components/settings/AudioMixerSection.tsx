@@ -11,10 +11,11 @@
  * first and the allow-list is empty until it is on — a picker of remembered names would
  * be a picker of names that may no longer mean anything.
  */
-import { Alert, Box, Chip, Divider, FormControlLabel, Stack, Switch, TextField, Typography } from '@mui/material';
+import { Alert, Box, Chip, Divider, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSettings, useUpdateSetting, type AudioMixerSettings } from '@/store/settingsSlice';
 import { useGetAudioMixerStatus } from '@/store/audioMixerSlice';
+import { SettingFrame } from './SettingRow';
 
 export const AudioMixerSection = () => {
   const { LL } = useI18nContext();
@@ -58,16 +59,21 @@ export const AudioMixerSection = () => {
 
   const state = statusLine();
 
+  // Laid out like every other row of Settings: what it is on the left, the switch at the end.
   const permission = (label: string, description: string, checked: boolean, onChange: (value: boolean) => void, disabled = false) => (
-    <Box>
-      <FormControlLabel
-        control={<Switch size="small" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />}
-        label={<Typography variant="body2">{label}</Typography>}
-      />
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', ml: 6, mt: -0.75 }}>
-        {description}
-      </Typography>
-    </Box>
+    <SettingFrame
+      label={label}
+      description={description}
+      control={
+        <Switch
+          size="small"
+          checked={checked}
+          disabled={disabled}
+          onChange={(event) => onChange(event.target.checked)}
+          slotProps={{ input: { 'aria-label': label } }}
+        />
+      }
+    />
   );
 
   return (
@@ -79,9 +85,16 @@ export const AudioMixerSection = () => {
         </Typography>
       </Box>
 
-      <FormControlLabel
-        control={<Switch checked={audioMixer.enabled} onChange={(event) => patch({ enabled: event.target.checked })} />}
-        label={<Typography variant="body2">{LL.AUDIO_MIXER.ENABLED()}</Typography>}
+      <SettingFrame
+        label={LL.AUDIO_MIXER.ENABLED()}
+        control={
+          <Switch
+            size="small"
+            checked={audioMixer.enabled}
+            onChange={(event) => patch({ enabled: event.target.checked })}
+            slotProps={{ input: { 'aria-label': LL.AUDIO_MIXER.ENABLED() } }}
+          />
+        }
       />
 
       <Alert severity={state.severity} variant="outlined" sx={{ py: 0.25 }}>
@@ -156,7 +169,7 @@ export const AudioMixerSection = () => {
         <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
           {LL.AUDIO_MIXER.PERMISSIONS()}
         </Typography>
-        <Stack spacing={1}>
+        <Stack>
           {permission(
             LL.AUDIO_MIXER.ALLOW_MAIN(),
             LL.AUDIO_MIXER.ALLOW_MAIN_DESC(),

@@ -47,7 +47,10 @@ export interface WindowState {
 export interface ScreenInfo {
   id: number;
   label: string;
+  /** Scaled (DIP) coordinates — what window positions and sizes use. */
   bounds: { x: number; y: number; width: number; height: number };
+  /** Real pixels: the panel's resolution and arrangement (on Windows; equals `bounds` elsewhere). */
+  pixels: { x: number; y: number; width: number; height: number };
   workArea: { x: number; y: number; width: number; height: number };
   isPrimary: boolean;
   scaleFactor: number;

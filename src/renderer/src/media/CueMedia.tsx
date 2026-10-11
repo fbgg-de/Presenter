@@ -6,6 +6,8 @@ import { slideAt } from './mediaItem';
 
 /** How far a paused element may be from the clock before it is moved there prior to playing. */
 const SYNC_START_TOLERANCE = 0.05;
+/** After a seek, how long an element plays before it may seek again (it only nudges meanwhile). */
+const SEEK_COOLDOWN_MS = 1000;
 
 type Props = {
   packet: CuePacket;
@@ -19,6 +21,8 @@ type Props = {
   fadeEndsAt?: number;
   fadeMs?: number;
   onStatus?: (status: string) => void;
+  /** The file's own pixel size, once known. */
+  onSize?: (width: number, height: number) => void;
 };
 export function CueSource({
   packet,
@@ -30,12 +34,13 @@ export function CueSource({
   fadeEndsAt,
   fadeMs = 0,
   onStatus,
+  onSize,
 }: Props) {
   const host = useRef<HTMLDivElement>(null),
     video = useRef<HTMLMediaElement | null>(null);
   const MediaElement = audioOnly ? 'audio' : 'video';
-  const latest = useRef({ packet, source, audible, onStatus, volume, fadeEndsAt, fadeMs });
-  latest.current = { packet, source, audible, onStatus, volume, fadeEndsAt, fadeMs };
+  const latest = useRef({ packet, source, audible, onStatus, onSize, volume, fadeEndsAt, fadeMs });
+  latest.current = { packet, source, audible, onStatus, onSize, volume, fadeEndsAt, fadeMs };
   const [size, setSize] = useState({ w: 1920, h: 1080, sw: 1920, sh: 1080 });
   useEffect(() => {
     if (!host.current) return;
@@ -51,14 +56,9 @@ export function CueSource({
       revision = -1,
       // How long this element's seeks take, learnt from each one — a playing seek aims that far ahead.
       seekLead = 0.15,
-      seekStarted = 0;
-    const onSeeked = () => {
-      if (!seekStarted) return;
-      const took = (performance.now() - seekStarted) / 1000;
-      seekStarted = 0;
-      seekLead = clamp(seekLead * 0.5 + took * 0.5, 0.02, 0.6);
-    };
-    v.addEventListener('seeked', onSeeked);
+      seekStarted = 0,
+      resumedAt = 0,
+      nudge = 0;
     const update = () => {
       const { packet: p, source: s, audible: audio, onStatus: report, volume: level, fadeEndsAt: fadeEnd, fadeMs: fade } = latest.current;
       if (revision !== p.transport.revision) {
@@ -86,10 +86,21 @@ export function CueSource({
         return;
       }
       // Playing: follow the clock at its speed, nudging the rate for small drift (see followClock).
-      if (!v.seeking && !v.paused) {
-        const follow = followClock(target, v.currentTime, rateOf(t), seekLead);
+      // Not while it is still buffering: its time stands still then, and seeking again only restarts
+      // the wait — after a start or a seek that made it jump twice in a row.
+      if (!v.seeking && !v.paused && v.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+        const now = performance.now();
+        // A seek lasts until the element plays again — 'seeked' fires earlier, and under load the
+        // wait for frames after it is most of the cost.
+        if (seekStarted) {
+          seekLead = clamp(seekLead * 0.5 + ((now - seekStarted) / 1000) * 0.5, 0.02, 1);
+          seekStarted = 0;
+          resumedAt = now;
+        }
+        const follow = followClock(target, v.currentTime, rateOf(t), seekLead, p.syncTolerance, nudge, now - resumedAt > SEEK_COOLDOWN_MS);
+        nudge = follow.nudge;
         if (follow.seek !== undefined) {
-          seekStarted = performance.now();
+          seekStarted = now;
           v.currentTime = clamp(follow.seek, 0, Math.max(0, duration - 0.001));
         }
         // Only touch the element when it matters — every write can make the decoder resync.
@@ -114,7 +125,10 @@ export function CueSource({
       }
     };
     const ready = () => {
-      if (v instanceof HTMLVideoElement) setSize((s) => ({ ...s, sw: v.videoWidth || 1920, sh: v.videoHeight || 1080 }));
+      if (v instanceof HTMLVideoElement) {
+        setSize((s) => ({ ...s, sw: v.videoWidth || 1920, sh: v.videoHeight || 1080 }));
+        if (v.videoWidth) latest.current.onSize?.(v.videoWidth, v.videoHeight);
+      }
       latest.current.onStatus?.(v.readyState >= 3 ? 'ready' : 'buffering');
       update();
     };
@@ -126,7 +140,6 @@ export function CueSource({
       clearInterval(timer);
       v.removeEventListener('loadedmetadata', ready);
       v.removeEventListener('canplay', update);
-      v.removeEventListener('seeked', onSeeked);
       v.pause();
     };
   }, [source.path, source.type]);
@@ -167,6 +180,7 @@ export function CueSource({
               style={style}
               onLoad={(e) => {
                 setSize((s) => ({ ...s, sw: e.currentTarget.naturalWidth, sh: e.currentTarget.naturalHeight }));
+                onSize?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
                 onStatus?.('ready');
               }}
               onError={() => onStatus?.('error')}

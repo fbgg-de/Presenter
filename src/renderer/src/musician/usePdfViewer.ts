@@ -1,5 +1,11 @@
 ﻿import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import { useGetPdfAreaMappingsQuery, useListPdfsQuery, useResolvePdfQuery, useSavePdfAreaMappingsMutation } from '@/api/pdfs.api';
+import {
+  useGetPdfAreaMappingsQuery,
+  useListPdfsQuery,
+  useResolvePdfQuery,
+  useSavePdfAreaMappingsMutation,
+  type PdfFileInfo,
+} from '@/api/pdfs.api';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import type { ShowItem } from '@/api/shows.api';
 import type { PdfAreaMapping } from '@/components/pdf/PdfAreaMappingEditor';
@@ -172,7 +178,10 @@ export const usePdfViewer = ({
   const totalPdfCount = resolveResult?.total ?? 0;
 
   // List all available PDF filenames for the file selector
-  const { data: pdfListData } = useListPdfsQuery({ songNumber: activeSongNumber! }, { skip: activeSongNumber == null });
+  const { data: pdfListData, isError: pdfListFailed } = useListPdfsQuery(
+    { songNumber: activeSongNumber! },
+    { skip: activeSongNumber == null },
+  );
   const availableFilenames = useMemo(() => (pdfListData as any)?.map?.((f: { filename: string }) => f.filename) ?? [], [pdfListData]);
 
   const resolvedFilenameRef = useRef<string | null>(null);
@@ -183,10 +192,17 @@ export const usePdfViewer = ({
   const pdfUrl = useMemo(() => {
     if (!activeItem || activeItem.type !== 'song' || activeItem.songNumber == null) return null;
     if (!resolvedFilename) return null;
+    // Wait for the list: its time stamp is part of the address, and starting without it would load
+    // the file twice on a first visit.
+    if (!pdfListData && !pdfListFailed) return null;
     const path = `rest/Pdfs/${activeItem.songNumber}/${encodeURIComponent(resolvedFilename)}`;
     const url = new URL(path, window.location.origin + '/');
+    // A file rewritten in place (the page editor) keeps its name; its time makes it a new address,
+    // so the viewer loads it again instead of showing the old pages.
+    const modified = (pdfListData as PdfFileInfo[] | undefined)?.find((f) => f.filename === resolvedFilename)?.modified;
+    if (modified) url.searchParams.set('v', String(modified));
     return url.href;
-  }, [activeItem, resolvedFilename]);
+  }, [activeItem, resolvedFilename, pdfListData, pdfListFailed]);
 
   const [saveMappingsMutation] = useSavePdfAreaMappingsMutation();
 
@@ -452,6 +468,8 @@ export const usePdfViewer = ({
     ({ numPages: np }: { numPages: number }) => {
       setNumPages(np);
       setPdfLoadError(false);
+      // The page editor can delete pages under the reader; never sit past the last one.
+      setCurrentPage((page) => Math.min(page, Math.max(1, np)));
 
       // In two-page mode PdfView handles per-panel scroll restore via its own refs
       if (pageView === 'two-page') return;

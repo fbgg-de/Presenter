@@ -31,7 +31,7 @@ class AdminAccounts extends RestController
 				LEFT JOIN account_oidc_providers aop ON a.license = aop.license
 				LEFT JOIN oidc_providers p ON aop.provider_id = p.id
 				GROUP BY a.license, a.name
-				ORDER BY a.name, a.license
+				ORDER BY COALESCE(NULLIF(a.name, ""), a.mail), a.license
 			');
 
         $accounts = [];
@@ -98,6 +98,10 @@ class AdminAccounts extends RestController
         $req->params->check('mail')->checkNumeric('license');
 
         $license = $req->params->getAsInt('license');
+        // 0 is the admin session's account (Auth::setAdminSessionFromOidc) and means "signed out" everywhere else.
+        if ($license < 1) {
+            $res->error(400, 'The license number must be 1 or higher', false);
+        }
         $mail = $req->params->get('mail');
         $name = $req->params->get('name', '');
         $active = $req->params->getAsBool('active', true);

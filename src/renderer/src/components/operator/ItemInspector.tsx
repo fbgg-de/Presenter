@@ -128,7 +128,7 @@ const GroupBackgrounds = ({ itemIndex }: { itemIndex?: number }) => {
               <Typography variant="caption" noWrap sx={{ color: live ? PLAYHEAD : 'text.secondary' }}>
                 {live
                   ? M.RUNNING_ON({ screens: screenNames(shownOn) })
-                  : M.SWITCH_TO({ screens: screenNames(screenKeysOf(version, screenGroups)) })}
+                  : M.SWITCH_TO({ screens: screenNames(screenKeysOf(version, screenGroups, 'background')) })}
               </Typography>
             </Stack>
           </ButtonBase>

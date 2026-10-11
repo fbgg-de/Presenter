@@ -6,7 +6,7 @@
  * is separate from placing it at a slide (`contentForItem`), because the broadcast keeps the parsed
  * lyrics memoised while the slide changes on every arrow key.
  */
-import { SONG_TRANSLATION_LINE_REGEX, inferSongLanguages, resolvePrimaryLanguage } from '@/song';
+import { SONG_TRANSLATION_LINE_REGEX, resolvePrimaryLanguage, songLanguageOrder } from '@/song';
 import type { ShowItem } from '@/api/shows.api';
 import type { ResolvedStyle } from '@/utils/styleUtils';
 import { resolveNextLinePreview } from '@/utils/styleUtils';
@@ -91,13 +91,12 @@ export function itemContentParts(item: ShowItem | undefined, song: ContentSong |
           const allLines = songBlocks.flatMap((b) => b.lines ?? []);
           const anchor = resolvePrimaryLanguage(allLines, declared[0]);
           // A song that has not recorded its languages yet still has them written into its
-          // lyrics. Without this fallback every translation resolves to no slot at all, and a
-          // style's per-language typography silently does nothing.
-          songLanguages = declared.length
-            ? anchor
-              ? [anchor, ...declared.filter((code) => code.toUpperCase() !== anchor.toUpperCase())]
-              : declared
-            : inferSongLanguages(allLines);
+          // lyrics, and a recorded list can miss a tag typed in later. Either way the lyrics
+          // fill the gaps: a language without a slot never reached the screen.
+          songLanguages = songLanguageOrder(
+            allLines,
+            anchor ? [anchor, ...declared.filter((code) => code.toUpperCase() !== anchor.toUpperCase())] : declared,
+          );
           blocks = songBlocks.filter((b) => !b.copyright).map((b) => ({ name: b.name, lines: parseSongLines(b.lines || []) }));
         }
         break;

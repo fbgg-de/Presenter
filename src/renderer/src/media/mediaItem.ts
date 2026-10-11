@@ -55,10 +55,7 @@ export const isVisualMediaItem = (item: ShowItem | undefined): boolean =>
 export const DEFAULT_SLIDE_SECONDS = 8;
 
 /** A slideshow entry's data for a list of images. Repeats unless told otherwise. */
-export function newSlideshowData(
-  paths: string[],
-  options: { role?: MediaRole; groups?: Pick<ScreenGroupEntity, 'id' | 'enabled' | 'data'>[]; seconds?: number } = {},
-): MediaItemData {
+export function newSlideshowData(paths: string[], options: { role?: MediaRole; seconds?: number } = {}): MediaItemData {
   const role = options.role ?? 'content';
   const sources: MediaSource[] = paths.map((path) => ({ id: newId('m'), name: fileLabel(path), path, type: 'image', offset: 0 }));
   const version: MediaVersion = {
@@ -67,11 +64,7 @@ export function newSlideshowData(
     duration: 0,
     sources,
     regions: [],
-    assignments: defaultScreens(options.groups ?? [], role).map((screen) => ({
-      role: screen,
-      sourceId: sources[0]?.id ?? null,
-      frame: defaultMediaFrame(),
-    })),
+    assignments: [{ role: ALL_SCREENS, sourceId: sources[0]?.id ?? null, frame: defaultMediaFrame() }],
     loop: true,
     slideshow: { seconds: options.seconds ?? DEFAULT_SLIDE_SECONDS, transition: 'fade' },
   };
@@ -136,22 +129,16 @@ export const slideStarts = (version: MediaCue): number[] => {
   return version.slideshow ? version.sources.map((_, index) => index * seconds) : [];
 };
 
-/** Screen groups a new entry shows on: the enabled ones whose windows show that role's layer. */
-export function defaultScreens(groups: Pick<ScreenGroupEntity, 'id' | 'enabled' | 'data'>[], role: MediaRole): string[] {
-  const fitting = groups.filter((group) => {
+/** The screen groups "all screens" reaches for an entry of `role`: the enabled ones that show its layer, never a stage. */
+export const groupsShowing = <G extends Pick<ScreenGroupEntity, 'enabled' | 'data'>>(groups: G[], role: MediaRole): G[] =>
+  groups.filter((group) => {
     if (!group.enabled) return false;
     const data = normaliseScreenGroupData(group.data);
     return data.kind !== 'stage' && (role === 'background' ? data.layers.background : data.layers.media);
   });
-  return fitting.length ? fitting.map((group) => screenRole(group.id)) : [ALL_SCREENS];
-}
 
-/** A fresh entry's data for one file. */
-export function newMediaItemData(
-  kind: 'image' | 'video',
-  path: string,
-  options: { role?: MediaRole; groups?: Pick<ScreenGroupEntity, 'id' | 'enabled' | 'data'>[]; name?: string } = {},
-): MediaItemData {
+/** A fresh entry's data for one file. It shows on all screens until screens are picked. */
+export function newMediaItemData(kind: 'image' | 'video', path: string, options: { role?: MediaRole; name?: string } = {}): MediaItemData {
   const role = options.role ?? 'content';
   const source: MediaSource = { id: newId('m'), name: fileLabel(path), path, type: kind, offset: 0 };
   const version: MediaVersion = {
@@ -160,11 +147,7 @@ export function newMediaItemData(
     duration: 0,
     sources: [source],
     regions: [],
-    assignments: defaultScreens(options.groups ?? [], role).map((screen) => ({
-      role: screen,
-      sourceId: source.id,
-      frame: defaultMediaFrame(),
-    })),
+    assignments: [{ role: ALL_SCREENS, sourceId: source.id, frame: defaultMediaFrame() }],
     audioSourceId: kind === 'video' ? source.id : undefined,
     // A content video is heard on the operator computer, as media items always were; a
     // background loop stays silent.
@@ -238,17 +221,52 @@ export function screensOf(version: MediaCue): { all: boolean; groupIds: number[]
   };
 }
 
-/** Turn a screen group on or off for a version; a new group copies the framing of the first one. */
+/**
+ * Turn a screen on or off for a version. "All screens" is the default and screen groups are a
+ * filter over it: picking a group replaces "all", picking "all" drops the groups, and removing the
+ * last group falls back to "all".
+ *
+ * Every screen keeps its own framing: one that leaves is parked and comes back as it was, so a
+ * wall set up on two groups and the framing for "all" never overwrite each other. A screen chosen
+ * for the first time copies the framing of a group already chosen, else starts with the whole
+ * picture — never "all"'s framing.
+ */
 export function toggleScreen(version: MediaVersion, role: string, on: boolean): MediaVersion {
-  const existing = version.assignments.find((a) => a.role === role);
-  if (!on) return { ...version, assignments: version.assignments.filter((a) => a.role !== role) };
+  const active = version.assignments;
+  const parked = version.parked ?? [];
+  const existing = active.find((a) => a.role === role);
+  const groups = active.filter((a) => a.role !== ALL_SCREENS);
+  // A parked screen as it was (on a file the version still has), else a fresh one.
+  const bring = (r: string, template?: MediaAssignment): MediaAssignment => {
+    const kept = parked.find((a) => a.role === r);
+    if (kept) {
+      const known = kept.sourceId === null || version.sources.some((s) => s.id === kept.sourceId);
+      return { ...kept, sourceId: known ? kept.sourceId : (version.sources[0]?.id ?? null) };
+    }
+    return {
+      role: r,
+      sourceId: template?.sourceId ?? active[0]?.sourceId ?? version.sources[0]?.id ?? null,
+      frame: template ? structuredClone(template.frame) : defaultMediaFrame(),
+    };
+  };
+  const move = (assignments: MediaAssignment[], leaving: MediaAssignment[]): MediaVersion => ({
+    ...version,
+    assignments,
+    parked: [...parked.filter((p) => !assignments.some((a) => a.role === p.role) && !leaving.some((a) => a.role === p.role)), ...leaving],
+  });
+
+  if (!on) {
+    if (!existing) return version;
+    const rest = active.filter((a) => a !== existing);
+    if (rest.length) return move(rest, [existing]);
+    return role === ALL_SCREENS ? version : move([bring(ALL_SCREENS)], [existing]);
+  }
+  if (role === ALL_SCREENS) return existing && active.length === 1 ? version : move([existing ?? bring(ALL_SCREENS)], groups);
   if (existing) return version;
-  const template = version.assignments[0];
-  const sourceId = template?.sourceId ?? version.sources[0]?.id ?? null;
-  const frame = template ? structuredClone(template.frame) : defaultMediaFrame();
-  const assignments = [...version.assignments, { role, sourceId, frame }];
-  // Choosing screens explicitly replaces "all screens".
-  return { ...version, assignments: role === ALL_SCREENS ? assignments : assignments.filter((a) => a.role !== ALL_SCREENS) };
+  return move(
+    [...groups, bring(role, groups[0])],
+    active.filter((a) => a.role === ALL_SCREENS),
+  );
 }
 
 /** Whether any version of the data plays a video. */

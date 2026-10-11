@@ -48,21 +48,55 @@ export const lyricAt = (cue: MediaCue, time: number, mapping?: Record<string, st
  *
  * Small drift is pulled in by playing a few percent faster or slower (proportional to the drift,
  * at most ±10 %), which is invisible; a seek is a visible stutter, so it is kept for real jumps —
- * a seek on the operator side, a loop wrapping, a window that fell far behind.
+ * a seek on the operator side, a loop wrapping, a window that fell far behind. What counts as a
+ * jump is the operator's tolerance (setting `videoSyncTolerance`, 0.1–1 s, default 0.5).
  *
  * A seek takes the decoder a while (commonly 0.1–0.4 s) during which the clock moves on, so it
  * aims `leadSeconds` of wall time ahead — the element's measured seek time — and lands on time
  * instead of behind, where the gentle nudge would need seconds to catch up.
+ *
+ * Every threshold is in real time — the drift divided by the speed. In media time, timer jitter
+ * and a seek's cost grow with the speed: at 3× a 0.3 s seek lands 0.9 s off, past the tolerance,
+ * and the next seek is due at once (measured: a seek storm, the outputs stalling). `canSeek` false
+ * (right after a seek) only nudges, for the same reason.
  */
 export const SYNC_HARD_SEEK = 0.5;
 export const SYNC_DEADBAND = 0.02;
+/**
+ * A correction, once started, runs until this close. Stopping at the deadband's edge left the drift
+ * hovering there: timer jitter flipped the rate 1 ↔ 0.99 every few seconds, and every rate change
+ * can cost a frame — the occasional stutter on the outputs.
+ */
+const SYNC_SETTLED = 0.005;
 const SYNC_GAIN = 0.5;
 const SYNC_MAX_NUDGE = 0.1;
-export function followClock(target: number, current: number, rate: number, leadSeconds = 0): { seek?: number; playbackRate: number } {
-  const drift = target - current;
-  if (Math.abs(drift) > SYNC_HARD_SEEK) return { seek: target + leadSeconds * rate, playbackRate: rate };
-  if (Math.abs(drift) <= SYNC_DEADBAND) return { playbackRate: rate };
-  return { playbackRate: rate * (1 + clamp(drift * SYNC_GAIN, -SYNC_MAX_NUDGE, SYNC_MAX_NUDGE)) };
+/** The operator's tolerance; output windows receive it with each packet (CuePacket.syncTolerance). */
+let hardSeek = SYNC_HARD_SEEK;
+export const setSyncTolerance = (seconds: number) => {
+  hardSeek = Number.isFinite(seconds) ? clamp(seconds, 0.1, 1) : SYNC_HARD_SEEK;
+};
+export const syncTolerance = () => hardSeek;
+export function followClock(
+  target: number,
+  current: number,
+  rate: number,
+  leadSeconds = 0,
+  tolerance = hardSeek,
+  /** The correction under way: the previous call's returned `nudge` (0 = none). */
+  nudge = 0,
+  canSeek = true,
+): { seek?: number; playbackRate: number; nudge: number } {
+  // How late the picture is in real time.
+  const drift = (target - current) / Math.max(rate, MIN_RATE);
+  if (canSeek && Math.abs(drift) > tolerance) return { seek: target + leadSeconds * rate, playbackRate: rate, nudge: 0 };
+  if (Math.abs(drift) <= (nudge ? SYNC_SETTLED : SYNC_DEADBAND)) return { playbackRate: rate, nudge: 0 };
+  // In whole percent (at least one), and held — only ever raised — until the correction settles. A
+  // rate that followed the drift moved with the timer's millisecond jitter and was rewritten on most
+  // ticks; measured on an output, frames run unevenly about four times as often while the rate is
+  // off 1, so every change and every second spent nudged shows.
+  const wanted = Math.sign(drift) * Math.min(SYNC_MAX_NUDGE, Math.max(1, Math.round(Math.abs(drift) * SYNC_GAIN * 100)) / 100);
+  const next = Math.sign(wanted) === Math.sign(nudge) && Math.abs(nudge) >= Math.abs(wanted) ? nudge : wanted;
+  return { playbackRate: rate * (1 + next), nudge: next };
 }
 
 /** Immutable deterministic clock used by the operator and every output. */

@@ -30,7 +30,6 @@ import { FileUpload as DropIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useAppDispatch } from '@/store';
 import { insertItemsIntoGroup } from '@/store/showSlice';
-import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { newMediaItemData, newSlideshowData } from '@/media/mediaItem';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
 import type { ShowGroup, ShowItem } from '@/api/shows.api';
@@ -80,7 +79,6 @@ export function useAgendaFileDrop({
   const dispatch = useAppDispatch();
   const { mediaPath, mediaImportFolder } = useGetSettings('mediaPath', 'mediaImportFolder');
   const updateSetting = useUpdateSetting();
-  const { data: screenGroups = [] } = useGetScreenGroupsQuery();
 
   const depth = useRef(0);
   const [dragging, setDragging] = useState(false);
@@ -125,10 +123,7 @@ export function useAgendaFileDrop({
       type: 'media',
       mediaSubType: 'slideshow',
       label: A.SLIDESHOW_NAME({ count: images.length }),
-      media: newSlideshowData(
-        images.map((entry) => entry.path),
-        { groups: screenGroups },
-      ),
+      media: newSlideshowData(images.map((entry) => entry.path)),
     };
     dispatch(insertItemsIntoGroup({ items: [slideshow], groupId: target.groupId, afterIndex: target.afterIndex }));
     insertEntries(others, target);
@@ -145,8 +140,8 @@ export function useAgendaFileDrop({
             mediaSubType: kind,
             mediaPath: path,
             label: mediaLabelOf(path),
-            // Images and videos start as content on the screens that show media items.
-            ...(kind === 'audio' ? {} : { media: newMediaItemData(kind, path, { groups: screenGroups }) }),
+            // Images and videos start as content on all screens.
+            ...(kind === 'audio' ? {} : { media: newMediaItemData(kind, path) }),
           },
     );
     dispatch(insertItemsIntoGroup({ items, groupId: target.groupId, afterIndex: target.afterIndex }));

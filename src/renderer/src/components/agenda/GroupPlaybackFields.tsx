@@ -3,9 +3,9 @@
  * together, and what its backgrounds do. Shown as a tab of the group settings; saved with the show,
  * on the group.
  */
-import { Button, Stack, Switch, Typography } from '@mui/material';
+import { Button, Stack, Typography } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { InspectorRow, InspectorSection, Segmented } from '@/components/media/Viewer';
+import { InspectorRow, InspectorSection, OptionList, OptionSwitch, Segmented } from '@/components/media/Viewer';
 import {
   DEFAULT_GROUP_BACKGROUNDS,
   DEFAULT_GROUP_MEDIA,
@@ -65,13 +65,6 @@ export const GroupPlaybackFields = ({
             onChange={(mode) => patchMedia({ mode })}
           />
         </Row>
-        <Row label={P.AUTO_ADVANCE()} hint={P.AUTO_ADVANCE_HINT()}>
-          <Switch
-            checked={media.autoAdvance}
-            disabled={media.mode === 'together'}
-            onChange={(e) => patchMedia({ autoAdvance: e.target.checked })}
-          />
-        </Row>
         <Row label={P.MAX_AT_ONCE()} hint={P.MAX_AT_ONCE_HINT()}>
           <Segmented
             value={String(media.maxAtOnce)}
@@ -94,9 +87,6 @@ export const GroupPlaybackFields = ({
             onChange={(topLayer) => patchMedia({ topLayer })}
           />
         </Row>
-        <Row label={P.START_WITH_SONG()} hint={P.START_WITH_SONG_HINT()}>
-          <Switch checked={media.startWithSong} onChange={(e) => patchMedia({ startWithSong: e.target.checked })} />
-        </Row>
         <Row label={P.MEDIA_ON_LEAVE()} hint={P.MEDIA_ON_LEAVE_HINT()}>
           <Segmented
             value={media.onLeave}
@@ -108,6 +98,21 @@ export const GroupPlaybackFields = ({
             onChange={(onLeave) => patchMedia({ onLeave })}
           />
         </Row>
+        <OptionList>
+          <OptionSwitch
+            label={P.AUTO_ADVANCE()}
+            description={P.AUTO_ADVANCE_HINT()}
+            checked={media.autoAdvance}
+            disabled={media.mode === 'together'}
+            onChange={(autoAdvance) => patchMedia({ autoAdvance })}
+          />
+          <OptionSwitch
+            label={P.START_WITH_SONG()}
+            description={P.START_WITH_SONG_HINT()}
+            checked={media.startWithSong}
+            onChange={(startWithSong) => patchMedia({ startWithSong })}
+          />
+        </OptionList>
       </InspectorSection>
       <InspectorSection id="group-backgrounds" title={P.SECTION_BACKGROUNDS()}>
         <Row label={P.BACKGROUND_TRANSITION()}>

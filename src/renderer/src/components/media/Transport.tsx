@@ -101,9 +101,10 @@ export const Timecode = ({
           letterSpacing: 0.3,
           lineHeight: 1,
           color: tone ?? (remaining ? TRANSPORT_ACTIVE : 'text.primary'),
-          bgcolor: 'rgba(0,0,0,0.38)',
+          // An inset readout: darker than a dark panel, a light grey on a light one (the layer bar).
+          bgcolor: (theme) => (theme.palette.mode === 'dark' ? 'rgba(0,0,0,0.38)' : alpha(theme.palette.text.primary, 0.05)),
           border: 1,
-          borderColor: 'rgba(255,255,255,0.08)',
+          borderColor: (theme) => alpha(theme.palette.text.primary, 0.08),
           borderRadius: 0.75,
           px: size === 'large' ? 1 : 0.75,
           py: size === 'large' ? 0.75 : 0.5,
@@ -133,7 +134,7 @@ export const TransportCluster = ({ children }: { children: ReactNode }) => (
       borderRadius: 1,
       border: 1,
       borderColor: 'divider',
-      bgcolor: 'rgba(255,255,255,0.035)',
+      bgcolor: (theme) => alpha(theme.palette.text.primary, 0.035),
     }}
   >
     {children}
@@ -349,7 +350,7 @@ export const Scrubber = ({
           bottom: full ? 0 : 7,
           borderRadius: 0.5,
           overflow: 'hidden',
-          bgcolor: 'rgba(255,255,255,0.07)',
+          bgcolor: (theme) => alpha(theme.palette.text.primary, 0.07),
           transition: 'top 120ms, bottom 120ms',
         }}
       >
@@ -363,20 +364,13 @@ export const Scrubber = ({
             component="svg"
             viewBox={`0 0 ${bars.length} 100`}
             preserveAspectRatio="none"
-            sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+            sx={{ position: 'absolute', inset: 0, width: '100%', height: '100%', color: 'text.primary' }}
           >
             {bars.map((peak, i) => {
               const h = Math.max(2, peak * 92);
               const played = length > 0 && (i + 0.5) / bars.length <= shownTime / length;
               return (
-                <rect
-                  key={i}
-                  x={i + 0.15}
-                  y={50 - h / 2}
-                  width={0.7}
-                  height={h}
-                  fill={played ? 'rgba(255,255,255,0.78)' : 'rgba(255,255,255,0.3)'}
-                />
+                <rect key={i} x={i + 0.15} y={50 - h / 2} width={0.7} height={h} fill="currentColor" fillOpacity={played ? 0.78 : 0.3} />
               );
             })}
           </Box>
@@ -402,7 +396,17 @@ export const Scrubber = ({
         {ticks
           ?.filter((t) => t > 0 && t < length)
           .map((t) => (
-            <Box key={t} sx={{ position: 'absolute', top: 0, bottom: 0, left: pct(t), width: '1px', bgcolor: 'rgba(255,255,255,0.35)' }} />
+            <Box
+              key={t}
+              sx={{
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: pct(t),
+                width: '1px',
+                bgcolor: (theme) => alpha(theme.palette.text.primary, 0.35),
+              }}
+            />
           ))}
       </Box>
 
@@ -453,7 +457,7 @@ export const Scrubber = ({
             bottom: full ? 0 : 3,
             left: pct(hover),
             width: '1px',
-            bgcolor: 'rgba(255,255,255,0.5)',
+            bgcolor: (theme) => alpha(theme.palette.text.primary, 0.5),
             pointerEvents: 'none',
           }}
         >

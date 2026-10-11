@@ -20,8 +20,10 @@ import { useGetSettings } from '@/store/settingsSlice';
 import { languageName } from '@/song/languageNames';
 import {
   SONG_BLOCK_SEPARATOR,
+  SONG_TRANSLATION_LINE_REGEX,
   PRIMARY_LANGUAGE_KEY,
   createLyricLine,
+  isLyricLineEmpty,
   itemsToPages,
   lyricItemId,
   nextLyricId,
@@ -221,7 +223,8 @@ const BreakRow = ({ id, label, onRemove, removeLabel }: { id: string; label: str
  * Each line owns its translations, so they stay together when the line moves and there is no
  * way to leave a translation stranded under the wrong line. What is stored does not change:
  * the lines are serialised back to the same flat `string[]` the presentation reads (see
- * `song/lyrics.ts`), and the raw mode below hands that exact text over for bulk edits.
+ * `song/lyrics.ts`), and the raw mode below hands that text over for bulk edits — with the default
+ * language untagged, as in the whole-song text tab.
  */
 export const LyricBlockEditor = ({
   pages,
@@ -431,12 +434,37 @@ export const LyricBlockEditor = ({
   /** Pasting a verse creates one line per pasted line instead of cramming it into one field. */
   const handlePaste = (event: ClipboardEvent<Element>, lineId: string, key: string) => {
     const text = event.clipboardData.getData('text');
-    if (!text.includes('\n')) return;
+    const parts = text.split(/\r?\n/);
+
+    // Lyrics copied with their language tags (raw or whole-song text) go to those languages
+    // instead of landing in this field as a literal `[EN] …`, which would then be stored tagged twice.
+    const known = languages.map((code) => code.toUpperCase());
+    if (parts.some((part) => known.includes(part.match(SONG_TRANSLATION_LINE_REGEX)?.[1].toUpperCase() ?? ''))) {
+      event.preventDefault();
+      const at = items.findIndex((item) => lyricItemId(item) === lineId);
+      const current = items[at];
+      if (current?.kind !== 'line') return;
+
+      const pasted = pagesToItems(rawTextToPages(parts.join('\n'), languages[0]));
+      const texts = pasted.length === 1 && pasted[0].kind === 'line' ? pasted[0].line.texts : undefined;
+      const filled = Object.entries(texts ?? {}).filter(([, value]) => value !== '');
+      const next = [...items];
+      if (texts && filled.every(([code]) => !current.line.texts[code]?.trim())) {
+        // One line fills the gaps of the line it was pasted into; it never overwrites text.
+        next[at] = { ...current, line: { ...current.line, texts: { ...current.line.texts, ...Object.fromEntries(filled) } } };
+      } else {
+        const replace = isLyricLineEmpty(current.line) ? 1 : 0;
+        next.splice(at + 1 - replace, replace, ...pasted);
+      }
+      commit(next);
+      return;
+    }
+
+    if (parts.length < 2) return;
 
     event.preventDefault();
 
     const input = event.target as HTMLInputElement;
-    const parts = text.split(/\r?\n/);
     const head = input.value.slice(0, input.selectionStart ?? 0);
     const tail = input.value.slice(input.selectionEnd ?? 0);
 

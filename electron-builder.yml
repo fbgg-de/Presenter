@@ -73,5 +73,3 @@ publish:
   owner: fbgg-de
   repo: Presenter
   releaseType: draft
-electronDownload:
-  mirror: https://npmmirror.com/mirrors/electron/

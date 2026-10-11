@@ -166,11 +166,11 @@ export const WsMonitor = () => {
 
   const statusColor = ({ idle: 'default', connecting: 'warning', connected: 'success', error: 'error' } as const)[status];
 
-  /** Every account known from either side: configured accounts and ones seen live. */
+  /** Every account known from either side: configured accounts (server sorts them by name), then ones only seen live. */
   const accountOptions = useMemo(() => {
     const seen = new Set<number>(adminAccounts.map((a) => a.license));
     accounts.forEach((row) => row.account >= 0 && seen.add(row.account));
-    return [...seen].sort((a, b) => a - b);
+    return [...seen];
   }, [adminAccounts, accounts]);
 
   const accountName = (license: number) => adminAccounts.find((a) => a.license === license)?.name || '';
@@ -201,8 +201,7 @@ export const WsMonitor = () => {
             <MenuItem value={ALL_ACCOUNTS}>{LL.ADMIN_WS.ALL_ACCOUNTS()}</MenuItem>
             {accountOptions.map((license) => (
               <MenuItem key={license} value={license}>
-                {license}
-                {accountName(license) ? ` — ${accountName(license)}` : ''}
+                {accountName(license) ? `${accountName(license)} (#${license})` : `#${license}`}
               </MenuItem>
             ))}
           </Select>

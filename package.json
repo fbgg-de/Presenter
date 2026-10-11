@@ -1,11 +1,11 @@
 {
   "name": "presenter",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Presentation of songs, media and notes",
   "main": "./out/main/index.js",
   "author": "Marcel Birkholz",
   "homepage": "https://github.com/fbgg-de/Presenter",
-  "packageManager": "yarn@4.18.0",
+  "packageManager": "yarn@4.18.1",
   "private": true,
   "workspaces": [
     "ws-server"
@@ -24,6 +24,7 @@
     "test:ws:bundle": "node scripts/test-ws-bundle.mjs",
     "test:screens": "node test/viewport/run.mjs",
     "test:lyrics": "node test/lyrics/run.mjs",
+    "test:pdf-edit": "node test/pdf-page-edit/run.mjs",
     "test:media": "node test/media-cue/run.mjs",
     "test:media:server": "node test/media-cue/server.mjs",
     "test:agenda-media": "node test/agenda-media/run.mjs",
@@ -44,6 +45,7 @@
     "test:section-color": "node test/section-color/run.mjs",
     "test:companion": "node test/companion/run.mjs",
     "test:agenda-text": "node test/agenda-text/run.mjs",
+    "test:churchtools": "node test/churchtools/run.mjs",
     "package:companion": "node scripts/package-companion-module.mjs",
     "build": "npm run typesafe-i18n && npm run typecheck && electron-vite build",
     "build:unpack": "npm run build && electron-builder --dir",
@@ -73,7 +75,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@electron-toolkit/eslint-config-prettier": "^3.0.1",
-    "@electron-toolkit/eslint-config-ts": "^3.1.0",
+    "@electron-toolkit/eslint-config-ts": "^4.0.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron-toolkit/utils": "^4.0.0",
@@ -82,18 +84,18 @@
     "@mui/icons-material": "^9.4.0",
     "@mui/material": "^9.4.0",
     "@reduxjs/toolkit": "^2.13.0",
-    "@types/node": "^26.6.3",
+    "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/react-router-dom": "^5.3.3",
     "@types/ws": "^8.18.2",
-    "@vitejs/plugin-react": "^6.1.1",
+    "@vitejs/plugin-react": "^6.1.2",
     "concurrently": "^10.0.5",
-    "electron": "^44.4.5",
+    "electron": "^44.5.1",
     "electron-builder": "^26.17.0",
     "electron-updater": "^6.8.10",
     "electron-vite": "^5.0.0",
-    "eslint": "^10.11.0",
+    "eslint": "^10.12.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",
@@ -112,12 +114,12 @@
     "recharts": "^3.10.1",
     "typesafe-i18n": "^5.27.1",
     "typescript": "^6.0.3",
-    "vite": "^8.3.1",
+    "vite": "^8.3.3",
     "vite-plugin-static-copy": "^4.1.1",
     "vite-plugin-svgr": "^5.2.0",
     "ws": "^8.22.0"
   },
   "dependencies": {
-    "mediabunny": "^1.61.0"
+    "mediabunny": "^1.61.3"
   }
 }

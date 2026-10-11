@@ -444,6 +444,9 @@ export class PresentationWindowManager {
       id: d.id,
       label: d.label || `Display ${d.id}`,
       bounds: d.bounds,
+      // Windows reports bounds scaled (a 4K panel at 200 % is 1920×1080) — right for placing
+      // windows, wrong for drawing the desk. Elsewhere the scaled layout is what the OS shows.
+      pixels: process.platform === 'win32' ? screen.dipToScreenRect(null, d.bounds) : d.bounds,
       workArea: d.workArea,
       isPrimary: d.id === primary.id,
       scaleFactor: d.scaleFactor,

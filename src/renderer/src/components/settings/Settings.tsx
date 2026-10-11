@@ -33,7 +33,7 @@ import { CompanionHelper } from '@/components/settings/CompanionHelper';
 import { AudioMixerSection } from '@/components/settings/AudioMixerSection';
 import { BandsSection } from '@/components/settings/BandsSection';
 import { SettingsImportReview } from '@/components/settings/SettingsImportReview';
-import { DesktopAppDownloadModal } from '@/components/settings/DesktopAppBanner';
+import { DesktopAppDownloads } from '@/components/settings/DesktopAppBanner';
 import { AutoUpdaterSection } from '@/components/settings/AutoUpdaterSection';
 import { CredentialsSection } from '@/components/settings/CredentialsSection';
 import { ViewerTokenSection } from '@/components/settings/ViewerTokenSection';
@@ -41,7 +41,6 @@ import { SettingRow } from '@/components/settings/SettingRow';
 import {
   BackupBlock,
   CompanionBlock,
-  DesktopDownloadBlock,
   GlobalStyleRow,
   PrivacyNoticeBlock,
   RemoteCommandsBlock,
@@ -83,7 +82,6 @@ const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void; 
     return () => clearTimeout(timer);
   }, [props.open, targetSection]);
   const [companionOpen, setCompanionOpen] = useState(false);
-  const [desktopAppModalOpen, setDesktopAppModalOpen] = useState(false);
   /** Pending settings import — reviewed in a diff dialog before anything is applied. */
   const [importDiff, setImportDiff] = useState<SettingsDiff | null>(null);
 
@@ -105,7 +103,7 @@ const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void; 
       audioMixer: () => <AudioMixerSection />,
       autoUpdater: () => <AutoUpdaterSection />,
       credentials: () => <CredentialsSection />,
-      desktopDownload: () => <DesktopDownloadBlock onOpen={() => setDesktopAppModalOpen(true)} />,
+      desktopDownload: () => <DesktopAppDownloads />,
       backup: () => (
         <BackupBlock
           onExport={() => exportSettings()}
@@ -129,7 +127,6 @@ const SettingsBody = (props: { open: boolean; setOpen: (open: boolean) => void; 
     // come up over it — mounted last, it does, and its own dialogs still open above it.
     <Drawer open={props.open} onClose={() => props.setOpen(false)} anchor="right" sx={{ zIndex: (theme) => theme.zIndex.modal }}>
       <CompanionHelper open={companionOpen} onClose={() => setCompanionOpen(false)} />
-      <DesktopAppDownloadModal open={desktopAppModalOpen} onClose={() => setDesktopAppModalOpen(false)} />
       <SettingsImportReview
         open={!!importDiff}
         diff={importDiff}

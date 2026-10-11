@@ -1,0 +1,2550 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "contact": {
+      "email": "support@churchtools.de",
+      "name": "German ChurchTools Forum",
+      "url": "https://forum.church.tools/category/22/churchtools-schnittstellen"
+    },
+    "description": "The ChurchTools REST API is the best entry point for developers to access ChurchTools. <br><br> **Authentication:** You need to be authorized to use some endpoints. Those endpoints are marked by a gray lock symbol. If you view the documentation, while you are logged into ChurchTools, all requests are already authorized. If you want to authorized a request, you need to provide a `Login Token` as `Authorization` header in the format `Authorization: Login <token>` or send a valid cookie. You can use the green \"Authorize\" dialog to enter those details and see how a request would look like in detail. <br><br> **Missing Endpoints:** Not all features are yet available by our new REST API. This documentation will grow in the future. We are working hard to add new endpoints with every ChurchTools version. The documentation will always show only those endpoints you can use with your ChurchTools installation.",
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "title": "ChurchTools REST API",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "description": "ChurchTools",
+      "url": "/api"
+    },
+    {
+      "description": "Local",
+      "url": "http://churchtools.test/api"
+    }
+  ],
+  "security": [
+    {
+      "Login-Token-Header": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "Endpoints for agendas and agenda templates",
+      "name": "Agenda"
+    }
+  ],
+  "paths": {
+    "/agendas/send": {
+      "post": {
+        "deprecated": true,
+        "description": "An agenda can be sent to multiple people at once. Recipients can be participants of one of the events, whereby the user sending the mail MUST see the service groups, or the user can add additional recipients from the list of people the user can see. To send a mail the user MUST see the agenda.",
+        "operationId": "post-agendas-send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "example": {
+                  "body": "I have updated the agenda for the upcoming service. Please review the changes.",
+                  "eventIds": [31, 32],
+                  "recipients": [40, 41, 116],
+                  "sendCopyToMe": true,
+                  "subject": "Agenda Updated"
+                },
+                "properties": {
+                  "body": {
+                    "description": "E-Mail body.",
+                    "type": "string"
+                  },
+                  "eventIds": {
+                    "description": "Array of event IDs. Multiple event IDs MUST be integrated events, i.e. all events share the same agenda.",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "recipients": {
+                    "description": "Array of person IDs.",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "sendCopyToMe": {
+                    "default": false,
+                    "description": "Flag if a mail should be send to the user sending the request.",
+                    "type": "boolean"
+                  },
+                  "subject": {
+                    "description": "E-Mail subject.",
+                    "type": "string"
+                  }
+                },
+                "required": ["eventIds", "recipients", "subject", "body"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "E-Mail information and recipients",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "args": {
+                      "properties": {
+                        "count": {
+                          "example": 5,
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "errors": {
+                      "description": "Array of DomainObjects with people, who have no eMail Addresses.",
+                      "items": {
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "example": "5 recipients have no eMail address. No eMail is sent to them.",
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "example": "agenda.mail.missing.email",
+                      "type": "string"
+                    },
+                    "translatedMessage": {
+                      "example": "5 Empfänger haben keine E-Mail Adresse. Keine E-Mail wurde an sie geschickt.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successfully sent mails to some recipients."
+          },
+          "204": {
+            "description": "Successfully sent mails to all recipients the user can see."
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Send agenda email to recipients",
+        "tags": ["Agenda"]
+      }
+    },
+    "/agendatemplates": {
+      "get": {
+        "description": "Get all available agenda templates.",
+        "operationId": "get-agendatemplates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/Agenda"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get all agenda templates",
+        "tags": ["Agenda"]
+      },
+      "post": {
+        "description": "Create a new agenda template.",
+        "operationId": "post-agendatemplates",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaTemplateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Agenda"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Create agenda template",
+        "tags": ["Agenda"]
+      }
+    },
+    "/agendatemplates/{agendaId}": {
+      "delete": {
+        "description": "Delete the specified agenda template. Use the `dryRun` query parameter to check if the template can be deleted without actually deleting it.",
+        "operationId": "delete-agendatemplates-agendaId",
+        "parameters": [
+          {
+            "description": "If true, only checks whether the template can be deleted without actually deleting it.",
+            "in": "query",
+            "name": "dryRun",
+            "schema": {
+              "default": false,
+              "example": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Delete agenda template",
+        "tags": ["Agenda"]
+      },
+      "get": {
+        "description": "Get the specified agenda template.",
+        "operationId": "get-agendatemplates-agendaId",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Agenda"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get agenda template",
+        "tags": ["Agenda"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AgendaId"
+        }
+      ],
+      "put": {
+        "description": "Update the specified agenda template.",
+        "operationId": "put-agendatemplates-agendaId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaTemplateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Agenda"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update agenda template",
+        "tags": ["Agenda"]
+      }
+    },
+    "/agendatemplates/{agendaId}/export": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AgendaId"
+        }
+      ],
+      "post": {
+        "description": "Export the specified agenda template as a presenter import archive. The response contains a temporary download URL and a list of songs that have multiple files and may need manual handling after import.",
+        "operationId": "post-agendatemplates-agendaId-export",
+        "parameters": [
+          {
+            "description": "Presenter format to export the agenda template for.",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/AgendaExportOutputFormat"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "appendArrangement": {
+                    "description": "Append the arrangement name to exported song titles.",
+                    "example": false,
+                    "type": "boolean"
+                  },
+                  "exportSongs": {
+                    "description": "Include song files in the presenter archive.",
+                    "example": true,
+                    "type": "boolean"
+                  },
+                  "withCategory": {
+                    "description": "Include song categories in the exported presenter data.",
+                    "example": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": ["appendArrangement", "exportSongs", "withCategory"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "songsWithMultipleFiles": {
+                          "description": "Song titles for which multiple files exist and the exporter could not choose one automatically.",
+                          "items": {
+                            "example": "Amazing Grace",
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "url": {
+                          "description": "Relative download URL for the generated archive.",
+                          "example": "?q=downloadfile&id=123&filename=agenda.zip",
+                          "type": "string"
+                        }
+                      },
+                      "required": ["songsWithMultipleFiles", "url"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Export agenda template",
+        "tags": ["Agenda"]
+      }
+    },
+    "/agendatemplates/{agendaId}/items": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AgendaId"
+        },
+        {
+          "description": "Insert the new item after the item with this ID. Cannot be used together with `before_id`.",
+          "in": "query",
+          "name": "after_id",
+          "schema": {
+            "example": 123,
+            "type": "integer"
+          }
+        },
+        {
+          "description": "Insert the new item before the item with this ID. Cannot be used together with `after_id`.",
+          "in": "query",
+          "name": "before_id",
+          "schema": {
+            "example": 456,
+            "type": "integer"
+          }
+        }
+      ],
+      "post": {
+        "description": "Create a new agenda item for the specified agenda template.",
+        "operationId": "post-agendatemplates-agendaId-items",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaItemInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AgendaItem"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Create agenda template item",
+        "tags": ["Agenda"]
+      }
+    },
+    "/agendatemplates/{agendaId}/items/{itemId}": {
+      "delete": {
+        "description": "Delete an agenda item from the template.",
+        "operationId": "delete-agendatemplates-agendaId-items-itemId",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete agenda template item",
+        "tags": ["Agenda"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AgendaId"
+        },
+        {
+          "$ref": "#/components/parameters/AgendaItemId"
+        }
+      ],
+      "put": {
+        "description": "Update an agenda item in the template.",
+        "operationId": "put-agendatemplates-agendaId-items-itemId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaItemInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AgendaItem"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Updated"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update agenda template item",
+        "tags": ["Agenda"]
+      }
+    },
+    "/agendatemplates/{agendaId}/items/{itemId}/servicegroups/{serviceGroupId}": {
+      "delete": {
+        "description": "Delete a service group note from an agenda template item.",
+        "operationId": "delete-agendatemplates-agendaId-items-itemId-servicegroups-serviceGroupId",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete service group note from agenda template item",
+        "tags": ["Agenda"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/AgendaId"
+        },
+        {
+          "$ref": "#/components/parameters/AgendaItemId"
+        },
+        {
+          "description": "ID of service group",
+          "in": "path",
+          "name": "serviceGroupId",
+          "required": true,
+          "schema": {
+            "example": 13,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "description": "Add or update a service group note for an agenda template item. Sending an empty body removes the note, but the DELETE endpoint should be used for explicit deletion.",
+        "operationId": "put-agendatemplates-agendaId-items-itemId-servicegroups-serviceGroupId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "note": {
+                    "description": "The note text for the service group",
+                    "example": "Start with soft pad in background",
+                    "maxLength": 4000,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Add or update service group note for agenda template item",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda": {
+      "delete": {
+        "description": "Delete the agenda for the specified event.",
+        "operationId": "delete-events-id-agenda",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete agenda",
+        "tags": ["Agenda"]
+      },
+      "get": {
+        "description": "Get the agenda for the specified event.",
+        "operationId": "get-events-id-agenda",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Agenda"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get agenda for event",
+        "tags": ["Agenda"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        }
+      ],
+      "put": {
+        "description": "Create or update the agenda for an event",
+        "operationId": "put-events-id-agenda",
+        "parameters": [
+          {
+            "description": "ID of an agenda template to copy items from. If provided, the new agenda will be populated with items from the specified template. Cannot be used together with 'event_id', or 'items'.",
+            "in": "query",
+            "name": "template_id",
+            "schema": {
+              "example": 5,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "ID of an existing event whose agenda should be copied. If provided, the new agenda will be populated with items from that event's agenda. Cannot be used together with 'template_id', or 'items'.",
+            "in": "query",
+            "name": "event_id",
+            "schema": {
+              "example": 42,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "calendarId": {
+                    "description": "The calendar ID for this agenda",
+                    "example": 1,
+                    "type": "integer"
+                  },
+                  "eventStartPosition": {
+                    "description": "Sort key position where the event starts",
+                    "example": 0,
+                    "minimum": 0,
+                    "type": "integer"
+                  },
+                  "items": {
+                    "description": "Agenda items to create or update. Cannot be used together with 'template_id' or 'event_id'.",
+                    "items": {
+                      "$ref": "#/components/schemas/AgendaItemInput"
+                    },
+                    "type": "array"
+                  },
+                  "series": {
+                    "description": "Optional series name for the agenda",
+                    "example": "Prophets",
+                    "maxLength": 100,
+                    "type": "string"
+                  }
+                },
+                "required": ["calendarId"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Agenda"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Create or update agenda",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/export": {
+      "post": {
+        "description": "Exports the agenda of the specified event for the selected presenter format. The response contains a download URL and a list of songs that could not be exported unambiguously because multiple files were available.",
+        "operationId": "post-events-id-agenda-export",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "description": "Presenter format to export the event agenda for",
+            "in": "query",
+            "name": "format",
+            "required": true,
+            "schema": {
+              "$ref": "#/components/schemas/AgendaExportOutputFormat"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "appendArrangement": {
+                    "type": "boolean"
+                  },
+                  "exportSongs": {
+                    "type": "boolean"
+                  },
+                  "withCategory": {
+                    "type": "boolean"
+                  }
+                },
+                "required": ["appendArrangement", "exportSongs", "withCategory"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "songsWithMultipleFiles": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["songsWithMultipleFiles", "url"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Export event agenda",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/integrate": {
+      "post": {
+        "description": "Integrates the agenda from another event into the specified target event. After integration both events share the same agenda, so later agenda changes affect all integrated events. The target event must not already have its own agenda.",
+        "operationId": "post-events-id-agenda-integrate",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "description": "ID of the source event whose agenda should be integrated",
+            "in": "query",
+            "name": "event_id",
+            "required": true,
+            "schema": {
+              "example": 1337,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Agenda"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          },
+          "422": {
+            "description": "Unprocessable Content. Target event already has an agenda."
+          }
+        },
+        "summary": "Integrate agenda with another event",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/items": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        },
+        {
+          "description": "Insert the new item after the item with this ID. Cannot be used together with `before_id`.",
+          "in": "query",
+          "name": "after_id",
+          "schema": {
+            "example": 123,
+            "type": "integer"
+          }
+        },
+        {
+          "description": "Insert the new item before the item with this ID. Cannot be used together with `after_id`.",
+          "in": "query",
+          "name": "before_id",
+          "schema": {
+            "example": 456,
+            "type": "integer"
+          }
+        }
+      ],
+      "post": {
+        "description": "Create a new agenda item for the specified event's agenda.",
+        "operationId": "post-events-id-agenda-items",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaItemInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AgendaItem"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Create agenda item",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/items/{itemId}": {
+      "delete": {
+        "description": "Delete an agenda item.",
+        "operationId": "delete-events-id-agenda-items-id",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete agenda item",
+        "tags": ["Agenda"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        },
+        {
+          "$ref": "#/components/parameters/AgendaItemId"
+        }
+      ],
+      "put": {
+        "description": "Update an existing agenda item.",
+        "operationId": "put-events-id-agenda-items-id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "description": "Insert the new item after the item with this ID. Cannot be used together with `before_id`.",
+            "in": "query",
+            "name": "after_id",
+            "schema": {
+              "example": 123,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Insert the new item before the item with this ID. Cannot be used together with `after_id`.",
+            "in": "query",
+            "name": "before_id",
+            "schema": {
+              "example": 456,
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaItemInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/AgendaItem"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update agenda item",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/items/{itemId}/hide": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        },
+        {
+          "$ref": "#/components/parameters/AgendaItemId"
+        }
+      ],
+      "post": {
+        "description": "Hide the specified item in the agenda for the specified event. The item remains part of the agenda but is not shown for this event.",
+        "operationId": "post-events-id-agenda-items-id-hide",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Hide agenda item for event",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/items/{itemId}/servicegroups/{serviceGroupId}": {
+      "delete": {
+        "description": "Delete a service group note from the specified agenda item.",
+        "operationId": "delete-events-id-agenda-items-id-servicegroups-id",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete service group note from agenda item",
+        "tags": ["Agenda"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        },
+        {
+          "$ref": "#/components/parameters/AgendaItemId"
+        },
+        {
+          "description": "ID of the service group",
+          "in": "path",
+          "name": "serviceGroupId",
+          "required": true,
+          "schema": {
+            "example": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "description": "Add or update a service group note for the specified agenda item. The note is only visible to members of the specified service group.",
+        "operationId": "put-events-id-agenda-items-id-servicegroups-id",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "note": {
+                    "description": "The note text for the service group",
+                    "example": "Remember to bring the sheet music",
+                    "maxLength": 4000,
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": ["note"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Add or update service group note for agenda item",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/items/{itemId}/unhide": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        },
+        {
+          "$ref": "#/components/parameters/AgendaItemId"
+        }
+      ],
+      "post": {
+        "description": "Unhide the specified item in the agenda for the specified event. The item will be shown again for this event.",
+        "operationId": "post-events-id-agenda-items-id-unhide",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Unhide agenda item for event",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/lock": {
+      "post": {
+        "description": "Lock the specified agenda. If the agenda is shared among several events, it is locked for all events.",
+        "operationId": "post-events-id-agenda-lock",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Lock agenda",
+        "tags": ["Agenda"]
+      }
+    },
+    "/events/{eventId}/agenda/songs": {
+      "get": {
+        "description": "Get all songs of agenda for this event. Only those songs are returned, which the user may see. The user may see that the song is on the agenda, but s/he may not view all its details.",
+        "operationId": "get-events-id-agenda-songs",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/Song"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get All Songs of Agenda",
+        "tags": ["Agenda"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        }
+      ]
+    },
+    "/events/{eventId}/agenda/unlock": {
+      "post": {
+        "description": "Unlock the specified agenda. If the agenda is shared among several events, it is unlocked for all events.",
+        "operationId": "post-events-id-agenda-unlock",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {},
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Unlock agenda",
+        "tags": ["Agenda"]
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "AgendaId": {
+        "description": "ID of agenda",
+        "in": "path",
+        "name": "agendaId",
+        "required": true,
+        "schema": {
+          "example": 35,
+          "type": "integer"
+        }
+      },
+      "AgendaItemId": {
+        "description": "ID of agenda item",
+        "in": "path",
+        "name": "itemId",
+        "required": true,
+        "schema": {
+          "example": 123,
+          "type": "integer"
+        }
+      },
+      "EventId": {
+        "description": "ID of Event",
+        "in": "path",
+        "name": "eventId",
+        "required": true,
+        "schema": {
+          "example": 42,
+          "type": "integer"
+        }
+      }
+    },
+    "responses": {
+      "204-Deleted": {
+        "description": "Successfully deleted"
+      },
+      "204-NoContent": {
+        "description": "No Content"
+      },
+      "400-BadRequest": {
+        "description": "Bad Request"
+      },
+      "400-Errors": {
+        "description": "Validation errors. See response for details"
+      },
+      "401-Unauthorized": {
+        "content": {
+          "text/plain": {
+            "schema": {
+              "example": "Session expired!",
+              "type": "string"
+            }
+          }
+        },
+        "description": "Unauthorized"
+      },
+      "403-Forbidden": {
+        "description": "Forbidden to see, create, update, or delete resource"
+      },
+      "404-NotFound": {
+        "description": "Resource not found"
+      }
+    },
+    "schemas": {
+      "Agenda": {
+        "properties": {
+          "@deprecated": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "calendarId": {
+            "example": 1,
+            "type": "integer"
+          },
+          "eventStartPosition": {
+            "description": "Position in the agenda where the event starts (0-based).",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "id": {
+            "example": 10,
+            "type": "integer"
+          },
+          "isFinal": {
+            "deprecated": true,
+            "description": "Use `isLocked` instead.",
+            "type": "boolean"
+          },
+          "isLocked": {
+            "description": "If true, the agenda is locked for changes.",
+            "example": false,
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgendaItem"
+            },
+            "type": "array"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "example": "25.05.2019 11.00 - Worship Service",
+            "type": ["string", "null"]
+          },
+          "series": {
+            "example": "Prophets",
+            "type": ["string", "null"]
+          },
+          "total": {
+            "description": "Total of agenda items (without headers)",
+            "example": 24,
+            "type": "integer"
+          }
+        },
+        "required": ["calendarId", "eventStartPosition", "id", "isFinal", "isLocked", "items", "meta", "name", "series", "total"],
+        "type": "object",
+        "x-tags": ["Event"]
+      },
+      "AgendaExportOutputFormat": {
+        "description": "Agenda export output format",
+        "enum": ["PRO_PRESENTER_6", "PRO_PRESENTER_7", "SONG_BEAMER"],
+        "type": "string"
+      },
+      "AgendaItem": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemText"
+          },
+          {
+            "$ref": "#/components/schemas/AgendaItemSong"
+          },
+          {
+            "$ref": "#/components/schemas/AgendaItemHeader"
+          }
+        ]
+      },
+      "AgendaItemBase": {
+        "properties": {
+          "duration": {
+            "description": "Duration of agenda item in seconds.",
+            "example": 315,
+            "type": "integer"
+          },
+          "id": {
+            "example": 345,
+            "type": "integer"
+          },
+          "isBeforeEvent": {
+            "example": false,
+            "type": "boolean"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "position": {
+            "deprecated": true,
+            "example": 1,
+            "type": "integer"
+          },
+          "start": {
+            "description": "The start time of a position is dynamically calculated based on previous items and the start time of the event.",
+            "example": "2019-05-25T11:00:00Z",
+            "format": "date-time",
+            "type": ["string", "null"]
+          },
+          "startTimes": {
+            "additionalProperties": {
+              "example": "2021-03-09T13:59:00Z",
+              "format": "date-time",
+              "type": ["string", "null"]
+            },
+            "description": "Start times keyed by event ID if this agenda is shared between multiple events. A value is null when the item is hidden for that event.",
+            "type": "object"
+          },
+          "title": {
+            "example": "Start of Worship",
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": ["duration", "id", "isBeforeEvent", "meta", "position", "start", "startTimes", "title"],
+        "title": "Agenda Item",
+        "type": "object",
+        "x-tags": ["Event"]
+      },
+      "AgendaItemContent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemBase"
+          },
+          {
+            "properties": {
+              "note": {
+                "example": "Praise the Lord",
+                "maxLength": 4000,
+                "type": ["string", "null"]
+              },
+              "responsible": {
+                "properties": {
+                  "persons": {
+                    "description": "Array of all persons, who could be resolved from the text string. If a service has multiple positions, multiple objects are in the array with the same `service` text string. If a service is not yet set the `person` object will be null.",
+                    "items": {
+                      "properties": {
+                        "accepted": {
+                          "description": "Flag to indicate if the person has accepted the service or is requested.",
+                          "type": "boolean"
+                        },
+                        "person": {
+                          "anyOf": [
+                            {
+                              "$ref": "#/components/schemas/DomainObjectExternalPerson"
+                            },
+                            {
+                              "$ref": "#/components/schemas/DomainObjectPerson"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "service": {
+                          "description": "Name of the service, which is also the placeholder in the raw text string.",
+                          "example": "Leader",
+                          "type": "string"
+                        }
+                      },
+                      "required": ["accepted", "person", "service"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "text": {
+                    "description": "Raw text string. You need to search-replace the placeholders yourself.",
+                    "maxLength": 1000,
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": ["persons", "text"],
+                "type": "object"
+              },
+              "serviceGroupNotes": {
+                "description": "Array of notes per service group. You will only see the service groups, you are allowed to see.",
+                "items": {
+                  "properties": {
+                    "note": {
+                      "example": "Start with synthy pad in background",
+                      "type": "string"
+                    },
+                    "serviceGroupId": {
+                      "example": 13,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["note", "serviceGroupId"],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "required": ["note", "responsible", "serviceGroupNotes"],
+            "type": "object"
+          }
+        ]
+      },
+      "AgendaItemHeader": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemBase"
+          },
+          {
+            "properties": {
+              "type": {
+                "enum": ["header"],
+                "type": "string"
+              }
+            },
+            "required": ["type"],
+            "type": "object"
+          }
+        ]
+      },
+      "AgendaItemInput": {
+        "description": "Input schema for creating or updating an agenda item",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemInputHeader"
+          },
+          {
+            "$ref": "#/components/schemas/AgendaItemInputSong"
+          },
+          {
+            "$ref": "#/components/schemas/AgendaItemInputText"
+          }
+        ]
+      },
+      "AgendaItemInputBase": {
+        "properties": {
+          "title": {
+            "description": "The title of the agenda item",
+            "example": "Worship Song",
+            "maxLength": 100,
+            "type": ["string", "null"]
+          }
+        },
+        "type": "object"
+      },
+      "AgendaItemInputContent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemInputBase"
+          },
+          {
+            "properties": {
+              "duration": {
+                "description": "Duration in seconds",
+                "example": 300,
+                "type": "integer"
+              },
+              "note": {
+                "description": "Additional notes for this item",
+                "maxLength": 4000,
+                "type": ["string", "null"]
+              },
+              "responsible": {
+                "description": "The responsible person or service placeholder",
+                "example": "[Worship Leader]",
+                "maxLength": 1000,
+                "type": ["string", "null"]
+              },
+              "serviceGroupNotes": {
+                "description": "Array of notes per service group",
+                "items": {
+                  "properties": {
+                    "note": {
+                      "description": "The note text for the service group",
+                      "example": "Start with synthy pad in background",
+                      "maxLength": 4000,
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "serviceGroupId": {
+                      "example": 13,
+                      "type": "integer"
+                    }
+                  },
+                  "required": ["note", "serviceGroupId"],
+                  "type": "object"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          }
+        ]
+      },
+      "AgendaItemInputHeader": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemInputBase"
+          },
+          {
+            "properties": {
+              "type": {
+                "enum": ["header"],
+                "type": "string"
+              }
+            },
+            "required": ["type"],
+            "type": "object"
+          }
+        ]
+      },
+      "AgendaItemInputSong": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemInputContent"
+          },
+          {
+            "properties": {
+              "arrangementId": {
+                "description": "The ID of the song arrangement",
+                "example": 42,
+                "type": ["integer", "null"]
+              },
+              "type": {
+                "enum": ["song"],
+                "type": "string"
+              }
+            },
+            "required": ["arrangementId", "type"],
+            "type": "object"
+          }
+        ]
+      },
+      "AgendaItemInputText": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemInputContent"
+          },
+          {
+            "properties": {
+              "type": {
+                "enum": ["text"],
+                "type": "string"
+              }
+            },
+            "required": ["type"],
+            "type": "object"
+          }
+        ]
+      },
+      "AgendaItemSong": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemContent"
+          },
+          {
+            "properties": {
+              "song": {
+                "anyOf": [
+                  {
+                    "properties": {
+                      "arrangement": {
+                        "example": "For Man Voice",
+                        "type": "string"
+                      },
+                      "arrangementId": {
+                        "example": 22,
+                        "type": "integer"
+                      },
+                      "bpm": {
+                        "example": 80,
+                        "type": ["integer", "null"]
+                      },
+                      "category": {
+                        "example": "Worship",
+                        "type": "string"
+                      },
+                      "isDefault": {
+                        "example": true,
+                        "type": "boolean"
+                      },
+                      "key": {
+                        "example": "Dm",
+                        "type": ["string", "null"]
+                      },
+                      "songId": {
+                        "example": 11,
+                        "type": "integer"
+                      },
+                      "title": {
+                        "example": "Bless the Lord",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["arrangement", "arrangementId", "bpm", "category", "isDefault", "key", "songId", "title"],
+                    "type": "object"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "The selected song arrangement, or `null` if no arrangement is assigned. `text` and `header` items do not include this field."
+              },
+              "type": {
+                "enum": ["song"],
+                "type": "string"
+              }
+            },
+            "required": ["song", "type"],
+            "type": "object"
+          }
+        ]
+      },
+      "AgendaItemText": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AgendaItemContent"
+          },
+          {
+            "properties": {
+              "type": {
+                "enum": ["text"],
+                "type": "string"
+              }
+            },
+            "required": ["type"],
+            "type": "object"
+          }
+        ]
+      },
+      "AgendaTemplateInput": {
+        "description": "Input schema for creating or updating an agenda template",
+        "properties": {
+          "calendarId": {
+            "description": "The calendar ID for the template",
+            "example": 1,
+            "type": "integer"
+          },
+          "eventStartPosition": {
+            "description": "Position in the agenda where the event starts (0-based)",
+            "example": 0,
+            "minimum": 0,
+            "type": "integer"
+          },
+          "items": {
+            "description": "Array of agenda items to include in the template",
+            "items": {
+              "$ref": "#/components/schemas/AgendaItemInput"
+            },
+            "type": "array"
+          },
+          "name": {
+            "description": "The name of the agenda template",
+            "example": "Sunday Service Template",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "series": {
+            "description": "The series name for this template",
+            "example": "Regular Services",
+            "maxLength": 100,
+            "type": "string"
+          }
+        },
+        "required": ["calendarId", "name", "series"],
+        "type": "object",
+        "x-tags": ["Event"]
+      },
+      "Arrangement": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ArrangementUpdate"
+          },
+          {
+            "properties": {
+              "files": {
+                "description": "List of files uploaded to that arrangement",
+                "items": {
+                  "$ref": "#/components/schemas/FileOrLink"
+                },
+                "type": "array"
+              },
+              "id": {
+                "example": 3,
+                "type": "integer"
+              },
+              "isDefault": {
+                "example": true,
+                "type": "boolean"
+              },
+              "keyOfArrangement": {
+                "deprecated": true,
+                "description": "Use 'key' instead",
+                "type": "string"
+              },
+              "links": {
+                "description": "List of links \"uploaded\" to that arrangement",
+                "items": {
+                  "$ref": "#/components/schemas/FileOrLink"
+                },
+                "type": "array"
+              },
+              "meta": {
+                "$ref": "#/components/schemas/MetaDataEntityId"
+              },
+              "note": {
+                "deprecated": true,
+                "description": "Use 'description' instead",
+                "type": "string"
+              },
+              "source": {
+                "$ref": "#/components/schemas/SongSource"
+              }
+            }
+          }
+        ],
+        "required": [
+          "beat",
+          "description",
+          "duration",
+          "files",
+          "id",
+          "isDefault",
+          "key",
+          "links",
+          "meta",
+          "name",
+          "source",
+          "sourceId",
+          "sourceReference",
+          "tempo"
+        ],
+        "type": "object"
+      },
+      "ArrangementKey": {
+        "description": "Possible keys that the song is arranged in",
+        "enum": [
+          "A",
+          "Ab",
+          "Am",
+          "B",
+          "Bb",
+          "Bbm",
+          "Bm",
+          "C",
+          "C#m",
+          "Cm",
+          "D",
+          "D#m",
+          "Db",
+          "Dm",
+          "E",
+          "Eb",
+          "Ebm",
+          "Em",
+          "F",
+          "F#",
+          "F#m",
+          "Fm",
+          "G",
+          "G#m",
+          "Gb",
+          "Gm"
+        ],
+        "example": "F",
+        "type": "string"
+      },
+      "ArrangementUpdate": {
+        "description": "Details about a song's arrangement.",
+        "properties": {
+          "beat": {
+            "example": "4/4",
+            "maxLength": 10,
+            "type": ["string", "null"]
+          },
+          "description": {
+            "example": "Great arrangement for male voices",
+            "maxLength": 4000,
+            "type": ["string", "null"]
+          },
+          "duration": {
+            "description": "Duration in seconds",
+            "example": 170,
+            "minimum": 1,
+            "type": ["integer", "null"]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArrangementKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "example": "Men Voicing",
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "sourceId": {
+            "example": 77,
+            "type": ["integer", "null"]
+          },
+          "sourceReference": {
+            "example": "55a",
+            "maxLength": 30,
+            "type": ["string", "null"]
+          },
+          "tempo": {
+            "example": 120,
+            "minimum": 1,
+            "type": ["integer", "null"]
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "Color": {
+        "description": "Value for Tailwind color",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/CtColor"
+          },
+          "shade": {
+            "enum": [100, 200, 300, 400, 50, 500, 600, 700, 800, 900, null],
+            "example": 500,
+            "type": ["integer", "null"]
+          }
+        },
+        "required": ["key", "shade"],
+        "title": "Color",
+        "type": "object"
+      },
+      "CtColor": {
+        "description": "A color in ChurchTools",
+        "enum": [
+          "accent",
+          "amber",
+          "basic",
+          "blue",
+          "constructive",
+          "critical",
+          "cyan",
+          "destructive",
+          "emerald",
+          "error",
+          "fuchsia",
+          "green",
+          "indigo",
+          "info",
+          "lime",
+          "magic",
+          "orange",
+          "pink",
+          "purple",
+          "red",
+          "rose",
+          "sky",
+          "success",
+          "teal",
+          "violet",
+          "warning",
+          "yellow"
+        ],
+        "example": "accent",
+        "type": "string"
+      },
+      "DateStringNullable": {
+        "description": "A simple date in ISO format, e.g. '2022-10-19'",
+        "example": "2022-10-19",
+        "format": "date",
+        "type": ["string", "null"]
+      },
+      "DomainObject": {
+        "description": "Compact, domain-independent representation for displaying a link to a ChurchTools object. It is not the full resource returned by the object’s own API.",
+        "properties": {
+          "apiUrl": {
+            "description": "URL for the full API resource, if available. Some legacy domain implementations produce inconsistent URLs.",
+            "type": ["string", "null"]
+          },
+          "color": {
+            "description": "Optional display color.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "$ref": "#/components/schemas/CtColor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domainIdentifier": {
+            "description": "Opaque identifier within the domain; do not assume that every domain uses a numeric ID.",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Optional image URL.",
+            "type": ["string", "null"]
+          },
+          "infos": {
+            "description": "Additional localized display lines; not structured resource fields.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "initials": {
+            "description": "Optional initials for an avatar fallback.",
+            "type": ["string", "null"]
+          },
+          "title": {
+            "description": "Display title of the referenced object.",
+            "type": "string"
+          }
+        },
+        "required": ["domainIdentifier", "title"],
+        "type": "object"
+      },
+      "DomainObjectExternalPerson": {
+        "description": "External person as Domain Object",
+        "properties": {
+          "apiUrl": {
+            "type": "null"
+          },
+          "color": {
+            "type": "null"
+          },
+          "domainAttributes": {
+            "properties": {
+              "email": {
+                "example": "vanessa.fischer@example.com",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "domainIdentifier": {
+            "type": "null"
+          },
+          "domainType": {
+            "enum": ["externalPerson"],
+            "type": "string"
+          },
+          "frontendUrl": {
+            "type": "null"
+          },
+          "icon": {
+            "enum": ["user"],
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": "null"
+          },
+          "infos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "initials": {
+            "type": ["string", "null"]
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiUrl",
+          "color",
+          "domainAttributes",
+          "domainIdentifier",
+          "domainType",
+          "frontendUrl",
+          "icon",
+          "imageUrl",
+          "infos",
+          "initials",
+          "title"
+        ],
+        "type": "object"
+      },
+      "DomainObjectPerson": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DomainObject"
+          },
+          {
+            "properties": {
+              "apiUrl": {
+                "type": "string"
+              },
+              "domainAttributes": {
+                "properties": {
+                  "dateOfDeath": {
+                    "$ref": "#/components/schemas/DateStringNullable"
+                  },
+                  "firstName": {
+                    "example": "Vanessa",
+                    "type": "string"
+                  },
+                  "guid": {
+                    "description": "Globally Unique Identifier",
+                    "example": "D7AC4C66-8DA4-405A-B492-39B5870D2DB6",
+                    "type": ["string", "null"]
+                  },
+                  "isArchived": {
+                    "type": "boolean"
+                  },
+                  "lastName": {
+                    "example": "Fischer",
+                    "type": "string"
+                  }
+                },
+                "required": ["dateOfDeath", "firstName", "guid", "isArchived", "lastName"],
+                "type": "object"
+              },
+              "domainType": {
+                "enum": ["person"],
+                "type": "string"
+              },
+              "frontendUrl": {
+                "type": "string"
+              },
+              "icon": {
+                "description": "user for an ordinary person; user-shield for a censored person placeholder.",
+                "enum": ["user", "user-shield"],
+                "example": "user",
+                "type": "string"
+              },
+              "infos": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": ["frontendUrl", "domainAttributes", "domainType", "icon", "infos", "apiUrl"],
+            "type": "object"
+          }
+        ],
+        "description": "Person as Domain Object"
+      },
+      "FileOrLink": {
+        "description": "File or Link for a specific domain type. E.g. uploaded music file for songs or avatar of a person.",
+        "properties": {
+          "domainId": {
+            "example": "1",
+            "type": "string"
+          },
+          "domainType": {
+            "description": "ChurchTools Domain Type. Where does this file belong to?",
+            "example": "avatar",
+            "type": "string"
+          },
+          "fileUrl": {
+            "description": "Link to external website or link to file in ChurchTools",
+            "example": "http://churchtools.test/?q=public/filedownload&id=116&filename=57407b0f37e8833cc7ff34f76413885e3856336ff21a263187c6bbd3acb9d385",
+            "type": "string"
+          },
+          "filename": {
+            "description": "Filename of uploaded file or name of the link",
+            "example": "57407b0f37e8833cc7ff34f76413885e3856336ff21a263187c6bbd3acb9d385",
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "description": "Name of that file, when it's been uploaded",
+            "example": "myPicture.jpg",
+            "type": "string"
+          }
+        },
+        "title": "File or Link",
+        "type": "object",
+        "x-tags": ["General"]
+      },
+      "MetaCount": {
+        "properties": {
+          "count": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MetaDataEntityId": {
+        "example": {
+          "createdDate": "2020-01-01T00:00:00Z",
+          "createdPerson": {
+            "id": 1
+          },
+          "modifiedDate": "2020-01-01T00:00:00Z",
+          "modifiedPerson": {
+            "id": 1
+          }
+        },
+        "properties": {
+          "createdDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          "createdPerson": {
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            },
+            "required": ["id"],
+            "type": "object"
+          },
+          "modifiedDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          "modifiedPerson": {
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            },
+            "required": ["id"],
+            "type": "object"
+          }
+        },
+        "required": ["createdDate", "createdPerson", "modifiedDate", "modifiedPerson"],
+        "type": "object"
+      },
+      "Song": {
+        "description": "Song information",
+        "properties": {
+          "arrangements": {
+            "deprecated": true,
+            "description": "All arrangements for that song",
+            "items": {
+              "$ref": "#/components/schemas/Arrangement"
+            },
+            "type": "array"
+          },
+          "author": {
+            "example": "Matthias Claudius",
+            "maxLength": 300,
+            "type": ["string", "null"]
+          },
+          "category": {
+            "$ref": "#/components/schemas/SongCategory"
+          },
+          "ccli": {
+            "example": "123456789",
+            "maxLength": 50,
+            "type": ["string", "null"]
+          },
+          "copyright": {
+            "example": "Public Domain",
+            "maxLength": 400,
+            "type": ["string", "null"]
+          },
+          "id": {
+            "example": 5,
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "example": "Hallelujah",
+            "maxLength": 200,
+            "minLength": 2,
+            "type": "string"
+          },
+          "note": {
+            "deprecated": true,
+            "type": "string"
+          },
+          "shouldPractice": {
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "name", "category", "meta", "shouldPractice", "copyright", "author"],
+        "title": "Song",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "SongCategory": {
+        "properties": {
+          "campusId": {
+            "type": ["integer", "null"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameTranslated": {
+            "type": "string"
+          },
+          "sortKey": {
+            "type": "integer"
+          }
+        },
+        "title": "Song Category",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "SongSource": {
+        "description": "Source of a song resp. arrangement",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "shorty": {
+            "type": ["string", "null"]
+          },
+          "sortKey": {
+            "type": "integer"
+          }
+        },
+        "required": ["id", "name", "shorty", "sortKey", "meta"],
+        "title": "SongSource",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "ZuluDate": {
+        "description": "A timestamp in Zulu time format, e.g. '2022-10-19T12:00:00Z'",
+        "example": "2022-10-19T12:00:00Z",
+        "format": "date-time",
+        "type": "string"
+      }
+    },
+    "securitySchemes": {
+      "Login-Token-Header": {
+        "description": "Format: `Login <token>`",
+        "in": "header",
+        "name": "Authorization",
+        "type": "apiKey"
+      }
+    }
+  }
+}

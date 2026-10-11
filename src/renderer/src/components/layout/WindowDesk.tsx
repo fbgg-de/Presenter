@@ -15,7 +15,7 @@ import { Box, Stack, Tooltip, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { AcUnit as FreezeIcon, Cast as StreamIcon, Monitor as NormalIcon, VisibilityOff as HiddenIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { deskLayout, type ScreenInfo } from './ScreenPicker';
+import { boundsInPixels, deskLayout, pixelsOf, resolutionLabel, type ScreenInfo } from './ScreenPicker';
 import type { RigWindow, WindowBounds } from '@/hooks/usePresentationWindows';
 
 interface WindowDeskProps {
@@ -60,7 +60,10 @@ export const WindowDesk = ({
 
   const { scale, boardW, boardH, minX, minY } = deskLayout(screens, maxWidth, height);
 
-  const placed = windows.map((w) => ({ w, bounds: boundsForWindow(w) }));
+  const placed = windows.map((w) => {
+    const bounds = boundsForWindow(w);
+    return { w, bounds: bounds && boundsInPixels(bounds, screens) };
+  });
 
   return (
     <Stack spacing={0.5}>
@@ -98,10 +101,10 @@ export const WindowDesk = ({
                 onDoubleClick={() => onCreateOnScreen?.(s)}
                 sx={(theme) => ({
                   position: 'absolute',
-                  left: (s.bounds.x - minX) * scale,
-                  top: (s.bounds.y - minY) * scale,
-                  width: Math.max(24, s.bounds.width * scale - 4),
-                  height: Math.max(20, s.bounds.height * scale - 4),
+                  left: (pixelsOf(s).x - minX) * scale,
+                  top: (pixelsOf(s).y - minY) * scale,
+                  width: Math.max(24, pixelsOf(s).width * scale - 4),
+                  height: Math.max(20, pixelsOf(s).height * scale - 4),
                   border: '2px solid',
                   borderColor: isDropTarget ? 'primary.main' : 'divider',
                   bgcolor: isDropTarget ? alpha(theme.palette.primary.main, 0.18) : theme.palette.background.paper,
@@ -117,7 +120,7 @@ export const WindowDesk = ({
                     {s.isPrimary ? ` · ${LL.WINDOW.PRIMARY_SCREEN()}` : ''}
                   </Typography>
                   <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.55rem', lineHeight: 1.2 }}>
-                    {s.bounds.width}×{s.bounds.height}
+                    {resolutionLabel(s)}
                   </Typography>
                 </Stack>
               </Box>

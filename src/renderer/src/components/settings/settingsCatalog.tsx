@@ -235,6 +235,12 @@ export const buildSettingsCatalog = (LL: TranslationFunctions, ctx: CatalogConte
             description: O.VIDEOS_FOLLOW_MASTER_SPEED.DESCRIPTION(),
             control: { kind: 'boolean' },
           },
+          {
+            key: 'videoSyncTolerance',
+            label: O.VIDEO_SYNC_TOLERANCE.TITLE(),
+            description: O.VIDEO_SYNC_TOLERANCE.DESCRIPTION(),
+            control: { kind: 'number', min: 0.1, max: 1, step: 0.1 },
+          },
         ],
       },
       {

@@ -116,15 +116,13 @@ interface DesktopAppDownloadModalProps {
   onDismiss?: () => void;
 }
 
-/**
- * Standalone download modal that can be opened from anywhere (e.g. Settings).
- * Exported so it can be reused without the banner.
- */
-export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopAppDownloadModalProps) => {
+/** The detected-OS hint and one card per system — the download modal's body, and inline in Settings. */
+export const DesktopAppDownloads = () => {
   const { LL } = useI18nContext();
   const os = detectOs();
-  // What the server has in /app, asked each time the dialog opens: an upload shows without a reload.
-  const { data, isFetching } = useGetInstallersQuery(undefined, { skip: !open, refetchOnMountOrArgChange: true });
+  // What the server has in /app, asked each time this mounts (a dialog opening, the settings section
+  // coming into view): an upload shows without a reload.
+  const { data, isFetching } = useGetInstallersQuery(undefined, { refetchOnMountOrArgChange: true });
   const installerOf = (o: DetectedOs) => data?.installers.find((installer) => installer.os === o);
 
   const osLabel = (o: DetectedOs) => {
@@ -141,6 +139,53 @@ export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopApp
   };
 
   return (
+    <Stack spacing={2}>
+      {os !== 'unknown' && (
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          {LL.DESKTOP_APP.MODAL_DETECT_HINT({ os: osLabel(os) })}
+        </Typography>
+      )}
+      <Stack direction="row" spacing={2} sx={{ pt: 1 }}>
+        <OsCard
+          label={LL.DESKTOP_APP.OS_WINDOWS()}
+          icon={<WindowsIcon color={os === 'windows' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
+          isCurrent={os === 'windows'}
+          installer={installerOf('windows')}
+          loading={isFetching && !data}
+          unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
+          yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
+          downloadLabel={LL.DESKTOP_APP.DOWNLOAD_WINDOWS()}
+        />
+        <OsCard
+          label={LL.DESKTOP_APP.OS_MACOS()}
+          icon={<MacIcon color={os === 'macos' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
+          isCurrent={os === 'macos'}
+          installer={installerOf('macos')}
+          loading={isFetching && !data}
+          unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
+          yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
+          downloadLabel={LL.DESKTOP_APP.DOWNLOAD_MACOS()}
+        />
+        <OsCard
+          label={LL.DESKTOP_APP.OS_LINUX()}
+          icon={<LinuxIcon color={os === 'linux' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
+          isCurrent={os === 'linux'}
+          installer={installerOf('linux')}
+          loading={isFetching && !data}
+          unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
+          yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
+          downloadLabel={LL.DESKTOP_APP.DOWNLOAD_LINUX()}
+        />
+      </Stack>
+    </Stack>
+  );
+};
+
+/** The download modal, opened from the banner and the account menu. Settings shows its body inline. */
+export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopAppDownloadModalProps) => {
+  const { LL } = useI18nContext();
+  return (
+    // MUI mounts the content only while open, so the installer list is re-asked on every open.
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{LL.DESKTOP_APP.MODAL_TITLE()}</DialogTitle>
       <DialogContent>
@@ -148,43 +193,7 @@ export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopApp
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {LL.DESKTOP_APP.MODAL_BODY()}
           </Typography>
-          {os !== 'unknown' && (
-            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-              {LL.DESKTOP_APP.MODAL_DETECT_HINT({ os: osLabel(os) })}
-            </Typography>
-          )}
-          <Stack direction="row" spacing={2} sx={{ pt: 1 }}>
-            <OsCard
-              label={LL.DESKTOP_APP.OS_WINDOWS()}
-              icon={<WindowsIcon color={os === 'windows' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
-              isCurrent={os === 'windows'}
-              installer={installerOf('windows')}
-              loading={isFetching && !data}
-              unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
-              yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
-              downloadLabel={LL.DESKTOP_APP.DOWNLOAD_WINDOWS()}
-            />
-            <OsCard
-              label={LL.DESKTOP_APP.OS_MACOS()}
-              icon={<MacIcon color={os === 'macos' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
-              isCurrent={os === 'macos'}
-              installer={installerOf('macos')}
-              loading={isFetching && !data}
-              unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
-              yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
-              downloadLabel={LL.DESKTOP_APP.DOWNLOAD_MACOS()}
-            />
-            <OsCard
-              label={LL.DESKTOP_APP.OS_LINUX()}
-              icon={<LinuxIcon color={os === 'linux' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
-              isCurrent={os === 'linux'}
-              installer={installerOf('linux')}
-              loading={isFetching && !data}
-              unavailableLabel={LL.DESKTOP_APP.MODAL_UNAVAILABLE()}
-              yourOsLabel={LL.DESKTOP_APP.YOUR_OS()}
-              downloadLabel={LL.DESKTOP_APP.DOWNLOAD_LINUX()}
-            />
-          </Stack>
+          <DesktopAppDownloads />
         </Stack>
       </DialogContent>
       <DialogActions>

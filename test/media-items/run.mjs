@@ -41,6 +41,7 @@ const P = await bundle('src/renderer/src/media/playback.ts', 'playback.mjs');
 const G = await bundle('src/renderer/src/presentation/groupContent.ts', 'group.mjs');
 const S = await bundle('src/renderer/src/media/groupPlayback.ts', 'settings.mjs');
 const L = await bundle('src/renderer/src/media/lyricFollow.ts', 'follow.mjs');
+const F = await bundle('src/renderer/src/media/framing.ts', 'framing.mjs');
 
 const group = (id, kind, layers = {}, enabled = true) => ({ id, name: `G${id}`, enabled, sort_order: id, data: { kind, layers } });
 const audience = group(1, 'audience');
@@ -51,22 +52,25 @@ const groups = [audience, stage, led, stream];
 
 // ── Entry data ────────────────────────────────────────────────────────────────
 
-const video = I.newMediaItemData('video', 'Worship/clouds.mp4', { groups });
+const video = I.newMediaItemData('video', 'Worship/clouds.mp4');
 const version = I.activeVersionOf(video);
 eq('a new entry is content', video.role, 'content');
 eq(
-  'content shows on groups that show media items, never on stage',
+  'a new entry shows on all screens',
   version.assignments.map((a) => a.role),
-  ['group:1', 'group:3'],
+  ['all'],
 );
 eq('a content video is heard on the operator computer and does not loop', [version.audioEnabled, version.loop], [true, false]);
-const bg = I.newMediaItemData('image', 'bg/rays.jpg', { groups, role: 'background' });
 eq(
-  'a background shows on groups that show backgrounds',
-  I.activeVersionOf(bg).assignments.map((a) => a.role),
-  ['group:1', 'group:3'],
+  '"all" reaches the groups that show media items, never a stage',
+  I.groupsShowing(groups, 'content').map((g) => g.id),
+  [1, 3],
 );
-eq('without screen groups an entry shows everywhere', I.activeVersionOf(I.newMediaItemData('image', 'a.png')).assignments[0].role, 'all');
+eq(
+  'for a background, the groups that show backgrounds',
+  I.groupsShowing(groups, 'background').map((g) => g.id),
+  [1, 3],
+);
 
 const legacy = {
   type: 'media',
@@ -97,23 +101,79 @@ eq(
   [undefined, undefined],
 );
 
-let v = I.toggleScreen(version, 'group:4', true);
-eq('turning a screen on copies the framing of the first', v.assignments.at(-1).frame, version.assignments[0].frame);
+let v = I.toggleScreen(version, 'group:1', true);
+eq(
+  'picking a screen replaces "all screens"',
+  v.assignments.map((a) => a.role),
+  ['group:1'],
+);
+v = I.toggleScreen(I.toggleScreen(v, 'group:3', true), 'group:4', true);
 v = I.toggleScreen(v, 'group:1', false);
 eq(
   'and off removes it',
   v.assignments.map((a) => a.role),
   ['group:3', 'group:4'],
 );
+v = I.toggleScreen(v, 'all', true);
+eq(
+  'picking "all screens" drops the filter',
+  v.assignments.map((a) => a.role),
+  ['all'],
+);
+eq('picking it again changes nothing', I.toggleScreen(v, 'all', true), v);
+
+{
+  // Every screen keeps its own framing: a wall on two groups and the framing for "all" never mix.
+  const frameOf = (ver, role) => ver.assignments.find((a) => a.role === role)?.frame;
+  const reframe = (ver, role, change) => ({
+    ...ver,
+    assignments: ver.assignments.map((a) => (a.role === role ? { ...a, frame: { ...a.frame, ...change } } : a)),
+  });
+  const left = { crop: { x: 0, y: 0, w: 0.5, h: 1 } };
+  const right = { crop: { x: 0.5, y: 0, w: 0.5, h: 1 } };
+  let wall = reframe(version, 'all', { scale: 80 });
+  wall = I.toggleScreen(wall, 'group:1', true);
+  eq('a first screen starts with the whole picture, not the framing of "all"', frameOf(wall, 'group:1'), I.defaultMediaFrame());
+  wall = reframe(wall, 'group:1', left);
+  wall = I.toggleScreen(wall, 'group:3', true);
+  eq('the next one copies the screen already chosen', frameOf(wall, 'group:3').crop, left.crop);
+  wall = reframe(wall, 'group:3', right);
+  let all = I.toggleScreen(wall, 'all', true);
+  eq('back to "all" brings its own framing back, not the one of the wall', frameOf(all, 'all').scale, 80);
+  all = reframe(all, 'all', { scale: 150 });
+  wall = I.toggleScreen(I.toggleScreen(all, 'group:1', true), 'group:3', true);
+  eq(
+    'and the wall comes back as it was, untouched by the change to "all"',
+    [frameOf(wall, 'group:1').crop, frameOf(wall, 'group:3').crop, frameOf(wall, 'group:1').scale],
+    [left.crop, right.crop, 100],
+  );
+  const lastOff = I.toggleScreen(I.toggleScreen(wall, 'group:1', false), 'group:3', false);
+  eq(
+    'removing the last screen falls back to "all" with its own framing',
+    [lastOff.assignments.map((a) => a.role), frameOf(lastOff, 'all').scale],
+    [['all'], 150],
+  );
+  eq('nothing parked twice', lastOff.parked.map((a) => a.role).sort(), ['group:1', 'group:3']);
+  const gone = I.toggleScreen(
+    { ...lastOff, sources: [{ id: 'other', name: 'b', path: 'b.mp4', type: 'video', offset: 0 }] },
+    'group:1',
+    true,
+  );
+  eq(
+    'a parked screen whose file is gone comes back on a file the version has',
+    frameOf(gone, 'group:1') && gone.assignments[0].sourceId,
+    'other',
+  );
+}
 const everywhere = I.toggleScreen(I.activeVersionOf(read), 'group:3', true);
 eq(
-  'choosing a group replaces "all screens"',
+  'choosing a group replaces "all screens" on an old entry too',
   everywhere.assignments.map((a) => a.role),
   ['group:3'],
 );
 eq(
   'the group assignment wins, all-screens is the fallback',
-  [I.assignmentFor(read.versions[0], 7)?.role, I.assignmentFor(version, 2)],
+  [I.assignmentFor(read.versions[0], 7)?.role, I.assignmentFor(everywhere, 2)],
   ['all', undefined],
 );
 const copy = I.duplicateVersion(version, 'Short');
@@ -271,9 +331,41 @@ eq(
   { mode: 'together', autoAdvance: false, maxAtOnce: 0, topLayer: 'lastStarted', onLeave: 'fade', startWithSong: false },
 );
 
+// ── Video walls ───────────────────────────────────────────────────────────────
+
+eq(
+  'a clip shaped like several screens is offered as that wall',
+  [F.wallFor(32 / 9, 16 / 9), F.wallFor(48 / 9, 16 / 9), F.wallFor(16 / 18, 16 / 9)],
+  [
+    { cols: 2, rows: 1 },
+    { cols: 3, rows: 1 },
+    { cols: 1, rows: 2 },
+  ],
+);
+eq('one screen, or cinema 21:9, is no wall', [F.wallFor(16 / 9, 16 / 9), F.wallFor(2560 / 1080, 16 / 9)], [undefined, undefined]);
+{
+  const whole = I.defaultMediaFrame();
+  const right = F.tileFrame(whole, { cols: 2, rows: 1, col: 1, row: 0 });
+  eq('a tile reads back as itself', F.tileOf(right), { cols: 2, rows: 1, col: 1, row: 0 });
+  eq('the whole picture is the 1×1 tile', F.tileOf(whole), { cols: 1, rows: 1, col: 0, row: 0 });
+  eq('moved or scaled by hand it is no tile', F.tileOf({ ...right, scale: 120 }), undefined);
+  const g = F.frameGeometry(right, 1920, 1080, 3840, 1080);
+  eq(
+    'the right tile of a 3840×1080 clip puts its right half on a 1920×1080 screen',
+    [g.source.left, g.source.width, g.crop.width, g.crop.height],
+    [-1920, 3840, 1920, 1080],
+  );
+  const middle = F.frameGeometry(F.tileFrame(whole, { cols: 3, rows: 3, col: 1, row: 1 }), 1920, 1080, 1920, 1080);
+  eq(
+    'the middle of a 3×3 wall is its middle ninth, three times as large',
+    [middle.source.left, middle.source.top, middle.source.width],
+    [-1920, -1080, 5760],
+  );
+}
+
 // ── Slideshows ────────────────────────────────────────────────────────────────
 
-const slides = I.newSlideshowData(['a.jpg', 'b.jpg', 'c.jpg'], { groups, seconds: 5 });
+const slides = I.newSlideshowData(['a.jpg', 'b.jpg', 'c.jpg'], { seconds: 5 });
 const show = I.activeVersionOf(slides);
 eq('a slideshow repeats and fades by default', [show.loop, show.slideshow], [true, { seconds: 5, transition: 'fade' }]);
 eq('its length is every image for its seconds', I.slideshowDuration(show), 15);
@@ -307,7 +399,11 @@ eq(
   eq('plain video: not past the end', I.stepTarget(plain, 20, 1), { time: 25, unit: 'seconds' });
   eq('plain video: nothing before the start', I.stepTarget(plain, 0, -1), { time: undefined, unit: 'seconds' });
 }
-eq('a slideshow runs on a clock, an image does not', [I.hasClock(show), I.hasClock(I.activeVersionOf(bg))], [true, false]);
+eq(
+  'a slideshow runs on a clock, an image does not',
+  [I.hasClock(show), I.hasClock(I.activeVersionOf(I.newMediaItemData('image', 'bg/rays.jpg', { role: 'background' })))],
+  [true, false],
+);
 eq(
   'a slideshow entry reads as media data',
   I.mediaItemDataOf({ type: 'media', mediaSubType: 'slideshow', media: slides })?.role,
@@ -383,7 +479,9 @@ eq(
 );
 eq(
   'a section disarmed in the saved cue but armed at runtime counts again',
-  L.slideForTime({ ...mapped, regions: mapped.regions.map((r) => (r.id === 'c1' ? { ...r, enabled: false } : r)) }, 35, slidesA, { c1: true }),
+  L.slideForTime({ ...mapped, regions: mapped.regions.map((r) => (r.id === 'c1' ? { ...r, enabled: false } : r)) }, 35, slidesA, {
+    c1: true,
+  }),
   1,
 );
 const editorBinding = L.timelineBinding(mapped);
@@ -445,7 +543,11 @@ P.startPlayback(entry('m3', 'content', ['3']), { autoplay: true, fadeMs: 0 });
 eq('a new video starts at the master speed', rateOfKey('m3'), 2);
 P.setFollowMasterByDefault(false);
 P.startPlayback(entry('m4', 'content', ['3'], 'other'), { autoplay: true, fadeMs: 0 });
-eq('with the setting off, a new video plays at its own 1×', [rateOfKey('m4'), P.getPlaybacks().find((p) => p.key === 'm4').followsMaster], [1, false]);
+eq(
+  'with the setting off, a new video plays at its own 1×',
+  [rateOfKey('m4'), P.getPlaybacks().find((p) => p.key === 'm4').followsMaster],
+  [1, false],
+);
 P.setMasterRate(99);
 eq('the master is kept within the limits', P.getMasterRate(), 4);
 P.setMasterRate(1);

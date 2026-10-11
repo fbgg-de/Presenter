@@ -1,21 +1,10 @@
 import { useEffect, useState } from 'react';
-import {
-  Alert,
-  Button,
-  Divider,
-  FormControlLabel,
-  IconButton,
-  InputAdornment,
-  Stack,
-  Switch,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material';
+import { Alert, Button, Divider, IconButton, InputAdornment, Stack, Switch, TextField, Typography } from '@mui/material';
 import { Key as KeyIcon, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { isElectronApp } from '@/utils';
 import { useGetSettings, useUpdateSetting } from '@/store/settingsSlice';
+import { SettingFrame } from './SettingRow';
 
 export const CredentialsSection = () => {
   const { LL } = useI18nContext();
@@ -136,23 +125,23 @@ export const CredentialsSection = () => {
 
       {/* Auto-login — only useful when credentials are stored */}
       {hasExisting && (
-        <Tooltip title={LL.AUTH.CREDENTIALS_AUTO_LOGIN_HINT()} placement="top-start">
-          <FormControlLabel
-            control={
-              <Switch
-                size="small"
-                checked={autoLogin}
-                onChange={(e) => {
-                  updateSetting('autoLogin', e.target.checked);
-                  // Mirror to the main process so the IdP auto-fill script can submit
-                  // even if the setting is toggled without reloading the page.
-                  api?.setAutoLogin?.(e.target.checked);
-                }}
-              />
-            }
-            label={<Typography variant="body2">{LL.AUTH.CREDENTIALS_AUTO_LOGIN()}</Typography>}
-          />
-        </Tooltip>
+        <SettingFrame
+          label={LL.AUTH.CREDENTIALS_AUTO_LOGIN()}
+          description={LL.AUTH.CREDENTIALS_AUTO_LOGIN_HINT()}
+          control={
+            <Switch
+              size="small"
+              checked={autoLogin}
+              slotProps={{ input: { 'aria-label': LL.AUTH.CREDENTIALS_AUTO_LOGIN() } }}
+              onChange={(e) => {
+                updateSetting('autoLogin', e.target.checked);
+                // Mirror to the main process so the IdP auto-fill script can submit
+                // even if the setting is toggled without reloading the page.
+                api?.setAutoLogin?.(e.target.checked);
+              }}
+            />
+          }
+        />
       )}
 
       <Typography variant="caption" color="text.secondary">

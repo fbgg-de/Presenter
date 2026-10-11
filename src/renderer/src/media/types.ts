@@ -51,6 +51,12 @@ export interface MediaCue {
   sources: MediaSource[];
   regions: MediaRegion[];
   assignments: MediaAssignment[];
+  /**
+   * The framing of each screen that is not chosen right now ("all screens" while groups are
+   * picked, the groups while it is "all"). Choosing it again brings its own back, so the two never
+   * overwrite each other. Playback reads `assignments` only.
+   */
+  parked?: MediaAssignment[];
   audioSourceId?: string;
   /** Sound of `audioSourceId` on the operator computer. */
   audioEnabled?: boolean;
@@ -131,6 +137,8 @@ export interface CuePacket {
   visible?: boolean;
   /** Milliseconds a change of `visible`, or this packet replacing another, takes to fade. */
   fadeMs?: number;
+  /** Seconds a playing element may drift before it seeks — the operator's setting; omitted = 0.5. */
+  syncTolerance?: number;
 }
 export type CueCommand =
   | { type: 'play' | 'pause' | 'toggle' | 'stop' | 'exit' | 'cancel' }

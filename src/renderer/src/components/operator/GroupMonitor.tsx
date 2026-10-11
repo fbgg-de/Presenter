@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { Box, ButtonBase, Stack, Typography } from '@mui/material';
+import { WebAssetOutlined as WindowIcon } from '@mui/icons-material';
 import { BackgroundThumb } from '@/components/look/BackgroundThumb';
 import { usePreviewScale } from '@/components/style/styleFormUtils';
 import { styleToTextCss, type ResolvedStyle } from '@/utils/styleUtils';
@@ -13,7 +14,8 @@ import { styleBackground as backgroundOf } from '@/look/styleBackground';
  */
 export const GroupMonitor = ({
   label,
-  sublabel,
+  windowCount,
+  windowCountLabel,
   style,
   media,
   background,
@@ -44,7 +46,9 @@ export const GroupMonitor = ({
   /** Tile width (pixels, or any CSS width); the picture keeps 16:9 and its text scales with it. */
   width?: number | string;
   label: string;
-  sublabel?: string;
+  /** How many windows the group has, drawn as an icon and the number; `windowCountLabel` says it in words. */
+  windowCount?: number;
+  windowCountLabel?: string;
   /** The drawn picture (without `picture`): */
   style?: ResolvedStyle;
   /** A media item shown full-screen instead of the background. */
@@ -138,14 +142,22 @@ export const GroupMonitor = ({
       <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', justifyContent: 'space-between', minWidth: 0 }}>
         <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', minWidth: 0 }}>
           {live && <Box sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'error.main', flexShrink: 0 }} />}
-          <Typography variant="caption" noWrap sx={{ fontWeight: 600, fontSize: '0.68rem', minWidth: 0 }}>
+          <Typography variant="caption" noWrap title={label} sx={{ fontWeight: 600, fontSize: '0.68rem', minWidth: 0 }}>
             {label}
           </Typography>
         </Stack>
-        {sublabel && (
-          <Typography variant="caption" noWrap sx={{ color: 'text.secondary', minWidth: 0 }}>
-            {sublabel}
-          </Typography>
+        {windowCount !== undefined && (
+          <Stack
+            direction="row"
+            spacing={0.25}
+            title={windowCountLabel}
+            sx={{ alignItems: 'center', color: 'text.secondary', flexShrink: 0 }}
+          >
+            <WindowIcon sx={{ fontSize: 12 }} />
+            <Typography variant="caption" sx={{ fontSize: '0.68rem', fontVariantNumeric: 'tabular-nums' }}>
+              {windowCount}
+            </Typography>
+          </Stack>
         )}
       </Stack>
     </Stack>

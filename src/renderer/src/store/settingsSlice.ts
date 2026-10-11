@@ -242,6 +242,8 @@ export interface SettingsState {
   operatorSlideSize: number;
   /** Operator view: whether the set list column is shown. */
   operatorSetListOpen: boolean;
+  /** Operator view: whether the screen previews (live tiles in the top bar) are shown. */
+  operatorMonitorsOpen: boolean;
   /** Operator view: whether the side panel (the right-hand column) is shown at all. */
   operatorSidePanelOpen: boolean;
   /** Operator view: whether the side panel holds the inspector (look, backgrounds, stage). */
@@ -299,6 +301,8 @@ export interface SettingsState {
   audioFadeOutSeconds: number;
   /** A newly started video plays at the master speed (the layer bar's M control) until given its own. */
   videosFollowMasterSpeed: boolean;
+  /** Seconds a video on an output may drift from the clock before it jumps back (0.1–1). */
+  videoSyncTolerance: number;
 }
 
 export const DEFAULT_AUDIO_MIXER: AudioMixerSettings = {
@@ -349,6 +353,7 @@ const defaultState: SettingsState = {
   operatorMonitorWidth: 90,
   operatorSlideSize: 280,
   operatorSetListOpen: true,
+  operatorMonitorsOpen: true,
   operatorSidePanelOpen: true,
   operatorInspectorOpen: true,
   operatorSetListWidth: 320,
@@ -383,6 +388,7 @@ const defaultState: SettingsState = {
   videoFadeDuration: 0,
   audioFadeOutSeconds: 3,
   videosFollowMasterSpeed: true,
+  videoSyncTolerance: 0.5,
 };
 
 /** The value every setting falls back to — the UI compares against this to offer a reset. */

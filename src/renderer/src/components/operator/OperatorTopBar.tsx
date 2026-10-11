@@ -89,12 +89,13 @@ export const OperatorTopBar = ({
   const settings = useGetSettings(
     'operatorMode',
     'operatorMonitorWidth',
+    'operatorMonitorsOpen',
     'operatorSetListOpen',
     'operatorSidePanelOpen',
     'operatorInspectorOpen',
     'operatorPreviewOpen',
   );
-  const { operatorMode, operatorMonitorWidth, operatorSetListOpen } = settings;
+  const { operatorMode, operatorMonitorWidth, operatorMonitorsOpen, operatorSetListOpen } = settings;
   // Older stored settings have no width yet; keep it inside the slider's range either way.
   const monitorWidth = clampSize(operatorMonitorWidth, MONITOR_RANGE, MONITOR_DEFAULT);
   const updateSetting = useUpdateSetting();
@@ -228,7 +229,13 @@ export const OperatorTopBar = ({
         )}
       />
 
-      <MonitorStrip boxRef={monitorWheelRef} monitorWidth={monitorWidth} />
+      {/* Hidden, the strip is not drawn at all — its live outputs stop rendering and decoding too.
+          The empty box keeps the View menu and Window Manager at the right edge. */}
+      {operatorMonitorsOpen !== false ? (
+        <MonitorStrip boxRef={monitorWheelRef} monitorWidth={monitorWidth} />
+      ) : (
+        <Box sx={{ flex: 1 }} />
+      )}
 
       {/* Right edge: the View menu and the Window Manager above the side panel toggle. */}
       <Stack sx={{ flexShrink: 0, alignItems: 'center', gap: 0.25 }}>
@@ -303,12 +310,10 @@ const MonitorStrip = ({ boxRef, monitorWidth }: { boxRef: (node: HTMLElement | n
   };
 
   const monitors = useMemo(() => {
-    const openLabel = (windows: typeof rig.windows) => O.MONITOR_WINDOWS({ count: windows.length });
     const monitor = (key: string, label: string, groupId: number | undefined, windows: typeof rig.windows) => ({
       key,
       label,
       groupId,
-      sublabel: openLabel(windows),
       windows,
       live: windows.some((w) => w.isOpen),
       size: outputSize(rig.windows, groupId),
@@ -335,7 +340,8 @@ const MonitorStrip = ({ boxRef, monitorWidth }: { boxRef: (node: HTMLElement | n
             <GroupMonitor
               key={monitor.key}
               label={monitor.label}
-              sublabel={monitor.sublabel}
+              windowCount={monitor.windows.length}
+              windowCountLabel={O.MONITOR_WINDOWS({ count: monitor.windows.length })}
               picture={<LiveOutput groupId={monitor.groupId} size={monitor.size} title={monitor.label} />}
               aspect={`${monitor.size.width}/${monitor.size.height}`}
               black={isBlack}

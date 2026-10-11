@@ -14,11 +14,39 @@ import { Box, Chip, Stack, Typography } from '@mui/material';
 import { alpha } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
 
+type Rect = { x: number; y: number; width: number; height: number };
+
 export type ScreenInfo = {
   id: number;
   label: string;
-  bounds: { x: number; y: number; width: number; height: number };
+  /** Scaled (DIP) coordinates — window placement uses these. */
+  bounds: Rect;
+  /** Real pixels, for drawing and the resolution label. Missing from older desktop builds. */
+  pixels?: Rect;
+  scaleFactor?: number;
   isPrimary: boolean;
+};
+
+/**
+ * Where a screen sits in real pixels. Windows scales `bounds` by the display's scale factor, so a
+ * 4K panel at 200 % would otherwise be drawn and labelled as a 1080p one.
+ */
+export const pixelsOf = (s: ScreenInfo): Rect => s.pixels ?? s.bounds;
+
+/** "3840×2160 · 200 %" — the scale explains why the window's own numbers are smaller. */
+export const resolutionLabel = (s: ScreenInfo): string => {
+  const { width, height } = pixelsOf(s);
+  const scale = s.scaleFactor && s.scaleFactor !== 1 ? ` · ${Math.round(s.scaleFactor * 100)} %` : '';
+  return `${width}×${height}${scale}`;
+};
+
+/** Window bounds (DIP) mapped into the pixel space of the screen they sit on, for drawing. */
+export const boundsInPixels = (bounds: Rect, screens: ScreenInfo[]): Rect => {
+  const s = screens.find((screen) => screen.id === screenIdForBounds(bounds, screens));
+  if (!s) return bounds;
+  const p = pixelsOf(s);
+  const k = p.width / s.bounds.width;
+  return { x: p.x + (bounds.x - s.bounds.x) * k, y: p.y + (bounds.y - s.bounds.y) * k, width: bounds.width * k, height: bounds.height * k };
 };
 
 /** A window drawn on top of the screen it currently occupies. */
@@ -75,10 +103,11 @@ export const deskLayout = (
   height: number,
   pad = 8,
 ): { scale: number; boardW: number; boardH: number; minX: number; minY: number } => {
-  const minX = Math.min(...screens.map((s) => s.bounds.x));
-  const minY = Math.min(...screens.map((s) => s.bounds.y));
-  const maxX = Math.max(...screens.map((s) => s.bounds.x + s.bounds.width));
-  const maxY = Math.max(...screens.map((s) => s.bounds.y + s.bounds.height));
+  const rects = screens.map(pixelsOf);
+  const minX = Math.min(...rects.map((r) => r.x));
+  const minY = Math.min(...rects.map((r) => r.y));
+  const maxX = Math.max(...rects.map((r) => r.x + r.width));
+  const maxY = Math.max(...rects.map((r) => r.y + r.height));
   const totalW = Math.max(1, maxX - minX);
   const totalH = Math.max(1, maxY - minY);
   const scale = Math.min((maxWidth - pad * 2) / totalW, (height - pad * 2) / totalH);
@@ -110,10 +139,11 @@ export const ScreenPicker = ({ screens, value, onChange, windows = [], height = 
         <Box sx={{ position: 'relative', width: boardW, height: boardH }}>
           {screens.map((s) => {
             const selected = value === s.id;
-            const left = (s.bounds.x - minX) * scale;
-            const top = (s.bounds.y - minY) * scale;
-            const w = s.bounds.width * scale;
-            const h = s.bounds.height * scale;
+            const px = pixelsOf(s);
+            const left = (px.x - minX) * scale;
+            const top = (px.y - minY) * scale;
+            const w = px.width * scale;
+            const h = px.height * scale;
             const onThisScreen = windows.filter((win) => screenIdForBounds(win.bounds, screens) === s.id);
 
             return (
@@ -154,7 +184,7 @@ export const ScreenPicker = ({ screens, value, onChange, windows = [], height = 
                   {s.label}
                 </Typography>
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.62rem' }}>
-                  {s.bounds.width}×{s.bounds.height}
+                  {resolutionLabel(s)}
                 </Typography>
                 {s.isPrimary && (
                   <Chip

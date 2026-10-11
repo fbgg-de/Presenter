@@ -129,6 +129,11 @@ const saveWindowBounds = (bounds: WindowBoundsData) => {
 // Chromium owns persistent cookies; no shutdown snapshot should replace its current state.
 let flushSessionCookies: (() => Promise<void>) | null = null;
 
+// On a PC with integrated + dedicated graphics Windows may render on the integrated one and copy
+// every frame to the card the beamers hang on — black flashes and colour glitches in video.
+// No effect with a single GPU.
+app.commandLine.appendSwitch('force_high_performance_gpu');
+
 // ── Single instance lock ──
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {

@@ -36,6 +36,87 @@ export const songDetails = {
     key: 'E',
     updatedAt: '2026-08-01 10:00:00',
   },
+  // Bilingual, every line tagged the way the song editor stores it — for the language switch
+  // in the musician lyrics view and the editor's raw mode.
+  108: {
+    account: 1,
+    songNumber: 108,
+    title: 'Holy Spirit',
+    authors: 'Bryan Torwalt, Katie Torwalt',
+    copyright: '',
+    languages: ['DE', 'EN'],
+    initialOrder: ['Strophe 1', 'Refrain'],
+    order: { Default: ['Strophe 1', 'Refrain', 'Strophe 1', 'Refrain'] },
+    blocks: {
+      'Strophe 1': ['[DE] Erste Zeile der Strophe', '[EN] First line of the verse', '[DE] Zweite Zeile', '[EN] Second line'],
+      Refrain: ['[DE] Refrain auf Deutsch', '[EN] Chorus in English', '', '[DE] Noch eine Zeile', '[EN] One more line'],
+    },
+    ccliNumber: null,
+    key: 'D',
+    updatedAt: '2026-08-01 10:00:00',
+  },
+};
+
+/** PDF versions per song number (GET /rest/Pdfs/{song}); the mock renders each as a placeholder page. */
+export const pdfs = {
+  47: ['Default.pdf', 'Marcel-D.pdf', 'Sonntagsband-E.pdf'],
+};
+
+/**
+ * Annotations and block mappings per `song/filename` — something for the page editor to carry
+ * along (a stroke over page 2's top block, a note that stays, a highlight lower on page 2).
+ */
+export const pdfAnnotations = {
+  '47/Default.pdf': [
+    {
+      id: 1,
+      layer: 'Marcel',
+      tool: 'draw',
+      page: 2,
+      x: 12,
+      y: 15,
+      color: '#e53935',
+      opacity: 1,
+      sortOrder: 0,
+      data: {
+        points: [
+          { x: 12, y: 15 },
+          { x: 30, y: 17 },
+        ],
+        lineWidth: 2,
+      },
+    },
+    {
+      id: 2,
+      layer: 'default',
+      tool: 'text',
+      page: 1,
+      x: 70,
+      y: 10,
+      color: '#1e88e5',
+      opacity: 1,
+      sortOrder: 1,
+      data: { text: 'capo 2', fontSize: 12 },
+    },
+    {
+      id: 3,
+      layer: 'default',
+      tool: 'highlight',
+      page: 2,
+      x: 20,
+      y: 60,
+      color: '#fdd835',
+      opacity: 0.4,
+      sortOrder: 2,
+      data: { width: 30, height: 5 },
+    },
+  ],
+};
+export const pdfMappings = {
+  '47/Default.pdf': [
+    { blockName: 'Verse 1', page: 1, region: { x: 6, y: 25, width: 40, height: 25 } },
+    { blockName: 'Bridge', page: 2, region: { x: 5, y: 9, width: 44, height: 17 } },
+  ],
 };
 
 export const shows = [

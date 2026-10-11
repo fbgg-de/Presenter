@@ -16,11 +16,16 @@
  */
 import { createServer } from 'node:http';
 import * as fixtures from './fixtures.mjs';
+import { metricsFixture } from '../metrics/fixtures.mjs';
 
 const PORT = Number(process.env.MOCK_PORT ?? 8000);
 
 /** Mutable copies, so writes within one run are visible to later reads. */
 const state = {
+  /** PDFs written back (PUT, e.g. by the page editor), by `song/filename`, with their time. */
+  pdfFiles: {},
+  pdfAnnotations: structuredClone(fixtures.pdfAnnotations),
+  pdfMappings: structuredClone(fixtures.pdfMappings),
   songs: structuredClone(fixtures.songs),
   songDetails: structuredClone(fixtures.songDetails),
   shows: structuredClone(fixtures.shows),
@@ -512,14 +517,47 @@ const handlers = {
     return state.stageLayers;
   },
   '/rest/Styles': () => [],
-  '/rest/PdfAnnotations': () => [],
+  // Annotations per `song/filename`, kept in state so an edit (the page editor moves them) can be
+  // read back. Endpoints other than list / update / delete answer empty, as before.
+  '/rest/PdfAnnotations': (req) => {
+    const [, , , song, id] = req.path.split('/');
+    if (req.method === 'GET') return state.pdfAnnotations[`${song}/${req.query.filename}`] ?? [];
+    const list = Object.entries(state.pdfAnnotations).find(
+      ([key, entries]) => key.startsWith(`${song}/`) && entries.some((a) => a.id === Number(id)),
+    )?.[1];
+    const at = list ? list.findIndex((a) => a.id === Number(id)) : -1;
+    if (at < 0) return [];
+    if (req.method === 'DELETE') {
+      list.splice(at, 1);
+      return { message: 'deleted (mock)', deletedId: Number(id) };
+    }
+    const { filename: _filename, ...fields } = req.body ?? {};
+    list[at] = { ...list[at], ...fields };
+    return { message: 'updated (mock)', id: Number(id) };
+  },
   '/rest/PdfIcons': () => [],
-  '/rest/Pdfs': () => [],
+  // GET /rest/Pdfs/{song} lists a song's versions (fixtures.pdfs); the files themselves are
+  // served as real PDFs further down, before the JSON handlers.
+  '/rest/Pdfs': (req) => {
+    const [, , , song, sub] = req.path.split('/');
+    if (sub === 'mappings') {
+      const key = `${song}/${req.query.filename ?? req.body?.filename}`;
+      if (req.method === 'PUT') state.pdfMappings[key] = req.body?.mappings ?? [];
+      return req.method === 'PUT' ? { message: 'Mappings saved' } : (state.pdfMappings[key] ?? []);
+    }
+    // Other sub-paths (search, updates) stay empty.
+    return sub
+      ? []
+      : (fixtures.pdfs[Number(song)] ?? []).map((filename) => {
+          const saved = state.pdfFiles[`${song}/${filename}`];
+          return { filename, size: saved?.bytes.length ?? 1024, modified: saved?.modified ?? 0 };
+        });
+  },
   '/rest/BibleTranslations': () => [],
   '/rest/BibleVerses': () => ({ verses: [] }),
   '/rest/LanguageTags': () => ['DE', 'EN'],
   '/rest/Search': (req) => filterSongs(req.query.q ?? req.query.search),
-  '/rest/Metrics': () => ({ message: 'recorded (mock)' }),
+  '/rest/Metrics': metricsFixture,
   '/rest/Log': () => ({ message: 'logged (mock)' }),
   '/rest/ValidateToken': () => ({ valid: true }),
   // The event picker reads `events` off the answer, so a bare [] makes it throw
@@ -653,6 +691,29 @@ const readBody = (req) =>
     });
   });
 
+/** A one-page PDF that prints `label`, with a correct xref table. */
+function placeholderPdf(label) {
+  const stream = `BT /F1 36 Tf 72 700 Td (${label.replace(/[()\\]/g, '')}) Tj ET`;
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`,
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = objects.map((body, i) => {
+    const at = pdf.length;
+    pdf += `${i + 1} 0 obj\n${body}\nendobj\n`;
+    return at;
+  });
+  const xref = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  pdf += offsets.map((at) => `${String(at).padStart(10, '0')} 00000 n \n`).join('');
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(pdf, 'latin1');
+}
+
 // Longest prefix first: '/rest/SongsAll' must be tested before '/rest/Song'.
 const routes = Object.keys(handlers).sort((a, b) => b.length - a.length);
 
@@ -666,6 +727,25 @@ createServer(async (req, res) => {
     state.sessionExpiresAt = Math.floor(Date.now() / 1000) + minutes * 60;
     res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
     res.end(JSON.stringify({ expiresAt: state.sessionExpiresAt }));
+    return;
+  }
+
+  // A PDF version of a song (GET /rest/Pdfs/{song}/{file}): one page naming the file, so a
+  // switch between versions is visible.
+  const pdfFile = path.match(/^\/rest\/Pdfs\/(\d+)\/([^/]+\.pdf)$/i);
+  if (pdfFile && req.method === 'PUT') {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const bytes = Buffer.concat(chunks);
+    state.pdfFiles[`${pdfFile[1]}/${decodeURIComponent(pdfFile[2])}`] = { bytes, modified: Math.floor(Date.now() / 1000) };
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' });
+    res.end(JSON.stringify({ message: `Saved ${pdfFile[2]}`, size: bytes.length }));
+    return;
+  }
+  if (pdfFile && req.method === 'GET') {
+    const name = decodeURIComponent(pdfFile[2]);
+    res.writeHead(200, { 'Content-Type': 'application/pdf', 'Access-Control-Allow-Origin': '*' });
+    res.end(state.pdfFiles[`${pdfFile[1]}/${name}`]?.bytes ?? placeholderPdf(name));
     return;
   }
 
@@ -691,7 +771,7 @@ createServer(async (req, res) => {
   const route = routes.find((prefix) => path === prefix || path.startsWith(prefix + '/') || path.startsWith(prefix + '?'));
   const handler = route ? handlers[route] : null;
 
-  let payload = {};
+  let payload;
   let status = 200;
   try {
     if (signedOut && route === '/rest/Session')

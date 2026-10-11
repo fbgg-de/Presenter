@@ -10,13 +10,14 @@ import {
   Alert,
   Box,
   Button,
+  ButtonBase,
   Chip,
+  Divider,
   IconButton,
   MenuItem,
   Select,
   Slider,
   Stack,
-  Switch,
   TextField,
   Tooltip,
   Typography,
@@ -35,6 +36,7 @@ import {
   VolumeOff as MutedIcon,
   VolumeUp as VolumeIcon,
 } from '@mui/icons-material';
+import { alpha } from '@mui/material/styles';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { ShowItem } from '@/api/shows.api';
 import { useAppDispatch } from '@/store';
@@ -46,7 +48,7 @@ import { CueSource, SlideshowSource } from '@/media/CueMedia';
 import { SlideshowFilmstrip, SlideshowSettings } from '@/components/show/SlideshowEditor';
 import { MediaTimelineSection } from '@/components/show/MediaTimelineSection';
 import { useGetScreenSetsQuery } from '@/api/screenSets.api';
-import { FrameEditor } from '@/media/FrameEditor';
+import { FrameEditor, FrameMap, useFrameSummary } from '@/media/FrameEditor';
 import { advanceCue, initialTransport } from '@/media/engine';
 import { useMediaLabels } from '@/media/labels';
 import {
@@ -68,7 +70,7 @@ import {
 } from '@/media/mediaItem';
 import { commandPlayback, endPlayback, setPlaybackFollowsMaster, setPlaybackHidden, usePlaybacks } from '@/media/playback';
 import { playbackKeyOf, startItem } from '@/media/useMediaHost';
-import type { CuePacket, CueTransport, MediaFrame, MediaSource } from '@/media/types';
+import { defaultFrame, type CuePacket, type CueTransport, type MediaFrame, type MediaSource } from '@/media/types';
 import { mediaKindOf, mediaLabelOf } from '@/media/mediaFiles';
 import { newId } from '@/utils/ids';
 import { MediaBrowser } from '@/components/media/MediaBrowser';
@@ -84,7 +86,15 @@ import {
   LiveTime,
   PLAYHEAD,
 } from '@/components/media/Transport';
-import { InspectorRow, InspectorSection, Segmented, ViewerFrame, type LampState } from '@/components/media/Viewer';
+import {
+  InspectorRow,
+  InspectorSection,
+  OptionList,
+  OptionSwitch,
+  Segmented,
+  ViewerFrame,
+  type LampState,
+} from '@/components/media/Viewer';
 import { resolveMediaUrl } from '@/utils/mediaUrl';
 import { useMediaFolderIssue } from '@/media/useMediaFolder';
 import { MediaFolderNotice } from '@/components/media/MediaFolderNotice';
@@ -93,6 +103,23 @@ import { MediaFolderNotice } from '@/components/media/MediaFolderNotice';
 const OTHER_FILE = '__other__';
 
 const ASPECT_RATIOS: Record<MediaPreviewAspect, string> = { '16:9': '16/9', '16:10': '16/10', '4:3': '4/3' };
+
+/** The viewer's overview: the whole file, letterboxed, as no screen frames it. */
+const ORIGINAL_FRAME = defaultFrame();
+
+/** How tall the viewer's picture may be (vh); remembered on this device. Off keeps the transport. */
+const VIEWER_SIZES = { off: 0, s: 22, m: 36, l: 52 } as const;
+type ViewerSize = keyof typeof VIEWER_SIZES;
+const VIEWER_SIZE_KEY = 'presenter_media_viewer_size';
+const VIEWER_SIZE_LABEL = { off: 'viewerOff', s: 'viewerS', m: 'viewerM', l: 'viewerL' } as const;
+const storedViewerSize = (): ViewerSize => {
+  try {
+    const stored = localStorage.getItem(VIEWER_SIZE_KEY);
+    return stored && stored in VIEWER_SIZES ? (stored as ViewerSize) : 'm';
+  } catch {
+    return 'm';
+  }
+};
 
 const ColorCard = ({ item, aspectRatio }: { item: ShowItem; aspectRatio: string }) => {
   const { LL } = useI18nContext();
@@ -118,6 +145,7 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
   const M = LL.MEDIA_ITEM;
   const T = LL.TRANSPORT;
   const l = useMediaLabels();
+  const frameSummary = useFrameSummary();
   const dispatch = useAppDispatch();
   const { currentShow } = useGetShow();
   const { mediaPreviewAspect, hideTransitionMode, hideTransitionDuration } = useGetSettings(
@@ -137,6 +165,9 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
   const playback = usePlaybacks().find((p) => p.key === key && p.endsAt === undefined);
 
   const [screenTab, setScreenTab] = useState<string | undefined>(undefined);
+  const [viewerSize, setViewerSize] = useState(storedViewerSize);
+  // The file's own shape, so the overview is not letterboxed into the screen's.
+  const [clipSize, setClipSize] = useState<{ w: number; h: number }>();
   const [framing, setFraming] = useState<string | undefined>(undefined);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [volumeDraft, setVolumeDraft] = useState<number | null>(null);
@@ -169,9 +200,10 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
   const clock = hasClock(version);
   const label = mediaItemLabel(item);
 
-  // The screen whose framing the viewer shows: the chosen one, else the first assignment.
-  const assignment = version.assignments.find((a) => a.role === screenTab) ?? version.assignments[0];
-  const source = version.sources.find((s) => s.id === assignment?.sourceId) ?? version.sources[0];
+  // The viewer shows the file as it is — the overview — and one screen's framing only when picked.
+  const viewed = version.assignments.find((a) => a.role === screenTab);
+  const source = version.sources.find((s) => s.id === (viewed ?? version.assignments[0])?.sourceId) ?? version.sources[0];
+  const viewFrame = viewed?.frame ?? ORIGINAL_FRAME;
   const previewSource = source ? { ...source, path: resolveMediaUrl(source.path) || source.path } : undefined;
   const packet: CuePacket = playback
     ? { cue: playback.cue, transport: playback.transport, at: playback.at }
@@ -222,36 +254,55 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
   const shownOn = version.assignments.filter((a) => a.sourceId !== null).map((a) => screenName(a.role));
   const slideOf = (now?: CueTransport) => (playback && now && isSlideshow ? slideAt(playback.cue, now.time).index : undefined);
 
+  const chooseViewerSize = (size: ViewerSize) => {
+    setViewerSize(size);
+    try {
+      localStorage.setItem(VIEWER_SIZE_KEY, size);
+    } catch {
+      /* not remembered */
+    }
+  };
+
   // ── Viewer ──
-  const picture = (
-    <Box sx={{ position: 'relative', aspectRatio, maxHeight: '52vh', mx: 'auto', width: '100%' }}>
-      {isSlideshow && assignment ? (
-        <SlideshowSource packet={packet} frame={assignment.frame} />
+  // The overview takes the file's shape (a 32:9 clip is a wide strip), a screen's framing the
+  // screen's. The width follows the height limit, so the shape holds at every size.
+  const pictureAspect = !viewed && !isSlideshow && clipSize ? clipSize.w / clipSize.h : aspectRatio;
+  const picture = viewerSize !== 'off' && (
+    <Box
+      sx={{
+        position: 'relative',
+        aspectRatio: pictureAspect,
+        mx: 'auto',
+        width: `min(100%, calc(${VIEWER_SIZES[viewerSize]}vh * ${pictureAspect}))`,
+      }}
+    >
+      {isSlideshow ? (
+        <SlideshowSource packet={packet} frame={viewFrame} />
       ) : (
-        previewSource &&
-        assignment && (
+        previewSource && (
           <CueSource
             key={`${packet.transport.session}/${previewSource.id}`}
             packet={packet}
             source={previewSource}
-            frame={assignment.frame}
+            frame={viewFrame}
+            onSize={(w, h) => setClipSize((size) => (size?.w === w && size.h === h ? size : { w, h }))}
           />
         )
       )}
-      {/* Screens the viewer can show the framing of */}
-      {version.assignments.length > 1 && (
-        <Stack direction="row" spacing={0.5} sx={{ position: 'absolute', left: 8, bottom: 8, flexWrap: 'wrap' }}>
-          {version.assignments.map((a) => (
+      {/* The original, or one screen's framing */}
+      {version.assignments.length > 0 && (
+        <Stack direction="row" spacing={0.5} useFlexGap sx={{ position: 'absolute', left: 8, bottom: 8, right: 8, flexWrap: 'wrap' }}>
+          {[undefined, ...version.assignments.map((a) => a.role)].map((role) => (
             <Chip
-              key={a.role}
+              key={role ?? 'original'}
               size="small"
-              label={screenName(a.role)}
-              onClick={() => setScreenTab(a.role)}
+              label={role ? screenName(role) : l('original')}
+              onClick={() => setScreenTab(role)}
               sx={{
                 height: 22,
                 fontSize: 11,
                 color: '#fff',
-                bgcolor: a.role === assignment?.role ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.55)',
+                bgcolor: role === viewed?.role ? 'rgba(255,255,255,0.28)' : 'rgba(0,0,0,0.55)',
                 backdropFilter: 'blur(4px)',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.35)' },
               }}
@@ -453,49 +504,45 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
               )}
             </InspectorRow>
             {isVideo && (
-              <>
-                <InspectorRow label={M.AUTOPLAY()}>
-                  <Switch
+              <OptionList>
+                <OptionSwitch
+                  label={M.AUTOPLAY()}
+                  description={M.AUTOPLAY_HINT()}
+                  checked={item.mediaAutoplay !== false}
+                  onChange={(mediaAutoplay) => dispatch(updateShowItem({ index: itemIndex, item: { mediaAutoplay } }))}
+                />
+                <OptionSwitch
+                  label={M.SOUND_HERE()}
+                  description={M.SOUND_HERE_HINT()}
+                  checked={!!version.audioEnabled}
+                  onChange={(audioEnabled) =>
+                    saveVersion({
+                      ...version,
+                      audioEnabled,
+                      audioSourceId: version.audioSourceId ?? version.sources.find((s) => s.type === 'video')?.id,
+                    })
+                  }
+                >
+                  <VolumeIcon fontSize="small" color="action" />
+                  <Slider
                     size="small"
-                    checked={item.mediaAutoplay !== false}
-                    onChange={(e) => dispatch(updateShowItem({ index: itemIndex, item: { mediaAutoplay: e.target.checked } }))}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={volumeDraft ?? version.volume ?? 1}
+                    aria-label={LL.AUDIO.VOLUME()}
+                    onChange={(_, v) => setVolumeDraft(v as number)}
+                    onChangeCommitted={(_, v) => {
+                      setVolumeDraft(null);
+                      saveVersion({ ...version, volume: v as number });
+                    }}
+                    sx={{ flex: '1 1 140px', maxWidth: 240, mx: 1 }}
                   />
-                </InspectorRow>
-                <InspectorRow label={M.SOUND_HERE()}>
-                  <Switch
-                    size="small"
-                    checked={!!version.audioEnabled}
-                    onChange={(e) =>
-                      saveVersion({
-                        ...version,
-                        audioEnabled: e.target.checked,
-                        audioSourceId: version.audioSourceId ?? version.sources.find((s) => s.type === 'video')?.id,
-                      })
-                    }
-                  />
-                  {version.audioEnabled && (
-                    <>
-                      <Slider
-                        size="small"
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        value={volumeDraft ?? version.volume ?? 1}
-                        aria-label={LL.AUDIO.VOLUME()}
-                        onChange={(_, v) => setVolumeDraft(v as number)}
-                        onChangeCommitted={(_, v) => {
-                          setVolumeDraft(null);
-                          saveVersion({ ...version, volume: v as number });
-                        }}
-                        sx={{ flex: '1 1 140px', maxWidth: 240, mx: 1 }}
-                      />
-                      <Typography sx={{ fontSize: 12.5, fontFamily: 'monospace', minWidth: 40 }}>
-                        {Math.round((volumeDraft ?? version.volume ?? 1) * 100)}%
-                      </Typography>
-                    </>
-                  )}
-                </InspectorRow>
-              </>
+                  <Typography sx={{ fontSize: 12.5, fontFamily: 'monospace', minWidth: 40 }}>
+                    {Math.round((volumeDraft ?? version.volume ?? 1) * 100)}%
+                  </Typography>
+                </OptionSwitch>
+              </OptionList>
             )}
           </InspectorSection>
 
@@ -512,16 +559,16 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
 
           {/* ── Screens ── */}
           <InspectorSection id="screens" title={T.SCREENS()} summary={shownOn.join(' · ') || M.NO_SCREENS_HINT()}>
+            {/* "All screens" is the default; picking screens turns it into a filter. */}
             <InspectorRow label={M.SHOW_ON()} align="start">
-              {(groups.length === 0 || hasScreen(ALL_SCREENS)) && (
-                <Chip
-                  size="small"
-                  label={M.ALL_SCREENS()}
-                  color={hasScreen(ALL_SCREENS) ? 'primary' : 'default'}
-                  variant={hasScreen(ALL_SCREENS) ? 'filled' : 'outlined'}
-                  onClick={() => saveVersion(toggleScreen(version, ALL_SCREENS, !hasScreen(ALL_SCREENS)))}
-                />
-              )}
+              <Chip
+                size="small"
+                label={M.ALL_SCREENS()}
+                color={hasScreen(ALL_SCREENS) ? 'primary' : 'default'}
+                variant={hasScreen(ALL_SCREENS) ? 'filled' : 'outlined'}
+                onClick={() => saveVersion(toggleScreen(version, ALL_SCREENS, true))}
+              />
+              {(screenSets.length > 0 || groups.length > 0) && <Divider orientation="vertical" flexItem sx={{ mx: 0.25 }} />}
               {screenSets.map((set) => {
                 const members = groups.filter((group) => set.screenGroupIds.includes(group.id));
                 if (members.length === 0) return null;
@@ -552,69 +599,117 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
                   />
                 );
               })}
-              {version.assignments.length === 0 && (
-                <Typography variant="caption" sx={{ color: 'warning.main', width: '100%' }}>
-                  {M.NO_SCREENS_HINT()}
-                </Typography>
-              )}
-            </InspectorRow>
-            {/* One row per screen: which file, how it fills the screen, crop and place. */}
-            {version.assignments.map((a) => (
-              <InspectorRow key={a.role} label={screenName(a.role)}>
-                {!isSlideshow && (
-                  <Tooltip title={M.OTHER_FILE_HINT()} placement="top">
-                    <Select
-                      size="small"
-                      value={a.sourceId ?? ''}
-                      aria-label={M.SCREEN_FILE()}
-                      onChange={(e) => {
-                        if (e.target.value === OTHER_FILE) setPickingFor(a.role);
-                        else setScreenSource(a.role, e.target.value);
-                      }}
-                      sx={{ minWidth: 140, maxWidth: 220, height: 32 }}
-                    >
-                      {version.sources.map((s) => (
-                        <MenuItem key={s.id} value={s.id}>
-                          {s.name}
-                        </MenuItem>
-                      ))}
-                      <MenuItem value={OTHER_FILE}>{M.OTHER_FILE()}</MenuItem>
-                    </Select>
-                  </Tooltip>
-                )}
-                <Select
-                  size="small"
-                  value={a.frame.fit}
-                  onChange={(e) => setFrame(a.role, { ...a.frame, fit: e.target.value as MediaFrame['fit'] })}
-                  sx={{ minWidth: 120, height: 32 }}
-                >
-                  {(['cover', 'contain', 'fill'] as const).map((fit) => (
-                    <MenuItem key={fit} value={fit}>
-                      {l(fit)}
-                    </MenuItem>
-                  ))}
-                </Select>
-                <Button
-                  size="small"
-                  color="inherit"
-                  startIcon={<FrameIcon />}
-                  onClick={() => setFraming(a.role)}
-                  sx={{ textTransform: 'none' }}
-                >
-                  {M.FRAME()}
-                </Button>
-                {a.role !== assignment?.role && version.assignments.length > 1 && (
-                  <Button
+              {/* Screens still assigned but no longer offered above — a deleted or disabled group.
+                  Without a chip here they could not be taken off. */}
+              {version.assignments
+                .filter((a) => a.role !== ALL_SCREENS && !groups.some((group) => screenRole(group.id) === a.role))
+                .map((a) => (
+                  <Chip
+                    key={a.role}
                     size="small"
-                    color="inherit"
-                    onClick={() => setScreenTab(a.role)}
-                    sx={{ textTransform: 'none', color: 'text.secondary' }}
-                  >
-                    {T.VIEWING()}
-                  </Button>
-                )}
+                    label={screenName(a.role)}
+                    color="warning"
+                    variant="outlined"
+                    onDelete={() => saveVersion(toggleScreen(version, a.role, false))}
+                  />
+                ))}
+              <Typography
+                variant="caption"
+                sx={{ color: version.assignments.length === 0 ? 'warning.main' : 'text.secondary', width: '100%' }}
+              >
+                {version.assignments.length === 0
+                  ? M.NO_SCREENS_HINT()
+                  : hasScreen(ALL_SCREENS)
+                    ? l('allScreensHint')
+                    : l('pickedScreensHint')}
+              </Typography>
+            </InspectorRow>
+            {/* One card per screen: where the picture sits, which file, how it fills, crop and place.
+                Clicking the name shows that screen in the viewer. */}
+            {version.assignments.length > 0 && (
+              <InspectorRow label={M.FRAMING()} align="start">
+                <Stack spacing={0.75} sx={{ width: '100%' }}>
+                  {version.assignments.map((a) => {
+                    const viewing = a.role === viewed?.role;
+                    return (
+                      <Stack
+                        key={a.role}
+                        direction="row"
+                        spacing={1.25}
+                        useFlexGap
+                        sx={(theme) => ({
+                          alignItems: 'center',
+                          flexWrap: 'wrap',
+                          p: 0.75,
+                          borderRadius: 1,
+                          border: 1,
+                          borderColor: viewing ? 'primary.main' : 'divider',
+                          bgcolor: viewing ? alpha(theme.palette.primary.main, 0.06) : 'transparent',
+                        })}
+                      >
+                        <Tooltip title={M.FRAME()}>
+                          <ButtonBase aria-label={M.FRAME()} onClick={() => setFraming(a.role)} sx={{ borderRadius: 0.5 }}>
+                            <FrameMap frame={a.frame} />
+                          </ButtonBase>
+                        </Tooltip>
+                        <ButtonBase
+                          title={viewing ? l('showOriginal') : l('showInViewer')}
+                          onClick={() => setScreenTab(viewing ? undefined : a.role)}
+                          sx={{ flex: '1 1 140px', minWidth: 0, flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}
+                        >
+                          <Typography noWrap sx={{ fontSize: 13, fontWeight: 600, maxWidth: '100%' }}>
+                            {screenName(a.role)}
+                          </Typography>
+                          <Typography noWrap sx={{ fontSize: 11.5, color: 'text.secondary', maxWidth: '100%' }}>
+                            {frameSummary(a.frame)}
+                          </Typography>
+                        </ButtonBase>
+                        {!isSlideshow && (
+                          <Tooltip title={M.OTHER_FILE_HINT()} placement="top">
+                            <Select
+                              size="small"
+                              value={a.sourceId ?? ''}
+                              aria-label={M.SCREEN_FILE()}
+                              onChange={(e) => {
+                                if (e.target.value === OTHER_FILE) setPickingFor(a.role);
+                                else setScreenSource(a.role, e.target.value);
+                              }}
+                              sx={{ minWidth: 130, maxWidth: 200, height: 30, fontSize: 13 }}
+                            >
+                              {version.sources.map((s) => (
+                                <MenuItem key={s.id} value={s.id}>
+                                  {s.name}
+                                </MenuItem>
+                              ))}
+                              <MenuItem value={OTHER_FILE}>{M.OTHER_FILE()}</MenuItem>
+                            </Select>
+                          </Tooltip>
+                        )}
+                        <Segmented
+                          size="small"
+                          value={a.frame.fit}
+                          options={(['cover', 'contain', 'fill'] as const).map((fit) => ({
+                            value: fit,
+                            label: <span title={l(fit)}>{l(`${fit}Short`)}</span>,
+                          }))}
+                          onChange={(fit) => setFrame(a.role, { ...a.frame, fit })}
+                        />
+                        <Tooltip title={M.FRAME()}>
+                          <IconButton
+                            size="small"
+                            aria-label={M.FRAME()}
+                            onClick={() => setFraming(a.role)}
+                            sx={{ border: 1, borderColor: 'divider', borderRadius: 1, width: 30, height: 30 }}
+                          >
+                            <FrameIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
               </InspectorRow>
-            ))}
+            )}
           </InspectorSection>
 
           {/* ── Timeline and the song it follows ── */}
@@ -653,6 +748,7 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
           {framingAssignment && framingSource && (
             <FrameEditor
               value={framingAssignment.frame}
+              screenName={screenName(framingAssignment.role)}
               source={framingSource}
               packet={packet}
               onClose={() => setFraming(undefined)}
@@ -669,19 +765,47 @@ const ControlMedia = ({ item, index: itemIndex }: { item: ShowItem; index: numbe
       <ViewerFrame
         lamp={lamp}
         // The card header names the entry; the viewer names the screen whose framing it shows.
-        title={assignment ? screenName(assignment.role) : ''}
+        title={viewed ? screenName(viewed.role) : l('original')}
         headerRight={
-          isSlideshow && playback ? (
-            <LiveTime playback={playback} fast>
-              {(now) =>
-                slideOf(now) !== undefined && (
-                  <Typography sx={{ fontFamily: 'monospace', fontSize: 11.5, color: 'rgba(233,236,239,0.7)' }}>
-                    {slideOf(now)! + 1} / {version.sources.length}
-                  </Typography>
-                )
-              }
-            </LiveTime>
-          ) : undefined
+          <>
+            {isSlideshow && playback && (
+              <LiveTime playback={playback} fast>
+                {(now) =>
+                  slideOf(now) !== undefined && (
+                    <Typography sx={{ fontFamily: 'monospace', fontSize: 11.5, color: 'rgba(233,236,239,0.7)' }}>
+                      {slideOf(now)! + 1} / {version.sources.length}
+                    </Typography>
+                  )
+                }
+              </LiveTime>
+            )}
+            <Stack
+              direction="row"
+              sx={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 0.75, overflow: 'hidden', flexShrink: 0 }}
+            >
+              {(Object.keys(VIEWER_SIZES) as ViewerSize[]).map((size) => (
+                <Tooltip key={size} title={l(VIEWER_SIZE_LABEL[size])}>
+                  <ButtonBase
+                    aria-label={l(VIEWER_SIZE_LABEL[size])}
+                    aria-pressed={size === viewerSize}
+                    onClick={() => chooseViewerSize(size)}
+                    sx={{
+                      minWidth: 24,
+                      height: 22,
+                      px: 0.6,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: size === viewerSize ? '#fff' : 'rgba(233,236,239,0.5)',
+                      bgcolor: size === viewerSize ? 'rgba(255,255,255,0.16)' : 'transparent',
+                      '&:hover': { bgcolor: 'rgba(255,255,255,0.1)' },
+                    }}
+                  >
+                    {size === 'off' ? <HiddenIcon sx={{ fontSize: 14 }} /> : size.toUpperCase()}
+                  </ButtonBase>
+                </Tooltip>
+              ))}
+            </Stack>
+          </>
         }
         scrubber={
           clock ? (

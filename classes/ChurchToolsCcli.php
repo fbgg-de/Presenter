@@ -314,9 +314,12 @@ class ChurchToolsCcli
         }
 
         $match = $byCcli ?? $byName;
-        if (is_array($match) && !empty($match['arrangements'][0]['id'])) {
+        $arrs  = is_array($match) ? ($match['arrangements'] ?? []) : [];
+        // The song's default arrangement, not just the first one listed.
+        $arr   = array_find($arrs, fn ($a) => !empty($a['isDefault'])) ?? $arrs[0] ?? null;
+        if (!empty($arr['id'])) {
             $categoryId = $match['category']['id'] ?? $match['categoryId'] ?? $categoryId;
-            return (int)$match['arrangements'][0]['id'];
+            return (int)$arr['id'];
         }
         return null;
     }
@@ -367,23 +370,24 @@ class ChurchToolsCcli
             return ['ok' => false, 'synced' => 0, 'reason' => 'unresolved'];
         }
 
-        $ok = self::syncAgendaSongs($eventId, $arrangementIds, $cfg);
-        return ['ok' => $ok, 'synced' => count($arrangementIds)];
+        $fail = self::syncAgendaSongs($eventId, $arrangementIds, $cfg);
+        return ['ok' => $fail === null, 'synced' => count($arrangementIds)] + ($fail !== null ? ['reason' => $fail] : []);
     }
 
     /**
      * Reconcile an event's agenda so its song items match the given arrangements (in show order),
-     * idempotently (a no-op when already in sync). Uses item-level POST/DELETE — the whole-agenda
+     * idempotently (a no-op when already in sync). Uses item-level operations — the whole-agenda
      * PUT is forbidden for agendas that contain non-song items. A missing agenda is created first
      * (PUT create is allowed). Non-song items (headers/text) are left untouched.
      *
      * @param array{url:string,token:string} $cfg
+     * @return string|null why it failed (`locked`, `no_calendar`, `agenda_create_failed`, `items_failed`), null when in sync
      */
-    private static function syncAgendaSongs(int $eventId, array $arrangementIds, array $cfg): bool
+    private static function syncAgendaSongs(int $eventId, array $arrangementIds, array $cfg): ?string
     {
         require_once(__DIR__ . '/Logging.php');
 
-        $agenda        = ChurchToolsClient::get("events/{$eventId}/agenda", ['include' => 'items'], $cfg);
+        $agenda        = ChurchToolsClient::get("events/{$eventId}/agenda", [], $cfg);
         $hasAgenda     = isset($agenda['data']['id']);
         $existingItems = $agenda['data']['items'] ?? [];
 
@@ -391,65 +395,81 @@ class ChurchToolsCcli
         // permitted, even though a full PUT *update* of an existing agenda usually isn't.
         if (!$hasAgenda) {
             $event      = ChurchToolsClient::get("events/{$eventId}", [], $cfg);
-            $calendarId = $event['data']['calendar']['id'] ?? null;
+            // `calendar` is a domain object: its id is the string `domainIdentifier`, not `id`.
+            $calendar   = $event['data']['calendar'] ?? [];
+            $calendarId = $calendar['domainIdentifier'] ?? $calendar['id'] ?? null;
             if ($calendarId === null) {
                 Logging::debug("eventSync eventId={$eventId} no calendarId — cannot create agenda");
-                return false;
+                return 'no_calendar';
             }
             $created = ChurchToolsClient::put("events/{$eventId}/agenda", [], ['calendarId' => (int)$calendarId], $cfg);
             if (!isset($created['data']['id'])) {
                 Logging::debug("eventSync eventId={$eventId} agenda create FAILED resp=" . substr((string)json_encode($created), 0, 300));
-                return false;
+                return 'agenda_create_failed';
             }
             $existingItems = [];
+        } elseif (!empty($agenda['data']['isLocked'])) {
+            // A locked agenda refuses item changes; trying anyway could leave it half-changed.
+            Logging::debug("eventSync eventId={$eventId} agenda is locked — left unchanged");
+            return 'locked';
         }
 
         $desired = array_values(array_map('intval', $arrangementIds));
 
-        // Existing song items: their arrangement ids (in order) and item ids (to remove).
-        $currentSongOrder = [];
-        $songItemIds      = [];
-        foreach ($existingItems as $it) {
-            if (($it['type'] ?? '') === 'song') {
-                $aid = $it['song']['arrangementId'] ?? null;
-                if ($aid) {
-                    $currentSongOrder[] = (int)$aid;
-                }
-                if (!empty($it['id'])) {
-                    $songItemIds[] = $it['id'];
-                }
-            }
-        }
-        if ($currentSongOrder === $desired) {
+        // The agenda's song slots in order, including template slots that have no song yet.
+        $slots   = array_values(array_filter($existingItems, fn ($it) => ($it['type'] ?? '') === 'song' && !empty($it['id'])));
+        $current = array_map(fn ($it) => (int)($it['song']['arrangementId'] ?? 0), $slots);
+        if ($current === $desired) {
             Logging::debug("eventSync eventId={$eventId} already in sync (" . count($desired) . ' songs)');
-            return true;
+            return null;
         }
 
-        // Reconcile with item-level operations — the whole-agenda PUT is FORBIDDEN for agendas
-        // that contain non-song items (CT "error.forbidden.update"), but adding/removing single
-        // song items is permitted. Non-song items (headers/text) are left untouched; the songs
-        // end up in the show's order (appended after any non-song items).
-        $removed = 0;
-        foreach ($songItemIds as $itemId) {
-            ChurchToolsClient::delete("events/{$eventId}/agenda/items/{$itemId}", [], $cfg);
-            $removed++;
-        }
-        $added    = 0;
+        // Fill the song slots in order, so the songs stay where the agenda places them (between its
+        // headers and texts) and each slot keeps its duration, note and responsible. Songs beyond
+        // the slots go right after the last song; slots beyond the songs are removed.
+        $failed   = 0;
         $lastFail = null;
-        foreach ($desired as $arrId) {
-            $resp = ChurchToolsClient::post("events/{$eventId}/agenda/items", [], ['type' => 'song', 'arrangementId' => $arrId], $cfg);
-            if (isset($resp['data']['id'])) {
-                $added++;
+        $lastId   = null;
+        foreach ($desired as $i => $arrId) {
+            $slot = $slots[$i] ?? null;
+            if ($slot !== null) {
+                $lastId = $slot['id'];
+                if ($current[$i] === $arrId) {
+                    continue;
+                }
+                // PUT replaces the item, so send the slot's own details back with the new song.
+                $resp = ChurchToolsClient::put("events/{$eventId}/agenda/items/{$slot['id']}", [], [
+                    'type'              => 'song',
+                    'arrangementId'     => $arrId,
+                    'duration'          => (int)($slot['duration'] ?? 0),
+                    'note'              => $slot['note'] ?? null,
+                    'responsible'       => $slot['responsible']['text'] ?? null,
+                    'serviceGroupNotes' => $slot['serviceGroupNotes'] ?? [],
+                ], $cfg);
             } else {
+                $resp  = ChurchToolsClient::post("events/{$eventId}/agenda/items", [], ['type' => 'song', 'arrangementId' => $arrId], $cfg);
+                $newId = $resp['data']['id'] ?? null;
+                // A new item lands at the end of the agenda — move it after the last song.
+                if ($newId !== null && $lastId !== null) {
+                    $resp = ChurchToolsClient::put("events/{$eventId}/agenda/items/{$newId}", ['after_id' => $lastId], ['type' => 'song', 'arrangementId' => $arrId], $cfg);
+                }
+                $lastId = $newId ?? $lastId;
+            }
+            if (!isset($resp['data']['id'])) {
+                $failed++;
                 $lastFail = $resp;
             }
         }
-        $ok = $added === count($desired);
+        $removed = 0;
+        foreach (array_slice($slots, count($desired)) as $slot) {
+            ChurchToolsClient::delete("events/{$eventId}/agenda/items/{$slot['id']}", [], $cfg);
+            $removed++;
+        }
         Logging::debug("eventSync eventId={$eventId} hadAgenda=" . ($hasAgenda ? 'yes' : 'no')
-            . ' was=[' . implode(',', $currentSongOrder) . '] now=[' . implode(',', $desired) . ']'
-            . " removed={$removed} added={$added}/" . count($desired) . ' ok=' . ($ok ? 'yes' : 'no')
-            . ($ok ? '' : ' resp=' . substr((string)json_encode($lastFail), 0, 300)));
-        return $ok;
+            . ' was=[' . implode(',', $current) . '] now=[' . implode(',', $desired) . ']'
+            . " removed={$removed} failed={$failed}"
+            . ($failed === 0 ? '' : ' resp=' . substr((string)json_encode($lastFail), 0, 300)));
+        return $failed === 0 ? null : 'items_failed';
     }
 
     /** Decode a legacy response's `data` payload (often a JSON string, sometimes nested under data.data). */

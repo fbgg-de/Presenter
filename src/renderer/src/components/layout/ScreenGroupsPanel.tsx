@@ -25,7 +25,6 @@ import {
   MenuItem,
   Paper,
   Stack,
-  Switch,
   TextField,
   Tooltip,
   Typography,
@@ -33,7 +32,7 @@ import {
 import { alpha } from '@mui/material/styles';
 import { ContentCopy as DuplicateIcon, DeleteOutlined as DeleteIcon, DragIndicator as DragIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
-import { Segmented } from '@/components/media/Viewer';
+import { OptionSwitch, Segmented } from '@/components/media/Viewer';
 import type { RigWindow } from '@/hooks/usePresentationWindows';
 import {
   useCreateScreenGroupMutation,
@@ -368,23 +367,15 @@ export const ScreenGroupsPanel = ({ windows, onAssign }: ScreenGroupsPanelProps)
 
                     <Stack sx={{ borderTop: 1, borderColor: 'divider', pt: 0.5 }}>
                       {LAYER_KEYS.map((key) => (
-                        <Stack key={key} direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {layerLabel(key)}
-                          </Typography>
-                          <Switch
-                            size="small"
-                            checked={data.layers[key]}
-                            onChange={(e) =>
-                              void run(
-                                updateGroup({
-                                  id: group.id,
-                                  data: { ...data, layers: { ...data.layers, [key]: e.target.checked } },
-                                }).unwrap(),
-                              )
-                            }
-                          />
-                        </Stack>
+                        <OptionSwitch
+                          key={key}
+                          dense
+                          label={layerLabel(key)}
+                          checked={data.layers[key]}
+                          onChange={(on) =>
+                            void run(updateGroup({ id: group.id, data: { ...data, layers: { ...data.layers, [key]: on } } }).unwrap())
+                          }
+                        />
                       ))}
                     </Stack>
 
@@ -466,20 +457,13 @@ export const ScreenGroupsPanel = ({ windows, onAssign }: ScreenGroupsPanelProps)
                         </Stack>
                       </Stack>
 
-                      <Tooltip title={G.TRANSPARENT_HINT()}>
-                        <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-                            {G.TRANSPARENT()}
-                          </Typography>
-                          <Switch
-                            size="small"
-                            checked={data.transparent}
-                            onChange={(e) =>
-                              void run(updateGroup({ id: group.id, data: { ...data, transparent: e.target.checked } }).unwrap())
-                            }
-                          />
-                        </Stack>
-                      </Tooltip>
+                      <OptionSwitch
+                        dense
+                        label={G.TRANSPARENT()}
+                        hint={G.TRANSPARENT_HINT()}
+                        checked={data.transparent}
+                        onChange={(transparent) => void run(updateGroup({ id: group.id, data: { ...data, transparent } }).unwrap())}
+                      />
                     </Stack>
 
                     {data.kind === 'stage' && data.stage && (

@@ -32,7 +32,7 @@ import { useRemoteActionFilter } from '@/hooks/useRemoteActionFilter';
 import { loadShowSongs } from '@/store/songsSlice';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import { useBands } from '@/hooks/useBands';
-import { Song } from '@/song';
+import { Song, readerLines, songLanguageOrder } from '@/song';
 import type { Show, ShowItem } from '@/api/shows.api';
 import {
   useGetPresentationSettings,
@@ -132,6 +132,8 @@ export const MusicianPage = () => {
   const [areaMappingOpen, setAreaMappingOpen] = useState(false);
   const [annotateMode, setAnnotateMode] = useState(false);
   const [pdfOverrideFilename, setPdfOverrideFilename] = useState<string | null>(null);
+  /** The plain lyrics picked over the song's PDFs in the footer. Per visit, like the PDF pick. */
+  const [lyricsChosen, setLyricsChosen] = useState(false);
   const [midiOpen, setMidiOpen] = useState(false);
   const [syncMode, setSyncMode] = useState<SyncMode>(syncModeSetting);
   const [orderEditorOpen, setOrderEditorOpen] = useState(false);
@@ -206,6 +208,12 @@ export const MusicianPage = () => {
   const pendingWsStateRef = useRef<{ activeItemIndex?: number; activeBlockIndex?: number } | null>(null);
   // Track operator's current song number from WS so we only apply block indicators when songs match.
   const [operatorWsSongNumber, setOperatorWsSongNumber] = useState<number | undefined>(undefined);
+  /**
+   * The operator's lyric line, keyed `item:block` so it never marks a line in another block.
+   * `stepped` once they have moved off the first line there — an operator who never steps lines
+   * sits on line 0 of every block, and marking it would claim a position nobody chose.
+   */
+  const [operatorLine, setOperatorLine] = useState<{ at: string; line: number; stepped: boolean } | null>(null);
   // Ref to current musician's active item for use inside WS callback (avoids stale closure).
   const activeItemIndexRef = useRef(persistedLastItemIndex);
   const showItemsRef = useRef<ShowItem[]>([]);
@@ -358,6 +366,11 @@ export const MusicianPage = () => {
           matchesSong && typeof state.activeBlockIndex === 'number' ? state.activeBlockIndex : operatorBlockIndexRef.current;
         if (nextItemIndex !== operatorItemIndexRef.current || nextBlockIndex !== operatorBlockIndexRef.current) {
           dispatch(setPresentationItemAndBlock({ itemIndex: nextItemIndex, blockIndex: nextBlockIndex }));
+        }
+        if (matchesSong && typeof state.activeLineIndex === 'number') {
+          const at = `${nextItemIndex}:${nextBlockIndex}`;
+          const line = state.activeLineIndex;
+          setOperatorLine((prev) => ({ at, line, stepped: line > 0 || (prev?.at === at && prev.stepped) }));
         }
       },
       [dispatch, syncMode],
@@ -535,11 +548,17 @@ export const MusicianPage = () => {
   // instead of the user having to look the song up elsewhere to tell verses apart.
   const activeSongBlockLines = useMemo(() => {
     const map: Record<string, string[]> = {};
+    // The main language only, without its tags — a preview to tell blocks apart.
+    const order = activeSong ? songLanguageOrder(Object.values(activeSong.blocks).flat(), activeSong.languages) : [];
+    const main = (lines: string[]) =>
+      readerLines(lines, order)
+        .filter((line) => !line.muted)
+        .map((line) => line.text);
     for (const block of lyricsBlocks) {
-      if (!map[block.name]) map[block.name] = block.lines ?? [];
+      if (!map[block.name]) map[block.name] = main(block.lines ?? []);
     }
     for (const [name, lines] of Object.entries(activeSong?.blocks ?? {})) {
-      if (!map[name]) map[name] = lines;
+      if (!map[name]) map[name] = main(lines);
     }
     return map;
   }, [lyricsBlocks, activeSong]);
@@ -931,18 +950,18 @@ export const MusicianPage = () => {
   // instance and shares it with the RemoteControlDialog (a second one would double-fire).
   const keyboardRemote = useKeyboardRemote({ onAction: handleRemoteAction, enabled: true });
 
+  // Not a `setSidebarOpen(prev => …)` updater: React runs those during render, and the store
+  // write inside it updated MusicianApp mid-render ("Cannot update a component while rendering").
   const handleToggleSidebar = useCallback(() => {
-    setSidebarOpen((prev) => {
-      const next = !prev;
-      updateMusicianSetting('musicianSidebarOpen', next);
-      return next;
-    });
-  }, [updateMusicianSetting]);
+    setSidebarOpen(!sidebarOpen);
+    updateMusicianSetting('musicianSidebarOpen', !sidebarOpen);
+  }, [sidebarOpen, updateMusicianSetting]);
 
   // Reset annotate mode when the active item changes
   useEffect(() => {
     setAnnotateMode(false);
     setPdfOverrideFilename(null);
+    setLyricsChosen(false);
     // Reset CT context when song changes
     setCtSongId(null);
     setCtSongName('');
@@ -983,6 +1002,10 @@ export const MusicianPage = () => {
   }, [syncMode, operatorWsSongNumber, activeSongNumber]);
 
   const isSynced = (syncMode === 'operator' || syncMode === 'midi') && blockIndicator && operatorSongMatchesMusician;
+  const operatorLineHere =
+    isSynced && operatorLine?.stepped && operatorLine.at === `${operatorItemIndex}:${operatorActiveBlockIndex}`
+      ? operatorLine.line
+      : undefined;
 
   const showMismatchDetected =
     !!operatorWsShowTitle &&
@@ -1257,7 +1280,7 @@ export const MusicianPage = () => {
             onZoomFitWidth={pdfViewer.handleZoomFitWidth}
             annotateMode={annotateMode}
             onToggleAnnotate={() => setAnnotateMode((a) => !a)}
-            hasPdfs={hasPdfs}
+            hasPdfs={hasPdfs && !lyricsChosen}
             onRefetchAnnotations={() => annotationRefetchRef.current?.()}
             onRefreshContent={() => void handleRefreshContent()}
             autoRefresh={autoRefresh}
@@ -1267,10 +1290,8 @@ export const MusicianPage = () => {
             mixerAvailable={mixerAvailable}
             mixerOpen={mixerOpen}
             onToggleMixer={() => {
-              setMixerOpen((open) => {
-                if (!open) trackEvent('modal_opened', undefined, undefined, { modal: 'monitor_mixer' });
-                return !open;
-              });
+              if (!mixerOpen) trackEvent('modal_opened', undefined, undefined, { modal: 'monitor_mixer' });
+              setMixerOpen(!mixerOpen);
             }}
           />
 
@@ -1310,7 +1331,7 @@ export const MusicianPage = () => {
             >
               <CircularProgress />
             </Stack>
-          ) : isSongItem && hasPdfs ? (
+          ) : isSongItem && hasPdfs && !lyricsChosen ? (
             /* PDF view for songs with PDFs */
             <PdfView
               pdfUrl={pdfViewer.pdfUrl}
@@ -1332,6 +1353,10 @@ export const MusicianPage = () => {
               stableResolvedFilename={pdfViewer.stableResolvedFilename}
               availableFilenames={pdfViewer.availableFilenames}
               onSelectPdf={(f) => setPdfOverrideFilename(f)}
+              onShowLyrics={() => {
+                setAnnotateMode(false);
+                setLyricsChosen(true);
+              }}
               onOpenPdfModal={() => setPdfUploadOpen(true)}
               onZoomIn={pdfViewer.handleZoomIn}
               onZoomOut={pdfViewer.handleZoomOut}
@@ -1355,11 +1380,16 @@ export const MusicianPage = () => {
               lyricsBlocks={lyricsBlocks}
               isSynced={isSynced}
               operatorActiveBlockIndex={operatorActiveBlockIndex}
-              pageView={pdfViewer.pageView}
+              operatorLine={operatorLineHere}
               textSize={textSize}
               showFooter={showFooter}
               activeSong={activeSong}
               setPdfUploadOpen={setPdfUploadOpen}
+              pdfVersions={hasPdfs ? pdfViewer.availableFilenames : undefined}
+              onSelectPdf={(f) => {
+                setPdfOverrideFilename(f);
+                setLyricsChosen(false);
+              }}
             />
           ) : (
             /* Non-song items — placeholder */

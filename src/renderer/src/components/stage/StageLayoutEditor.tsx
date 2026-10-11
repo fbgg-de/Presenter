@@ -3,7 +3,8 @@
  * Stage group card in the screen groups board — nothing here is positioned by hand.
  */
 import type { ReactNode } from 'react';
-import { Box, ButtonBase, MenuItem, Select, Stack, Switch, Typography, Tooltip } from '@mui/material';
+import { Box, ButtonBase, MenuItem, Select, Stack, Typography } from '@mui/material';
+import { OptionSwitch } from '@/components/media/Viewer';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { STAGE_LAYOUT_KINDS, type StageLayoutKind, type StageLayoutSettings } from '@/screens/types';
 import { SectionLabel } from '@/components/operator/SectionLabel';
@@ -67,14 +68,14 @@ export const StageLayoutEditor = ({ value, onChange }: { value: StageLayoutSetti
    * out instead of removed, so the card keeps its height and the grid stays even.
    */
   const toggle = (label: string, key: 'roadmap' | 'next' | 'key' | 'clock' | 'mirror', used = true) => (
-    <Tooltip title={used ? '' : G.STAGE_NOT_IN_LAYOUT()}>
-      <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between', opacity: used ? 1 : 0.5 }}>
-        <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
-          {label}
-        </Typography>
-        <Switch size="small" disabled={!used} checked={value[key]} onChange={(e) => set({ [key]: e.target.checked })} />
-      </Stack>
-    </Tooltip>
+    <OptionSwitch
+      dense
+      label={label}
+      hint={used ? undefined : G.STAGE_NOT_IN_LAYOUT()}
+      disabled={!used}
+      checked={value[key]}
+      onChange={(on) => set({ [key]: on })}
+    />
   );
 
   return (
@@ -107,11 +108,14 @@ export const StageLayoutEditor = ({ value, onChange }: { value: StageLayoutSetti
           );
         })}
       </Box>
-      {toggle(G.STAGE_ROADMAP(), 'roadmap', value.layout === 'band')}
-      {toggle(G.STAGE_NEXT(), 'next', value.layout === 'band' || value.layout === 'speaker')}
-      {toggle(G.STAGE_KEY(), 'key', value.layout !== 'countdown')}
-      {toggle(G.STAGE_CLOCK(), 'clock', value.layout !== 'countdown')}
-      {toggle(G.STAGE_MIRROR(), 'mirror')}
+      {/* One list, spaced like the layer switches of the card above it. */}
+      <Box>
+        {toggle(G.STAGE_ROADMAP(), 'roadmap', value.layout === 'band')}
+        {toggle(G.STAGE_NEXT(), 'next', value.layout === 'band' || value.layout === 'speaker')}
+        {toggle(G.STAGE_KEY(), 'key', value.layout !== 'countdown')}
+        {toggle(G.STAGE_CLOCK(), 'clock', value.layout !== 'countdown')}
+        {toggle(G.STAGE_MIRROR(), 'mirror')}
+      </Box>
       <Stack direction="row" sx={{ alignItems: 'center', justifyContent: 'space-between' }}>
         <Typography variant="body2" sx={{ fontSize: '0.8rem' }}>
           {G.STAGE_TEXT_SIZE()}

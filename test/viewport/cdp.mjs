@@ -133,7 +133,7 @@ export async function launchBrowser({ headless = true, slowMo = 0 } = {}) {
 /** Poll the DevTools HTTP endpoint until it hands back a browser websocket URL. */
 async function waitForDevTools(port, stderr, timeout = 30000) {
   const started = Date.now();
-  let lastError = 'no response yet';
+  let lastError;
   for (;;) {
     try {
       const res = await fetch(`http://127.0.0.1:${port}/json/version`);

@@ -8,10 +8,10 @@
  * mode starts from something that already works rather than an empty box.
  */
 import { useMemo, useState } from 'react';
-import { Alert, Box, Chip, FormControlLabel, MenuItem, Select, Stack, Switch, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Chip, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { StageCue } from '@/stage/types';
-import { InspectorRow, Segmented } from '@/components/media/Viewer';
+import { InspectorRow, OptionSwitch, Segmented } from '@/components/media/Viewer';
 import { parseTimerInput } from './TimerAdjust';
 import {
   DURATION_PRESET_PATTERNS,
@@ -153,15 +153,15 @@ const ClockFormatControl = ({ format, onChange }: { format: ClockFormat; onChang
           ))}
           <MenuItem value="custom">{LL.STAGE.PRESET_CUSTOM()}</MenuItem>
         </Select>
-        {format.preset !== 'custom' && (
-          <FormControlLabel
-            control={
-              <Switch size="small" checked={!!format.seconds} onChange={(e) => onChange({ ...format, seconds: e.target.checked })} />
-            }
-            label={<Typography variant="caption">{LL.STAGE.SHOW_SECONDS()}</Typography>}
-          />
-        )}
       </Stack>
+      {format.preset !== 'custom' && (
+        <OptionSwitch
+          dense
+          label={LL.STAGE.SHOW_SECONDS()}
+          checked={!!format.seconds}
+          onChange={(seconds) => onChange({ ...format, seconds })}
+        />
+      )}
 
       {format.preset === 'custom' && (
         <Stack spacing={1}>

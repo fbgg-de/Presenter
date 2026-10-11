@@ -75,13 +75,14 @@ export const ViewMenu = () => {
   const settings = useGetSettings(
     'operatorMonitorWidth',
     'operatorSlideSize',
+    'operatorMonitorsOpen',
     'operatorSetListOpen',
     'operatorPreviewBeforeLive',
     'operatorSidePanelOpen',
     'operatorInspectorOpen',
     'operatorPreviewOpen',
   );
-  const { operatorMonitorWidth, operatorSlideSize, operatorSetListOpen, operatorPreviewBeforeLive } = settings;
+  const { operatorMonitorWidth, operatorSlideSize, operatorMonitorsOpen, operatorSetListOpen, operatorPreviewBeforeLive } = settings;
   const sidePanel = sidePanelState(settings);
   const updateSetting = useUpdateSetting();
   const setListShortcut = useShortcut('toggle_set_list');
@@ -118,6 +119,11 @@ export const ViewMenu = () => {
             onChange={(value) => updateSetting('operatorSlideSize', value)}
           />
           <Divider />
+          <ToggleRow
+            label={O.VIEW_PREVIEWS()}
+            checked={operatorMonitorsOpen !== false}
+            onChange={(checked) => updateSetting('operatorMonitorsOpen', checked)}
+          />
           <ToggleRow
             label={O.VIEW_SET_LIST()}
             shortcut={setListShortcut}

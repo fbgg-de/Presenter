@@ -142,6 +142,8 @@ const pdfAnnotationsApi = presenterApi.injectEndpoints({
         opacity?: number;
         /** Optional: update the JSON data payload (text content / font style) */
         data?: AnnotationData;
+        /** Optional: move to another page (the page editor carries annotations with the content). */
+        page?: number;
       }
     >({
       query: ({ songNumber, annotationId, ...body }) => ({
