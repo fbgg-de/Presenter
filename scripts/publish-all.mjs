@@ -58,7 +58,7 @@ function requestedTargets() {
 }
 
 /** Run a command, returning true on success. Output is inherited — a publish is a live log. */
-function run(label, command, args, env = {}) {
+function run(label, command, args, env = {}, shell = false) {
   console.log(`\n\x1b[1m━━ ${label} ━━\x1b[0m`);
 
   if (dryRun) {
@@ -66,7 +66,8 @@ function run(label, command, args, env = {}) {
     return true;
   }
 
-  const result = spawnSync(command, args, { cwd: repoRoot, stdio: 'inherit', env: { ...process.env, ...env } });
+  const result = spawnSync(command, args, { cwd: repoRoot, stdio: 'inherit', env: { ...process.env, ...env }, shell });
+  if (result.error) console.error(`  ${command}: ${result.error.message}`);
   return result.status === 0;
 }
 
@@ -96,8 +97,8 @@ const platforms = [
 
 // ── Shared renderer build ───────────────────────────────────────────────────
 if (platforms.some((p) => p.buildable)) {
-  const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  if (!run('build (shared by all platforms)', npm, ['run', 'build'])) {
+  // Through a shell: Node refuses to spawn npm.cmd directly since CVE-2024-27980 (EINVAL).
+  if (!run('build (shared by all platforms)', 'npm', ['run', 'build'], {}, true)) {
     console.error('\nBuild failed — nothing was published.');
     process.exit(1);
   }
