@@ -1,20 +1,19 @@
 <?php
 
 require_once(__DIR__ . '/RestController.php');
+require_once(__DIR__ . '/../classes/Logging.php');
 
 class Log extends RestController
 {
-    private static string $filename = __DIR__ . '/../error.log';
-
     public static function write($message): bool
     {
-        return file_put_contents(self::$filename, date('Y.m.d H:i:s - ') . $message . "\n", FILE_APPEND) !== false;
+        return Logging::append(date('Y.m.d H:i:s - ') . $message . "\n");
     }
 
     public static function read(): string
     {
-        if (file_exists(self::$filename)) {
-            return file_get_contents(self::$filename);
+        if (file_exists(Logging::file())) {
+            return file_get_contents(Logging::file());
         }
 
         return '';
@@ -47,7 +46,7 @@ class Log extends RestController
             $limit = $req->query->getAsInt('limit', 50);
             $severity = $req->query->get('severity', null, false);
 
-            if (!file_exists(self::$filename)) {
+            if (!file_exists(Logging::file())) {
                 $res->success([
                     'total' => 0,
                     'offset' => $offset,
@@ -56,7 +55,7 @@ class Log extends RestController
                 ]);
             }
 
-            $lines = file(self::$filename, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+            $lines = file(Logging::file(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
             if ($lines === false) {
                 $res->error(500, 'failed to read log file');
             }
@@ -197,17 +196,20 @@ class Log extends RestController
         $line = sprintf("[%s] [%s] [%s] [%s] %s
 ", date('Y.m.d H:i:s'), $severity, $location, $context, $message);
 
-        return file_put_contents(self::$filename, $line, FILE_APPEND) !== false;
+        return Logging::append($line);
     }
 
     protected function delete(Request &$req, Response &$res): never
     {
         $this->requireAdmin($res);
 
-        if (file_exists(self::$filename)) {
-            unlink(self::$filename);
+        foreach ([Logging::file(), Logging::rotatedFile()] as $file) {
+            if (file_exists($file)) {
+                unlink($file);
+            }
         }
 
         $res->success(['message' => 'log file cleared']);
+
     }
 }

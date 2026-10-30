@@ -380,6 +380,34 @@ $debugMode  = isset($_GET['debug']);
       user-select: none;
     }
     #debug-toggle:hover { color: rgba(255,255,255,0.5); }
+
+    /* ── Lower-third overlay (?overlay=lowerthird) — an OBS browser source over the stream ──
+       Transparent page, the lyrics in a band at the bottom, no menu, pills or waiting text.
+       "Black" hides the text instead of painting the stream black. */
+    body.overlay { background: transparent; overflow: hidden; }
+    body.overlay #status-bar,
+    body.overlay #info-bar,
+    body.overlay #waiting,
+    body.overlay #dev-stripe,
+    body.overlay #black-overlay { display: none !important; }
+    body.overlay #stage {
+      min-height: 100vh;
+      justify-content: flex-end;
+      padding: 0 6% 6vh;
+    }
+    body.overlay #lyrics {
+      font-size: calc(clamp(20px, 3.4vw, 72px) * var(--scale));
+      max-width: none;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.85);
+    }
+    body.overlay #lyrics:not(:empty) {
+      background: rgba(0,0,0,0.6);
+      border-radius: 0.25em;
+      padding: 0.3em 0.6em;
+      width: auto;
+    }
+    body.overlay.no-band #lyrics:not(:empty) { background: none; }
+    body.overlay #lyrics.blacked { opacity: 0; }
   </style>
 </head>
 <body>
@@ -451,6 +479,36 @@ $debugMode  = isset($_GET['debug']);
       // Empty-state wording: before anything has been presented vs. after the selection
       // went stale (see "Selection expiry" below).
       const WAITING_TEXT = 'Waiting for presenter…';
+
+      // ── Overlay mode (OBS browser source) ───────────────────────────────────
+      //   ?overlay=lowerthird  transparent page, text in a band at the bottom
+      //   &lines=2             at most this many lines, following the operator's line steps
+      //   &align=left|center|right  &scale=0.8  &band=0 (text shadow only)
+      const PARAMS  = new URLSearchParams(location.search);
+      const OVERLAY = PARAMS.has('overlay') && PARAMS.get('overlay') !== '0';
+      const MAX_LINES = Math.max(0, Math.min(12, parseInt(PARAMS.get('lines') || '0', 10) || 0));
+      if (OVERLAY) {
+        document.documentElement.style.background = 'transparent';
+        document.body.classList.add('overlay');
+        if (PARAMS.get('band') === '0') document.body.classList.add('no-band');
+      }
+
+      /**
+       * At most MAX_LINES rows, a translation staying with the line it translates. The window
+       * starts at the row holding the operator's current line, so stepping lines in the app pages
+       * through a long block.
+       */
+      function visibleLines(lines, lineIndex) {
+        if (!MAX_LINES) return lines;
+        const rows = [];
+        let start = 0;
+        lines.forEach(function (line, i) {
+          if (!line.language || rows.length === 0) rows.push([]);
+          rows[rows.length - 1].push(line);
+          if (i === lineIndex) start = rows.length - 1;
+        });
+        return [].concat.apply([], rows.slice(start, start + MAX_LINES));
+      }
       const NO_TEXT_TEXT = 'No text is currently available.';
 
       // Fallback if the relay does not advertise its TTL (older server): 1 hour.
@@ -532,6 +590,10 @@ $debugMode  = isset($_GET['debug']);
           var a = localStorage.getItem(ALIGN_KEY);
           if (ALIGNMENTS.indexOf(a) !== -1) align = a;
         } catch (e) { /* private mode */ }
+        // The overlay has no menu: its size and alignment come from the address.
+        var qScale = parseFloat(PARAMS.get('scale'));
+        if (qScale > 0) scale = qScale;
+        if (ALIGNMENTS.indexOf(PARAMS.get('align')) !== -1) align = PARAMS.get('align');
         applyScale(scale, false);
         applyAlign(align, false);
       })();
@@ -695,8 +757,9 @@ $debugMode  = isset($_GET['debug']);
       function render(data, ageMs) {
         armExpiry(ageMs);
         blackOver.classList.toggle('active', !!data.isBlack);
+        lyricsEl.classList.toggle('blacked', OVERLAY && (!!data.isBlack || !!data.isTextHidden));
 
-        const lines     = Array.isArray(data.blockLines) ? data.blockLines : [];
+        const lines     = visibleLines(Array.isArray(data.blockLines) ? data.blockLines : [], typeof data.lineIndex === 'number' ? data.lineIndex : 0);
         const blockName = data.blockName || '';
         const songTitle = data.songTitle || '';
         const showTitle = data.showTitle || '';

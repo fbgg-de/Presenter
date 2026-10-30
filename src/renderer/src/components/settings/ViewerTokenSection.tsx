@@ -41,6 +41,9 @@ import { copyTextToClipboard } from '@/utils/clipboard';
  * this app's address. It arrives without a trailing slash. When it is unset we fall back
  * to `<this app>/viewer/`, which is right only when both are served from the same host.
  */
+/** Lower-third overlay for an OBS browser source: transparent, two lines at a time. */
+const OVERLAY_QUERY = '&overlay=lowerthird&lines=2';
+
 function buildViewerUrl(token: string, viewerUrl?: string | null): string {
   if (viewerUrl) return `${viewerUrl}/?token=${token}`;
   const base = getBackendBaseUrl();
@@ -163,6 +166,31 @@ export const ViewerTokenSection = () => {
                             </IconButton>
                           </Tooltip>
                         </Stack>
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+                size="small"
+                fullWidth
+              />
+              {/* The same live text as a transparent lower third for a stream (viewer/index.php overlay mode). */}
+              <TextField
+                label={LL.VIEWER_TOKEN.OVERLAY_URL()}
+                helperText={LL.VIEWER_TOKEN.OVERLAY_URL_HINT()}
+                value={buildViewerUrl(newTokenDialog.token, viewerUrl) + OVERLAY_QUERY}
+                slotProps={{
+                  input: {
+                    readOnly: true,
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <Tooltip title={copied ? LL.VIEWER_TOKEN.COPIED() : LL.VIEWER_TOKEN.COPY_URL()}>
+                          <IconButton
+                            size="small"
+                            onClick={() => handleCopy(buildViewerUrl(newTokenDialog.token!, viewerUrl) + OVERLAY_QUERY)}
+                          >
+                            <CopyIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </InputAdornment>
                     ),
                   },

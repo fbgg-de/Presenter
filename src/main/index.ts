@@ -1,11 +1,11 @@
-import { app, shell, BrowserWindow, dialog, ipcMain, session } from 'electron';
+import { app, shell, BrowserWindow, dialog, ipcMain, nativeImage, session } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { join } from 'path';
 import { networkInterfaces } from 'os';
 import { electronApp, optimizer, is } from '@electron-toolkit/utils';
 import { PresentationWindowManager } from './windows';
 import { registerIpcHandlers } from './ipc';
-import { IMPORTABLE_EXTS, LocalMediaServer } from './mediaServer';
+import { IMPORTABLE_EXTS, LocalMediaServer, setMediaCorsOrigins, setMediaThumbnailer } from './mediaServer';
 import { PresenterWebSocketServer } from './wsServer';
 import { getCredentials } from './credentials';
 import { migrateSessionCookies, persistCookieChanges } from './sessionCookies';
@@ -145,7 +145,42 @@ const windowManager = new PresentationWindowManager();
 let mediaServer: LocalMediaServer | null = null;
 let mainWindow: BrowserWindow | null = null;
 let backendOrigin = '';
-const wsServer = new PresenterWebSocketServer(9001, windowManager);
+setMediaCorsOrigins(() => {
+  const dev = process.env['ELECTRON_RENDERER_URL'];
+  return [backendOrigin, dev ? new URL(dev).origin : ''].filter(Boolean);
+});
+// Media browser thumbnails (mediaServer's disk cache): the OS thumbnail first (Windows and macOS
+// shells read most image formats fast and cache them), then a nativeImage resize. PNG keeps
+// transparency for formats that may have it; JPEG is smaller for the rest.
+setMediaThumbnailer(
+  async (file, width) => {
+    try {
+      let image =
+        process.platform === 'linux' ? null : await nativeImage.createThumbnailFromPath(file, { width, height: width }).catch(() => null);
+      if (!image || image.isEmpty()) {
+        const full = nativeImage.createFromPath(file);
+        image = full.isEmpty() ? null : full.getSize().width > width ? full.resize({ width, quality: 'good' }) : full;
+      }
+      if (!image || image.isEmpty()) return null;
+      return /\.(png|gif|webp|ico|bmp)$/i.test(file) ? { data: image.toPNG(), type: 'png' } : { data: image.toJPEG(82), type: 'jpeg' };
+    } catch {
+      return null;
+    }
+  },
+  join(app.getPath('userData'), 'media-thumbs'),
+);
+
+// Whether the Companion server accepts other computers. Needed before any renderer exists, so it
+// lives in a sidecar file like auto-login.json rather than in the renderer settings.
+const wsServerFile = join(app.getPath('userData'), 'ws-server.json');
+const wsAllowNetwork = (() => {
+  try {
+    return JSON.parse(readFileSync(wsServerFile, 'utf-8')).allowNetwork === true;
+  } catch {
+    return false;
+  }
+})();
+const wsServer = new PresenterWebSocketServer(9001, windowManager, wsAllowNetwork);
 
 // ── Graceful shutdown ──
 // Startup Manager stops us by posting WM_CLOSE to the window and force-kills
@@ -398,7 +433,9 @@ const createWindow = () => {
     } catch {
       /* unparseable URL — fall through to opening externally */
     }
-    shell.openExternal(details.url);
+    // Web and mail links only: file:, ms-msdt:, search-ms: and other handlers are a known way
+    // from a page (the IdP's, a document's link) to running programs on this computer.
+    if (/^(https?|mailto):/i.test(details.url)) void shell.openExternal(details.url);
     return { action: 'deny' };
   });
 
@@ -772,11 +809,22 @@ ipcMain.handle('get-media-server-url', () => {
 
 ipcMain.handle('get-ws-server-info', () => {
   return {
-    hosts: getWsHosts(),
+    hosts: wsServer.allowsNetwork() ? getWsHosts() : ['127.0.0.1'],
     port: wsServer.getPort(),
     clientCount: wsServer.getClientCount(),
     commandHandlingEnabled: wsServer.isCommandHandlingEnabled(),
+    allowNetwork: wsServer.allowsNetwork(),
   };
+});
+
+ipcMain.handle('set-ws-allow-network', (_event, allow: boolean) => {
+  try {
+    writeFileSync(wsServerFile, JSON.stringify({ allowNetwork: allow === true }), 'utf-8');
+  } catch {
+    /* still applies until restart */
+  }
+  wsServer.setAllowNetwork(allow === true);
+  return wsServer.allowsNetwork();
 });
 
 ipcMain.handle('set-ws-command-handling-enabled', (_event, enabled: boolean) => {

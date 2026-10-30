@@ -1,4 +1,5 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react';
+import { ShrinkToFit, fitFont } from './ShrinkToFit';
 import type { PresentationContent } from './types';
 import type { StageOverlayPayload } from '@/stage/types';
 import {
@@ -102,19 +103,26 @@ const FadeOutLayer = ({ prevContent, transitionDuration }: { prevContent: Presen
           {prevContent.contentType === 'media' ? (
             <MediaContent content={prevContent} />
           ) : prevContent.contentType === 'bible_verse' ? (
-            <BibleVerseContent content={prevContent} textStyle={prevTextCss} />
+            <ShrinkToFit measureKey={prevContent}>
+              <BibleVerseContent
+                content={prevContent}
+                textStyle={{ ...prevTextCss, fontSize: fitFont(prevTextCss.fontSize ?? DEFAULT_STYLE.fontSize) }}
+              />
+            </ShrinkToFit>
           ) : (
             (() => {
               const prevBlock = prevContent.blocks[prevContent.activeBlockIndex];
               if (!prevBlock) return null;
               return (
-                <NormalMode
-                  block={prevBlock.lines}
-                  textStyle={prevTextCss}
-                  languages={prevContent.languages}
-                  songLanguages={prevContent.songLanguages}
-                  paragraphPadding={prevResolved.paragraphPadding}
-                />
+                <ShrinkToFit measureKey={prevContent}>
+                  <NormalMode
+                    block={prevBlock.lines}
+                    textStyle={{ ...prevTextCss, fontSize: fitFont(prevTextCss.fontSize ?? DEFAULT_STYLE.fontSize) }}
+                    languages={prevContent.languages}
+                    songLanguages={prevContent.songLanguages}
+                    paragraphPadding={prevResolved.paragraphPadding}
+                  />
+                </ShrinkToFit>
               );
             })()
           )}
@@ -155,6 +163,10 @@ export const Presentation = (props: PresentationProps) => {
 
   // Check for transparent mode from URL params (OBS Browser Source)
   const isTransparent = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('transparent') === '1';
+
+  // Preview monitors (operator view) flag a slide whose text had to be shrunk.
+  const isPreviewWindow = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('preview') === '1';
+  const [fitScale, setFitScale] = useState(1);
 
   // Black screen fade state
   const [visible, setVisible] = useState(true);
@@ -261,6 +273,8 @@ export const Presentation = (props: PresentationProps) => {
   const resolvedStyle: ResolvedStyle = mergeStyles(DEFAULT_STYLE, content.style || {});
   const containerCss = styleToContainerCss(resolvedStyle);
   const textCss = styleToTextCss(resolvedStyle);
+  // Text sizes that shrink when a block would not fit (ShrinkToFit, below).
+  const fitTextCss: CSSProperties = { ...textCss, fontSize: fitFont(textCss.fontSize ?? DEFAULT_STYLE.fontSize) };
 
   // Extract padding from containerCss — it will be applied on the inner content div
   // so that vertical alignment (justifyContent) isn't offset by outer padding.
@@ -300,7 +314,7 @@ export const Presentation = (props: PresentationProps) => {
         return <MediaContent content={content} />;
 
       case 'bible_verse':
-        return <BibleVerseContent content={content} textStyle={textCss} />;
+        return <BibleVerseContent content={content} textStyle={fitTextCss} />;
 
       case 'document':
         // Drawn full-bleed below, outside the theme's text padding.
@@ -332,7 +346,7 @@ export const Presentation = (props: PresentationProps) => {
         return (
           <NormalMode
             block={activeBlock.lines}
-            textStyle={textCss}
+            textStyle={fitTextCss}
             languages={content.languages}
             songLanguages={content.songLanguages}
             langStyles={resolvedStyle.languageStyles}
@@ -342,6 +356,37 @@ export const Presentation = (props: PresentationProps) => {
       }
     }
   };
+
+  // Next-block preview — hidden in stream mode. Inside the fit box, so it shrinks with the text.
+  const nextPreview =
+    content.displayMode !== 'stream' &&
+    content.nextBlockPreviewLines &&
+    content.nextBlockPreviewLines.length > 0 &&
+    (() => {
+      // The lines only arrive when the operator's style shows the preview; this window's own
+      // style can still switch it off.
+      const preview = resolveNextLinePreview(resolvedStyle, true);
+      return (
+        preview.enabled && (
+          <NextBlockPreview
+            lines={content.nextBlockPreviewLines}
+            color={content.nextLinePreviewColor || preview.color}
+            opacity={preview.opacity}
+            layout={preview}
+            edgePadding={contentPadding}
+            textStyle={fitTextCss}
+            languages={content.languages}
+            songLanguages={content.songLanguages}
+            langStyles={resolvedStyle.languageStyles}
+            paragraphPadding={resolvedStyle.paragraphPadding}
+          />
+        )
+      );
+    })();
+  // Text content is fitted; media, documents and the scrolling stream mode keep their own layout.
+  const shrinks =
+    content.contentType === 'bible_verse' ||
+    (content.contentType !== 'media' && content.contentType !== 'document' && content.displayMode !== 'stream');
 
   return (
     <div
@@ -388,33 +433,38 @@ export const Presentation = (props: PresentationProps) => {
           pointerEvents: 'none',
         }}
       >
-        {renderContent()}
-        {/* Next-block preview — hidden in stream mode */}
-        {content.displayMode !== 'stream' &&
-          content.nextBlockPreviewLines &&
-          content.nextBlockPreviewLines.length > 0 &&
-          (() => {
-            // The lines only arrive when the operator's style shows the preview; this window's own
-            // style can still switch it off.
-            const preview = resolveNextLinePreview(resolvedStyle, true);
-            return (
-              preview.enabled && (
-                <NextBlockPreview
-                  lines={content.nextBlockPreviewLines}
-                  color={content.nextLinePreviewColor || preview.color}
-                  opacity={preview.opacity}
-                  layout={preview}
-                  edgePadding={contentPadding}
-                  textStyle={textCss}
-                  languages={content.languages}
-                  songLanguages={content.songLanguages}
-                  langStyles={resolvedStyle.languageStyles}
-                  paragraphPadding={resolvedStyle.paragraphPadding}
-                />
-              )
-            );
-          })()}
+        {shrinks ? (
+          <ShrinkToFit measureKey={content} onScale={setFitScale}>
+            {renderContent()}
+            {nextPreview}
+          </ShrinkToFit>
+        ) : (
+          <>
+            {renderContent()}
+            {nextPreview}
+          </>
+        )}
       </div>
+
+      {/* Preview monitors only: the operator sees a slide that had to be shrunk before it goes live. */}
+      {isPreviewWindow && shrinks && fitScale < 0.95 && (
+        <div
+          title="Text shrunk to fit"
+          style={{
+            position: 'absolute',
+            top: '2%',
+            right: '2%',
+            zIndex: 5,
+            background: 'rgba(255, 167, 38, 0.92)',
+            color: '#000',
+            font: '700 2.4vw sans-serif',
+            padding: '0.15em 0.5em',
+            borderRadius: '0.3em',
+          }}
+        >
+          ↓ {Math.round(fitScale * 100)} %
+        </div>
+      )}
 
       {/* Copyright overlay — always rendered so it can animate in/out */}
       {(content.showCopyright || content.title) && <CopyrightOverlay content={content} resolvedStyle={resolvedStyle} />}

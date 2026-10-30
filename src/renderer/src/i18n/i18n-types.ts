@@ -2390,6 +2390,10 @@ type RootTranslation = {
 		 */
 		RENAME: string
 		/**
+		 * D​u​p​l​i​c​a​t​e
+		 */
+		DUPLICATE: string
+		/**
 		 * L​e​a​v​e​ ​e​m​p​t​y​ ​t​o​ ​s​h​o​w​ ​t​h​e​ ​f​i​l​e​ ​n​a​m​e​ ​o​r​ ​U​R​L
 		 */
 		NAME_HINT: string
@@ -2501,6 +2505,10 @@ type RootTranslation = {
 		 * S​e​a​r​c​h​ ​p​r​e​s​e​n​t​a​t​i​o​n​s​.​.​.
 		 */
 		SEARCH_PRESENTATIONS: string
+		/**
+		 * S​e​a​r​c​h​ ​a​u​d​i​o​.​.​.
+		 */
+		SEARCH_AUDIO: string
 		/**
 		 * N​o​ ​m​e​d​i​a​ ​f​o​l​d​e​r​ ​s​e​t​ ​u​p
 		 */
@@ -2636,6 +2644,10 @@ type RootTranslation = {
 		 * P​D​F​ ​&​ ​P​o​w​e​r​P​o​i​n​t
 		 */
 		PRESENTATIONS: string
+		/**
+		 * A​u​d​i​o
+		 */
+		AUDIO: string
 		/**
 		 * G​r​i​d​ ​v​i​e​w
 		 */
@@ -2823,6 +2835,14 @@ type RootTranslation = {
 		 * V​i​e​w​e​r​ ​U​R​L
 		 */
 		VIEWER_URL: string
+		/**
+		 * S​t​r​e​a​m​ ​l​o​w​e​r​ ​t​h​i​r​d​ ​(​O​B​S​ ​b​r​o​w​s​e​r​ ​s​o​u​r​c​e​)
+		 */
+		OVERLAY_URL: string
+		/**
+		 * T​r​a​n​s​p​a​r​e​n​t​,​ ​t​w​o​ ​l​i​n​e​s​ ​a​t​ ​a​ ​t​i​m​e​,​ ​f​o​l​l​o​w​s​ ​t​h​e​ ​p​r​e​s​e​n​t​a​t​i​o​n​.​ ​A​d​d​ ​i​t​ ​i​n​ ​O​B​S​ ​a​s​ ​a​ ​b​r​o​w​s​e​r​ ​s​o​u​r​c​e​;​ ​c​h​a​n​g​e​ ​l​i​n​e​s​=​2​ ​t​o​ ​s​h​o​w​ ​m​o​r​e​.
+		 */
+		OVERLAY_URL_HINT: string
 		/**
 		 * C​o​p​y​ ​t​o​k​e​n
 		 */
@@ -6210,6 +6230,11 @@ type RootTranslation = {
 	}
 	OPERATOR: {
 		/**
+		 * T​i​m​e​ ​l​e​f​t​ ​o​f​ ​t​h​i​s​ ​e​n​t​r​y​ ​(​p​l​a​n​n​e​d​ ​{​p​l​a​n​n​e​d​}​)​.​ ​R​e​d​ ​o​n​c​e​ ​i​t​ ​r​u​n​s​ ​o​v​e​r​.
+		 * @param {unknown} planned
+		 */
+		AGENDA_TIMER_HINT: RequiredParams<'planned'>
+		/**
 		 * S​e​t​ ​u​p​ ​s​t​a​g​e​ ​o​v​e​r​l​a​y​s​ ​—​ ​c​o​u​n​t​d​o​w​n​s​,​ ​m​e​s​s​a​g​e​s​,​ ​a​ ​c​l​o​c​k
 		 */
 		NO_STAGE_LAYERS: string
@@ -6582,6 +6607,23 @@ type RootTranslation = {
 		 */
 		SECTION_ENTRY: string
 		/**
+		 * P​l​a​n​n​e​d
+		 */
+		PLANNED_DURATION: string
+		/**
+		 * T​a​k​e​ ​t​h​e​ ​p​l​a​n​n​e​d​ ​d​u​r​a​t​i​o​n​s​ ​o​f​ ​a​l​l​ ​e​n​t​r​i​e​s​ ​f​r​o​m​ ​t​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​a​g​e​n​d​a
+		 */
+		DURATIONS_FROM_CHURCHTOOLS: string
+		/**
+		 * {​c​o​u​n​t​}​ ​e​n​t​r​i​e​s​ ​t​o​o​k​ ​t​h​e​i​r​ ​d​u​r​a​t​i​o​n​ ​f​r​o​m​ ​C​h​u​r​c​h​T​o​o​l​s​.
+		 * @param {unknown} count
+		 */
+		DURATIONS_TAKEN: RequiredParams<'count'>
+		/**
+		 * C​o​u​l​d​ ​n​o​t​ ​r​e​a​d​ ​t​h​e​ ​C​h​u​r​c​h​T​o​o​l​s​ ​a​g​e​n​d​a​.
+		 */
+		DURATIONS_FAILED: string
+		/**
 		 * N​a​m​e
 		 */
 		ENTRY_NAME: string
@@ -6935,6 +6977,30 @@ type RootTranslation = {
 		SAVE_FAILED: string
 	}
 	STAGE: {
+		/**
+		 * O​n​ ​s​c​r​e​e​n
+		 */
+		MESSAGE_ON_SCREEN: string
+		/**
+		 * S​h​o​w
+		 */
+		MESSAGE_SHOW: string
+		/**
+		 * C​h​a​n​g​e​ ​b​e​f​o​r​e​ ​s​h​o​w​i​n​g
+		 */
+		MESSAGE_EDIT: string
+		/**
+		 * M​e​s​s​a​g​e​s​ ​r​e​q​u​e​s​t​e​d​ ​o​n​ ​t​h​e​ ​/​m​e​s​s​a​g​e​ ​p​a​g​e​ ​—​ ​n​o​t​h​i​n​g​ ​i​s​ ​s​h​o​w​n​ ​u​n​t​i​l​ ​y​o​u​ ​s​h​o​w​ ​i​t
+		 */
+		MESSAGE_REQUESTS: string
+		/**
+		 * R​e​q​u​e​s​t​s
+		 */
+		MESSAGE_REQUEST_CHIP: string
+		/**
+		 * T​h​i​s​ ​m​e​s​s​a​g​e​ ​n​o​ ​l​o​n​g​e​r​ ​e​x​i​s​t​s​.
+		 */
+		MESSAGE_GONE: string
 		/**
 		 * S​h​o​w​s​ ​a​s
 		 */
@@ -7420,6 +7486,14 @@ type RootTranslation = {
 		 * U​n​t​i​l​ ​a​ ​t​i​m​e​ ​o​f​ ​d​a​y
 		 */
 		SOURCE_TIME_OF_DAY: string
+		/**
+		 * A​g​e​n​d​a​ ​e​n​t​r​y
+		 */
+		SOURCE_AGENDA_ITEM: string
+		/**
+		 * C​o​u​n​t​s​ ​d​o​w​n​ ​t​h​e​ ​l​i​v​e​ ​a​g​e​n​d​a​ ​e​n​t​r​y​'​s​ ​p​l​a​n​n​e​d​ ​d​u​r​a​t​i​o​n​ ​(​s​e​t​ ​i​n​ ​t​h​e​ ​e​n​t​r​y​ ​i​n​s​p​e​c​t​o​r​ ​o​r​ ​t​a​k​e​n​ ​f​r​o​m​ ​C​h​u​r​c​h​T​o​o​l​s​)​.​ ​E​n​t​r​i​e​s​ ​w​i​t​h​o​u​t​ ​o​n​e​ ​s​h​o​w​ ​n​o​t​h​i​n​g​.
+		 */
+		AGENDA_ITEM_HINT: string
 		/**
 		 * L​e​n​g​t​h
 		 */
@@ -9925,6 +9999,14 @@ type RootTranslation = {
 		 * A​c​c​e​p​t​ ​c​o​m​m​a​n​d​s​ ​f​r​o​m​ ​C​o​m​p​a​n​i​o​n
 		 */
 		ENABLED: string
+		/**
+		 * A​l​l​o​w​ ​o​t​h​e​r​ ​c​o​m​p​u​t​e​r​s
+		 */
+		ALLOW_NETWORK: string
+		/**
+		 * O​n​l​y​ ​n​e​e​d​e​d​ ​w​h​e​n​ ​C​o​m​p​a​n​i​o​n​ ​r​u​n​s​ ​o​n​ ​a​n​o​t​h​e​r​ ​c​o​m​p​u​t​e​r​.​ ​A​n​y​o​n​e​ ​o​n​ ​t​h​e​ ​s​a​m​e​ ​n​e​t​w​o​r​k​ ​c​a​n​ ​t​h​e​n​ ​c​o​n​t​r​o​l​ ​t​h​e​ ​p​r​e​s​e​n​t​a​t​i​o​n​.
+		 */
+		ALLOW_NETWORK_HINT: string
 		/**
 		 * {​c​o​u​n​t​}​ ​a​c​t​i​v​e​ ​c​o​n​n​e​c​t​i​o​n​{​{​s​}​}
 		 * @param {string | number | boolean} count
@@ -13923,6 +14005,10 @@ export type TranslationFunctions = {
 		 */
 		RENAME: () => LocalizedString
 		/**
+		 * Duplicate
+		 */
+		DUPLICATE: () => LocalizedString
+		/**
 		 * Leave empty to show the file name or URL
 		 */
 		NAME_HINT: () => LocalizedString
@@ -14034,6 +14120,10 @@ export type TranslationFunctions = {
 		 * Search presentations...
 		 */
 		SEARCH_PRESENTATIONS: () => LocalizedString
+		/**
+		 * Search audio...
+		 */
+		SEARCH_AUDIO: () => LocalizedString
 		/**
 		 * No media folder set up
 		 */
@@ -14166,6 +14256,10 @@ export type TranslationFunctions = {
 		 * PDF & PowerPoint
 		 */
 		PRESENTATIONS: () => LocalizedString
+		/**
+		 * Audio
+		 */
+		AUDIO: () => LocalizedString
 		/**
 		 * Grid view
 		 */
@@ -14346,6 +14440,14 @@ export type TranslationFunctions = {
 		 * Viewer URL
 		 */
 		VIEWER_URL: () => LocalizedString
+		/**
+		 * Stream lower third (OBS browser source)
+		 */
+		OVERLAY_URL: () => LocalizedString
+		/**
+		 * Transparent, two lines at a time, follows the presentation. Add it in OBS as a browser source; change lines=2 to show more.
+		 */
+		OVERLAY_URL_HINT: () => LocalizedString
 		/**
 		 * Copy token
 		 */
@@ -17631,6 +17733,10 @@ export type TranslationFunctions = {
 	}
 	OPERATOR: {
 		/**
+		 * Time left of this entry (planned {planned}). Red once it runs over.
+		 */
+		AGENDA_TIMER_HINT: (arg: { planned: unknown }) => LocalizedString
+		/**
 		 * Set up stage overlays — countdowns, messages, a clock
 		 */
 		NO_STAGE_LAYERS: () => LocalizedString
@@ -17985,6 +18091,22 @@ export type TranslationFunctions = {
 		 */
 		SECTION_ENTRY: () => LocalizedString
 		/**
+		 * Planned
+		 */
+		PLANNED_DURATION: () => LocalizedString
+		/**
+		 * Take the planned durations of all entries from the ChurchTools agenda
+		 */
+		DURATIONS_FROM_CHURCHTOOLS: () => LocalizedString
+		/**
+		 * {count} entries took their duration from ChurchTools.
+		 */
+		DURATIONS_TAKEN: (arg: { count: unknown }) => LocalizedString
+		/**
+		 * Could not read the ChurchTools agenda.
+		 */
+		DURATIONS_FAILED: () => LocalizedString
+		/**
 		 * Name
 		 */
 		ENTRY_NAME: () => LocalizedString
@@ -18332,6 +18454,30 @@ export type TranslationFunctions = {
 		SAVE_FAILED: () => LocalizedString
 	}
 	STAGE: {
+		/**
+		 * On screen
+		 */
+		MESSAGE_ON_SCREEN: () => LocalizedString
+		/**
+		 * Show
+		 */
+		MESSAGE_SHOW: () => LocalizedString
+		/**
+		 * Change before showing
+		 */
+		MESSAGE_EDIT: () => LocalizedString
+		/**
+		 * Messages requested on the /message page — nothing is shown until you show it
+		 */
+		MESSAGE_REQUESTS: () => LocalizedString
+		/**
+		 * Requests
+		 */
+		MESSAGE_REQUEST_CHIP: () => LocalizedString
+		/**
+		 * This message no longer exists.
+		 */
+		MESSAGE_GONE: () => LocalizedString
 		/**
 		 * Shows as
 		 */
@@ -18808,6 +18954,14 @@ export type TranslationFunctions = {
 		 * Until a time of day
 		 */
 		SOURCE_TIME_OF_DAY: () => LocalizedString
+		/**
+		 * Agenda entry
+		 */
+		SOURCE_AGENDA_ITEM: () => LocalizedString
+		/**
+		 * Counts down the live agenda entry's planned duration (set in the entry inspector or taken from ChurchTools). Entries without one show nothing.
+		 */
+		AGENDA_ITEM_HINT: () => LocalizedString
 		/**
 		 * Length
 		 */
@@ -21274,6 +21428,14 @@ export type TranslationFunctions = {
 		 * Accept commands from Companion
 		 */
 		ENABLED: () => LocalizedString
+		/**
+		 * Allow other computers
+		 */
+		ALLOW_NETWORK: () => LocalizedString
+		/**
+		 * Only needed when Companion runs on another computer. Anyone on the same network can then control the presentation.
+		 */
+		ALLOW_NETWORK_HINT: () => LocalizedString
 		/**
 		 * {count} active connection{{s}}
 		 */

@@ -32,6 +32,7 @@ import {
 import { oidcErrorTitle } from '@/utils/oidcErrors';
 import { useBackendConfig } from '@/components/settings/ConnectivityChecker';
 import { LogoutResetDialog } from '@/components/layout/LogoutResetDialog';
+import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
 import { RELOGIN_DONE_MESSAGE } from '@/utils/relogin';
 
 const useQueryParam = (name: string): string | null => {
@@ -275,173 +276,182 @@ export const LoginPage = () => {
     // card's max-content, so the card's own `maxWidth: '100%'` resolved against 480px and
     // never did anything — on a 375px phone the card hung 121px off the right edge, taking
     // the account dropdown (anchored to its width) with it.
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 2 }}>
-      <Card sx={{ width: 480, maxWidth: '100%' }}>
-        <CardContent>
-          <Stack
-            sx={{
-              gap: 2,
-            }}
-          >
-            <Typography variant="h5">{LL.AUTH.LOGIN()}</Typography>
-
-            {relogin === 'done' && window.opener && <Alert severity="success">{LL.AUTH.RELOGIN_DONE()}</Alert>}
-
-            {loginError && (
-              <Alert severity="error" action={resetAction}>
-                <Typography variant="subtitle2">{oidcErrorTitle(LL, loginError)}</Typography>
-                <Typography variant="body2">
-                  {LL.AUTH.LOGIN_REJECTED()} ({loginError})
-                </Typography>
-                {loginErrorRef && (
-                  <Typography variant="caption" sx={{ fontFamily: 'monospace', userSelect: 'text' }}>
-                    {LL.AUTH.ERROR_REFERENCE({ ref: loginErrorRef })}
-                  </Typography>
-                )}
-              </Alert>
-            )}
-            {autoLoginStopped && !loginError && (
-              <Alert severity="info" action={resetAction}>
-                {LL.AUTH.AUTO_LOGIN_STOPPED()}
-              </Alert>
-            )}
-            {errorText && <Alert severity="error">{errorText}</Alert>}
-
-            {accountsError && !offlineMode && (
-              <Alert
-                severity="error"
-                action={
-                  <Button color="inherit" size="small" startIcon={<SettingsIcon fontSize="small" />} onClick={openBackendDialog}>
-                    {LL.CONNECTIVITY.SNACK_CHANGE_BUTTON()}
-                  </Button>
-                }
-              >
-                {LL.ERRORS.LOAD_LICENSES()}
-              </Alert>
-            )}
-
-            {!offlineMode && (
-              <>
-                <TextField
-                  select
-                  label={LL.AUTH.ACCOUNT()}
-                  value={selectedLicense}
-                  disabled={accountsLoading}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    // '' is the placeholder row, not an account — never commit it.
-                    if (v === '') return;
-                    onSelectLicense(v === 'admin' ? v : Number(v));
-                  }}
-                  helperText={LL.AUTH.SELECT_HELP()}
-                >
-                  {/* Placeholder only — selecting it would store an empty account and leave
-                      the page in a state with no account and no way to start a login. */}
-                  <MenuItem value="" disabled>
-                    {LL.AUTH.SELECT_PROMPT()}
-                  </MenuItem>
-                  <MenuItem value="admin">{LL.AUTH.ADMIN_LABEL()}</MenuItem>
-                  {(accounts ?? []).map((a) => (
-                    <MenuItem key={a.license} value={a.license}>
-                      {a.name ? a.name : `#${a.license}`}
-                    </MenuItem>
-                  ))}
-                </TextField>
-
-                {selectedLicense === '' && (
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: 'text.secondary',
-                    }}
-                  >
-                    {LL.AUTH.SELECT_PROMPT()}
-                  </Typography>
-                )}
-
-                {selectedLicense !== '' && (
-                  <Stack
-                    sx={{
-                      gap: 1,
-                    }}
-                  >
-                    <Button
-                      fullWidth
-                      variant="contained"
-                      startIcon={<SecurityIcon />}
-                      disabled={isAdminSelected ? adminOidcLoading : oidcLoading}
-                      onClick={() => {
-                        setErrorText(null);
-                        const url = isAdminSelected ? adminOidcUrlData?.url : oidcUrlData?.url;
-                        if (!url) {
-                          setErrorText(isAdminSelected ? LL.ERRORS.ADMIN_CONFIG_MISSING() : LL.ERRORS.NO_PROVIDER_FOR_ACCOUNT());
-                          return;
-                        }
-                        openUrl(url);
-                      }}
-                    >
-                      {LL.AUTH.LOGIN()}
-                    </Button>
-
-                    {isAdminSelected && adminOidcError && (
-                      <Alert severity="error">
-                        <Typography variant="subtitle2" gutterBottom>
-                          {LL.ERRORS.ADMIN_OIDC_CONFIG()}
-                        </Typography>
-                        <Typography variant="body2">{LL.ERRORS.LOGIN_UNAVAILABLE()}</Typography>
-                      </Alert>
-                    )}
-                    {isTenantSelected && oidcError && (
-                      <Alert severity="error">
-                        <Typography variant="subtitle2" gutterBottom>
-                          {LL.ERRORS.PROVIDER_CONFIG()}
-                        </Typography>
-                        <Typography variant="body2">{LL.ERRORS.CONTACT_ADMIN_ASSIGN_PROVIDER()}</Typography>
-                      </Alert>
-                    )}
-                  </Stack>
-                )}
-              </>
-            )}
-
-            <Divider />
-
-            {/* Offline mode toggle */}
+    <Stack sx={{ minHeight: '100vh' }}>
+      {/* Many first visits start here: offer the desktop app before anyone signs in — always. */}
+      <DesktopAppBanner persistent />
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 2 }}>
+        <Card sx={{ width: 480, maxWidth: '100%' }}>
+          <CardContent>
             <Stack
               sx={{
-                gap: 1,
+                gap: 2,
               }}
             >
-              {offlineMode && (
-                <Alert severity="info" icon={<WifiOffIcon fontSize="small" />}>
-                  {LL.HEADER.OFFLINE_MODE_ON()}
+              <Typography variant="h5">{LL.AUTH.LOGIN()}</Typography>
+
+              {relogin === 'done' && window.opener && <Alert severity="success">{LL.AUTH.RELOGIN_DONE()}</Alert>}
+
+              {loginError && (
+                <Alert severity="error" action={resetAction}>
+                  <Typography variant="subtitle2">{oidcErrorTitle(LL, loginError)}</Typography>
+                  <Typography variant="body2">
+                    {LL.AUTH.LOGIN_REJECTED()} ({loginError})
+                  </Typography>
+                  {loginErrorRef && (
+                    <Typography variant="caption" sx={{ fontFamily: 'monospace', userSelect: 'text' }}>
+                      {LL.AUTH.ERROR_REFERENCE({ ref: loginErrorRef })}
+                    </Typography>
+                  )}
                 </Alert>
               )}
-              <Tooltip title={offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}>
+              {autoLoginStopped && !loginError && (
+                <Alert severity="info" action={resetAction}>
+                  {LL.AUTH.AUTO_LOGIN_STOPPED()}
+                </Alert>
+              )}
+              {errorText && <Alert severity="error">{errorText}</Alert>}
+
+              {accountsError && !offlineMode && (
+                <Alert
+                  severity="error"
+                  action={
+                    <Button color="inherit" size="small" startIcon={<SettingsIcon fontSize="small" />} onClick={openBackendDialog}>
+                      {LL.CONNECTIVITY.SNACK_CHANGE_BUTTON()}
+                    </Button>
+                  }
+                >
+                  {LL.ERRORS.LOAD_LICENSES()}
+                </Alert>
+              )}
+
+              {!offlineMode && (
+                <>
+                  <TextField
+                    select
+                    label={LL.AUTH.ACCOUNT()}
+                    value={selectedLicense}
+                    disabled={accountsLoading}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      // '' is the placeholder row, not an account — never commit it.
+                      if (v === '') return;
+                      onSelectLicense(v === 'admin' ? v : Number(v));
+                    }}
+                    helperText={LL.AUTH.SELECT_HELP()}
+                  >
+                    {/* Placeholder only — selecting it would store an empty account and leave
+                      the page in a state with no account and no way to start a login. */}
+                    <MenuItem value="" disabled>
+                      {LL.AUTH.SELECT_PROMPT()}
+                    </MenuItem>
+                    <MenuItem value="admin">{LL.AUTH.ADMIN_LABEL()}</MenuItem>
+                    {(accounts ?? []).map((a) => (
+                      <MenuItem key={a.license} value={a.license}>
+                        {a.name ? a.name : `#${a.license}`}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+
+                  {selectedLicense === '' && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'text.secondary',
+                      }}
+                    >
+                      {LL.AUTH.SELECT_PROMPT()}
+                    </Typography>
+                  )}
+
+                  {selectedLicense !== '' && (
+                    <Stack
+                      sx={{
+                        gap: 1,
+                      }}
+                    >
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<SecurityIcon />}
+                        disabled={isAdminSelected ? adminOidcLoading : oidcLoading}
+                        onClick={() => {
+                          setErrorText(null);
+                          const url = isAdminSelected ? adminOidcUrlData?.url : oidcUrlData?.url;
+                          if (!url) {
+                            setErrorText(isAdminSelected ? LL.ERRORS.ADMIN_CONFIG_MISSING() : LL.ERRORS.NO_PROVIDER_FOR_ACCOUNT());
+                            return;
+                          }
+                          openUrl(url);
+                        }}
+                      >
+                        {LL.AUTH.LOGIN()}
+                      </Button>
+
+                      {isAdminSelected && adminOidcError && (
+                        <Alert severity="error">
+                          <Typography variant="subtitle2" gutterBottom>
+                            {LL.ERRORS.ADMIN_OIDC_CONFIG()}
+                          </Typography>
+                          <Typography variant="body2">{LL.ERRORS.LOGIN_UNAVAILABLE()}</Typography>
+                        </Alert>
+                      )}
+                      {isTenantSelected && oidcError && (
+                        <Alert severity="error">
+                          <Typography variant="subtitle2" gutterBottom>
+                            {LL.ERRORS.PROVIDER_CONFIG()}
+                          </Typography>
+                          <Typography variant="body2">{LL.ERRORS.CONTACT_ADMIN_ASSIGN_PROVIDER()}</Typography>
+                        </Alert>
+                      )}
+                    </Stack>
+                  )}
+                </>
+              )}
+
+              <Divider />
+
+              {/* Offline mode toggle */}
+              <Stack
+                sx={{
+                  gap: 1,
+                }}
+              >
+                {offlineMode && (
+                  <Alert severity="info" icon={<WifiOffIcon fontSize="small" />}>
+                    {LL.HEADER.OFFLINE_MODE_ON()}
+                  </Alert>
+                )}
+                <Tooltip title={offlineMode ? LL.HEADER.OFFLINE_MODE_OFF() : LL.HEADER.OFFLINE_MODE_ON()}>
+                  <Button
+                    size="small"
+                    variant={offlineMode ? 'contained' : 'outlined'}
+                    color={offlineMode ? 'warning' : 'inherit'}
+                    startIcon={offlineMode ? <WifiOffIcon /> : <WifiIcon />}
+                    onClick={() => updateSetting('offlineMode', !offlineMode)}
+                    fullWidth
+                  >
+                    {offlineMode ? LL.HEADER.OFFLINE_MODE_LABEL_OFF() : LL.HEADER.OFFLINE_MODE_LABEL_ON()}
+                  </Button>
+                </Tooltip>
                 <Button
                   size="small"
-                  variant={offlineMode ? 'contained' : 'outlined'}
-                  color={offlineMode ? 'warning' : 'inherit'}
-                  startIcon={offlineMode ? <WifiOffIcon /> : <WifiIcon />}
-                  onClick={() => updateSetting('offlineMode', !offlineMode)}
-                  fullWidth
+                  color="inherit"
+                  onClick={() => setResetOpen(true)}
+                  sx={{ alignSelf: 'center', color: 'text.secondary' }}
                 >
-                  {offlineMode ? LL.HEADER.OFFLINE_MODE_LABEL_OFF() : LL.HEADER.OFFLINE_MODE_LABEL_ON()}
+                  {LL.AUTH.LOGOUT_RESET.LOGIN_LINK()}
                 </Button>
-              </Tooltip>
-              <Button size="small" color="inherit" onClick={() => setResetOpen(true)} sx={{ alignSelf: 'center', color: 'text.secondary' }}>
-                {LL.AUTH.LOGOUT_RESET.LOGIN_LINK()}
-              </Button>
+              </Stack>
             </Stack>
-          </Stack>
-        </CardContent>
-      </Card>
-      <Backdrop open={autoLoggingIn} sx={{ zIndex: (theme) => theme.zIndex.modal + 1, flexDirection: 'column', gap: 2 }}>
-        <CircularProgress color="inherit" />
-        <Typography>{LL.AUTH.AUTO_LOGIN_RUNNING()}</Typography>
-      </Backdrop>
-      {/* Mounted only while open, so the preselection starts fresh each time. */}
-      {resetOpen && <LogoutResetDialog open context="login" onClose={() => setResetOpen(false)} />}
-    </Box>
+          </CardContent>
+        </Card>
+        <Backdrop open={autoLoggingIn} sx={{ zIndex: (theme) => theme.zIndex.modal + 1, flexDirection: 'column', gap: 2 }}>
+          <CircularProgress color="inherit" />
+          <Typography>{LL.AUTH.AUTO_LOGIN_RUNNING()}</Typography>
+        </Backdrop>
+        {/* Mounted only while open, so the preselection starts fresh each time. */}
+        {resetOpen && <LogoutResetDialog open context="login" onClose={() => setResetOpen(false)} />}
+      </Box>
+    </Stack>
   );
 };

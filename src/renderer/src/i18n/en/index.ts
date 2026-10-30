@@ -621,6 +621,7 @@ const en = {
     SONG_UPDATED: 'This song was updated on the server — click to load the changes',
     SONG_UPDATE_APPLIED: 'Song updated',
     RENAME: 'Rename',
+    DUPLICATE: 'Duplicate',
     NAME_HINT: 'Leave empty to show the file name or URL',
     EDIT_TEXT: 'Edit text',
     VERSE_TEXT: 'Verse text',
@@ -654,6 +655,7 @@ const en = {
     SEARCH_IMAGES: 'Search images...',
     SEARCH_VIDEOS: 'Search videos...',
     SEARCH_PRESENTATIONS: 'Search presentations...',
+    SEARCH_AUDIO: 'Search audio...',
     FOLDER_UNSET_TITLE: 'No media folder set up',
     FOLDER_UNSET: 'Images, videos, audio, PDFs and PowerPoints are read from a media folder. Choose one, and the media browser and every media entry work from it.',
     FOLDER_UNREACHABLE_TITLE: 'Media folder not reachable',
@@ -687,6 +689,7 @@ const en = {
     IMAGES: 'Images',
     VIDEOS: 'Videos',
     PRESENTATIONS: 'PDF & PowerPoint',
+    AUDIO: 'Audio',
     VIEW_GRID: 'Grid view',
     VIEW_LIST: 'List view',
     SORT_BY: 'Sort by',
@@ -738,6 +741,8 @@ const en = {
     GENERATED_WARNING: 'Copy this token now — it will not be shown again.',
     TOKEN: 'Token',
     VIEWER_URL: 'Viewer URL',
+    OVERLAY_URL: 'Stream lower third (OBS browser source)',
+    OVERLAY_URL_HINT: 'Transparent, two lines at a time, follows the presentation. Add it in OBS as a browser source; change lines=2 to show more.',
     COPY_TOKEN: 'Copy token',
     COPY_URL: 'Copy URL',
     COPIED: 'Copied',
@@ -1629,6 +1634,7 @@ const en = {
   },
 
   OPERATOR: {
+    AGENDA_TIMER_HINT: 'Time left of this entry (planned {planned}). Red once it runs over.',
     NO_STAGE_LAYERS: 'Set up stage overlays — countdowns, messages, a clock',
     READINESS: {
       TITLE: 'Ready for the service?',
@@ -1721,6 +1727,10 @@ const en = {
     ADD_WINDOW: 'Add window',
     NOW_ON_SCREEN: 'Now on screen',
     SECTION_ENTRY: 'Entry',
+    PLANNED_DURATION: 'Planned',
+    DURATIONS_FROM_CHURCHTOOLS: 'Take the planned durations of all entries from the ChurchTools agenda',
+    DURATIONS_TAKEN: '{count} entries took their duration from ChurchTools.',
+    DURATIONS_FAILED: 'Could not read the ChurchTools agenda.',
     ENTRY_NAME: 'Name',
     AGENDA_GROUP: 'Group',
     ARRANGEMENT: 'Arrangement',
@@ -1813,6 +1823,12 @@ const en = {
   },
 
   STAGE: {
+    MESSAGE_ON_SCREEN: 'On screen',
+    MESSAGE_SHOW: 'Show',
+    MESSAGE_EDIT: 'Change before showing',
+    MESSAGE_REQUESTS: 'Messages requested on the /message page — nothing is shown until you show it',
+    MESSAGE_REQUEST_CHIP: 'Requests',
+    MESSAGE_GONE: 'This message no longer exists.',
     SHOWS_AS: 'Shows as',
     COUNTS: 'Counts',
     LENGTH: 'Length',
@@ -1937,6 +1953,8 @@ const en = {
     SOURCE: 'Counts down',
     SOURCE_DURATION: 'For a length of time',
     SOURCE_TIME_OF_DAY: 'Until a time of day',
+    SOURCE_AGENDA_ITEM: 'Agenda entry',
+    AGENDA_ITEM_HINT: "Counts down the live agenda entry's planned duration (set in the entry inspector or taken from ChurchTools). Entries without one show nothing.",
     DURATION: 'Length',
     AT_TIME: 'Target time',
     AT_TIME_HINT: 'A time that has already passed today counts down to tomorrow.',
@@ -2626,6 +2644,9 @@ const en = {
     HELPER_TITLE: 'Bitfocus Companion',
     HELPER_DESC: 'Stream Deck buttons through the Presenter module for Bitfocus Companion.',
     ENABLED: 'Accept commands from Companion',
+    ALLOW_NETWORK: 'Allow other computers',
+    ALLOW_NETWORK_HINT: 'Only needed when Companion runs on another computer. Anyone on the same network can then control the presentation.',
+
     CONNECTIONS: '{count} active connection{{s}}',
     SETUP_1:
       'Install the Presenter module: extract companion-module-efsh-presenter.zip (attached to every Presenter release) into Companion’s developer modules folder, then restart Companion.',

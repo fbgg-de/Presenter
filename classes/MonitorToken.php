@@ -55,13 +55,15 @@ class MonitorToken
      *
      * @param int|null $account Account the holder may watch, or null for an unrestricted
      *                          (server admin) token that may watch and switch to any account.
+     * @param string|null $scope Overrides the monitor scopes — `client` mints a relay ticket
+     *                          (see api/WsTicket.php), which no monitor check accepts.
      */
-    public static function issue(?int $account): string
+    public static function issue(?int $account, ?string $scope = null, int $ttl = self::TTL): string
     {
         $claims = json_encode([
-            'scope'   => $account === null ? 'admin' : 'account',
+            'scope'   => $scope ?? ($account === null ? 'admin' : 'account'),
             'account' => $account,
-            'exp'     => time() + self::TTL,
+            'exp'     => time() + $ttl,
             // Makes two tokens minted in the same second differ, so one cannot be mistaken
             // for a replay of the other in a log.
             'nonce'   => bin2hex(random_bytes(8)),
@@ -76,9 +78,10 @@ class MonitorToken
     /**
      * Verify a token and return its claims, or null when it is malformed, forged or expired.
      *
-     * @return array{scope: string, account: int|null}|null
+     * @param string[] $scopes The scopes this caller accepts; any other scope is rejected.
+     * @return array{scope: string, account: int|null, exp: int}|null
      */
-    public static function verify(string $token): ?array
+    public static function verify(string $token, array $scopes = ['admin', 'account']): ?array
     {
         $parts = explode('.', $token);
 
@@ -107,16 +110,16 @@ class MonitorToken
             return null;
         }
 
-        if ((int) $claims['exp'] < time()) {
+        if ((int) $claims['exp'] < time() || !in_array($claims['scope'], $scopes, true)) {
             return null;
         }
 
         if ($claims['scope'] === 'admin') {
-            return ['scope' => 'admin', 'account' => null];
+            return ['scope' => 'admin', 'account' => null, 'exp' => (int) $claims['exp']];
         }
 
-        if ($claims['scope'] === 'account' && isset($claims['account'])) {
-            return ['scope' => 'account', 'account' => (int) $claims['account']];
+        if (isset($claims['account'])) {
+            return ['scope' => $claims['scope'], 'account' => (int) $claims['account'], 'exp' => (int) $claims['exp']];
         }
 
         return null;

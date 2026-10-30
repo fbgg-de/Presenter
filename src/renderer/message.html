@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="theme-color" content="#101418" />
+    <title>Presenter - Message</title>
+    <!--
+      connect-src carries a bare `ws:` on the entries that open a socket — this one (message),
+      admin, control and musician. The relay (WS_HOST) and Streamer's audio bridge are both
+      configured at runtime with a LAN address, and a static policy cannot enumerate those.
+      login.html and presentation.html open no socket and deliberately omit it; do not
+      "make them consistent" by pasting this one over them.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; connect-src 'self' blob: http://localhost:* http://127.0.0.1:* ws: wss: https:; script-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:"
+    />
+  </head>
+
+  <body style="margin: 0; background: #101418">
+    <div id="root"></div>
+    <script type="module" src="/src/message.tsx"></script>
+  </body>
+</html>

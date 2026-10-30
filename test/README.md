@@ -18,6 +18,19 @@ Tooling for running and inspecting the app without a real backend.
   Opens real windows, so it needs a desktop session.
 
 - `mock-backend/` — fixture HTTP server standing in for the PHP API (below).
+- `php-api/` — the real PHP backend over HTTP under `php -S`, on a throwaway copy with its own
+  config (`npm run test:php-api`). No database: sessions are seeded as files, the database points
+  at a closed port. Covers routing and the auth gate, CSRF/CORS, the anonymous log write with
+  rotation and the admin log view, relay tickets (including the real relay asking this backend),
+  database faults answered without leaking SQL, SVG icon uploads, `php -l` on every PHP file, and
+  stray PHP warnings in any response. Skips without PHP.
+- `live-position/` — the live position kept across an operator reload or restart (`npm run test:live-position`).
+- `agenda-timer/` — planned durations from a ChurchTools agenda and the stage countdown that follows the live entry (`npm run test:agenda-timer`).
+- `stage-messages/` — messages with `{fields}`, requests from the /message page and the stage store (`npm run test:stage-messages`).
+- `song-import/` — OpenLyrics, ChordPro and FreeShow song files (`npm run test:song-import`).
+- `security/` — class-level checks of the CSRF guard, relay ticket scopes and log rotation
+  (`npm run test:security`).
+
 - `ws-sync/` — integration test for the WebSocket relay and the sync protocol, run with
   `npm run test:ws`. See [ws-sync/README.md](ws-sync/README.md).
 - `lyrics/` — parse/serialise round-trip test for the song editor's lyric-line model, run with

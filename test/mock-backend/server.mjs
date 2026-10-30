@@ -560,9 +560,21 @@ const handlers = {
   '/rest/Metrics': metricsFixture,
   '/rest/Log': () => ({ message: 'logged (mock)' }),
   '/rest/ValidateToken': () => ({ valid: true }),
+  // Relay tickets: a relay started with BACKEND_URL pointing here lets the mock session in.
+  '/rest/WsTicket': () => ({ ticket: 'mock-ticket', expires: Math.floor(Date.now() / 1000) + 86400 }),
+  '/rest/ValidateWsTicket': () => ({ account: fixtures.account.license, expires: Math.floor(Date.now() / 1000) + 86400 }),
   // The event picker reads `events` off the answer, so a bare [] makes it throw
   // ("incoming is not iterable") before the new-show dialog can even paint.
-  '/rest/ChurchToolsEvents': () => ({ events: [] }),
+  '/rest/ChurchToolsEvents': (req) =>
+    req.path.endsWith('/agenda')
+      ? {
+          items: [
+            { title: 'Gottesdienst', type: 'header', duration: 0, start: null, songTitle: null },
+            { title: 'Way Maker', type: 'song', duration: 300, start: null, songTitle: 'Way Maker' },
+            { title: 'Lied', type: 'song', duration: 240, start: null, songTitle: 'Great Is Thy Faithfulness' },
+          ],
+        }
+      : { events: [] },
   '/rest/ChurchToolsSongs': () => [],
 
   '/rest/AdminAccounts': () => fixtures.adminAccounts,
@@ -776,7 +788,8 @@ createServer(async (req, res) => {
   try {
     if (signedOut && route === '/rest/Session')
       payload = { account: 0, name: '', mail: '', isAuthenticated: false, authType: null, settings: {} };
-    else if (signedOut && route !== '/rest/Accounts' && path.startsWith('/rest/')) payload = { __status: 401, error: 'Unauthorized' };
+    else if (signedOut && !['/rest/Accounts', '/rest/Installers'].includes(route) && path.startsWith('/rest/'))
+      payload = { __status: 401, error: 'Unauthorized' };
     else payload = handler ? handler({ path, method: req.method, body, query }) : {};
     if (!handler) status = 200; // unknown endpoints answer {} rather than 404 — see the header comment
   } catch (error) {

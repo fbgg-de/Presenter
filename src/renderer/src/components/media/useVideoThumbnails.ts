@@ -8,13 +8,51 @@ export interface VideoInfo {
   height?: number;
 }
 
+/** Where the media server keeps this file's grabbed frame and facts (see mediaServer's /thumb, /meta). */
+export interface VideoCache {
+  thumb: string;
+  meta: string;
+}
+
+/** A frame and facts grabbed in an earlier session, or null when the server has none (or no cache). */
+async function readCached(where: VideoCache | undefined): Promise<VideoInfo | null> {
+  if (!where) return null;
+  try {
+    const res = await fetch(where.meta);
+    if (!res.ok) return null;
+    const facts = (await res.json()) as { duration?: number; width?: number; height?: number; thumb?: number };
+    const { thumb, ...rest } = facts;
+    return thumb ? { ...rest, thumbnail: where.thumb } : rest;
+  } catch {
+    return null;
+  }
+}
+
+/** Keep what was just grabbed for the next session. Fire and forget: the cache is only a cache. */
+async function storeCached(where: VideoCache | undefined, info: VideoInfo): Promise<void> {
+  if (!where || info.duration === undefined) return;
+  try {
+    let thumb = 0;
+    if (info.thumbnail?.startsWith('data:image/jpeg')) {
+      const blob = await (await fetch(info.thumbnail)).blob();
+      thumb = (await fetch(where.thumb, { method: 'PUT', body: blob, headers: { 'Content-Type': 'image/jpeg' } })).ok ? 1 : 0;
+    }
+    const facts = { duration: info.duration, width: info.width, height: info.height, thumb };
+    await fetch(where.meta, { method: 'PUT', body: JSON.stringify(facts), headers: { 'Content-Type': 'application/json' } });
+  } catch {
+    /* an older media server without the cache */
+  }
+}
+
 const cache = new Map<string, VideoInfo>();
 /**
  * One decoder for the entire visible library; completed thumbnails survive reopening.
  * The metadata read on the way (duration, resolution) is kept even when grabbing a frame fails.
  */
-export function useVideoThumbnails(urls: string[], enabled: boolean) {
+export function useVideoThumbnails(urls: string[], enabled: boolean, cacheFor?: (url: string) => VideoCache | undefined) {
   const key = JSON.stringify(urls);
+  const cacheForRef = useRef(cacheFor);
+  cacheForRef.current = cacheFor;
   const [videos, setVideos] = useState<Record<string, VideoInfo>>({});
   const current = useRef(new Map<string, VideoInfo>());
   useEffect(() => {
@@ -47,6 +85,16 @@ export function useVideoThumbnails(urls: string[], enabled: boolean) {
       for (const url of queue) {
         if (disposed) break;
         if (current.current.has(url)) continue;
+        // Grabbed in an earlier session: no decoding at all.
+        const where = cacheForRef.current?.(url);
+        const stored = await readCached(where);
+        if (disposed) break;
+        if (stored) {
+          cache.set(url, stored);
+          current.current.set(url, stored);
+          publish();
+          continue;
+        }
         const info = await new Promise<VideoInfo>((resolve) => {
           const found: VideoInfo = {};
           let settled = false;
@@ -95,6 +143,7 @@ export function useVideoThumbnails(urls: string[], enabled: boolean) {
           video.src = url;
         });
         if (disposed) break;
+        void storeCached(where, info);
         cache.set(url, info);
         current.current.set(url, info);
         if (cache.size > 160) cache.delete(cache.keys().next().value!);

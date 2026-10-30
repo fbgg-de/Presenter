@@ -20,12 +20,20 @@ Every client **must** send an auth message as the **very first** message after
 the WebSocket connection is opened:
 
 ```json
-{ "action": "auth", "account": 12345 }
+{ "action": "auth", "ticket": "<from /rest/WsTicket>", "account": 12345 }
 ```
 
-- `account` is the integer account/license number the user is logged in with.
+- `ticket` is a signed relay ticket the signed-in app fetches from `/rest/WsTicket` (valid
+  24 h). The relay resolves it via `BACKEND_URL/rest/ValidateWsTicket` and takes the
+  account from the ticket — the `account` field only serves relays older than 1.4.0.
+- A bare `{ "action": "auth", "account": 12345 }` is refused (close 4002) unless the relay
+  runs with `ALLOW_ACCOUNT_AUTH=1` — account numbers are easy to guess, and anyone holding
+  one could otherwise blank or skip the screens of that church. Set it only while apps
+  older than relay tickets are still in use.
+- Viewer displays authenticate with `{ "action": "auth", "token": "<viewer token>" }` and
+  are receive-only: nothing they send reaches the account.
 - The server confirms authentication with `{ "type": "auth_ok", "account": 12345 }`.
-- Clients that do not authenticate within 5 seconds are disconnected.
+- Clients that do not authenticate within 10 seconds are disconnected.
 - All subsequent messages from a client are relayed verbatim to every other
   client with the **same account number**.
 
@@ -237,7 +245,8 @@ belonging to account `12345` will never receive messages from account `67890`.
 | Variable            | Default | Description                                                 |
 | ------------------- | ------- | ----------------------------------------------------------- |
 | `PORT`              | `9001`  | TCP port the server listens on                              |
-| `BACKEND_URL`       | –       | Base URL of the PHP backend; required for viewer-token auth |
+| `BACKEND_URL`       | –       | Base URL of the PHP backend; required for ticket and viewer-token auth |
+| `ALLOW_ACCOUNT_AUTH` | –      | `1` = also accept a bare account number (apps older than relay tickets) |
 | `SYNC_TTL_SECONDS`  | `3600`  | How long the last selection stays current (`0` = forever)   |
 | `TRACE_BUFFER_SIZE` | `500`   | Messages kept per account for the admin monitor (50–5000)   |
 
@@ -268,7 +277,9 @@ clear their display if the relay restarts while they are watching.
 
 | Message                                               | When          | Description                                        |
 | ----------------------------------------------------- | ------------- | -------------------------------------------------- |
-| `{ action: "auth", account: <number>, client?: {} }`  | First message | Authenticate with an account number                |
+| `{ action: "auth", ticket, account, client?: {} }`    | First message | Authenticate with a relay ticket                   |
+| `{ action: "auth", token, client?: {} }`              | First message | Viewer display (receive-only)                      |
+
 | `{ action: "client_info", client: {} }`               | After auth    | Update this client's descriptor (no reconnect)     |
 | `{ action: "disconnect_peers" }`                      | After auth    | Close every other client of the account (op. only) |
 | `{ action: "auth", role: "monitor", token, account }` | First message | Attach as an admin message monitor (see below)     |

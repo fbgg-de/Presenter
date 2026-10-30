@@ -7,7 +7,15 @@ require_once(__DIR__ . '/classes/Cors.php');
 require_once(__DIR__ . '/classes/OidcClient.php');
 require_once(__DIR__ . '/api/utils.php');
 
+// Uploaded files (PDFs, icons) are never re-read by the browser as another type. Before
+// Cors::handle(), which ends preflights early.
+header('X-Content-Type-Options: nosniff');
 Cors::handle();
+
+
+if (!Cors::isSameSiteWrite()) {
+    (new Response())->error(403, 'cross-site request refused', false);
+}
 
 $path = trim(strtok($_SERVER['REQUEST_URI'], '?'));
 
@@ -44,7 +52,7 @@ if (!isset($_SESSION['authType']) || empty($_SESSION['authType'])) {
     // GET (read) and DELETE (clear) still require admin auth — only write is open.
     $isAnonymousLogWrite = $restClass === 'Log' && $_SERVER['REQUEST_METHOD'] === 'POST';
 
-    if (!in_array($restClass, ['Session', 'Accounts', 'ValidateToken', 'ValidateMonitorToken']) && !$isAnonymousLogWrite) {
+    if (!in_array($restClass, ['Session', 'Accounts', 'Installers', 'ValidateToken', 'ValidateMonitorToken', 'ValidateWsTicket']) && !$isAnonymousLogWrite) {
         // An unauthenticated request to a protected endpoint is an *expected*
         // condition (e.g. a device whose session lapsed still polling /rest/Shows
         // or /rest/PdfAnnotations). It is a normal 401 HTTP outcome, not a server

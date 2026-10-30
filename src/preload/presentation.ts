@@ -70,7 +70,13 @@ const presentationApi = {
   },
 };
 
-if (process.contextIsolated) {
+// Only the app's own pages get the bridge — never a site a link or document navigated to.
+const devRenderer = process.env['ELECTRON_RENDERER_URL'];
+const ownPage = location.protocol === 'file:' || (!!devRenderer && location.origin === new URL(devRenderer).origin);
+
+if (!ownPage) {
+  // nothing to expose
+} else if (process.contextIsolated) {
   try {
     contextBridge.exposeInMainWorld('presentationApi', presentationApi);
   } catch (error) {

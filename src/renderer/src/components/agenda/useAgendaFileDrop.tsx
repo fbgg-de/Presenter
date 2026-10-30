@@ -2,7 +2,7 @@
  * Dropping files onto the agenda — or picking them in the file dialog of an empty group's drop
  * area (`onPick`), which takes the same files the same way.
  *
- * - Lyric files (.sng, CCLI .txt) are imported as songs, as before.
+ * - Lyric files (.sng, CCLI .txt, OpenLyrics .xml, ChordPro, FreeShow .show) are imported as songs.
  * - Images, videos and audio become media items in the group they are dropped on — after the entry
  *   under the pointer, else at the end of that group. PDFs and PowerPoints become document entries.
  * - In the desktop app a file inside the media folder is referenced by its relative path; files

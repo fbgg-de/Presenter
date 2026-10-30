@@ -4,7 +4,7 @@
  */
 import { ipcMain, BrowserWindow, dialog, shell, app } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { existsSync } from 'fs';
+import { existsSync, statSync } from 'fs';
 import { pathToFileURL } from 'url';
 import { PresentationWindowManager } from './windows';
 import type { WindowConfig, MusicianViewConfig, PresentationContentIPC, SettingsDiff } from '../shared/types';
@@ -68,6 +68,8 @@ export const registerIpcHandlers = (windowManager: PresentationWindowManager) =>
 
   ipcMain.handle('open-directory', async (_event, path: string) => {
     try {
+      // Folders only — openPath on a file would run it with its default program.
+      if (!statSync(path).isDirectory()) return false;
       await shell.openPath(path);
       return true;
     } catch {

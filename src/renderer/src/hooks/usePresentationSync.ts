@@ -46,6 +46,11 @@ import { useGetSessionQuery } from '@/api/session.api';
 import { useWsOperator, type WsOperatorIncomingSync } from '@/hooks/useWsOperator';
 import { useAudioMixerHost } from '@/hooks/useAudioMixerHost';
 import { resolveSyncIndex, showOrderSignature } from '@/utils/syncProtocol';
+import { findAgendaIndex } from '@/utils/agendaTarget';
+import { parseMessageRequest, setMessageRequestSender } from '@/stage/messageRequests';
+import { addMessageRequest } from '@/store/stageSlice';
+import type { ShowItem } from '@/api/shows.api';
+import type { ISong } from '@/song';
 
 /**
  * Hook that watches Redux state and broadcasts presentation content
@@ -235,6 +240,8 @@ export const usePresentationSync = (): void => {
   // Context ref is assigned further below once song/show/order are derived.
   const remoteCtxRef = useRef<{
     showItemCount: number;
+    order: ShowItem[];
+    songs: Record<number, ISong>;
     currentSong: { getBlocks: (order: string) => { name: string; copyright: boolean }[] } | undefined;
     orderName: string;
     /** Song sections or verse pages of the active item. */
@@ -248,6 +255,8 @@ export const usePresentationSync = (): void => {
     videoFadeDuration: number;
   }>({
     showItemCount: 0,
+    order: [],
+    songs: {},
     currentSong: undefined,
     orderName: 'Default',
     blockCount: 0,
@@ -292,9 +301,10 @@ export const usePresentationSync = (): void => {
           }
           break;
         case 'set_item': {
-          const idx = typeof data.index === 'number' ? Math.floor(data.index) : null;
+          // By id, title or position — see utils/agendaTarget.ts.
+          const idx = findAgendaIndex(ctx.order, ctx.songs, data);
           if (idx != null) {
-            dispatch(setActiveItemIndex(Math.max(0, Math.min(idx, Math.max(0, ctx.showItemCount - 1)))));
+            dispatch(setActiveItemIndex(idx));
             if (ctx.resetBlackOnSwitch) dispatch(setBlack(false));
           }
           break;
@@ -352,6 +362,20 @@ export const usePresentationSync = (): void => {
     [],
   );
   const { handleRelayMessage: handleAudioRelayMessage } = useAudioMixerHost({ send: sendRelay });
+  // Message requests from the /message page (stage/messageRequests.ts): only the live operator
+  // collects them, like remote commands; everything else goes on to the mixer host.
+  useEffect(() => setMessageRequestSender(sendRelay), [sendRelay]);
+  const handleRelayMessage = useCallback(
+    (msg: Record<string, unknown>) => {
+      if (msg.action === 'message_request') {
+        const request = isLiveOperator() ? parseMessageRequest(msg.data) : null;
+        if (request) dispatch(addMessageRequest(request));
+        return;
+      }
+      handleAudioRelayMessage(msg);
+    },
+    [handleAudioRelayMessage, isLiveOperator, dispatch],
+  );
 
   // Operator WebSocket connection to the relay server
   const {
@@ -368,7 +392,7 @@ export const usePresentationSync = (): void => {
     handleGetState,
     handleRemoteCommand,
     midiTrackingMaster === 'midi',
-    handleAudioRelayMessage,
+    handleRelayMessage,
   );
   wsBroadcastRef.current = wsBroadcast;
 
@@ -522,6 +546,8 @@ export const usePresentationSync = (): void => {
   // Keep the remote-command context current (declared above the WS hook, filled here)
   remoteCtxRef.current = {
     showItemCount: currentShow?.order?.length ?? 0,
+    order: currentShow?.order ?? [],
+    songs,
     currentSong,
     orderName,
     blockCount: navigableBlockCount(activeItem, currentSong, orderName),

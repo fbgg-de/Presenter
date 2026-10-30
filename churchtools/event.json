@@ -1,0 +1,4788 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "contact": {
+      "email": "support@churchtools.de",
+      "name": "German ChurchTools Forum",
+      "url": "https://forum.church.tools/category/22/churchtools-schnittstellen"
+    },
+    "description": "The ChurchTools REST API is the best entry point for developers to access ChurchTools. <br><br> **Authentication:** You need to be authorized to use some endpoints. Those endpoints are marked by a gray lock symbol. If you view the documentation, while you are logged into ChurchTools, all requests are already authorized. If you want to authorized a request, you need to provide a `Login Token` as `Authorization` header in the format `Authorization: Login <token>` or send a valid cookie. You can use the green \"Authorize\" dialog to enter those details and see how a request would look like in detail. <br><br> **Missing Endpoints:** Not all features are yet available by our new REST API. This documentation will grow in the future. We are working hard to add new endpoints with every ChurchTools version. The documentation will always show only those endpoints you can use with your ChurchTools installation.",
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "title": "ChurchTools REST API",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "description": "ChurchTools",
+      "url": "/api"
+    },
+    {
+      "description": "Local",
+      "url": "http://churchtools.test/api"
+    }
+  ],
+  "security": [
+    {
+      "Login-Token-Header": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "Endpoints for event module",
+      "name": "Event"
+    }
+  ],
+  "paths": {
+    "/event/masterdata": {
+      "get": {
+        "description": "The master data are the backbone of ChurchTools. This endpoint returns all data for that module to work with. Different endpoints don't include the master data directly but only state the ID for this data and this endpoint provides the data with all its details.",
+        "operationId": "get-event-masterdata",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EventMasterData"
+                    },
+                    "meta": {
+                      "properties": {
+                        "absenceReasons": {
+                          "type": "integer"
+                        },
+                        "facts": {
+                          "type": "integer"
+                        },
+                        "serviceGroups": {
+                          "type": "integer"
+                        },
+                        "services": {
+                          "type": "integer"
+                        },
+                        "songCategories": {
+                          "type": "integer"
+                        },
+                        "songSources": {
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Fetch MasterData for Module \"Event\"",
+        "tags": ["Event"]
+      }
+    },
+    "/events": {
+      "get": {
+        "description": "Get all events that meet the given search criteria. It is important to note that the some of the search parameters are mutually exclusive. Most importantly, pagination only works when `from` is used in combination with `direction` (The `to` parameter is ignored in this case). Conversely, when a range is used with `from` and `to`,  `page` and `limit` are ignored. Furthermore, when neither `to` nor `direction` are supplied, a `to` value with the current date plus two months is used. (NB: The `to` parameter is here still *inclusive*, but will be *exclusive* at a future point in time.)",
+        "operationId": "get-events",
+        "parameters": [
+          {
+            "description": "If true, include also canceled events",
+            "in": "query",
+            "name": "canceled",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/DirectionParameter"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParameter"
+          },
+          {
+            "description": "to include the eventServices",
+            "in": "query",
+            "name": "include",
+            "schema": {
+              "example": "eventServices",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/From"
+          },
+          {
+            "$ref": "#/components/parameters/To"
+          },
+          {
+            "$ref": "#/components/parameters/PageParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/Event"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get all events",
+        "tags": ["Event"]
+      }
+    },
+    "/events/ical": {
+      "get": {
+        "description": "Returns the roster iCal subscription setting for the requested person. If no roster secret exists yet, the endpoint creates one and returns the setting together with the generated iCal URL in `meta.iCalUrl`.",
+        "operationId": "get-events-ical",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "personId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "attribute": {
+                          "example": "rosterICalSecret",
+                          "type": "string"
+                        },
+                        "module": {
+                          "example": "churchservice",
+                          "type": "string"
+                        },
+                        "value": {
+                          "example": "QOkVUp7JVLf5Mg3s9ynS",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "iCalUrl": {
+                          "example": "http://churchtools.test/events/ical/QOkVUp7JVLf5Mg3s9ynS",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get iCal roster link",
+        "tags": ["Event"]
+      },
+      "post": {
+        "description": "Creates a new roster iCal subscription secret for the requested person and returns the updated setting plus the generated iCal URL. Existing roster links for that person are replaced by the newly created secret.",
+        "operationId": "post-events-ical",
+        "parameters": [
+          {
+            "description": "Person ID to create a new iCal roster link for.",
+            "in": "query",
+            "name": "personId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "attribute": {
+                          "example": "rosterICalSecret",
+                          "type": "string"
+                        },
+                        "module": {
+                          "example": "churchservice",
+                          "type": "string"
+                        },
+                        "value": {
+                          "example": "QOkVUp7JVLf5Mg3s9ynS",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "meta": {
+                      "properties": {
+                        "iCalUrl": {
+                          "example": "http://churchtools.test/events/ical/QOkVUp7JVLf5Mg3s9ynS",
+                          "type": "string"
+                        }
+                      },
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Create iCal roster link",
+        "tags": ["Event"]
+      }
+    },
+    "/events/send": {
+      "post": {
+        "description": "A agenda can be sent to multiple people at once. Recipients can be participants of one of the events, whereby the user sending the mail MUST see the service groups, or the user can add additional recipients from the list of people the user can see. To send a mail the user MUST see the agenda.",
+        "operationId": "post-events-send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "examples": {
+                "example-1": {
+                  "value": {
+                    "appendAgendaButton": false,
+                    "body": "I have a updated the agenda for the upcoming service. Please review the changes.",
+                    "eventIds": [31, 32],
+                    "files": [0],
+                    "recipients": [40, 41, 116],
+                    "sendCopyToMe": true,
+                    "subject": "Agenda Updated"
+                  }
+                }
+              },
+              "schema": {
+                "example": {
+                  "appendAgendaButton": false,
+                  "body": "I have a updated the agenda for the upcoming service. Please review the changes.",
+                  "eventIds": [31, 32],
+                  "files": [0],
+                  "recipients": [40, 41, 116],
+                  "sendCopyToMe": true,
+                  "subject": "Agenda Updated"
+                },
+                "properties": {
+                  "appendAgendaButton": {
+                    "description": "If an agenda exists for the event, a button with a link to that agenda is added to the mail body.",
+                    "example": true,
+                    "type": "boolean"
+                  },
+                  "body": {
+                    "description": "E-Mail body.",
+                    "type": "string"
+                  },
+                  "eventIds": {
+                    "description": "Array of event IDs. Multiple event IDs MUST be integrated events, i.e. all events share the same agenda.",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "files": {
+                    "description": "List of file Ids. If the file is attached to the event it is added to the mail body.",
+                    "items": {
+                      "example": 0,
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "recipients": {
+                    "description": "Array of person IDs.",
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "sendCopyToMe": {
+                    "default": false,
+                    "description": "Flag if a mail should be send to the user sending the request.",
+                    "type": "boolean"
+                  },
+                  "subject": {
+                    "description": "E-Mail subject.",
+                    "type": "string"
+                  }
+                },
+                "required": ["eventIds", "recipients", "subject", "body", "appendAgendaButton", "files"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "E-Mail information and recipients",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "args": {
+                      "properties": {
+                        "count": {
+                          "example": 5,
+                          "type": "integer"
+                        }
+                      },
+                      "type": "object"
+                    },
+                    "errors": {
+                      "description": "Array of DomainObjects with people, who have no eMail Addresses.",
+                      "items": {
+                        "$ref": "#/components/schemas/DomainObjectPerson"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "example": "5 recipients have no eMail address. No eMail is sent to them.",
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "example": "agenda.mail.missing.email",
+                      "type": "string"
+                    },
+                    "translatedMessage": {
+                      "example": "5 Empfänger haben keine E-Mail Adresse. Keine E-Mail wurde an sie geschickt.",
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successfully sent mails to some recipients."
+          },
+          "204": {
+            "description": "Successfully sent mails to all recipients the user can see."
+          },
+          "400": {
+            "description": "Validation errors. See response for details"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Send Mail to Event Participants",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}": {
+      "delete": {
+        "description": "Delete an event",
+        "operationId": "delete-events-id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "description": "If true, only checks whether the event can be deleted without actually deleting it.",
+            "in": "query",
+            "name": "dryRun",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "If true, sends an email notification to affected persons when deleting the event.",
+            "in": "query",
+            "name": "sendMail",
+            "schema": {
+              "default": false,
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Delete a single event",
+        "tags": ["Event"]
+      },
+      "get": {
+        "description": "Get a event by id, with services",
+        "operationId": "get-events-id",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Event"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get a single event",
+        "tags": ["Event"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        }
+      ],
+      "put": {
+        "description": "Update a event by id, with services",
+        "operationId": "put-events-id",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "adminIds": {
+                    "items": {
+                      "type": "integer"
+                    },
+                    "type": "array"
+                  },
+                  "isCanceled": {
+                    "type": "boolean"
+                  },
+                  "note": {
+                    "maxLength": 4000,
+                    "type": ["string", "null"]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EventUpdate"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Update a single event",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/chat": {
+      "post": {
+        "operationId": "post-events-id-chat",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartStopChat"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Start or stop an event chat",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/eventservices": {
+      "put": {
+        "deprecated": true,
+        "description": "Update the event services of an event. The request body must contain an array of event service objects. Each object must contain the serviceId and the count for that service.",
+        "operationId": "put-events-id-eventservices",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "eventId": {
+                    "type": "integer"
+                  },
+                  "services": {
+                    "items": {
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "serviceId": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["serviceId", "count"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": ["eventId", "services"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Update event services",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/eventservices/{serviceId}": {
+      "delete": {
+        "deprecated": true,
+        "description": "Delete an event service with a person outside of CT. No connection to a user.",
+        "operationId": "delete-events-id-eventservices-id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "comment": {
+                    "maxLength": 255,
+                    "type": "string"
+                  },
+                  "eventId": {
+                    "type": "integer"
+                  },
+                  "eventServiceId": {
+                    "type": "integer"
+                  }
+                },
+                "required": ["eventId", "eventServiceId"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Delete event service",
+        "tags": ["Event"]
+      },
+      "put": {
+        "deprecated": true,
+        "description": "Update an event service with a person outside of CT. No connection to a user",
+        "operationId": "put-events-id-eventservices-id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "agreed": {
+                    "type": "boolean"
+                  },
+                  "comment": {
+                    "maxLength": 255,
+                    "type": "string"
+                  },
+                  "eventId": {
+                    "type": "integer"
+                  },
+                  "eventServiceId": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "maxLength": 255,
+                    "minLength": 2,
+                    "type": "string"
+                  }
+                },
+                "required": ["eventId", "eventServiceId", "name", "agreed"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Update event service",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/facts": {
+      "get": {
+        "description": "Returns all fact values stored for the specified event that are visible to the current user. The response contains the fact definition, event reference, and the saved value for each matching fact.",
+        "operationId": "get-events-eventId-facts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/EventFact"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "summary": "Read facts for event",
+        "tags": ["Event"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        }
+      ]
+    },
+    "/events/{eventId}/facts/{factId}": {
+      "delete": {
+        "description": "Deletes the value of the specified fact for the given event. Use this to remove an event-specific fact value without deleting the fact definition itself.",
+        "operationId": "delete-events-eventId-facts-factId",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dry_run",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete event fact",
+        "tags": ["Event"]
+      },
+      "get": {
+        "description": "Returns one specific fact value for the given event and fact definition. The current user must be allowed to view the requested fact on that event.",
+        "operationId": "get-events-eventId-facts-factId",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EventFact"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "summary": "Read one event fact",
+        "tags": ["Event"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/EventId"
+        },
+        {
+          "in": "path",
+          "name": "factId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "put": {
+        "description": "Creates or updates the value of the specified fact for the given event. Numeric facts require a numeric value, while select facts require one of the configured options for the fact definition.",
+        "operationId": "put-events-eventId-facts-factId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "value": {
+                    "oneOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "type": "object",
+                "x-examples": {
+                  "Example 1": {
+                    "value": 12345
+                  }
+                }
+              }
+            }
+          },
+          "description": "Pass the `value` for that fact as payload. For numeric facts the value MUST be a numeric value. For select facts the value MUST be a valid option.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EventFact"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "Wrong Option": {
+                    "value": {
+                      "args": [],
+                      "errors": [
+                        {
+                          "args": {
+                            "compareIdentical": false,
+                            "haystack": ["Taufe", "Familie", "Beerdigung"],
+                            "input": "Hochzeit"
+                          },
+                          "fieldId": "value",
+                          "message": "Die Eingabe sollte einer der folgenden Werte sein: {allowedValues}",
+                          "messageKey": "validation.in"
+                        }
+                      ],
+                      "message": "There are validation errors",
+                      "messageKey": "validation.error",
+                      "translatedMessage": "Die eingegebenen Daten waren nicht korrekt."
+                    }
+                  }
+                },
+                "schema": {
+                  "properties": {
+                    "args": {
+                      "items": {
+                        "properties": {},
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "errors": {
+                      "items": {
+                        "properties": {
+                          "args": {
+                            "properties": {
+                              "compareIdentical": {
+                                "type": "boolean"
+                              },
+                              "haystack": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "input": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
+                          "fieldId": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "messageKey": {
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "messageKey": {
+                      "type": "string"
+                    },
+                    "translatedMessage": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "x-examples": {
+                    "Example 1": {
+                      "args": [],
+                      "errors": [
+                        {
+                          "args": {
+                            "compareIdentical": false,
+                            "haystack": ["Taufe", "Familie", "Beerdigung"],
+                            "input": "Hochzeit"
+                          },
+                          "fieldId": "value",
+                          "message": "Die Eingabe sollte einer der folgenden Werte sein: {allowedValues}",
+                          "messageKey": "validation.in"
+                        }
+                      ],
+                      "message": "There are validation errors",
+                      "messageKey": "validation.error",
+                      "translatedMessage": "Die eingegebenen Daten waren nicht korrekt."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "summary": "Create or update event fact",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/servicerequests": {
+      "put": {
+        "description": "Update the service requests of an event. The request body must contain an array of service request objects. Each object must contain the serviceId and the count for that service.",
+        "operationId": "put-events-eventId-servicerequests",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "eventId": {
+                    "type": "integer"
+                  },
+                  "services": {
+                    "items": {
+                      "properties": {
+                        "count": {
+                          "type": "integer"
+                        },
+                        "serviceId": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": ["serviceId", "count"],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": ["eventId", "services"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Update event services",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/servicerequests/{requestId}": {
+      "put": {
+        "description": "Update the specified service request. Supply exactly one non-null assignee: `personId` for an existing person or `name` for an external person. Omit the other field or set it to `null`.",
+        "operationId": "put-events-eventId-servicerequests-requestId",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "$ref": "#/components/parameters/ServiceRequestId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "personId": {
+                        "type": "null"
+                      }
+                    },
+                    "required": ["name"]
+                  },
+                  {
+                    "properties": {
+                      "name": {
+                        "type": "null"
+                      },
+                      "personId": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": ["personId"]
+                  }
+                ],
+                "properties": {
+                  "comment": {
+                    "maxLength": 255,
+                    "type": ["string", "null"]
+                  },
+                  "isAccepted": {
+                    "type": "boolean"
+                  },
+                  "name": {
+                    "description": "Name of an external assignee. Supply exactly one non-null value: `name` or `personId`.",
+                    "maxLength": 255,
+                    "minLength": 2,
+                    "type": ["string", "null"]
+                  },
+                  "personId": {
+                    "description": "ID of an existing person. Supply exactly one non-null value: `personId` or `name`.",
+                    "type": ["integer", "null"]
+                  }
+                },
+                "required": ["isAccepted"],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EventService"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Update service request",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/servicerequests/{requestId}/accept": {
+      "post": {
+        "description": "Accept the specified service request.",
+        "operationId": "post-events-id-servicerequests-id-accept",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "$ref": "#/components/parameters/ServiceRequestId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "comment": {
+                    "maxLength": 255,
+                    "type": ["string", "null"]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EventService"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Accept service request",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/servicerequests/{requestId}/decline": {
+      "post": {
+        "description": "Decline the specified service request.",
+        "operationId": "post-events-id-servicerequests-id-decline",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "$ref": "#/components/parameters/ServiceRequestId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "comment": {
+                    "maxLength": 255,
+                    "type": ["string", "null"]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EventService"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Decline service request",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/servicerequests/{requestId}/undo": {
+      "post": {
+        "description": "Undo the specified service request which was previously accepted or declined.",
+        "operationId": "post-events-id-servicerequests-id-undo",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "$ref": "#/components/parameters/ServiceRequestId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "comment": {
+                    "maxLength": 255,
+                    "type": ["string", "null"]
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EventService"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Undo service request",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{eventId}/services/{serviceId}/possiblepersons": {
+      "get": {
+        "description": "Gets all persons that can potentially be assigned to the specified service of an event. The response includes availability information, service history, and conflicts that help decide whether a person is a good candidate for the service request.",
+        "operationId": "get-events-eventId-services-serviceId-possiblepersons",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/EventId"
+          },
+          {
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/PossibleEventPerson"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-Errors"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get all possible persons for a service",
+        "tags": ["Event"]
+      }
+    },
+    "/events/{serviceId}/possiblepersonsforservice": {
+      "get": {
+        "description": "Gets all persons that can potentially serve in the specified service, independent of a concrete event. Use this endpoint for service-level candidate lists where event-specific availability and conflicts are not needed.",
+        "operationId": "get-events-id-possiblepersonsforservice",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "serviceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "properties": {
+                          "fullName": {
+                            "type": "string"
+                          },
+                          "personId": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": ["personId", "fullName"],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get all possible persons for a service",
+        "tags": ["Event"]
+      }
+    },
+    "/eventtemplates": {
+      "get": {
+        "description": "Returns all event templates visible to the current user. Event templates contain reusable defaults for creating event data such as services, service groups, facts, notes, and default start time information.",
+        "operationId": "get-eventtemplates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/EventTemplate"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful request"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get all event templates",
+        "tags": ["Event"]
+      }
+    },
+    "/persons/{personId}/events": {
+      "get": {
+        "description": "Returns an unpaginated list of non-cancelled events where the person has a valid assignment. Requires the current user to be this person or a super administrator. from defaults to today and is compared strictly to midnight: an event exactly at midnight is excluded, later events that day are included. Results are ordered by event start ascending with no upper date bound. Visible service assignments are always included under eventServices and are not restricted to just this person. eventFiles is present but this endpoint does not load files, so it is empty. meta.count is the number returned.",
+        "operationId": "get-persons-id-events",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PersonId"
+          },
+          {
+            "description": "Lower bound, strictly after midnight on this date. Defaults to today.",
+            "in": "query",
+            "name": "from",
+            "schema": {
+              "$ref": "#/components/schemas/DateString"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/EventReadWithServices"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get events that person is involved with",
+        "tags": ["Event"],
+        "x-last-checked": "2026-09-13T00:00:00.000Z"
+      }
+    },
+    "/persons/{personId}/events/{eventId}/services/{serviceId}/exchangerequests": {
+      "get": {
+        "description": "Returns all exchange requests that a user requested for a certain service",
+        "operationId": "get-persons-id-events-id-services-id-exchangerequests",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceExchangeRequest"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get all service exchange requests of a user for a service",
+        "tags": ["Event"]
+      },
+      "parameters": [
+        {
+          "description": "ID of person",
+          "in": "path",
+          "name": "personId",
+          "required": true,
+          "schema": {
+            "example": 42,
+            "type": "integer"
+          }
+        },
+        {
+          "description": "ID of Event",
+          "in": "path",
+          "name": "eventId",
+          "required": true,
+          "schema": {
+            "example": 42,
+            "type": "integer"
+          }
+        },
+        {
+          "in": "path",
+          "name": "serviceId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "description": "If set to true, service exchange requests from other users for the user are returned. Otherwise (default) requests from this user for other users are returned.",
+          "in": "query",
+          "name": "incoming",
+          "schema": {
+            "example": false,
+            "type": "boolean"
+          }
+        }
+      ],
+      "post": {
+        "description": "Creates a new service exchange request",
+        "operationId": "post-persons-id-events-id-services-id-exchangerequests",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceExchangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Create a new service exchange request",
+        "tags": ["Event"]
+      }
+    },
+    "/persons/{personId}/events/{eventId}/services/{serviceId}/exchangerequests/candidates": {
+      "get": {
+        "description": "Returns all possible candidates for an exchange of a service",
+        "operationId": "get-persons-id-events-id-services-id-exchangerequests-candidates",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "eventDate": {
+                      "type": "string"
+                    },
+                    "eventServiceId": {
+                      "type": "integer"
+                    },
+                    "eventTitle": {
+                      "type": "string"
+                    },
+                    "person": {
+                      "description": "Person Domain Object",
+                      "type": "object"
+                    }
+                  },
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get candidates for service exchange request",
+        "tags": ["Event"]
+      },
+      "parameters": [
+        {
+          "description": "ID of person",
+          "in": "path",
+          "name": "personId",
+          "required": true,
+          "schema": {
+            "example": 42,
+            "type": "integer"
+          }
+        },
+        {
+          "description": "ID of Event",
+          "in": "path",
+          "name": "eventId",
+          "required": true,
+          "schema": {
+            "example": 42,
+            "type": "integer"
+          }
+        },
+        {
+          "in": "path",
+          "name": "serviceId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/persons/{personId}/events/{eventId}/services/{serviceId}/exchangerequests/{requestId}": {
+      "delete": {
+        "operationId": "delete-persons-id-events-id-services-id-exchangerequests-id",
+        "parameters": [
+          {
+            "description": "If set to true, the service exchange request gets deleted from database, otherwise (the default) it just gets a status of CANCELLED.",
+            "in": "query",
+            "name": "hardDelete",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          }
+        },
+        "summary": "Delete a service exchange request",
+        "tags": ["Event"]
+      },
+      "parameters": [
+        {
+          "description": "ID of person",
+          "in": "path",
+          "name": "personId",
+          "required": true,
+          "schema": {
+            "example": 42,
+            "type": "integer"
+          }
+        },
+        {
+          "description": "ID of Event",
+          "in": "path",
+          "name": "eventId",
+          "required": true,
+          "schema": {
+            "example": 42,
+            "type": "integer"
+          }
+        },
+        {
+          "in": "path",
+          "name": "serviceId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "in": "path",
+          "name": "requestId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/persons/{personId}/exchangerequests": {
+      "get": {
+        "description": "Returns all exchange requests for a certain user",
+        "operationId": "get-persons-id-exchangerequests",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/ServiceExchangeRequest"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get all service exchange requests for a user",
+        "tags": ["Event"]
+      },
+      "parameters": [
+        {
+          "description": "ID of person",
+          "in": "path",
+          "name": "personId",
+          "required": true,
+          "schema": {
+            "example": 42,
+            "type": "integer"
+          }
+        },
+        {
+          "description": "If set to true, service exchange requests that the user requested are returned. Otherwise (default) requests from other users for the user are returned.",
+          "in": "query",
+          "name": "personIsRequester",
+          "schema": {
+            "example": false,
+            "type": "boolean"
+          }
+        }
+      ]
+    },
+    "/persons/{personId}/exchangerequests/{requestId}": {
+      "delete": {
+        "operationId": "delete-persons-id-exchangerequests-id",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          }
+        },
+        "summary": "Decline a service exchange request",
+        "tags": ["Event"]
+      },
+      "parameters": [
+        {
+          "description": "ID of person",
+          "in": "path",
+          "name": "personId",
+          "required": true,
+          "schema": {
+            "example": 42,
+            "type": "integer"
+          }
+        },
+        {
+          "in": "path",
+          "name": "requestId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "put": {
+        "operationId": "put-persons-id-exchangerequests-id",
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "summary": "Accept a service exchange request",
+        "tags": ["Event"]
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "DirectionParameter": {
+        "description": "The direction of the result set",
+        "in": "query",
+        "name": "direction",
+        "schema": {
+          "default": "forward",
+          "enum": ["backward", "forward"],
+          "example": "forward",
+          "type": "string"
+        }
+      },
+      "EventId": {
+        "description": "ID of Event",
+        "in": "path",
+        "name": "eventId",
+        "required": true,
+        "schema": {
+          "example": 42,
+          "type": "integer"
+        }
+      },
+      "From": {
+        "description": "Return entities starting from this date.",
+        "in": "query",
+        "name": "from",
+        "schema": {
+          "$ref": "#/components/schemas/DateString"
+        }
+      },
+      "LimitParameter": {
+        "description": "Number of results per page.",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 10,
+          "example": 10,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "PageParameter": {
+        "description": "Page number to show page in pagination. If empty, start at first page.",
+        "in": "query",
+        "name": "page",
+        "schema": {
+          "default": 1,
+          "example": 1,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "PersonId": {
+        "description": "ID of person",
+        "in": "path",
+        "name": "personId",
+        "required": true,
+        "schema": {
+          "example": 42,
+          "type": "integer"
+        }
+      },
+      "ServiceRequestId": {
+        "description": "ID of a service request",
+        "in": "path",
+        "name": "requestId",
+        "required": true,
+        "schema": {
+          "example": 42,
+          "type": "integer"
+        }
+      },
+      "To": {
+        "description": "Return entities up to (but not including) this date.",
+        "in": "query",
+        "name": "to",
+        "schema": {
+          "$ref": "#/components/schemas/DateString"
+        }
+      }
+    },
+    "responses": {
+      "204-Deleted": {
+        "description": "Successfully deleted"
+      },
+      "204-NoContent": {
+        "description": "No Content"
+      },
+      "400-BadRequest": {
+        "description": "Bad Request"
+      },
+      "400-Errors": {
+        "description": "Validation errors. See response for details"
+      },
+      "401-Unauthorized": {
+        "content": {
+          "text/plain": {
+            "schema": {
+              "example": "Session expired!",
+              "type": "string"
+            }
+          }
+        },
+        "description": "Unauthorized"
+      },
+      "403-Forbidden": {
+        "description": "Forbidden to see, create, update, or delete resource"
+      },
+      "404-NotFound": {
+        "description": "Resource not found"
+      }
+    },
+    "schemas": {
+      "Absence": {
+        "description": "Absence for a person, like vacation or sickness.",
+        "properties": {
+          "absenceReason": {
+            "$ref": "#/components/schemas/AbsenceReason"
+          },
+          "comment": {
+            "description": "Name, description for absence",
+            "example": "Holiday",
+            "maxLength": 255,
+            "type": ["string", "null"]
+          },
+          "endDate": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateString"
+              }
+            ],
+            "description": "When this absence ends."
+          },
+          "endTime": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ZuluDateNullable"
+              }
+            ],
+            "description": "When this absence ends. Is null if absence is all-day."
+          },
+          "id": {
+            "description": "ID of Record",
+            "example": 1,
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "person": {
+            "$ref": "#/components/schemas/DomainObjectPerson"
+          },
+          "startDate": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DateString"
+              }
+            ],
+            "description": "When this absence begins."
+          },
+          "startTime": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ZuluDateNullable"
+              }
+            ],
+            "description": "When this absence begins. Is null if absence is all-day."
+          }
+        },
+        "required": ["id", "absenceReason", "startDate", "startTime", "endDate", "endTime", "comment", "person", "meta"],
+        "title": "Absence",
+        "type": "object",
+        "x-tags": ["Absence"]
+      },
+      "AbsenceReason": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameTranslated": {
+            "type": "string"
+          },
+          "sortKey": {
+            "type": "integer"
+          }
+        },
+        "required": ["id", "name", "nameTranslated", "sortKey"],
+        "type": "object",
+        "x-tags": ["Absence"]
+      },
+      "Address": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AddressUpdate"
+          },
+          {
+            "properties": {
+              "@deprecated": {
+                "description": "Legacy field mappings emitted by the address serializer.",
+                "properties": {
+                  "geoLat": {
+                    "const": "latitude",
+                    "type": "string"
+                  },
+                  "geoLng": {
+                    "const": "longitude",
+                    "type": "string"
+                  },
+                  "markerColor": {
+                    "const": "color",
+                    "type": "string"
+                  },
+                  "markerIcon": {
+                    "const": "icon",
+                    "type": "string"
+                  },
+                  "markerUrl": {
+                    "const": "@deleted use icon and color instead",
+                    "type": "string"
+                  },
+                  "meetingAt": {
+                    "const": "name",
+                    "type": "string"
+                  },
+                  "postalcode": {
+                    "const": "zip",
+                    "type": "string"
+                  }
+                },
+                "required": ["meetingAt", "markerIcon", "markerColor", "postalcode", "markerUrl", "geoLat", "geoLng"],
+                "type": "object"
+              },
+              "geoLat": {
+                "deprecated": true,
+                "description": "Use `latitude` instead",
+                "type": ["string", "null"]
+              },
+              "geoLng": {
+                "deprecated": true,
+                "description": "Use `longitude` instead",
+                "type": ["string", "null"]
+              },
+              "latitudeLoose": {
+                "deprecated": true,
+                "description": "Use `latitude` instead",
+                "type": ["string", "null"]
+              },
+              "longitudeLoose": {
+                "deprecated": true,
+                "description": "Use `longitude` instead",
+                "type": ["string", "null"]
+              },
+              "markerColor": {
+                "deprecated": true,
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/AddressColor"
+                  },
+                  {
+                    "$ref": "#/components/schemas/CtColor"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "markerIcon": {
+                "deprecated": true,
+                "description": "Use `icon` instead",
+                "type": ["string", "null"]
+              },
+              "markerUrl": {
+                "deprecated": true,
+                "type": ["string", "null"]
+              },
+              "meetingAt": {
+                "deprecated": true,
+                "description": "Use `name` instead",
+                "type": ["string", "null"]
+              },
+              "postalcode": {
+                "deprecated": true,
+                "description": "Use `zip` instead",
+                "type": ["string", "null"]
+              }
+            },
+            "required": [
+              "geoLat",
+              "geoLng",
+              "latitudeLoose",
+              "longitudeLoose",
+              "markerColor",
+              "markerIcon",
+              "markerUrl",
+              "meetingAt",
+              "postalcode",
+              "@deprecated",
+              "domainType",
+              "domainIdentifier"
+            ]
+          }
+        ]
+      },
+      "AddressColor": {
+        "description": "Special color values used for groups",
+        "enum": ["default", "parent"],
+        "type": "string"
+      },
+      "AddressCreate": {
+        "properties": {
+          "addition": {
+            "example": "Gebäude B",
+            "maxLength": 100,
+            "type": ["string", "null"]
+          },
+          "city": {
+            "example": "Hamburg",
+            "maxLength": 100,
+            "type": ["string", "null"]
+          },
+          "color": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CtColor"
+              },
+              {
+                "$ref": "#/components/schemas/AddressColor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "country": {
+            "description": "A country's ISO-code",
+            "example": "DE",
+            "maxLength": 2,
+            "type": ["string", "null"]
+          },
+          "district": {
+            "example": "Altona",
+            "maxLength": 100,
+            "type": ["string", "null"]
+          },
+          "domainIdentifier": {
+            "description": "The identifier of the domain object. This field is set automatically from the path parameter and should not be included in the request body.",
+            "example": "42",
+            "type": "string"
+          },
+          "domainType": {
+            "description": "The domain type of the address. This field is set automatically from the path parameter and should not be included in the request body.",
+            "enum": ["appointment", "campus", "church", "group"],
+            "example": "group",
+            "type": "string"
+          },
+          "icon": {
+            "example": "house",
+            "maxLength": 40,
+            "type": ["string", "null"]
+          },
+          "latitude": {
+            "example": "47.145",
+            "type": ["string", "null"]
+          },
+          "longitude": {
+            "example": "23.179",
+            "type": ["string", "null"]
+          },
+          "name": {
+            "example": "Retreat Center",
+            "maxLength": 100,
+            "type": ["string", "null"]
+          },
+          "street": {
+            "example": "14 Main St",
+            "maxLength": 100,
+            "type": ["string", "null"]
+          },
+          "zip": {
+            "example": "12345",
+            "maxLength": 100,
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["addition", "city", "color", "country", "district", "icon", "latitude", "longitude", "name", "street", "zip"],
+        "type": "object"
+      },
+      "AddressUpdate": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AddressCreate"
+          },
+          {
+            "properties": {
+              "id": {
+                "example": 7,
+                "type": "integer"
+              }
+            },
+            "required": ["id"],
+            "type": "object"
+          }
+        ]
+      },
+      "AppointmentAdditionalCreate": {
+        "description": "An additional occurrence on a calendar date, using the base appointment’s local start time and duration. With isRepeated=true, the recurrence rule also runs from this additional date, for example to add a second weekday to a weekly series.",
+        "properties": {
+          "date": {
+            "$ref": "#/components/schemas/DateString",
+            "example": "2026-09-23"
+          },
+          "isRepeated": {
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": ["date", "isRepeated"],
+        "type": "object"
+      },
+      "AppointmentAdditionals": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AppointmentAdditionalCreate"
+          },
+          {
+            "properties": {
+              "id": {
+                "description": "ID of the stored recurrence entry.",
+                "example": 12,
+                "type": "integer"
+              },
+              "meta": {
+                "$ref": "#/components/schemas/MetaDataEntityId"
+              }
+            },
+            "required": ["id", "meta"],
+            "type": "object"
+          }
+        ],
+        "description": "Stored additional date for a series."
+      },
+      "AppointmentBase": {
+        "description": "Stored calendar appointment defining a single occurrence or a series. id identifies the whole stored appointment; pair it with a local occurrence start date to address a particular occurrence. startDate/endDate are the base occurrence, not necessarily the occurrence currently being displayed. Service-planning events, registration groups, bookings and meeting requests are separate linked resources.",
+        "properties": {
+          "@deprecated": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Legacy response metadata mapping deprecated property names to their replacements. This is returned by the API and is separate from OpenAPI’s deprecated annotation.",
+            "readOnly": true,
+            "type": "object"
+          },
+          "additionals": {
+            "items": {
+              "$ref": "#/components/schemas/AppointmentAdditionals"
+            },
+            "type": "array"
+          },
+          "additions": {
+            "deprecated": true,
+            "description": "Use 'additionals' instead",
+            "items": {
+              "$ref": "#/components/schemas/AppointmentAdditionals"
+            },
+            "type": "array"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Address"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "allDay": {
+            "description": "True when the appointment is all-day. The serialized endDate is inclusive.",
+            "type": "boolean"
+          },
+          "calendar": {
+            "$ref": "#/components/schemas/Calendar",
+            "description": "Calendar containing the appointment."
+          },
+          "caption": {
+            "deprecated": true,
+            "description": "Use 'title' instead",
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 4096,
+            "type": ["string", "null"]
+          },
+          "endDate": {
+            "$ref": "#/components/schemas/AppointmentEndDate"
+          },
+          "exceptions": {
+            "items": {
+              "$ref": "#/components/schemas/AppointmentExeptions"
+            },
+            "type": "array"
+          },
+          "id": {
+            "description": "ID of the stored appointment or series.",
+            "example": 123,
+            "type": "integer"
+          },
+          "image": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Image"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "information": {
+            "deprecated": true,
+            "description": "Use 'description' instead",
+            "type": ["string", "null"]
+          },
+          "isInternal": {
+            "type": "boolean"
+          },
+          "link": {
+            "maxLength": 255,
+            "type": ["string", "null"]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "note": {
+            "deprecated": true,
+            "description": "Use 'subtitle' instead",
+            "type": ["string", "null"]
+          },
+          "onBehalfOfPid": {
+            "description": "Person on whose behalf the appointment was entered, or null.",
+            "type": ["integer", "null"]
+          },
+          "repeatFrequency": {
+            "$ref": "#/components/schemas/AppointmentRepeatFrequency"
+          },
+          "repeatId": {
+            "$ref": "#/components/schemas/AppointmentRepeatId"
+          },
+          "repeatOption": {
+            "$ref": "#/components/schemas/AppointmentRepeatOption"
+          },
+          "repeatUntil": {
+            "$ref": "#/components/schemas/AppointmentRepeatUntil"
+          },
+          "signup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AppointmentSignup"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Registration-group configuration, or null if the appointment has none."
+          },
+          "startDate": {
+            "$ref": "#/components/schemas/AppointmentStartDate"
+          },
+          "subtitle": {
+            "maxLength": 255,
+            "type": ["string", "null"]
+          },
+          "title": {
+            "maxLength": 255,
+            "minLength": 1,
+            "type": "string"
+          },
+          "version": {
+            "description": "Revision counter increased by updates; not an input precondition or a per-occurrence ID.",
+            "example": 1,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "additionals",
+          "address",
+          "allDay",
+          "calendar",
+          "description",
+          "endDate",
+          "exceptions",
+          "id",
+          "image",
+          "isInternal",
+          "link",
+          "meta",
+          "onBehalfOfPid",
+          "repeatFrequency",
+          "repeatId",
+          "repeatUntil",
+          "signup",
+          "repeatOption",
+          "startDate",
+          "subtitle",
+          "title",
+          "version",
+          "@deprecated"
+        ],
+        "type": "object"
+      },
+      "AppointmentDate": {
+        "description": "Use a UTC timestamp for a timed appointment or YYYY-MM-DD for an all-day appointment. ChurchTools interprets dates in the installation’s timezone. Seconds on appointment input are discarded.",
+        "example": "2026-09-20T08:00:00Z",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          {
+            "$ref": "#/components/schemas/DateString"
+          }
+        ]
+      },
+      "AppointmentEndDate": {
+        "$ref": "#/components/schemas/AppointmentDate",
+        "description": "End of the base occurrence. For timed appointments it must be later than startDate. For all-day appointments this date is inclusive and may equal startDate for a one-day appointment.",
+        "example": "2026-09-20T09:30:00Z"
+      },
+      "AppointmentExceptionCreate": {
+        "description": "Exclude occurrences starting on this local calendar date, including matches generated from additionals.",
+        "properties": {
+          "date": {
+            "$ref": "#/components/schemas/DateString",
+            "example": "2026-10-04"
+          }
+        },
+        "required": ["date"],
+        "type": "object"
+      },
+      "AppointmentExeptions": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/AppointmentExceptionCreate"
+          },
+          {
+            "properties": {
+              "id": {
+                "description": "ID of the stored recurrence entry.",
+                "example": 12,
+                "type": "integer"
+              },
+              "meta": {
+                "$ref": "#/components/schemas/MetaDataEntityId"
+              }
+            },
+            "required": ["id", "meta"],
+            "type": "object"
+          }
+        ],
+        "description": "Stored exclusion date for a series."
+      },
+      "AppointmentRepeatFrequency": {
+        "description": "Interval between repetitions; use a positive integer for automatic patterns, for example 2 with repeatId=7 for every two weeks. Irrelevant for once/manual patterns.",
+        "example": 1,
+        "type": ["integer", "null"]
+      },
+      "AppointmentRepeatId": {
+        "description": "Recurrence pattern: 0 = once, 1 = daily, 7 = weekly, 31 = monthly by date, 32 = monthly by weekday, 365 = yearly, 999 = manually selected dates. Automatic patterns use repeatFrequency and repeatUntil; manual dates use additionals.",
+        "enum": [0, 1, 31, 32, 365, 7, 999],
+        "example": 7,
+        "type": "integer"
+      },
+      "AppointmentRepeatOption": {
+        "description": "For repeatId=32, ordinal of the weekday within the month: 1–5 for first through fifth, 6 for last. The weekday comes from startDate.",
+        "example": 6,
+        "type": ["integer", "null"]
+      },
+      "AppointmentRepeatUntil": {
+        "$ref": "#/components/schemas/DateStringNullable",
+        "description": "Inclusive last date of an automatic series. Supply this with automatic recurrence; omission does not represent an unlimited series in these write endpoints.",
+        "example": "2026-12-20"
+      },
+      "AppointmentSignup": {
+        "properties": {
+          "signupDaysArchiveGroupNo": {
+            "type": ["integer", "null"]
+          },
+          "signupDaysForwardNo": {
+            "type": ["integer", "null"]
+          },
+          "signupGroupTypeId": {
+            "type": ["integer", "null"]
+          },
+          "signupTemplateGroupId": {
+            "type": ["integer", "null"]
+          },
+          "singupDaysForwardNo": {
+            "deprecated": true,
+            "description": "Use 'signupDaysForwardNo' instead. Misspelled legacy field.",
+            "type": ["integer", "null"]
+          }
+        },
+        "required": [
+          "signupDaysArchiveGroupNo",
+          "signupDaysForwardNo",
+          "signupGroupTypeId",
+          "signupTemplateGroupId",
+          "singupDaysForwardNo"
+        ],
+        "type": "object"
+      },
+      "AppointmentStartDate": {
+        "$ref": "#/components/schemas/AppointmentDate",
+        "description": "Start of the base occurrence. For all-day appointments, send YYYY-MM-DD.",
+        "example": "2026-09-20T08:00:00Z"
+      },
+      "Calendar": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CalendarCreate"
+          },
+          {
+            "properties": {
+              "@deprecated": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "description": "Legacy response metadata mapping isPublic and isPrivate to type.",
+                "example": {
+                  "isPrivate": "type",
+                  "isPublic": "type"
+                },
+                "readOnly": true,
+                "type": "object"
+              },
+              "id": {
+                "description": "Calendar ID used in /calendars/{calendarId} and appointment URLs.",
+                "example": 2,
+                "type": "integer"
+              },
+              "isPrivate": {
+                "deprecated": true,
+                "description": "Legacy category flag: true for personal calendars. Use type instead.",
+                "type": "boolean"
+              },
+              "isPublic": {
+                "deprecated": true,
+                "description": "Legacy category flag: true for church calendars. Use type; this flag does not replace access-permission checks.",
+                "type": "boolean"
+              },
+              "meta": {
+                "$ref": "#/components/schemas/MetaDataEntityId"
+              },
+              "nameTranslated": {
+                "description": "Localized display name, falling back to the stored name for ordinary calendar names.",
+                "example": "Community events",
+                "type": "string"
+              },
+              "randomUrl": {
+                "description": "Generated token used by calendar subscription/export links. This is not a complete URL and is not the external import source address.",
+                "example": "0123456789abcdef0123456789abcdef",
+                "type": "string"
+              }
+            },
+            "required": [
+              "campusId",
+              "evTermineEventTypeId",
+              "eventTemplateId",
+              "iCalSourceUrl",
+              "id",
+              "isPrivate",
+              "isPublic",
+              "meta",
+              "nameTranslated",
+              "randomUrl",
+              "syncToEvTermine",
+              "color",
+              "@deprecated"
+            ],
+            "type": "object"
+          }
+        ],
+        "description": "Calendar containing appointments and their series. Calendar settings, appointment editing and calendar administration are separate concerns. The type selects the applicable administration category; effective visibility depends on permissions. This object is also embedded in appointment responses."
+      },
+      "CalendarCreate": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CalendarUpdate"
+          },
+          {
+            "properties": {
+              "type": {
+                "$ref": "#/components/schemas/CalendarType"
+              }
+            },
+            "required": ["type"],
+            "type": "object"
+          }
+        ],
+        "description": "Create a calendar with its category and settings. The creator receives permission to edit its appointments. Calendar creation does not itself create appointments, except when an iCalSourceUrl initiates a feed import.",
+        "example": {
+          "name": "Community events",
+          "sortKey": 10,
+          "type": "church"
+        }
+      },
+      "CalendarType": {
+        "description": "Calendar category used by ChurchTools: church for a church calendar, group for a group calendar, personal for a personal calendar. The category determines which administration permissions apply; it does not by itself grant public access or link the calendar to a particular group or person. Access is controlled separately. The type is chosen on creation and cannot be changed by PUT.",
+        "enum": ["church", "group", "personal"],
+        "example": "church",
+        "type": "string"
+      },
+      "CalendarUpdate": {
+        "description": "Complete editable calendar settings. name and sortKey are required. Omitted color, campusId, eventTemplateId, iCalSourceUrl and evTermineEventTypeId are cleared; syncToEvTermine defaults to false. The calendar type cannot be changed here. Supplying a non-empty iCalSourceUrl triggers replacement/import of calendar contents, including when saving other settings with the same source URL.",
+        "properties": {
+          "campusId": {
+            "description": "Campus associated with this calendar, or null for no campus. A campus represents a ChurchTools location/site, not a calendar permission group.",
+            "example": 2,
+            "type": ["integer", "null"]
+          },
+          "color": {
+            "description": "Display color, normally a CSS hex color such as #336699. Omission clears the color; the backend checks only the text length.",
+            "example": "#336699",
+            "maxLength": 20,
+            "type": ["string", "null"]
+          },
+          "evTermineEventTypeId": {
+            "description": "Event type ID used by the Evangelische Termine integration, or null. This is an external event classification, not a ChurchTools calendar type.",
+            "example": 1,
+            "type": ["integer", "null"]
+          },
+          "eventTemplateId": {
+            "description": "Configured service-planning event template ID for this calendar, or null. This differs from an appointment template.",
+            "example": 3,
+            "type": ["integer", "null"]
+          },
+          "iCalSourceUrl": {
+            "description": "External iCalendar feed to import, or null for a locally managed calendar. webcal:// and ical:// are normalized to https://; addresses without a scheme receive https://. Saving a non-empty source URL clears existing calendar contents before importing the feed, even when the URL is unchanged. Import and URL errors cause the request to fail.",
+            "example": "https://example.org/calendar.ics",
+            "maxLength": 1000,
+            "type": ["string", "null"]
+          },
+          "name": {
+            "description": "Calendar display name; surrounding whitespace is trimmed.",
+            "example": "Community events",
+            "maxLength": 100,
+            "minLength": 2,
+            "type": "string"
+          },
+          "sortKey": {
+            "description": "Display order. The calendar list is sorted by this value in ascending order.",
+            "example": 10,
+            "type": "integer"
+          },
+          "syncToEvTermine": {
+            "default": false,
+            "description": "Whether the Evangelische Termine integration should synchronize this calendar. This is separate from importing an iCalendar feed.",
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "required": ["name", "sortKey"],
+        "type": "object"
+      },
+      "ChatStatus": {
+        "description": "Room lifecycle: NOT_STARTED means no started chat, STARTING awaits central-service confirmation, STARTED is active, and STOPPED is deactivated. An accepted request does not guarantee successful Matrix synchronization.",
+        "enum": ["NOT_STARTED", "STARTED", "STARTING", "STOPPED"],
+        "example": "STARTED",
+        "type": "string"
+      },
+      "Color": {
+        "description": "Value for Tailwind color",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/CtColor"
+          },
+          "shade": {
+            "enum": [100, 200, 300, 400, 50, 500, 600, 700, 800, 900, null],
+            "example": 500,
+            "type": ["integer", "null"]
+          }
+        },
+        "required": ["key", "shade"],
+        "title": "Color",
+        "type": "object"
+      },
+      "CtColor": {
+        "description": "A color in ChurchTools",
+        "enum": [
+          "accent",
+          "amber",
+          "basic",
+          "blue",
+          "constructive",
+          "critical",
+          "cyan",
+          "destructive",
+          "emerald",
+          "error",
+          "fuchsia",
+          "green",
+          "indigo",
+          "info",
+          "lime",
+          "magic",
+          "orange",
+          "pink",
+          "purple",
+          "red",
+          "rose",
+          "sky",
+          "success",
+          "teal",
+          "violet",
+          "warning",
+          "yellow"
+        ],
+        "example": "accent",
+        "type": "string"
+      },
+      "DateString": {
+        "description": "A simple date in ISO format, e.g. '2022-10-19'",
+        "example": "2022-10-19",
+        "format": "date",
+        "type": "string"
+      },
+      "DateStringNullable": {
+        "description": "A simple date in ISO format, e.g. '2022-10-19'",
+        "example": "2022-10-19",
+        "format": "date",
+        "type": ["string", "null"]
+      },
+      "DomainObject": {
+        "description": "Compact, domain-independent representation for displaying a link to a ChurchTools object. It is not the full resource returned by the object’s own API.",
+        "properties": {
+          "apiUrl": {
+            "description": "URL for the full API resource, if available. Some legacy domain implementations produce inconsistent URLs.",
+            "type": ["string", "null"]
+          },
+          "color": {
+            "description": "Optional display color.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "$ref": "#/components/schemas/CtColor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domainIdentifier": {
+            "description": "Opaque identifier within the domain; do not assume that every domain uses a numeric ID.",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Optional image URL.",
+            "type": ["string", "null"]
+          },
+          "infos": {
+            "description": "Additional localized display lines; not structured resource fields.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "initials": {
+            "description": "Optional initials for an avatar fallback.",
+            "type": ["string", "null"]
+          },
+          "title": {
+            "description": "Display title of the referenced object.",
+            "type": "string"
+          }
+        },
+        "required": ["domainIdentifier", "title"],
+        "type": "object"
+      },
+      "DomainObjectCalendar": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DomainObject"
+          },
+          {
+            "properties": {
+              "domainAttributes": {
+                "properties": {
+                  "campusName": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": ["campusName"],
+                "type": "object"
+              },
+              "domainType": {
+                "enum": ["calendar"],
+                "type": "string"
+              },
+              "frontendUrl": {
+                "type": "string"
+              },
+              "icon": {
+                "enum": ["calendar"],
+                "type": "string"
+              }
+            },
+            "required": ["domainAttributes", "domainType", "frontendUrl", "icon"],
+            "type": "object"
+          }
+        ],
+        "description": "Calendar as Domain Object"
+      },
+      "DomainObjectEvent": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DomainObject"
+          },
+          {
+            "properties": {
+              "domainAttributes": {
+                "properties": {
+                  "startDate": {
+                    "example": "2020-02-07T13:24:35+01:00",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "domainType": {
+                "enum": ["event"],
+                "type": "string"
+              },
+              "frontendUrl": {
+                "type": "string"
+              },
+              "icon": {
+                "enum": ["calendar-day"],
+                "type": "string"
+              }
+            },
+            "required": ["domainAttributes", "domainType", "frontendUrl", "icon"],
+            "type": "object"
+          }
+        ],
+        "description": "Event as Domain Object"
+      },
+      "DomainObjectFile": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DomainObject"
+          },
+          {
+            "properties": {
+              "domainAttributes": {
+                "type": "object"
+              },
+              "domainType": {
+                "enum": ["file"],
+                "type": "string"
+              },
+              "frontendUrl": {
+                "type": "string"
+              },
+              "icon": {
+                "enum": ["file"],
+                "type": "string"
+              }
+            },
+            "required": ["domainAttributes", "domainType", "frontendUrl", "icon"],
+            "type": "object"
+          }
+        ]
+      },
+      "DomainObjectGroup": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DomainObject"
+          },
+          {
+            "properties": {
+              "apiUrl": {
+                "type": "string"
+              },
+              "domainAttributes": {
+                "properties": {
+                  "campusId": {
+                    "type": ["number", "null"]
+                  },
+                  "groupStatusId": {
+                    "type": "number"
+                  },
+                  "groupTypeId": {
+                    "type": "number"
+                  },
+                  "guid": {
+                    "type": "string"
+                  },
+                  "note": {
+                    "type": "string"
+                  },
+                  "visibility": {
+                    "enum": ["hidden", "intern", "public", "restricted"],
+                    "type": "string"
+                  }
+                },
+                "required": ["guid", "campusId", "note", "groupStatusId", "groupTypeId", "visibility"],
+                "type": "object"
+              },
+              "domainType": {
+                "enum": ["group"],
+                "type": "string"
+              },
+              "frontendUrl": {
+                "type": "string"
+              },
+              "icon": {
+                "enum": ["users"],
+                "type": "string"
+              }
+            },
+            "required": ["domainAttributes", "domainType", "frontendUrl", "icon", "apiUrl"],
+            "type": "object"
+          }
+        ]
+      },
+      "DomainObjectPerson": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DomainObject"
+          },
+          {
+            "properties": {
+              "apiUrl": {
+                "type": "string"
+              },
+              "domainAttributes": {
+                "properties": {
+                  "dateOfDeath": {
+                    "$ref": "#/components/schemas/DateStringNullable"
+                  },
+                  "firstName": {
+                    "example": "Vanessa",
+                    "type": "string"
+                  },
+                  "guid": {
+                    "description": "Globally Unique Identifier",
+                    "example": "D7AC4C66-8DA4-405A-B492-39B5870D2DB6",
+                    "type": ["string", "null"]
+                  },
+                  "isArchived": {
+                    "type": "boolean"
+                  },
+                  "lastName": {
+                    "example": "Fischer",
+                    "type": "string"
+                  }
+                },
+                "required": ["dateOfDeath", "firstName", "guid", "isArchived", "lastName"],
+                "type": "object"
+              },
+              "domainType": {
+                "enum": ["person"],
+                "type": "string"
+              },
+              "frontendUrl": {
+                "type": "string"
+              },
+              "icon": {
+                "description": "user for an ordinary person; user-shield for a censored person placeholder.",
+                "enum": ["user", "user-shield"],
+                "example": "user",
+                "type": "string"
+              },
+              "infos": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": ["frontendUrl", "domainAttributes", "domainType", "icon", "infos", "apiUrl"],
+            "type": "object"
+          }
+        ],
+        "description": "Person as Domain Object"
+      },
+      "Event": {
+        "description": "An occurrence in service planning linked to a calendar appointment. id identifies the planning event, appointmentId the underlying appointment (possibly a recurring series). This enriched read representation differs from the response to PUT /events/{eventId}.",
+        "properties": {
+          "@deprecated": {
+            "type": "string"
+          },
+          "adminIds": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "appointmentId": {
+            "type": "integer"
+          },
+          "calendar": {
+            "$ref": "#/components/schemas/DomainObjectCalendar"
+          },
+          "chatStatus": {
+            "$ref": "#/components/schemas/ChatStatus"
+          },
+          "description": {
+            "deprecated": true,
+            "description": "Deprecated alias for note.",
+            "type": ["string", "null"]
+          },
+          "endDate": {
+            "$ref": "#/components/schemas/ZuluDate",
+            "description": "End derived by adding the underlying appointment duration to this event occurrence’s start."
+          },
+          "eventAdminIds": {
+            "deprecated": true,
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "eventFiles": {
+            "items": {
+              "$ref": "#/components/schemas/DomainObjectFile"
+            },
+            "type": "array"
+          },
+          "eventServices": {
+            "description": "Assignments included by include=eventServices (legacy spelling). Always included by single-event and person-event reads.",
+            "items": {
+              "$ref": "#/components/schemas/EventReadAssignment"
+            },
+            "type": "array"
+          },
+          "event_services": {
+            "description": "Assignments included by include=event_services. The property spelling follows the requested include.",
+            "items": {
+              "$ref": "#/components/schemas/EventReadAssignment"
+            },
+            "type": "array"
+          },
+          "guid": {
+            "type": ["string", "null"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "isCanceled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": ["string", "null"]
+          },
+          "permissions": {
+            "description": "Computed UI permissions. startChat does not include all installation-level chat prerequisites; the chat action performs its own authorization checks.",
+            "properties": {
+              "startChat": {
+                "type": "boolean"
+              },
+              "useChat": {
+                "type": "boolean"
+              }
+            },
+            "required": ["useChat", "startChat"],
+            "type": "object"
+          },
+          "startDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          }
+        },
+        "required": [
+          "adminIds",
+          "appointmentId",
+          "calendar",
+          "chatStatus",
+          "endDate",
+          "eventFiles",
+          "guid",
+          "id",
+          "isCanceled",
+          "name",
+          "note",
+          "startDate",
+          "permissions",
+          "description",
+          "eventAdminIds",
+          "@deprecated"
+        ],
+        "type": "object"
+      },
+      "EventAssignmentPerson": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DomainObject"
+          },
+          {
+            "properties": {
+              "apiUrl": {
+                "type": "string"
+              },
+              "domainAttributes": {
+                "properties": {
+                  "dateOfDeath": {
+                    "$ref": "#/components/schemas/DateStringNullable"
+                  },
+                  "firstName": {
+                    "example": "Vanessa",
+                    "type": "string"
+                  },
+                  "guid": {
+                    "description": "Globally Unique Identifier",
+                    "example": "D7AC4C66-8DA4-405A-B492-39B5870D2DB6",
+                    "type": ["string", "null"]
+                  },
+                  "isArchived": {
+                    "type": "boolean"
+                  },
+                  "lastName": {
+                    "example": "Fischer",
+                    "type": "string"
+                  }
+                },
+                "required": ["dateOfDeath", "firstName", "guid", "isArchived", "lastName"],
+                "type": "object"
+              },
+              "domainType": {
+                "enum": ["person"],
+                "type": "string"
+              },
+              "frontendUrl": {
+                "type": "string"
+              },
+              "icon": {
+                "enum": ["user", "user-shield"],
+                "type": "string"
+              },
+              "infos": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": ["frontendUrl", "domainAttributes", "domainType", "icon", "infos", "apiUrl"],
+            "type": "object"
+          }
+        ],
+        "description": "Person representation in an event assignment. A concealed assignee can be represented by a placeholder with icon user-shield; its identifier must not be interpreted as the actual person ID."
+      },
+      "EventFact": {
+        "description": "Fact entry for an event",
+        "properties": {
+          "@deprecated": {
+            "type": "string"
+          },
+          "eventId": {
+            "type": "integer"
+          },
+          "factId": {
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "modifiedDate": {
+            "$ref": "#/components/schemas/ZuluDateDeprecated"
+          },
+          "modifiedPid": {
+            "deprecated": true,
+            "type": "integer"
+          },
+          "value": {
+            "oneOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        "required": ["@deprecated", "eventId", "factId", "value", "meta", "modifiedPid", "modifiedDate"],
+        "title": "EventFact",
+        "type": "object",
+        "x-examples": {
+          "Example": {
+            "eventId": 1991,
+            "factId": 1,
+            "value": 12345
+          }
+        },
+        "x-last-checked": "2024-04-24T00:00:00.000Z"
+      },
+      "EventMasterData": {
+        "properties": {
+          "absenceReasons": {
+            "items": {
+              "$ref": "#/components/schemas/AbsenceReason"
+            },
+            "type": "array"
+          },
+          "facts": {
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "type": "array"
+          },
+          "serviceGroups": {
+            "items": {
+              "$ref": "#/components/schemas/ServiceGroup"
+            },
+            "type": "array"
+          },
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/Service"
+            },
+            "type": "array"
+          },
+          "songCategories": {
+            "items": {
+              "$ref": "#/components/schemas/SongCategory"
+            },
+            "type": "array"
+          },
+          "songSources": {
+            "items": {
+              "$ref": "#/components/schemas/SongSource"
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "EventReadAssignment": {
+        "description": "Visible assignment embedded in an event read response. Uses the legacy assignment representation; concealed assignees may be replaced by a placeholder. List responses normally leave permissions null; single-event responses compute enterSelfIfFree.",
+        "properties": {
+          "@deprecated": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "agreed": {
+            "deprecated": true,
+            "description": "use `isAccepted` instead",
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          },
+          "comment": {
+            "description": "Legacy comment representation; an absent comment is returned as an empty string.",
+            "type": "string"
+          },
+          "counter": {
+            "deprecated": true,
+            "description": "Use index instead. In this legacy response null is converted to 0.",
+            "type": "integer"
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ServiceRequestEvent"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "description": "ID of this particular assignment record. Updating or answering a request may create a new record; use the ID returned by the operation.",
+            "type": "integer"
+          },
+          "index": {
+            "description": "Slot index when an event requires several persons for the same service; null if no index is assigned.",
+            "type": ["integer", "null"]
+          },
+          "isAccepted": {
+            "description": "Whether this record was confirmed. Interpret together with isValid, as an older confirmed record can be invalid.",
+            "type": "boolean"
+          },
+          "isValid": {
+            "description": "Whether this record is still the active assignment for its slot. Superseded and declined records are invalid.",
+            "type": "boolean"
+          },
+          "name": {
+            "type": ["string", "null"]
+          },
+          "permissions": {
+            "description": "Optional computed assignment permissions. These request endpoints do not populate them and normally return null.",
+            "properties": {
+              "enterSelfIfFree": {
+                "type": "boolean"
+              }
+            },
+            "type": ["object", "null"]
+          },
+          "person": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EventAssignmentPerson"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "personId": {
+            "deprecated": true,
+            "type": ["integer", "null"]
+          },
+          "requestedDate": {
+            "description": "Timestamp used by the legacy request history and undo time limit.",
+            "example": "2026-09-13T10:00:00Z",
+            "format": "date-time",
+            "type": "string"
+          },
+          "requesterPerson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DomainObjectPerson"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requesterPersonId": {
+            "deprecated": true,
+            "type": "integer"
+          },
+          "serviceId": {
+            "description": "ID of the reusable service role from /services, not the request ID.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "@deprecated",
+          "agreed",
+          "allowChat",
+          "comment",
+          "counter",
+          "event",
+          "id",
+          "index",
+          "isAccepted",
+          "isValid",
+          "name",
+          "permissions",
+          "person",
+          "personId",
+          "requesterPerson",
+          "requesterPersonId",
+          "serviceId",
+          "requestedDate"
+        ],
+        "type": "object"
+      },
+      "EventReadWithServices": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Event"
+          },
+          {
+            "required": ["eventServices"]
+          }
+        ],
+        "description": "Enriched event with the eventServices include always present, possibly as an empty list."
+      },
+      "EventService": {
+        "properties": {
+          "@deprecated": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "agreed": {
+            "deprecated": true,
+            "description": "use `isAccepted` instead",
+            "type": "boolean"
+          },
+          "allowChat": {
+            "type": "boolean"
+          },
+          "comment": {
+            "type": ["string", "null"]
+          },
+          "counter": {
+            "deprecated": true,
+            "description": "use `index` instead",
+            "type": ["integer", "null"]
+          },
+          "event": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DomainObjectEvent"
+              },
+              {
+                "properties": {
+                  "id": {
+                    "type": "integer"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "startDate": {
+                    "$ref": "#/components/schemas/ZuluDate"
+                  }
+                },
+                "required": ["id", "name", "startDate"],
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "index": {
+            "type": ["integer", "null"]
+          },
+          "isAccepted": {
+            "type": "boolean"
+          },
+          "isValid": {
+            "type": "boolean"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "type": ["string", "null"]
+          },
+          "permissions": {
+            "properties": {
+              "enterSelfIfFree": {
+                "type": "boolean"
+              }
+            },
+            "type": ["object", "null"]
+          },
+          "person": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DomainObjectPerson"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "personId": {
+            "deprecated": true,
+            "type": ["integer", "null"]
+          },
+          "requestedDate": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "requesterPerson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DomainObjectPerson"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requesterPersonId": {
+            "deprecated": true,
+            "type": "integer"
+          },
+          "serviceId": {
+            "type": "integer"
+          },
+          "serviceName": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "EventTemplate": {
+        "properties": {
+          "adminIds": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "type": ["array", "null"]
+          },
+          "calendarId": {
+            "type": ["integer", "null"]
+          },
+          "durationInSeconds": {
+            "type": "integer"
+          },
+          "eventName": {
+            "type": ["string", "null"]
+          },
+          "facts": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": ["object", "null"]
+          },
+          "hour": {
+            "type": ["integer", "null"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "minute": {
+            "type": ["integer", "null"]
+          },
+          "note": {
+            "type": ["string", "null"]
+          },
+          "services": {
+            "items": {
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "serviceId": {
+                  "type": "integer"
+                }
+              },
+              "required": ["serviceId", "count"],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "sortKey": {
+            "type": "integer"
+          },
+          "templateName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "templateName",
+          "calendarId",
+          "eventName",
+          "note",
+          "hour",
+          "minute",
+          "durationInSeconds",
+          "adminIds",
+          "sortKey",
+          "facts",
+          "services"
+        ],
+        "type": "object"
+      },
+      "EventUpdate": {
+        "properties": {
+          "adminIds": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "appointment": {
+            "$ref": "#/components/schemas/AppointmentBase"
+          },
+          "guid": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "isCanceled": {
+            "type": "boolean"
+          },
+          "note": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["adminIds", "appointment", "guid", "id", "isCanceled", "note"],
+        "type": "object"
+      },
+      "Fact": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/FactNumber"
+          },
+          {
+            "$ref": "#/components/schemas/FactSelect"
+          }
+        ]
+      },
+      "FactBase": {
+        "properties": {
+          "@deprecated": {
+            "description": "Deprecated response field that points clients from fieldType to type.",
+            "example": "fieldType (now: type)",
+            "type": "string"
+          },
+          "fieldType": {
+            "$ref": "#/components/schemas/FactType"
+          },
+          "id": {
+            "description": "ID of the fact master data entry.",
+            "example": 3,
+            "type": "integer"
+          },
+          "name": {
+            "description": "Name of the fact.",
+            "example": "Visitors",
+            "type": "string"
+          },
+          "nameTranslated": {
+            "description": "Translated name of the fact.",
+            "example": "Visitors",
+            "type": "string"
+          },
+          "sortKey": {
+            "description": "Sort key for ordering facts.",
+            "example": 30,
+            "type": "integer"
+          }
+        },
+        "required": ["@deprecated", "fieldType", "id", "name", "nameTranslated", "sortKey"],
+        "type": "object",
+        "x-last-checked": "2024-04-24T00:00:00.000Z"
+      },
+      "FactNumber": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FactBase"
+          },
+          {
+            "properties": {
+              "type": {
+                "enum": ["number"],
+                "type": "string"
+              },
+              "unit": {
+                "description": "Unit for numeric values.",
+                "example": "people",
+                "type": ["string", "null"]
+              }
+            },
+            "required": ["type", "unit"],
+            "type": "object"
+          }
+        ],
+        "x-last-checked": "2024-04-24T00:00:00.000Z"
+      },
+      "FactSelect": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FactBase"
+          },
+          {
+            "properties": {
+              "options": {
+                "description": "Allowed values for select facts.",
+                "items": {
+                  "example": "Baptism",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": {
+                "enum": ["select"],
+                "type": "string"
+              }
+            },
+            "required": ["options", "type"],
+            "type": "object"
+          }
+        ],
+        "x-last-checked": "2024-04-24T00:00:00.000Z"
+      },
+      "FactType": {
+        "description": "Type of fact value.",
+        "enum": ["number", "select"],
+        "type": "string"
+      },
+      "Image": {
+        "properties": {
+          "additionalInfos": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "domainId": {
+            "example": "1303847",
+            "type": "string"
+          },
+          "domainType": {
+            "example": "appointment_image",
+            "type": "string"
+          },
+          "fileUrl": {
+            "example": "http://churchtools.test/?q=public/filedownload&id=6071&filename=47207ecf8417a84f8361094d87b8b5beabb30d7aa72fe0840861346aa9587149",
+            "format": "uri",
+            "type": "string"
+          },
+          "filename": {
+            "example": "47207ecf8417a84f8361094d87b8b5beabb30d7aa72fe0840861346aa9587149",
+            "type": "string"
+          },
+          "id": {
+            "example": 6071,
+            "type": "integer"
+          },
+          "imageOption": {
+            "properties": {
+              "crop": {
+                "properties": {
+                  "bottom": {
+                    "example": "0.00000",
+                    "type": "string"
+                  },
+                  "left": {
+                    "example": "0.00000",
+                    "type": "string"
+                  },
+                  "right": {
+                    "example": "0.00000",
+                    "type": "string"
+                  },
+                  "top": {
+                    "example": "0.00000",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              },
+              "focus": {
+                "properties": {
+                  "x": {
+                    "example": "0.50000",
+                    "type": "string"
+                  },
+                  "y": {
+                    "example": "0.50000",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "imageUrl": {
+            "example": "http://churchtools.test/images/6071/70987c31abdea3986f69a6d601222ac9a388c36a6510564a80fae29311faec89",
+            "format": "uri",
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "example": "example.jpg",
+            "type": "string"
+          },
+          "relativeUrl": {
+            "example": "?q=public/filedownload&id=6071&filename=47207ecf8417a84f8361094d87b8b5beabb30d7aa72fe0840861346aa9587149",
+            "type": "string"
+          },
+          "securityLevelId": {
+            "type": ["integer", "null"]
+          },
+          "showOnlyWhenEditable": {
+            "example": false,
+            "type": "boolean"
+          },
+          "size": {
+            "type": ["integer", "null"]
+          },
+          "type": {
+            "example": "file",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "domainType",
+          "domainId",
+          "name",
+          "filename",
+          "fileUrl",
+          "imageUrl",
+          "relativeUrl",
+          "showOnlyWhenEditable",
+          "securityLevelId",
+          "imageOption",
+          "type",
+          "size",
+          "additionalInfos",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "InvitationStatus": {
+        "enum": ["accepted", "not_invited", "pending"],
+        "type": "string"
+      },
+      "MetaCount": {
+        "properties": {
+          "count": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MetaDataEntityId": {
+        "example": {
+          "createdDate": "2020-01-01T00:00:00Z",
+          "createdPerson": {
+            "id": 1
+          },
+          "modifiedDate": "2020-01-01T00:00:00Z",
+          "modifiedPerson": {
+            "id": 1
+          }
+        },
+        "properties": {
+          "createdDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          "createdPerson": {
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            },
+            "required": ["id"],
+            "type": "object"
+          },
+          "modifiedDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          "modifiedPerson": {
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            },
+            "required": ["id"],
+            "type": "object"
+          }
+        },
+        "required": ["createdDate", "createdPerson", "modifiedDate", "modifiedPerson"],
+        "type": "object"
+      },
+      "Person": {
+        "additionalProperties": true,
+        "description": "A person object includes all fields the logged in user may see depending on the security level. Additional DB fields, created by the admin, are also part of the response. Those fields have the same name as the column name.",
+        "properties": {
+          "acceptedsecurity": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "addressAddition": {
+            "type": "string"
+          },
+          "age": {
+            "description": "This computed field contains the age of this person if the date of birth is visible. If this person already dead, the age is calculated until the date of death.",
+            "type": ["integer", "null"]
+          },
+          "baptisedBy": {
+            "type": "string"
+          },
+          "birthName": {
+            "type": "string"
+          },
+          "birthday": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "birthplace": {
+            "type": "string"
+          },
+          "campusId": {
+            "type": "integer"
+          },
+          "canChat": {
+            "type": "boolean"
+          },
+          "chatActive": {
+            "type": "boolean"
+          },
+          "city": {
+            "type": "string"
+          },
+          "cmsUserId": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "dateOfBaptism": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "dateOfBelonging": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "dateOfDeath": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "dateOfEntry": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "dateOfResign": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "departmentIds": {
+            "description": "List of department IDs",
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "editSecurityLevelForPerson": {
+            "description": "Edit security level of the current person. The user can edit fields upto this level.",
+            "type": "integer"
+          },
+          "email": {
+            "description": "Primary email address of the person.",
+            "type": "string"
+          },
+          "emails": {
+            "items": {
+              "properties": {
+                "contactLabelId": {
+                  "type": "integer"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "isDefault": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["contactLabelId", "email", "isDefault"],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "familyImageUrl": {
+            "type": ["string", "null"]
+          },
+          "familyStatusId": {
+            "type": ["integer", "null"]
+          },
+          "fax": {
+            "type": "string"
+          },
+          "firstContact": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "growPathId": {
+            "type": ["integer", "null"]
+          },
+          "guid": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "imageUrl": {
+            "type": ["string", "null"]
+          },
+          "invitationStatus": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/InvitationStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "isArchived": {
+            "type": "boolean"
+          },
+          "isDead": {
+            "description": "This computed field is true iff a date of death is set for this person.",
+            "type": "boolean"
+          },
+          "job": {
+            "type": "string"
+          },
+          "lastEditedDate": {
+            "$ref": "#/components/schemas/ZuluDateNullable"
+          },
+          "lastLogin": {
+            "$ref": "#/components/schemas/ZuluDateNullable"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "latitude": {
+            "format": "float",
+            "type": ["number", "null"]
+          },
+          "latitudeLoose": {
+            "format": "float",
+            "type": ["number", "null"]
+          },
+          "longitude": {
+            "format": "float",
+            "type": ["number", "null"]
+          },
+          "longitudeLoose": {
+            "format": "float",
+            "type": ["number", "null"]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "mobile": {
+            "type": "string"
+          },
+          "nationalityId": {
+            "type": ["integer", "null"]
+          },
+          "nickname": {
+            "type": "string"
+          },
+          "optigemId": {
+            "description": "String with Optigem ID or empty string if no ID is set.",
+            "type": "string"
+          },
+          "phonePrivate": {
+            "type": "string"
+          },
+          "phoneWork": {
+            "type": "string"
+          },
+          "placeOfBaptism": {
+            "type": "string"
+          },
+          "privacyPolicyAgreement": {
+            "deprecated": true,
+            "properties": {
+              "date": {
+                "$ref": "#/components/schemas/DateStringNullable"
+              },
+              "typeId": {
+                "type": ["integer", "null"]
+              },
+              "whoId": {
+                "type": ["integer", "null"]
+              }
+            },
+            "required": ["date", "typeId", "whoId"],
+            "type": "object"
+          },
+          "privacyPolicyAgreementDate": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "privacyPolicyAgreementTypeId": {
+            "type": ["integer", "null"]
+          },
+          "privacyPolicyAgreementWhoId": {
+            "type": ["integer", "null"]
+          },
+          "referredBy": {
+            "type": "string"
+          },
+          "referredTo": {
+            "type": "string"
+          },
+          "securityLevelForPerson": {
+            "description": "Security level of the current person. The user sees fields upto this level.",
+            "type": "integer"
+          },
+          "sexId": {
+            "type": ["integer", "null"]
+          },
+          "statusId": {
+            "type": "integer"
+          },
+          "street": {
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            },
+            "type": "array"
+          },
+          "title": {
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/PersonVisibility"
+          },
+          "weddingDate": {
+            "$ref": "#/components/schemas/DateStringNullable"
+          },
+          "zip": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "guid", "editSecurityLevelForPerson", "securityLevelForPerson"],
+        "type": "object",
+        "x-tags": ["Person"]
+      },
+      "PersonVisibility": {
+        "default": "visible",
+        "description": "Extensible visibility of a person.",
+        "type": "string"
+      },
+      "PossibleEventPerson": {
+        "properties": {
+          "absences": {
+            "items": {
+              "$ref": "#/components/schemas/Absence"
+            },
+            "type": "array"
+          },
+          "connectedGroups": {
+            "items": {
+              "$ref": "#/components/schemas/DomainObjectGroup"
+            },
+            "type": "array"
+          },
+          "lastService": {
+            "properties": {
+              "event": {
+                "$ref": "#/components/schemas/DomainObjectEvent"
+              },
+              "eventService": {
+                "$ref": "#/components/schemas/EventService"
+              }
+            },
+            "required": ["event", "eventService"],
+            "type": ["object", "null"]
+          },
+          "monthlyUtilization": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object"
+          },
+          "nextService": {
+            "properties": {
+              "event": {
+                "$ref": "#/components/schemas/DomainObjectEvent"
+              },
+              "eventService": {
+                "$ref": "#/components/schemas/EventService"
+              }
+            },
+            "required": ["event", "eventService"],
+            "type": ["object", "null"]
+          },
+          "partnerServices": {
+            "type": "boolean"
+          },
+          "person": {
+            "$ref": "#/components/schemas/DomainObjectPerson"
+          },
+          "score": {
+            "type": "number"
+          },
+          "scoreHints": {
+            "items": {
+              "properties": {
+                "reason": {
+                  "type": "string"
+                },
+                "score": {
+                  "type": "number"
+                }
+              },
+              "required": ["score", "reason"],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "serviceGroupPreferences": {
+            "properties": {
+              "maxPerMonth": {
+                "type": "number"
+              },
+              "modifiedDate": {
+                "$ref": "#/components/schemas/ZuluDate"
+              },
+              "modifiedPerson": {
+                "properties": {
+                  "id": {
+                    "type": "number"
+                  }
+                },
+                "required": ["id"],
+                "type": "object"
+              },
+              "morningWeight": {
+                "type": "number"
+              },
+              "personId": {
+                "type": "number"
+              },
+              "relationWeight": {
+                "type": "number"
+              },
+              "serviceGroupId": {
+                "type": "number"
+              }
+            },
+            "required": ["maxPerMonth", "modifiedDate", "modifiedPerson", "morningWeight", "personId", "relationWeight", "serviceGroupId"],
+            "type": ["object", "null"]
+          },
+          "serviceOnSameDay": {
+            "type": "boolean"
+          },
+          "servicesOnSameDay": {
+            "items": {
+              "properties": {
+                "event": {
+                  "$ref": "#/components/schemas/DomainObjectEvent"
+                },
+                "eventService": {
+                  "$ref": "#/components/schemas/EventService"
+                }
+              },
+              "required": ["event", "eventService"],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "servicesPreviouslyDeclined": {
+            "items": {
+              "$ref": "#/components/schemas/EventService"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "absences",
+          "connectedGroups",
+          "lastService",
+          "nextService",
+          "partnerServices",
+          "person",
+          "monthlyUtilization",
+          "score",
+          "scoreHints",
+          "serviceGroupPreferences",
+          "serviceOnSameDay",
+          "servicesOnSameDay",
+          "servicesPreviouslyDeclined"
+        ],
+        "type": "object"
+      },
+      "Service": {
+        "properties": {
+          "@deprecated": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "allowChat": {
+            "example": false,
+            "type": "boolean"
+          },
+          "allowCommentOnConfirmation": {
+            "example": false,
+            "type": "boolean"
+          },
+          "allowControlLiveAgenda": {
+            "example": false,
+            "type": "boolean"
+          },
+          "allowDecline": {
+            "example": true,
+            "type": "boolean"
+          },
+          "allowExchange": {
+            "example": true,
+            "type": "boolean"
+          },
+          "calTextTemplate": {
+            "example": "Worship Service",
+            "type": "string"
+          },
+          "comment": {
+            "deprecated": true,
+            "description": "Use `description` instead.",
+            "type": ["string"]
+          },
+          "commentOnConfirmation": {
+            "deprecated": true,
+            "description": "use `allowCommentOnConfirmation` instead",
+            "type": "boolean"
+          },
+          "description": {
+            "example": "Lead vocals only",
+            "type": ["string", "null"]
+          },
+          "groupIds": {
+            "example": [1, 5],
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "hidePersonName": {
+            "example": false,
+            "type": "boolean"
+          },
+          "id": {
+            "example": 7,
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "example": "Vocals",
+            "type": "string"
+          },
+          "nameTranslated": {
+            "example": "Vocals",
+            "type": "string"
+          },
+          "onlyAssignFromGroups": {
+            "example": false,
+            "type": "boolean"
+          },
+          "sendReminderMails": {
+            "example": true,
+            "type": "boolean"
+          },
+          "sendServiceRequestEmails": {
+            "example": true,
+            "type": "boolean"
+          },
+          "serviceGroupId": {
+            "example": 3,
+            "type": "integer"
+          },
+          "sortKey": {
+            "example": 10,
+            "type": "integer"
+          },
+          "standard": {
+            "example": false,
+            "type": "boolean"
+          },
+          "tagIds": {
+            "example": [3],
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "allowChat",
+          "allowCommentOnConfirmation",
+          "allowControlLiveAgenda",
+          "allowDecline",
+          "allowExchange",
+          "calTextTemplate",
+          "comment",
+          "description",
+          "groupIds",
+          "hidePersonName",
+          "id",
+          "meta",
+          "name",
+          "nameTranslated",
+          "onlyAssignFromGroups",
+          "sendReminderMails",
+          "sendServiceRequestEmails",
+          "serviceGroupId",
+          "sortKey",
+          "standard",
+          "tagIds"
+        ],
+        "type": "object"
+      },
+      "ServiceExchangeRequest": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "isArchived": {
+            "type": "boolean"
+          },
+          "meta": {
+            "properties": {
+              "modifiedDate": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "requestedEvent": {
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "startDate": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "requestedPerson": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "requestedServiceId": {
+            "type": "integer"
+          },
+          "requestingEvent": {
+            "properties": {
+              "id": {
+                "type": "integer"
+              },
+              "name": {
+                "type": "string"
+              },
+              "startDate": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "requestingPerson": {
+            "$ref": "#/components/schemas/Person"
+          },
+          "requestingServiceId": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "title": "",
+        "type": "object",
+        "x-tags": ["Event"]
+      },
+      "ServiceGroup": {
+        "properties": {
+          "campusId": {
+            "example": null,
+            "type": ["integer", "null"]
+          },
+          "description": {
+            "example": "All technical services",
+            "type": ["string", "null"]
+          },
+          "id": {
+            "example": 3,
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "example": "Technik",
+            "type": "string"
+          },
+          "onlyVisibleInCampusFilter": {
+            "example": false,
+            "type": "boolean"
+          },
+          "sortKey": {
+            "example": 30,
+            "type": "integer"
+          },
+          "viewAll": {
+            "example": false,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "ServiceRequestEvent": {
+        "properties": {
+          "id": {
+            "example": 42,
+            "type": "integer"
+          },
+          "name": {
+            "example": "Sunday gathering",
+            "type": "string"
+          },
+          "startDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          }
+        },
+        "required": ["id", "name", "startDate"],
+        "type": "object"
+      },
+      "SongCategory": {
+        "properties": {
+          "campusId": {
+            "type": ["integer", "null"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameTranslated": {
+            "type": "string"
+          },
+          "sortKey": {
+            "type": "integer"
+          }
+        },
+        "title": "Song Category",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "SongSource": {
+        "description": "Source of a song resp. arrangement",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "shorty": {
+            "type": ["string", "null"]
+          },
+          "sortKey": {
+            "type": "integer"
+          }
+        },
+        "required": ["id", "name", "shorty", "sortKey", "meta"],
+        "title": "SongSource",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "StartStopChat": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "triggerChatInviteMail": {
+            "type": "boolean"
+          }
+        },
+        "required": ["enabled"],
+        "type": "object"
+      },
+      "Tag": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/TagBase"
+          },
+          {
+            "properties": {
+              "modifiedAt": {
+                "deprecated": true,
+                "type": "string"
+              },
+              "modifiedBy": {
+                "deprecated": true,
+                "type": "integer"
+              },
+              "modifiedDate": {
+                "deprecated": true,
+                "type": "string"
+              },
+              "modifiedPid": {
+                "deprecated": true,
+                "type": "string"
+              }
+            },
+            "required": ["modifiedAt", "modifiedBy", "modifiedDate", "modifiedPid"],
+            "type": "object"
+          }
+        ]
+      },
+      "TagBase": {
+        "description": "Tag label and display properties. The REST tag controller does not return the tag domain or audit metadata.",
+        "properties": {
+          "color": {
+            "$ref": "#/components/schemas/CtColor",
+            "description": "Stored semantic color, or basic when no explicit color is stored."
+          },
+          "description": {
+            "example": "For everything related to missions",
+            "maxLength": 400,
+            "type": ["string", "null"]
+          },
+          "id": {
+            "example": 42,
+            "type": "integer"
+          },
+          "name": {
+            "example": "Mission",
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": ["color", "description", "id", "name"],
+        "type": "object"
+      },
+      "ZuluDate": {
+        "description": "A timestamp in Zulu time format, e.g. '2022-10-19T12:00:00Z'",
+        "example": "2022-10-19T12:00:00Z",
+        "format": "date-time",
+        "type": "string"
+      },
+      "ZuluDateDeprecated": {
+        "deprecated": true,
+        "description": "A timestamp in Zulu time format, e.g. '2022-10-19T12:00:00Z'",
+        "example": "2022-10-19T12:00:00Z",
+        "format": "date-time",
+        "type": "string"
+      },
+      "ZuluDateNullable": {
+        "description": "A timestamp in Zulu time format, e.g. '2022-10-19T12:00:00Z'",
+        "example": "2022-10-19T12:00:00Z",
+        "format": "date-time",
+        "type": ["string", "null"]
+      }
+    },
+    "securitySchemes": {
+      "Login-Token-Header": {
+        "description": "Format: `Login <token>`",
+        "in": "header",
+        "name": "Authorization",
+        "type": "apiKey"
+      }
+    }
+  }
+}

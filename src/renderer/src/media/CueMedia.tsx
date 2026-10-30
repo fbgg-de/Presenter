@@ -179,8 +179,10 @@ export function CueSource({
               alt=""
               style={style}
               onLoad={(e) => {
-                setSize((s) => ({ ...s, sw: e.currentTarget.naturalWidth, sh: e.currentTarget.naturalHeight }));
-                onSize?.(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
+                // Read now: currentTarget is null by the time React runs the updater.
+                const { naturalWidth: sw, naturalHeight: sh } = e.currentTarget;
+                setSize((s) => ({ ...s, sw, sh }));
+                onSize?.(sw, sh);
                 onStatus?.('ready');
               }}
               onError={() => onStatus?.('error')}

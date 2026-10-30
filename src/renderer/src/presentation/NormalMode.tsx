@@ -3,6 +3,7 @@ import { PresentationLine } from '@/presentation/types';
 import { LanguageStyleEntry } from '@/api/styles.api';
 import { filterLinesByLanguage, resolveLineLangCss } from '@/presentation/index';
 import { slotForLanguage } from '@/utils/languageSlots';
+import { fitFont } from './ShrinkToFit';
 
 /**
  * Renders a block in normal mode (all visible lines).
@@ -24,6 +25,11 @@ export const NormalMode = ({
   paragraphPadding?: string;
 }) => {
   const filtered = filterLinesByLanguage(block, languages, songLanguages?.[0]);
+  // A per-language size shrinks with the rest when the block does not fit (ShrinkToFit).
+  const langCss = (language: string | undefined): CSSProperties => {
+    const css = resolveLineLangCss(language, langStyles, songLanguages);
+    return css.fontSize === undefined ? css : { ...css, fontSize: fitFont(css.fontSize) };
+  };
 
   return (
     <div
@@ -38,7 +44,7 @@ export const NormalMode = ({
           data-slot={slotForLanguage(line.language, songLanguages)}
           style={{
             ...textStyle,
-            ...resolveLineLangCss(line.language, langStyles, songLanguages),
+            ...langCss(line.language),
             ...(line.bold ? { fontWeight: 'bold' } : {}),
           }}
         >

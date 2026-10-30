@@ -12,10 +12,10 @@ class Statement
     private function throwError($message): void
     {
         if ($this->stmt->errno) {
-            throw new Error('sql error ' . $this->stmt->errno . ': ' . $this->stmt->error);
+            throw new DbError('sql error ' . $this->stmt->errno . ': ' . $this->stmt->error);
         }
 
-        throw new Error('sql error: ' . $message);
+        throw new DbError('sql error: ' . $message);
     }
 
     public function id(int | string | null &$id): Statement
@@ -126,11 +126,11 @@ class Statement
     public function close(): void
     {
         if ($this->stmt->errno) {
-            throw new Error('error (' . $this->stmt->errno . ': ' . $this->stmt->error . ')');
+            throw new DbError('error (' . $this->stmt->errno . ': ' . $this->stmt->error . ')');
         }
 
         if (!$this->stmt->close()) {
-            throw new Error('could not close mysqli statement');
+            throw new DbError('could not close mysqli statement');
         }
     }
 }

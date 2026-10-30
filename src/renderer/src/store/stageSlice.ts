@@ -27,15 +27,33 @@ export interface StageLayerRuntime {
   hidden: boolean;
   /** Time added to (or taken from) the running timer — see StageCueRuntime.adjustMs. */
   adjustMs?: number;
+  /** The filled-in `{fields}` of the message cue up — see StageCueRuntime.fields. */
+  fields?: Record<string, string>;
+}
+
+/**
+ * A message someone asked for on the /message page (a nursery worker, say). It only reaches the
+ * screens when the operator shows it.
+ */
+export interface MessageRequest {
+  id: string;
+  layerId: number;
+  cueId: string;
+  fields: Record<string, string>;
+  /** Who sent it, as they are signed in. */
+  from?: string;
+  at: number;
 }
 
 export interface StageState {
   layers: Record<number, StageLayerRuntime>;
   /** One switch that blanks every stage overlay, without disturbing per-layer state. */
   allHidden: boolean;
+  /** Messages asked for on the /message page, waiting for the operator. */
+  messageRequests: MessageRequest[];
 }
 
-const initialState: StageState = { layers: {}, allHidden: false };
+const initialState: StageState = { layers: {}, allHidden: false, messageRequests: [] };
 
 const ensure = (state: StageState, layerId: number, at: number): StageLayerRuntime => {
   let runtime = state.layers[layerId];
@@ -48,6 +66,8 @@ const ensure = (state: StageState, layerId: number, at: number): StageLayerRunti
 
 /** Move to a cue and (re)start its clock. */
 const enter = (runtime: StageLayerRuntime, cueIndex: number, at: number): void => {
+  // Filled-in fields belong to the message they were typed for; restarting it keeps them.
+  if (runtime.cueIndex !== Math.max(0, cueIndex)) delete runtime.fields;
   runtime.cueIndex = Math.max(0, cueIndex);
   runtime.startedAt = at;
   delete runtime.pausedAt;
@@ -84,6 +104,24 @@ export const stageSlice = createSlice({
       const { layerId, at } = action.payload;
       const runtime = ensure(state, layerId, at);
       enter(runtime, Math.max(0, runtime.cueIndex - 1), at);
+    },
+
+    /** Put a message cue up with its fields filled in (the operator's dialog, or a request). */
+    stageShowMessage: (state, action: PayloadAction<{ layerId: number; cueIndex: number; fields: Record<string, string>; at: number }>) => {
+      const { layerId, cueIndex, fields, at } = action.payload;
+      const runtime = ensure(state, layerId, at);
+      enter(runtime, cueIndex, at);
+      runtime.fields = { ...fields };
+      runtime.hidden = false;
+    },
+
+    addMessageRequest: (state, action: PayloadAction<MessageRequest>) => {
+      // The same request twice (a resend after a reconnect) stays one.
+      if (!state.messageRequests.some((r) => r.id === action.payload.id)) state.messageRequests.push(action.payload);
+    },
+
+    removeMessageRequest: (state, action: PayloadAction<string>) => {
+      state.messageRequests = state.messageRequests.filter((r) => r.id !== action.payload);
     },
 
     /** Jump straight to a cue — used by the cue list and by targeted triggers. */
@@ -192,6 +230,9 @@ export const {
   setStageAllHidden,
   toggleStageAllHidden,
   pruneStageLayers,
+  stageShowMessage,
+  addMessageRequest,
+  removeMessageRequest,
 } = stageSlice.actions;
 
 export const useGetStageState = () => useAppSelector((state) => state.stage);

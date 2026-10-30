@@ -55,6 +55,10 @@ abstract class RestController extends DB implements Rest
                 'DELETE' => $this->delete($req, $res),
                 default => $this->get($req, $res),
             };
+        } catch (DbError | mysqli_sql_exception $e) {
+            require_once(__DIR__ . '/../classes/Logging.php');
+            Logging::error(static::class . ': ' . $e->getMessage());
+            $res->error(500, 'Database error', false);
         } catch (Error $e) {
             $res->error(400, $e->getMessage());
         }

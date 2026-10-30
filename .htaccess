@@ -16,10 +16,13 @@ RewriteRule ^admin$ admin.html [L,QSA]
 RewriteRule ^admin/(.*)$ admin.html [L,QSA]
 RewriteRule ^notes$ musician.html [L,QSA]
 RewriteRule ^control$ control.html [L,QSA]
+RewriteRule ^message$ message.html [L,QSA]
 
-# Protect data and cache directories from direct access
+# Protect data, cache and log directories from direct access
 RewriteRule ^data/ - [F,L]
 RewriteRule ^cache/ - [F,L]
+RewriteRule ^logs/ - [F,L]
+
 
 # Handle React Router (HTML5 History Mode)
 # Don't rewrite if file or directory exists
@@ -35,6 +38,7 @@ RewriteCond %{REQUEST_URI} !^/admin\.html
 RewriteCond %{REQUEST_URI} !^/login\.html
 RewriteCond %{REQUEST_URI} !^/musician\.html
 RewriteCond %{REQUEST_URI} !^/control\.html
+RewriteCond %{REQUEST_URI} !^/message\.html
 RewriteCond %{REQUEST_URI} !^/presentation\.html
 # Rewrite everything else to index.html for React Router
 RewriteRule ^(.*)$ index.html [L]
@@ -47,9 +51,12 @@ RewriteRule ^(.*)$ index.html [L]
   </If>
 </IfModule>
 
-<Files "error.log">
+# Every log file, rotated copies included (error.1.log, see classes/Logging.php)
+<FilesMatch "\.log$">
+
+
   Require all denied
-</Files>
+</FilesMatch>
 
 <Files "config.php">
   Require all denied

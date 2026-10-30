@@ -35,12 +35,25 @@ const ACCOUNT_B = 41002;
 async function startFakeBackend() {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
+    res.setHeader('content-type', 'application/json');
+    // Relay tickets ("ticket:<n>") and viewer tokens ("viewer:<n>") — see api/ValidateWsTicket.php
+    // and api/ValidateToken.php.
+    const kind = url.pathname.endsWith('/rest/ValidateWsTicket')
+      ? 'ticket'
+      : url.pathname.endsWith('/rest/ValidateToken')
+        ? 'viewer'
+        : null;
+    if (kind) {
+      const match = new RegExp(`^${kind}:(\\d+)$`).exec(url.searchParams.get(kind === 'ticket' ? 'ticket' : 'token') ?? '');
+      if (!match) res.writeHead(403).end(JSON.stringify({ error: 'invalid' }));
+      else res.writeHead(200).end(JSON.stringify({ account: Number(match[1]), expires: Math.floor(Date.now() / 1000) + 3600 }));
+      return;
+    }
     if (!url.pathname.endsWith('/rest/ValidateMonitorToken')) {
       res.writeHead(404).end('{}');
       return;
     }
     const token = url.searchParams.get('token') ?? '';
-    res.setHeader('content-type', 'application/json');
     if (token === 'admin') {
       res.writeHead(200).end(JSON.stringify({ scope: 'admin', account: null }));
       return;
@@ -307,23 +320,89 @@ scenario('Buffer size is adjustable on the fly', 'Shrinking the buffer trims wha
   monitor.close();
 });
 
+// ── Relay auth ──────────────────────────────────────────────────────────────
+
+const ACCOUNT_C = 41003;
+const command = JSON.stringify({ type: 'broadcast', action: 'remote_command', data: { command: 'toggle_black' } });
+const gotCommand = (client) => client.received.some((m) => m.action === 'remote_command');
+
+/** Raw relay socket: sends the auth fields, resolves once authed or closed. */
+function rawClient(url, auth) {
+  return new Promise((resolve) => {
+    const client = { ws: new WebSocket(url), received: [], closeCode: null, authed: false };
+    client.ws.on('open', () => client.ws.send(JSON.stringify({ action: 'auth', ...auth })));
+    client.ws.on('message', (raw) => {
+      const msg = JSON.parse(raw.toString());
+      client.received.push(msg);
+      if (msg.type === 'auth_ok') {
+        client.authed = true;
+        resolve(client);
+      }
+    });
+    client.ws.on('close', (code) => {
+      client.closeCode = code;
+      resolve(client);
+    });
+  });
+}
+
+scenario(
+  'Relay tickets replace account numbers',
+  'A guessed account number is refused; a backend-signed ticket decides the account.',
+  async ({ strictUrl }) => {
+    const bare = await rawClient(strictUrl, { account: ACCOUNT_C, client: { role: 'remote' } });
+    report.equal('bare account number is refused', bare.closeCode, 4002);
+    const forged = await rawClient(strictUrl, { account: ACCOUNT_C, ticket: 'forged', client: { role: 'remote' } });
+    report.equal('forged ticket is refused', forged.closeCode, 4003);
+
+    // The sender claims another account; the ticket's account is the one that counts.
+    const sender = await rawClient(strictUrl, { account: 1, ticket: `ticket:${ACCOUNT_C}`, client: { role: 'remote' } });
+    const operator = await rawClient(strictUrl, { account: ACCOUNT_C, ticket: `ticket:${ACCOUNT_C}`, client: { role: 'operator' } });
+    report.check('ticket holders get in', sender.authed && operator.authed);
+    sender.ws.send(command);
+    await waitFor(() => gotCommand(operator), { label: 'the command to reach the operator' }).catch(() => {});
+    report.check('relayed within the ticket account', gotCommand(operator));
+    sender.ws.close();
+    operator.ws.close();
+  },
+);
+
+scenario(
+  'Viewer tokens only listen',
+  'A public viewer link cannot drive the show: nothing it sends reaches the account.',
+  async ({ url }) => {
+    const operator = await rawClient(url, { account: ACCOUNT_C, client: { role: 'operator' } });
+    const viewer = await rawClient(url, { token: `viewer:${ACCOUNT_C}`, client: { role: 'viewer' } });
+    report.check('viewer token gets in', viewer.authed);
+    viewer.ws.send(command);
+    viewer.ws.send(JSON.stringify({ action: 'disconnect_peers' }));
+    await sleep(300);
+    report.check('operator never got the command', !gotCommand(operator));
+    report.check('operator was not disconnected', operator.closeCode === null, `closeCode=${operator.closeCode}`);
+    operator.ws.close();
+    viewer.ws.close();
+  },
+);
+
 // ── Runner ──────────────────────────────────────────────────────────────────
 
 const backend = await startFakeBackend();
 const relay = await startRelay({ verbose: VERBOSE, backendUrl: backend.url });
-console.log(`\x1b[90mrelay: ${relay.url}   backend: ${backend.url}\x1b[0m`);
+const strictRelay = await startRelay({ verbose: VERBOSE, backendUrl: backend.url, allowAccountAuth: false });
+console.log(`\x1b[90mrelay: ${relay.url}   strict relay: ${strictRelay.url}   backend: ${backend.url}\x1b[0m`);
 
 try {
   for (const s of scenarios) {
     report.beginScenario(s.name, s.description);
     try {
-      await s.fn({ url: relay.url });
+      await s.fn({ url: relay.url, strictUrl: strictRelay.url });
     } catch (err) {
       report.scenarioError(err);
     }
   }
 } finally {
   await relay.stop();
+  await strictRelay.stop();
   await backend.stop();
 }
 

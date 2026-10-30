@@ -1,4 +1,3 @@
-import { ElectronAPI } from '@electron-toolkit/preload';
 import type {
   WindowConfig,
   WindowState,
@@ -84,8 +83,17 @@ export interface FrontendAPI {
   scanWsHosts: (url: string) => Promise<string[]>;
 
   // ── Built-in WebSocket server status ──
-  getWsServerInfo: () => Promise<{ hosts: string[]; port: number; clientCount: number; commandHandlingEnabled: boolean }>;
+  getWsServerInfo: () => Promise<{
+    hosts: string[];
+    port: number;
+    clientCount: number;
+    commandHandlingEnabled: boolean;
+    allowNetwork: boolean;
+  }>;
   setWsCommandHandlingEnabled: (enabled: boolean) => Promise<boolean>;
+  /** Let other computers (remote Companion) connect; off = this computer only. */
+  setWsAllowNetwork: (allow: boolean) => Promise<boolean>;
+
   onWsClientCount: (callback: (data: { count: number }) => void) => (() => void) | void;
   onWsLastCommand: (
     callback: (data: { action: string; target?: string; payload?: Record<string, unknown>; receivedAt: number }) => void,
@@ -167,7 +175,6 @@ export interface PresentationAPI {
 
 declare global {
   interface Window {
-    electron: ElectronAPI;
     api: FrontendAPI;
     presentationApi?: PresentationAPI;
   }

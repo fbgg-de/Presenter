@@ -1,0 +1,1509 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "contact": {
+      "email": "support@churchtools.de",
+      "name": "German ChurchTools Forum",
+      "url": "https://forum.church.tools/category/22/churchtools-schnittstellen"
+    },
+    "description": "The ChurchTools REST API is the best entry point for developers to access ChurchTools. <br><br> **Authentication:** You need to be authorized to use some endpoints. Those endpoints are marked by a gray lock symbol. If you view the documentation, while you are logged into ChurchTools, all requests are already authorized. If you want to authorized a request, you need to provide a `Login Token` as `Authorization` header in the format `Authorization: Login <token>` or send a valid cookie. You can use the green \"Authorize\" dialog to enter those details and see how a request would look like in detail. <br><br> **Missing Endpoints:** Not all features are yet available by our new REST API. This documentation will grow in the future. We are working hard to add new endpoints with every ChurchTools version. The documentation will always show only those endpoints you can use with your ChurchTools installation.",
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "title": "ChurchTools REST API",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "description": "ChurchTools",
+      "url": "/api"
+    },
+    {
+      "description": "Local",
+      "url": "http://churchtools.test/api"
+    }
+  ],
+  "security": [
+    {
+      "Login-Token-Header": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "Endpoints for Songs.",
+      "name": "Song"
+    }
+  ],
+  "paths": {
+    "/song/categories": {
+      "get": {
+        "description": "Returns all song categories.",
+        "operationId": "get-song-categories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/SongCategory"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get all song categories",
+        "tags": ["Song"]
+      },
+      "post": {
+        "description": "Creates a song category from the provided master-data fields.",
+        "operationId": "post-song-categories",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SongCategoryWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SongCategory"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Song category created"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Create a song category",
+        "tags": ["Song"]
+      }
+    },
+    "/song/categories/{songCategoryId}": {
+      "delete": {
+        "description": "Deletes the specified song category.",
+        "operationId": "delete-song-categories-id",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/409-Conflict"
+          }
+        },
+        "summary": "Delete song category",
+        "tags": ["Song"]
+      },
+      "get": {
+        "description": "Returns the specified song category.",
+        "operationId": "get-song-categories-id",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SongCategory"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get a song category by ID",
+        "tags": ["Song"]
+      },
+      "parameters": [
+        {
+          "description": "ID of the song category",
+          "in": "path",
+          "name": "songCategoryId",
+          "required": true,
+          "schema": {
+            "example": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "description": "Updates the specified song category.",
+        "operationId": "put-song-categories-id",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SongCategoryWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SongCategory"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Song category updated"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update song category",
+        "tags": ["Song"]
+      }
+    },
+    "/song/sources": {
+      "get": {
+        "description": "Returns all song sources.",
+        "operationId": "get-song-sources",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/SongSource"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Get all song sources",
+        "tags": ["Song"]
+      },
+      "post": {
+        "description": "Creates a song source.",
+        "operationId": "post-song-sources",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SongSourceWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SongSource"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Song source created"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Create a song source",
+        "tags": ["Song"]
+      }
+    },
+    "/song/sources/{songSourceId}": {
+      "delete": {
+        "description": "Deletes the specified song source.",
+        "operationId": "delete-song-sources-id",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/409-Conflict"
+          }
+        },
+        "summary": "Delete song source",
+        "tags": ["Song"]
+      },
+      "get": {
+        "description": "Returns the specified song source.",
+        "operationId": "get-song-sources-id",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SongSource"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get song source by ID",
+        "tags": ["Song"]
+      },
+      "parameters": [
+        {
+          "description": "ID of the song source",
+          "in": "path",
+          "name": "songSourceId",
+          "required": true,
+          "schema": {
+            "example": 1,
+            "type": "integer"
+          }
+        }
+      ],
+      "put": {
+        "description": "Updates the specified song source.",
+        "operationId": "put-song-sources-id",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SongSourceWrite"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SongSource"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Song source updated"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update song source",
+        "tags": ["Song"]
+      }
+    },
+    "/songs": {
+      "get": {
+        "description": "Get all Songs. Only those songs are returned that the user has permission to view.",
+        "operationId": "get-songs",
+        "parameters": [
+          {
+            "description": "Filter response by category IDs.",
+            "explode": true,
+            "in": "query",
+            "name": "song_category_ids[]",
+            "schema": {
+              "example": [1],
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Filter by Song IDs.",
+            "explode": true,
+            "in": "query",
+            "name": "ids[]",
+            "schema": {
+              "example": [5, 12],
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Filter by field `shouldPractice`.",
+            "in": "query",
+            "name": "practice",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Filter by arrangement key. Song plus all its arrangements are returned if one arrangement meets the filter criterion.",
+            "in": "query",
+            "name": "key_of_arrangement",
+            "schema": {
+              "$ref": "#/components/schemas/ArrangementKey"
+            }
+          },
+          {
+            "description": "Search by song title.",
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "example": "Amazing Grace",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Search by song title or author.",
+            "in": "query",
+            "name": "query",
+            "schema": {
+              "example": "Grace",
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/SongInclude"
+          },
+          {
+            "$ref": "#/components/parameters/PageParameter"
+          },
+          {
+            "$ref": "#/components/parameters/LimitParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/Song"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPagination"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get all songs",
+        "tags": ["Song"]
+      },
+      "post": {
+        "description": "Create a new song. Optionally, arrangements can be provided inline during creation.",
+        "operationId": "post-songs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SongCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Song"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Create a new song",
+        "tags": ["Song"]
+      }
+    },
+    "/songs/{songId}": {
+      "delete": {
+        "description": "Delete the specified song.",
+        "operationId": "delete-songs-songId",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SongId"
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete song",
+        "tags": ["Song"]
+      },
+      "get": {
+        "description": "Get the specified song.",
+        "operationId": "get-songs-songId",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SongId"
+          },
+          {
+            "$ref": "#/components/parameters/SongInclude"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Song"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get song",
+        "tags": ["Song"]
+      },
+      "put": {
+        "description": "Update the specified song.",
+        "operationId": "put-songs-songId",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SongId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SongCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Song"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update song",
+        "tags": ["Song"]
+      }
+    },
+    "/songs/{songId}/arrangements": {
+      "get": {
+        "description": "Get all arrangements for the specified song.",
+        "operationId": "get-songs-songId-arrangements",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/Arrangement"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get arrangements of song",
+        "tags": ["Song"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SongId"
+        }
+      ],
+      "post": {
+        "description": "Create a new arrangement for the specified song.",
+        "operationId": "post-songs-songId-arrangements",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrangementCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Arrangement"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Create new arrangement for song",
+        "tags": ["Song"]
+      }
+    },
+    "/songs/{songId}/arrangements/{arrangementId}": {
+      "delete": {
+        "description": "Delete the specified arrangement.",
+        "operationId": "delete-songs-songId-arrangements-arrangementId",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete arrangement",
+        "tags": ["Song"]
+      },
+      "get": {
+        "description": "Get the specified arrangement.",
+        "operationId": "get-songs-songId-arrangements-arrangementId",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Arrangement"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get arrangement of song",
+        "tags": ["Song"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SongId"
+        },
+        {
+          "$ref": "#/components/parameters/ArrangementId"
+        }
+      ],
+      "put": {
+        "description": "Update the specified arrangement.",
+        "operationId": "put-songs-songId-arrangements-arrangementId",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArrangementUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Arrangement"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update arrangement of song",
+        "tags": ["Song"]
+      }
+    },
+    "/songs/{songId}/arrangements/{arrangementId}/default": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/SongId"
+        },
+        {
+          "$ref": "#/components/parameters/ArrangementId"
+        }
+      ],
+      "patch": {
+        "description": "Make the specified arrangement the default for the specified song.",
+        "operationId": "patch-songs-songId-arrangements-arrangementId-default",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Make arrangement the default",
+        "tags": ["Song"]
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ArrangementId": {
+        "description": "ID of arrangement",
+        "in": "path",
+        "name": "arrangementId",
+        "required": true,
+        "schema": {
+          "example": 42,
+          "type": "integer"
+        }
+      },
+      "LimitParameter": {
+        "description": "Number of results per page.",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 10,
+          "example": 10,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "PageParameter": {
+        "description": "Page number to show page in pagination. If empty, start at first page.",
+        "in": "query",
+        "name": "page",
+        "schema": {
+          "default": 1,
+          "example": 1,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "SongId": {
+        "description": "ID of song",
+        "in": "path",
+        "name": "songId",
+        "required": true,
+        "schema": {
+          "example": 42,
+          "type": "integer"
+        }
+      },
+      "SongInclude": {
+        "description": "Include additional information",
+        "in": "query",
+        "name": "include",
+        "schema": {
+          "items": {
+            "enum": ["arrangements", "tags"],
+            "example": "arrangements",
+            "type": "string"
+          },
+          "type": "array"
+        }
+      }
+    },
+    "responses": {
+      "204-Deleted": {
+        "description": "Successfully deleted"
+      },
+      "204-NoContent": {
+        "description": "No Content"
+      },
+      "400-BadRequest": {
+        "description": "Bad Request"
+      },
+      "401-Unauthorized": {
+        "content": {
+          "text/plain": {
+            "schema": {
+              "example": "Session expired!",
+              "type": "string"
+            }
+          }
+        },
+        "description": "Unauthorized"
+      },
+      "403-Forbidden": {
+        "description": "Forbidden to see, create, update, or delete resource"
+      },
+      "404-NotFound": {
+        "description": "Resource not found"
+      },
+      "409-Conflict": {
+        "description": "A conflict occurred between the request and the current state of the resource."
+      }
+    },
+    "schemas": {
+      "Arrangement": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ArrangementUpdate"
+          },
+          {
+            "properties": {
+              "files": {
+                "description": "List of files uploaded to that arrangement",
+                "items": {
+                  "$ref": "#/components/schemas/FileOrLink"
+                },
+                "type": "array"
+              },
+              "id": {
+                "example": 3,
+                "type": "integer"
+              },
+              "isDefault": {
+                "example": true,
+                "type": "boolean"
+              },
+              "keyOfArrangement": {
+                "deprecated": true,
+                "description": "Use 'key' instead",
+                "type": "string"
+              },
+              "links": {
+                "description": "List of links \"uploaded\" to that arrangement",
+                "items": {
+                  "$ref": "#/components/schemas/FileOrLink"
+                },
+                "type": "array"
+              },
+              "meta": {
+                "$ref": "#/components/schemas/MetaDataEntityId"
+              },
+              "note": {
+                "deprecated": true,
+                "description": "Use 'description' instead",
+                "type": "string"
+              },
+              "source": {
+                "$ref": "#/components/schemas/SongSource"
+              }
+            }
+          }
+        ],
+        "required": [
+          "beat",
+          "description",
+          "duration",
+          "files",
+          "id",
+          "isDefault",
+          "key",
+          "links",
+          "meta",
+          "name",
+          "source",
+          "sourceId",
+          "sourceReference",
+          "tempo"
+        ],
+        "type": "object"
+      },
+      "ArrangementCreate": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ArrangementUpdate"
+          },
+          {
+            "properties": {
+              "fileIds": {
+                "description": "IDs of existing files to assign to the new arrangement",
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "isDefault": {
+                "default": false,
+                "description": "Whether the new arrangement should become the song's default arrangement",
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          }
+        ],
+        "description": "Details for creating a song arrangement.",
+        "type": "object"
+      },
+      "ArrangementKey": {
+        "description": "Possible keys that the song is arranged in",
+        "enum": [
+          "A",
+          "Ab",
+          "Am",
+          "B",
+          "Bb",
+          "Bbm",
+          "Bm",
+          "C",
+          "C#m",
+          "Cm",
+          "D",
+          "D#m",
+          "Db",
+          "Dm",
+          "E",
+          "Eb",
+          "Ebm",
+          "Em",
+          "F",
+          "F#",
+          "F#m",
+          "Fm",
+          "G",
+          "G#m",
+          "Gb",
+          "Gm"
+        ],
+        "example": "F",
+        "type": "string"
+      },
+      "ArrangementUpdate": {
+        "description": "Details about a song's arrangement.",
+        "properties": {
+          "beat": {
+            "example": "4/4",
+            "maxLength": 10,
+            "type": ["string", "null"]
+          },
+          "description": {
+            "example": "Great arrangement for male voices",
+            "maxLength": 4000,
+            "type": ["string", "null"]
+          },
+          "duration": {
+            "description": "Duration in seconds",
+            "example": 170,
+            "minimum": 1,
+            "type": ["integer", "null"]
+          },
+          "key": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ArrangementKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "example": "Men Voicing",
+            "maxLength": 50,
+            "minLength": 1,
+            "type": "string"
+          },
+          "sourceId": {
+            "example": 77,
+            "type": ["integer", "null"]
+          },
+          "sourceReference": {
+            "example": "55a",
+            "maxLength": 30,
+            "type": ["string", "null"]
+          },
+          "tempo": {
+            "example": 120,
+            "minimum": 1,
+            "type": ["integer", "null"]
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "FileOrLink": {
+        "description": "File or Link for a specific domain type. E.g. uploaded music file for songs or avatar of a person.",
+        "properties": {
+          "domainId": {
+            "example": "1",
+            "type": "string"
+          },
+          "domainType": {
+            "description": "ChurchTools Domain Type. Where does this file belong to?",
+            "example": "avatar",
+            "type": "string"
+          },
+          "fileUrl": {
+            "description": "Link to external website or link to file in ChurchTools",
+            "example": "http://churchtools.test/?q=public/filedownload&id=116&filename=57407b0f37e8833cc7ff34f76413885e3856336ff21a263187c6bbd3acb9d385",
+            "type": "string"
+          },
+          "filename": {
+            "description": "Filename of uploaded file or name of the link",
+            "example": "57407b0f37e8833cc7ff34f76413885e3856336ff21a263187c6bbd3acb9d385",
+            "type": "string"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "description": "Name of that file, when it's been uploaded",
+            "example": "myPicture.jpg",
+            "type": "string"
+          }
+        },
+        "title": "File or Link",
+        "type": "object",
+        "x-tags": ["General"]
+      },
+      "MetaCount": {
+        "properties": {
+          "count": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MetaDataEntityId": {
+        "example": {
+          "createdDate": "2020-01-01T00:00:00Z",
+          "createdPerson": {
+            "id": 1
+          },
+          "modifiedDate": "2020-01-01T00:00:00Z",
+          "modifiedPerson": {
+            "id": 1
+          }
+        },
+        "properties": {
+          "createdDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          "createdPerson": {
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            },
+            "required": ["id"],
+            "type": "object"
+          },
+          "modifiedDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          "modifiedPerson": {
+            "properties": {
+              "id": {
+                "type": "integer"
+              }
+            },
+            "required": ["id"],
+            "type": "object"
+          }
+        },
+        "required": ["createdDate", "createdPerson", "modifiedDate", "modifiedPerson"],
+        "type": "object"
+      },
+      "MetaPagination": {
+        "properties": {
+          "all": {
+            "type": "integer"
+          },
+          "count": {
+            "type": "integer"
+          },
+          "pagination": {
+            "properties": {
+              "current": {
+                "type": "integer"
+              },
+              "lastPage": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": ["current", "lastPage"],
+            "type": "object"
+          }
+        },
+        "required": ["pagination"],
+        "type": "object"
+      },
+      "Song": {
+        "description": "Song information",
+        "properties": {
+          "arrangements": {
+            "deprecated": true,
+            "description": "All arrangements for that song",
+            "items": {
+              "$ref": "#/components/schemas/Arrangement"
+            },
+            "type": "array"
+          },
+          "author": {
+            "example": "Matthias Claudius",
+            "maxLength": 300,
+            "type": ["string", "null"]
+          },
+          "category": {
+            "$ref": "#/components/schemas/SongCategory"
+          },
+          "ccli": {
+            "example": "123456789",
+            "maxLength": 50,
+            "type": ["string", "null"]
+          },
+          "copyright": {
+            "example": "Public Domain",
+            "maxLength": 400,
+            "type": ["string", "null"]
+          },
+          "id": {
+            "example": 5,
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "example": "Hallelujah",
+            "maxLength": 200,
+            "minLength": 2,
+            "type": "string"
+          },
+          "note": {
+            "deprecated": true,
+            "type": "string"
+          },
+          "shouldPractice": {
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "required": ["id", "name", "category", "meta", "shouldPractice", "copyright", "author"],
+        "title": "Song",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "SongCategory": {
+        "properties": {
+          "campusId": {
+            "type": ["integer", "null"]
+          },
+          "id": {
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "nameTranslated": {
+            "type": "string"
+          },
+          "sortKey": {
+            "type": "integer"
+          }
+        },
+        "title": "Song Category",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "SongCategoryWrite": {
+        "properties": {
+          "campusId": {
+            "type": ["integer", "null"]
+          },
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "sortKey": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "SongCreate": {
+        "description": "Song information",
+        "properties": {
+          "arrangements": {
+            "items": {
+              "$ref": "#/components/schemas/ArrangementCreate"
+            },
+            "type": "array"
+          },
+          "author": {
+            "example": "Matthias Claudius",
+            "maxLength": 300,
+            "type": ["string", "null"]
+          },
+          "categoryId": {
+            "example": 1,
+            "type": "integer"
+          },
+          "ccli": {
+            "example": "123456789",
+            "maxLength": 50,
+            "type": ["string", "null"]
+          },
+          "copyright": {
+            "example": "Public Domain",
+            "maxLength": 400,
+            "type": ["string", "null"]
+          },
+          "name": {
+            "example": "Hallelujah",
+            "maxLength": 200,
+            "minLength": 2,
+            "type": "string"
+          },
+          "shouldPractice": {
+            "default": false,
+            "example": true,
+            "type": "boolean"
+          },
+          "tags": {
+            "example": ["Worship", "Praise"],
+            "items": {
+              "maxLength": 100,
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": ["categoryId", "name"],
+        "title": "Song",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "SongSource": {
+        "description": "Source of a song resp. arrangement",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/MetaDataEntityId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "shorty": {
+            "type": ["string", "null"]
+          },
+          "sortKey": {
+            "type": "integer"
+          }
+        },
+        "required": ["id", "name", "shorty", "sortKey", "meta"],
+        "title": "SongSource",
+        "type": "object",
+        "x-tags": ["Song"]
+      },
+      "SongSourceWrite": {
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "minLength": 1,
+            "type": "string"
+          },
+          "shorty": {
+            "maxLength": 20,
+            "type": ["string", "null"]
+          },
+          "sortKey": {
+            "default": 0,
+            "type": "integer"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "ZuluDate": {
+        "description": "A timestamp in Zulu time format, e.g. '2022-10-19T12:00:00Z'",
+        "example": "2022-10-19T12:00:00Z",
+        "format": "date-time",
+        "type": "string"
+      }
+    },
+    "securitySchemes": {
+      "Login-Token-Header": {
+        "description": "Format: `Login <token>`",
+        "in": "header",
+        "name": "Authorization",
+        "type": "apiKey"
+      }
+    }
+  }
+}

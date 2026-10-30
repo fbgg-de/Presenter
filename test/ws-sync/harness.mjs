@@ -36,8 +36,10 @@ export function freePort() {
  * `ttlSeconds` maps to SYNC_TTL_SECONDS (0 disables selection expiry).
  * `backendUrl` maps to BACKEND_URL — only the token-auth and monitor paths need it.
  * `traceBufferSize` maps to TRACE_BUFFER_SIZE (messages kept per account for monitors).
+ * `allowAccountAuth` maps to ALLOW_ACCOUNT_AUTH (bare account numbers accepted; default on).
+
  */
-export async function startRelay({ ttlSeconds = 3600, verbose = false, backendUrl = '', traceBufferSize } = {}) {
+export async function startRelay({ ttlSeconds = 3600, verbose = false, backendUrl = '', traceBufferSize, allowAccountAuth = true } = {}) {
   const port = await freePort();
 
   // By default the suites run the TypeScript source, so they always test what is checked in.
@@ -54,6 +56,9 @@ export async function startRelay({ ttlSeconds = 3600, verbose = false, backendUr
       SYNC_TTL_SECONDS: String(ttlSeconds),
       ...(backendUrl ? { BACKEND_URL: backendUrl } : {}),
       ...(traceBufferSize ? { TRACE_BUFFER_SIZE: String(traceBufferSize) } : {}),
+      // The client ports authenticate by bare account number (no backend to mint tickets);
+      // test/ws-monitor covers the ticket path against a relay started with this off.
+      ...(allowAccountAuth ? { ALLOW_ACCOUNT_AUTH: '1' } : {}),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });

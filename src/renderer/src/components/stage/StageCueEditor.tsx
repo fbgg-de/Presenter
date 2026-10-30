@@ -250,7 +250,7 @@ export const formatMmss = (seconds: number): string => {
  * of separate minute and second boxes. The typed text is kept while the field has focus and
  * committed on Enter or leaving it; otherwise it shows the stored value.
  */
-const DurationField = ({
+export const DurationField = ({
   seconds,
   onChange,
   placeholder,
@@ -326,10 +326,17 @@ export const StageCueEditor = ({ cue, onChange }: { cue: StageCue; onChange: Pat
               options={[
                 { value: 'duration', label: S.SOURCE_DURATION() },
                 { value: 'timeOfDay', label: S.SOURCE_TIME_OF_DAY() },
+                { value: 'agendaItem', label: S.SOURCE_AGENDA_ITEM() },
               ]}
             />
           </InspectorRow>
-          {cue.source === 'duration' ? (
+          {cue.source === 'agendaItem' ? (
+            <InspectorRow label="" labelWidth={LABEL_WIDTH}>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {S.AGENDA_ITEM_HINT()}
+              </Typography>
+            </InspectorRow>
+          ) : cue.source === 'duration' ? (
             <InspectorRow label={S.LENGTH()} labelWidth={LABEL_WIDTH}>
               <DurationField seconds={cue.durationSec ?? 0} onChange={(durationSec) => set({ durationSec: durationSec ?? 0 })} />
             </InspectorRow>

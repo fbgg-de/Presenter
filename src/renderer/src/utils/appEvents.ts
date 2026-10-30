@@ -12,6 +12,8 @@ type AppEvents = {
   'presenter:group-settings': { groupId: string; tab?: 'general' | 'theme' | 'playback' };
   /** Open the song search drawer (Ctrl+F). */
   'presenter:open-search': Record<string, never>;
+  /** Ask for the `{fields}` of a message cue before it goes up; `requestId` answers a /message request. */
+  'presenter:message-fields': { layerId: number; cueIndex: number; fields?: Record<string, string>; requestId?: string };
 };
 
 export const emitAppEvent = <K extends keyof AppEvents>(name: K, detail: AppEvents[K]) =>

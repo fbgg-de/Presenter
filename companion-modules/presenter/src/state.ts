@@ -21,7 +21,8 @@ export type PresenterState = {
 	lineIndex: number
 	isBlack: boolean
 	isTextHidden: boolean
-	items: { title: string; type: string }[]
+	/** `id` is the entry's stable id (Presenter 2.2+); older versions send none. */
+	items: { id?: string; title: string; type: string }[]
 	/** The live item's sections; `color` is Presenter's section colour ("#3b82f6") or null. */
 	blocks: { name: string; color: string | null }[]
 	operatorMode: 'prepare' | 'live'

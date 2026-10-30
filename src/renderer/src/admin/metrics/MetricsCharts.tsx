@@ -1,5 +1,5 @@
-import { alpha, Box, Typography, useTheme } from '@mui/material';
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Box, Typography, useTheme } from '@mui/material';
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useI18nContext } from '@/i18n/i18n-react';
 import type { MetricCount, MetricsSummary } from '@/api/metrics.api';
 import { MetricsChartCard } from './MetricsOverview';

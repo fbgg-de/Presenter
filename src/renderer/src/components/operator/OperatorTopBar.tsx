@@ -25,6 +25,8 @@ import { MonitorWindowsMenu, openWindowManager } from './MonitorWindowsMenu';
 import { sidePanelState, sidePanelVisible, toggleSidePanel } from './sidePanel';
 import { ViewMenu } from './ViewMenu';
 import { ReadinessChip } from './ReadinessChip';
+import { AgendaTimerChip } from './AgendaTimerChip';
+import { MessageRequestsChip } from '@/components/stage/MessageRequests';
 import { formatShowDate } from '@/utils/agendaText';
 import { useShortcut, withShortcut } from '@/hooks/useShortcut';
 import { MONITOR_DEFAULT, MONITOR_RANGE, clampSize, useCtrlWheelSize } from './tileSize';
@@ -221,6 +223,8 @@ export const OperatorTopBar = ({
                 <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center', '& .MuiChip-root': { height: 24 } }}>
                   {/* A pre-service check: in Live it is too late to act on, and it only takes room. */}
                   {operatorMode !== 'live' && <ReadinessChip />}
+                  <AgendaTimerChip />
+                  <MessageRequestsChip />
                   {connections}
                 </Stack>
               </Stack>

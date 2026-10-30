@@ -56,6 +56,8 @@ class PdfIcons extends RestController
             }
 
             header('Content-Type: image/svg+xml');
+            // An uploaded SVG may carry <script>; opened directly it must not run on this origin.
+            header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox");
             header('Content-Length: ' . filesize($filePath));
             header('Cache-Control: public, max-age=86400');
             readfile($filePath);

@@ -190,9 +190,41 @@ class Cors
         return false;
     }
 
+    /**
+     * False for a write another website started in the user's browser.
+     *
+     * The session cookie is SameSite=None (the IdP round trip needs it), so a form post or a
+     * no-cors fetch from any site arrives with it — CORS only hides the answer, the write
+     * itself would still happen. Requests without an Origin pass: the desktop app's file://
+     * pages send none, and neither do server-to-server calls.
+     */
+    public static function isSameSiteWrite(): bool
+    {
+        $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+        if ($origin === '' || in_array($_SERVER['REQUEST_METHOD'] ?? 'GET', ['GET', 'HEAD', 'OPTIONS'], true)) {
+            return true;
+        }
+
+        $hostOf = static function (string $url): string {
+            $parts = parse_url($url);
+            return isset($parts['host']) ? $parts['host'] . (isset($parts['port']) ? ':' . $parts['port'] : '') : '';
+        };
+        $host = $hostOf($origin);
+        // Behind a reverse proxy Host may be the internal name; the public one is in these.
+        $ownHosts = array_filter([
+            $_SERVER['HTTP_HOST'] ?? '',
+            $_SERVER['HTTP_X_FORWARDED_HOST'] ?? '',
+            defined('BASE_URL') ? $hostOf(BASE_URL) : '',
+        ]);
+
+        return ($host !== '' && in_array($host, $ownHosts, true)) || self::isAllowedOrigin($origin);
+    }
+
     private static function isAllowedOrigin(string $origin): bool
     {
-        if (!$origin || !defined('CORS_ALLOWED_ORIGINS')) {
+        // Sandboxed iframes on any website send `Origin: null`; with credentials allowed they
+        // could read every account's data. Refused even if a config still lists it.
+        if (!$origin || $origin === 'null' || !defined('CORS_ALLOWED_ORIGINS')) {
             return false;
         }
 

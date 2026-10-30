@@ -34,6 +34,7 @@ import { useGetShow } from '@/store/showSlice';
 import { countPrimaryLines, lineStep } from '@/song';
 import { navigableBlockCount } from '@/utils/itemBlocks';
 import { wsActionTrigger } from './useBroadcastCompanionState';
+import { findAgendaIndex } from '@/utils/agendaTarget';
 
 const asNumber = (value: unknown): number | null => {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -173,11 +174,16 @@ export const useWsCompanionCommands = () => {
           break;
         }
         case 'set_item': {
-          const index = asNumber(data.payload?.index);
+          // By id, title or position (utils/agendaTarget.ts); shows without an agenda order by position.
+          const order = s.currentShow?.order;
+          const index = order?.length
+            ? findAgendaIndex(order, s.songs, data.payload)
+            : asNumber(data.payload?.index) != null
+              ? Math.max(0, Math.min(Math.floor(asNumber(data.payload?.index)!), Math.max(0, s.showItemCount - 1)))
+              : null;
           if (index != null) {
-            const clamped = Math.max(0, Math.min(Math.floor(index), Math.max(0, s.showItemCount - 1)));
             trigger(data.action);
-            dispatch(setActiveItemIndex(clamped));
+            dispatch(setActiveItemIndex(index));
             if (s.resetBlackOnSwitch) dispatch(setBlack(false));
           }
           break;

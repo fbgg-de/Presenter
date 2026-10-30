@@ -15,7 +15,13 @@ import { pathToFileURL } from 'url';
 
 const dir = mkdtempSync(join(tmpdir(), 'companion-'));
 await build({
-  entryPoints: { server: 'src/main/wsServer.ts', client: 'companion-modules/presenter/src/client.ts' },
+  entryPoints: {
+    server: 'src/main/wsServer.ts',
+    client: 'companion-modules/presenter/src/client.ts',
+    entry: 'companion-modules/presenter/src/entry.ts',
+    agenda: 'src/renderer/src/utils/agendaTarget.ts',
+  },
+  alias: { '@': join(process.cwd(), 'src/renderer/src') },
   bundle: true,
   format: 'esm',
   platform: 'node',
@@ -27,6 +33,8 @@ await build({
 });
 const { PresenterWebSocketServer } = await import(pathToFileURL(join(dir, 'server.mjs')).href);
 const { PresenterClient } = await import(pathToFileURL(join(dir, 'client.mjs')).href);
+const { entryTarget } = await import(pathToFileURL(join(dir, 'entry.mjs')).href);
+const { findAgendaIndex } = await import(pathToFileURL(join(dir, 'agenda.mjs')).href);
 
 let failed = 0;
 const check = (name, ok) => {
@@ -105,6 +113,34 @@ server.setCommandHandlingEnabled(false);
 rejected = false;
 await client.send('next_block').catch(() => (rejected = true));
 check('paused command handling rejects commands', rejected);
+
+// Any web page open on the operator's computer could otherwise drive the screens.
+const { WebSocket } = await import('ws');
+const fromBrowser = await new Promise((resolve) => {
+  const ws = new WebSocket(`ws://127.0.0.1:${port}`, { origin: 'https://example.com' });
+  ws.on('open', () => (ws.close(), resolve('open')));
+  ws.on('error', () => resolve('refused'));
+});
+check('a browser page (Origin header) is refused', fromBrowser === 'refused');
+
+const second = new PresenterWebSocketServer(port, windowManager);
+second.start();
+check('a taken port falls back to the next one', await until(() => second.getPort() === port + 1));
+second.stop();
+
+// Go to agenda entry: a picked entry follows its id, then its title (next week's show), then position.
+const order = [
+  { id: 'a', type: 'song', songNumber: 1 },
+  { id: 'b', type: 'media', label: 'Ankündigungen', mediaPath: 'news.png' },
+  { id: 'c', type: 'song', songNumber: 2 },
+];
+const songs = { 1: { title: 'Way Maker' }, 2: { title: 'Großer Gott' } };
+check('a picked entry is found by id after reordering', findAgendaIndex([order[2], order[0], order[1]], songs, entryTarget(JSON.stringify({ id: 'b', title: 'Ankündigungen', index: 1 }))) === 2);
+check("next week's entry is found by title", findAgendaIndex([{ ...order[1], id: 'new' }], songs, entryTarget(JSON.stringify({ id: 'b', title: 'Ankündigungen', index: 1 }))) === 0);
+check('a typed title matches case-insensitively', findAgendaIndex(order, songs, entryTarget('  großer gott ')) === 2);
+check('a typed number is the entry number (1 = first)', findAgendaIndex(order, songs, entryTarget('2')) === 1);
+check('an old saved button (index) still works', findAgendaIndex(order, songs, { index: 7 }) === 2);
+check('an unknown title goes nowhere', findAgendaIndex(order, songs, entryTarget('Missing')) === null);
 
 client.disconnect();
 server.stop();

@@ -31,7 +31,8 @@ export type OidcProvider = {
   name: string;
   discovery_url: string;
   client_id: string;
-  client_secret: string;
+  /** The secret itself never leaves the server; empty on save keeps it. */
+  client_secret_set: boolean;
   scopes: string;
   required_group?: string | null;
   enabled: boolean;

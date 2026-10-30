@@ -3,7 +3,7 @@
  * the desktop app's WebSocket server, so all the operator needs is where that server listens.
  * The module brings its own actions, feedbacks and presets — no JSON to copy by hand any more.
  */
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Box, Dialog, DialogContent, DialogTitle, FormControlLabel, IconButton, Stack, Switch, Tooltip, Typography } from '@mui/material';
 import { ContentCopy as CopyIcon, Close as CloseIcon, Cable as CableIcon, WifiTethering as WifiTetheringIcon } from '@mui/icons-material';
 import { useI18nContext } from '@/i18n/i18n-react';
@@ -21,31 +21,37 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
   const [clientCount, setClientCount] = useState(0);
   const [latestCommand, setLatestCommand] = useState('');
   const [copied, setCopied] = useState<string | null>(null);
+  const [allowNetwork, setAllowNetwork] = useState(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const loadInfo = useCallback(
+    () =>
+      window.api
+        ?.getWsServerInfo?.()
+        .then((info) => {
+          if (!info) return;
+          setHosts(info.hosts || []);
+          setPort(info.port);
+          setClientCount(info.clientCount);
+          setAllowNetwork(info.allowNetwork === true);
+          if (typeof info.commandHandlingEnabled === 'boolean') updateSetting('companionCommandsEnabled', info.commandHandlingEnabled);
+        })
+        .catch(() => undefined),
+    [updateSetting],
+  );
 
   useEffect(() => {
     if (!open) return;
-    let disposed = false;
-    void window.api
-      ?.getWsServerInfo?.()
-      .then((info) => {
-        if (disposed || !info) return;
-        setHosts(info.hosts || []);
-        setPort(info.port);
-        setClientCount(info.clientCount);
-        if (typeof info.commandHandlingEnabled === 'boolean') updateSetting('companionCommandsEnabled', info.commandHandlingEnabled);
-      })
-      .catch(() => undefined);
+    void loadInfo();
     const offCount = window.api?.onWsClientCount?.((data) => {
       if (typeof data?.count === 'number') setClientCount(data.count);
     });
     const offCommand = window.api?.onWsLastCommand?.((data) => setLatestCommand(data.action));
     return () => {
-      disposed = true;
       if (typeof offCount === 'function') offCount();
       if (typeof offCommand === 'function') offCommand();
     };
-  }, [open, updateSetting]);
+  }, [open, loadInfo]);
 
   useEffect(() => () => clearTimeout(copiedTimer.current ?? undefined), []);
 
@@ -63,6 +69,13 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
     } catch {
       // Browser build: no server, only the setting.
     }
+  };
+
+  const toggleNetwork = async (allow: boolean) => {
+    setAllowNetwork(allow);
+    await window.api?.setWsAllowNetwork?.(allow).catch(() => undefined);
+    // The server restarts; the host list changes with it.
+    setTimeout(() => void loadInfo(), 300);
   };
 
   const hasServer = port != null && hosts.length > 0;
@@ -97,6 +110,19 @@ export const CompanionHelper = ({ open, onClose }: { open: boolean; onClose: () 
               </Stack>
             </Tooltip>
           </Stack>
+
+          {hasServer && (
+            <Box>
+              <FormControlLabel
+                sx={{ m: 0 }}
+                control={<Switch size="small" checked={allowNetwork} onChange={(_, checked) => void toggleNetwork(checked)} />}
+                label={<Typography variant="body2">{C.ALLOW_NETWORK()}</Typography>}
+              />
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                {C.ALLOW_NETWORK_HINT()}
+              </Typography>
+            </Box>
+          )}
 
           <Box component="ol" sx={{ m: 0, pl: 2.5, '& li': { mb: 0.75 } }}>
             <Typography component="li" variant="body2">

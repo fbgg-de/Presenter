@@ -13,6 +13,9 @@ require_once(__DIR__ . '/RestController.php');
  *   GET /rest/Installers  →  { installers: [{ os, file, url, size, modified }] }
  *
  * `presenter-setup.*` comes first for its system, so a stray second file never wins over it.
+ *
+ * Public (whitelisted in rest.php): the sign-in page offers the app before anyone signs in, and
+ * the installers themselves are plain files in /app anyway.
  */
 class Installers extends RestController
 {

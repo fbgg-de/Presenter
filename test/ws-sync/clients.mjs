@@ -59,6 +59,8 @@ class BaseClient {
       const failTimer = setTimeout(() => reject(new Error(`${this.name}: auth timed out`)), 5000);
 
       ws.on('open', () => {
+        // The apps also send a `ticket` (utils/relayTicket.ts); the ports have no backend to
+        // mint one, so the harness starts the relay with ALLOW_ACCOUNT_AUTH=1.
         this.send({ action: 'auth', account: this.account, client: this.clientInfo });
       });
 

@@ -29,6 +29,27 @@ class ChurchToolsEvents extends RestController
             $res->error(404, 'ChurchTools integration is not configured for this account');
         }
 
+        // GET /rest/ChurchToolsEvents/<eventId>/agenda → the event's agenda entries with their
+        // planned durations, so a linked show can take them over for its agenda countdowns.
+        $eventId = $req->path->getAsInt(0, 0);
+        if ($eventId > 0 && $req->path->get(1, '') === 'agenda') {
+            $agenda = ChurchToolsClient::get("events/{$eventId}/agenda", [], $cfg);
+            if ($agenda === false) {
+                $res->error(502, 'Could not reach ChurchTools');
+            }
+            $items = [];
+            foreach (($agenda['data']['items'] ?? []) as $item) {
+                $items[] = [
+                    'title'     => (string)($item['title'] ?? ''),
+                    'type'      => (string)($item['type'] ?? ''),
+                    'duration'  => (int)($item['duration'] ?? 0),
+                    'start'     => $item['start'] ?? null,
+                    'songTitle' => isset($item['song']['title']) ? (string)$item['song']['title'] : null,
+                ];
+            }
+            $res->success(['items' => $items]);
+        }
+
         // Paginated, bidirectional: the client passes from/to + direction to page through past
         // and future events (default: upcoming events from today, forward).
         $limit     = $req->query->getAsInt('limit', 10);

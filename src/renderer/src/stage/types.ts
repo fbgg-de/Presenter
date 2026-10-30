@@ -42,7 +42,8 @@ export interface StageClockCue extends StageCueCommon {
  */
 export interface StageCountdownCue extends StageCueCommon {
   kind: 'countdown';
-  source: 'duration' | 'timeOfDay';
+  /** `agendaItem`: until the live agenda entry's planned duration is used up (see setAgendaItemEnd). */
+  source: 'duration' | 'timeOfDay' | 'agendaItem';
   /** For `source: 'duration'`. */
   durationSec?: number;
   /** For `source: 'timeOfDay'`, as `HH:mm`; the next occurrence is used. */
@@ -254,10 +255,21 @@ export const cueAutoAdvances = (cue: StageCue): boolean => cueEndsAt(cue, 0) !==
  * so the target cannot slide forward a day while the cue is already running.
  */
 export const countdownTarget = (cue: StageCountdownCue, startedAt: number): number => {
+  if (cue.source === 'agendaItem') return agendaItemEnd ?? startedAt;
   if (cue.source === 'timeOfDay' && cue.atTime) {
     return nextOccurrence(cue.atTime, startedAt) ?? startedAt;
   }
   return startedAt + (cue.durationSec ?? 0) * 1000;
+};
+
+/**
+ * When the live agenda entry runs out of its planned time (epoch ms), or null when it has none.
+ * Set by the stage engine whenever the live entry changes — module state rather than a parameter
+ * so every caller of resolveCue/cueEndsAt (engine, transport chip, Companion) agrees on it.
+ */
+let agendaItemEnd: number | null = null;
+export const setAgendaItemEnd = (end: number | null): void => {
+  agendaItemEnd = end;
 };
 
 // ── Wire format ───────────────────────────────────────────────────────────────
@@ -316,7 +328,21 @@ export interface StageCueRuntime {
    * of day has no start to move. Cleared when the layer enters another cue.
    */
   adjustMs?: number;
+  /** Values for the `{fields}` of a message cue ("Kind {Nummer} bitte abholen"). */
+  fields?: Record<string, string>;
 }
+
+/**
+ * The `{fields}` a message asks for, in order of appearance — ProPresenter's message tokens. A name
+ * is up to 30 characters without braces, so CSS or JSON pasted into a message is not mistaken for one.
+ */
+export const templateFields = (text: string): string[] => [
+  ...new Set(Array.from(text.matchAll(/\{([^{}\n]{1,30})\}/g), (match) => match[1].trim()).filter(Boolean)),
+];
+
+/** The message with its fields filled in; a field without a value is left empty. */
+export const fillTemplate = (text: string, fields: Record<string, string> | undefined): string =>
+  text.replace(/\{([^{}\n]{1,30})\}/g, (whole, name: string) => (fields ? (fields[name.trim()] ?? '').trim() : whole));
 
 /**
  * Turn one cue plus its runtime position into the wire form, or null when there is
@@ -328,6 +354,8 @@ export const resolveCue = (cue: StageCue, runtime: StageCueRuntime, locale: stri
       return { kind: 'clock', pattern: clockPattern(cue.format), locale };
 
     case 'countdown': {
+      // An entry without a planned duration has nothing to count down to.
+      if (cue.source === 'agendaItem' && agendaItemEnd === null) return null;
       const target = countdownTarget(cue, runtime.startedAt) + (runtime.adjustMs ?? 0);
       return {
         kind: 'timer',
@@ -355,8 +383,12 @@ export const resolveCue = (cue: StageCue, runtime: StageCueRuntime, locale: stri
         label: cue.label,
       };
 
-    case 'message':
-      return cue.text.trim() ? { kind: 'message', text: cue.text } : null;
+    case 'message': {
+      // A message with fields shows only once they are filled (see stageShowMessage).
+      if (templateFields(cue.text).length > 0 && !runtime.fields) return null;
+      const text = fillTemplate(cue.text, runtime.fields);
+      return text.trim() ? { kind: 'message', text } : null;
+    }
 
     case 'blank':
       return null;

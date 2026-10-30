@@ -5,7 +5,19 @@
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from 'http';
 import { join, extname, resolve, normalize, relative, isAbsolute, basename, parse as parsePath } from 'path';
 import { createReadStream } from 'fs';
-import { stat, readdir, copyFile, mkdir, constants as fsConstants } from 'fs/promises';
+import { createHash } from 'crypto';
+import { stat, readdir, copyFile, mkdir, open, readFile, writeFile, unlink, constants as fsConstants } from 'fs/promises';
+
+/**
+ * Pages that may read the media folder across origins: the presenter's own backend (the web
+ * build on this computer can use this server as its media path) and the dev renderer. The
+ * desktop app's own file:// pages send no Origin and need no CORS. Never `*` — that let any
+ * website list and read the media folder.
+ */
+let corsOrigins: () => string[] = () => [];
+export const setMediaCorsOrigins = (origins: () => string[]): void => {
+  corsOrigins = origins;
+};
 
 /**
  * What the media browser can show, and so what an import accepts — PDFs and PowerPoints included,
@@ -114,6 +126,76 @@ interface ListedFile {
   mtime: number;
 }
 
+// ── Thumbnail cache ───────────────────────────────────────────────────────────
+
+/**
+ * Small pictures for the media browser, kept on disk so they survive restarts (FreeShow keeps the
+ * same kind of cache). Images are made by the main process (`setMediaThumbnailer`, Electron's
+ * nativeImage); video frames are grabbed by the renderer once and stored here with their duration
+ * and size, so it does not decode every video again each session. Keys include the file's mtime and
+ * size: an overwritten file gets a new picture (ProPresenter had to fix exactly that in 21.3).
+ * Without a thumbnailer (plain node, tests) image thumbs answer 404 and the browser loads the file.
+ */
+export type MediaThumbnailer = (file: string, width: number) => Promise<{ data: Buffer; type: 'jpeg' | 'png' } | null>;
+let thumbnailer: MediaThumbnailer | null = null;
+let thumbDir = '';
+export const setMediaThumbnailer = (make: MediaThumbnailer | null, cacheDir: string): void => {
+  thumbnailer = make;
+  thumbDir = cacheDir;
+};
+const THUMB_WIDTHS = [160, 320, 640];
+const MAX_THUMB_FILES = 6000;
+
+/** Read a request body up to `limit` bytes; null when it is larger. */
+function readBody(req: IncomingMessage, limit: number): Promise<Buffer | null> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > limit) {
+        resolve(null);
+        req.destroy();
+      } else chunks.push(chunk);
+    });
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', () => resolve(null));
+  });
+}
+
+/**
+ * Pixel size from an image's first bytes — PNG, GIF, BMP, WebP and JPEG — so the list view can show
+ * a resolution without the browser decoding the full image just for that.
+ */
+export function imageSizeFromHeader(b: Buffer): { width: number; height: number } | null {
+  if (b.length >= 24 && b.readUInt32BE(0) === 0x89504e47) return { width: b.readUInt32BE(16), height: b.readUInt32BE(20) };
+  if (b.length >= 10 && b.toString('latin1', 0, 4) === 'GIF8') return { width: b.readUInt16LE(6), height: b.readUInt16LE(8) };
+  if (b.length >= 26 && b.toString('latin1', 0, 2) === 'BM') return { width: b.readInt32LE(18), height: Math.abs(b.readInt32LE(22)) };
+  if (b.length >= 30 && b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP') {
+    const chunk = b.toString('latin1', 12, 16);
+    if (chunk === 'VP8 ') return { width: b.readUInt16LE(26) & 0x3fff, height: b.readUInt16LE(28) & 0x3fff };
+    if (chunk === 'VP8L') {
+      const [b0, b1, b2, b3] = [b[21], b[22], b[23], b[24]];
+      return { width: 1 + (b0 | ((b1 & 0x3f) << 8)), height: 1 + ((b1 >> 6) | (b2 << 2) | ((b3 & 0x0f) << 10)) };
+    }
+    if (chunk === 'VP8X') return { width: 1 + b.readUIntLE(24, 3), height: 1 + b.readUIntLE(27, 3) };
+    return null;
+  }
+  if (b.length >= 4 && b[0] === 0xff && b[1] === 0xd8) {
+    let i = 2;
+    while (i + 9 < b.length) {
+      if (b[i] !== 0xff) return null;
+      const marker = b[i + 1];
+      // SOF0..SOF15 carry the size; C4 (DHT), C8 (JPG) and CC (DAC) are not frames.
+      if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+        return { width: b.readUInt16BE(i + 7), height: b.readUInt16BE(i + 5) };
+      }
+      i += 2 + b.readUInt16BE(i + 2);
+    }
+  }
+  return null;
+}
+
 const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 export class LocalMediaServer {
@@ -121,6 +203,11 @@ export class LocalMediaServer {
   private port: number = 0;
   private mediaPath: string;
   private listings = new Map<string, { at: number; value: Promise<{ dirs: string[]; files: ListedFile[] }> }>();
+  /** Image sizes read from file headers, by path + mtime. */
+  private imageSizes = new Map<string, { width: number; height: number } | null>();
+  /** Thumbnails being made, so two tiles asking for the same one share the work. */
+  private thumbJobs = new Map<string, Promise<{ data: Buffer; type: 'jpeg' | 'png' } | null>>();
+  private thumbWrites = 0;
   private contains(path: string): boolean {
     const rel = relative(this.mediaPath, path);
     return rel !== '..' && !rel.startsWith('..\\') && !rel.startsWith('../') && !isAbsolute(rel);
@@ -327,25 +414,35 @@ export class LocalMediaServer {
    * Handle an incoming HTTP request.
    */
   private async handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Range');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Last-Modified');
+    const origin = req.headers.origin;
+    if (origin && corsOrigins().includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+      res.setHeader('Vary', 'Origin');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, PUT, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Range, Content-Type');
+      res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Last-Modified');
+    }
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
       return;
     }
     const isHead = req.method === 'HEAD';
+    // Parse the URL and decode
+    const url = new URL(req.url || '/', `http://localhost:${this.port}`);
+    const requestedPath = decodeURIComponent(url.pathname);
+
+    // ── /thumb, /meta — the thumbnail cache (PUT only stores a video's grabbed frame and facts) ──
+    if (requestedPath === '/thumb' || requestedPath === '/meta') {
+      await this.handleThumb(req, res, url, requestedPath === '/meta');
+      return;
+    }
+
     if (req.method !== 'GET' && !isHead) {
       res.writeHead(405);
       res.end('Method Not Allowed');
       return;
     }
-
-    // Parse the URL and decode
-    const url = new URL(req.url || '/', `http://localhost:${this.port}`);
-    const requestedPath = decodeURIComponent(url.pathname);
 
     // ── /find — files with this exact name anywhere in the media folder ──
     if (requestedPath === '/find') {
@@ -407,7 +504,16 @@ export class LocalMediaServer {
           const key = sort === 'date' ? 'mtime' : sort === 'size' ? 'size' : null;
           files.sort((a, b) => direction * ((key ? a[key] - b[key] : 0) || collator.compare(a.name, b.name)));
         }
-        const paginatedFiles = files.slice(offset, offset + limit);
+        // Images carry their pixel size, read from the header — the list view shows it without
+        // decoding every picture at full size.
+        const paginatedFiles = await Promise.all(
+          files.slice(offset, offset + limit).map(async (f) => {
+            const ext = extname(f.name).toLowerCase();
+            if (!(MIME_TYPES[ext] || '').startsWith('image/') || ext === '.svg') return f;
+            const size = await this.imageSize(join(targetDir, f.name), f.mtime);
+            return size ? { ...f, ...size } : f;
+          }),
+        );
 
         const result = {
           dirs: listing.dirs,
@@ -510,6 +616,152 @@ export class LocalMediaServer {
     res.on('close', () => stream.destroy());
     stream.on('error', () => res.destroy());
     stream.pipe(res);
+  }
+
+  private async imageSize(path: string, mtime: number): Promise<{ width: number; height: number } | null> {
+    const key = `${path}|${mtime}`;
+    if (this.imageSizes.has(key)) return this.imageSizes.get(key)!;
+    let size: { width: number; height: number } | null = null;
+    try {
+      const handle = await open(path, 'r');
+      try {
+        // JPEG's EXIF block can come before the size; 256 KB covers real-world files.
+        const { buffer, bytesRead } = await handle.read(Buffer.alloc(256 * 1024), 0, 256 * 1024, 0);
+        size = imageSizeFromHeader(buffer.subarray(0, bytesRead));
+      } finally {
+        await handle.close();
+      }
+    } catch {
+      // unreadable: no size
+    }
+    this.imageSizes.set(key, size);
+    if (this.imageSizes.size > 4000) this.imageSizes.delete(this.imageSizes.keys().next().value!);
+    return size;
+  }
+
+  private thumbKey(path: string, s: { mtimeMs: number; size: number }, suffix: string): string {
+    return createHash('sha1').update(`${path}|${s.mtimeMs}|${s.size}|${suffix}`).digest('hex');
+  }
+
+  private async handleThumb(req: IncomingMessage, res: ServerResponse, url: URL, meta: boolean): Promise<void> {
+    const rel = url.searchParams.get('path') || '';
+    const full = normalize(join(this.mediaPath, rel));
+    const fileStat = rel && thumbDir && this.contains(full) ? await stat(full).catch(() => null) : null;
+    if (!fileStat?.isFile()) {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+    const isVideo = (MIME_TYPES[extname(full).toLowerCase()] || '').startsWith('video/');
+    const put = req.method === 'PUT';
+    if ((put && !isVideo) || (!put && req.method !== 'GET' && req.method !== 'HEAD')) {
+      res.writeHead(405);
+      res.end();
+      return;
+    }
+
+    if (meta) {
+      const file = join(thumbDir, this.thumbKey(full, fileStat, 'meta') + '.json');
+      if (put) {
+        const body = await readBody(req, 4096);
+        let facts: Record<string, unknown> | null = null;
+        try {
+          facts = body ? (JSON.parse(body.toString('utf8')) as Record<string, unknown>) : null;
+        } catch {
+          facts = null;
+        }
+        const clean = Object.fromEntries(
+          ['duration', 'width', 'height', 'thumb'].filter((k) => typeof facts?.[k] === 'number').map((k) => [k, facts![k]]),
+        );
+        if (Object.keys(clean).length === 0) {
+          res.writeHead(400);
+          res.end();
+          return;
+        }
+        await this.storeThumbFile(file, Buffer.from(JSON.stringify(clean)));
+        res.writeHead(204);
+        res.end();
+        return;
+      }
+      const cached = await readFile(file).catch(() => null);
+      if (!cached) {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+      res.end(cached);
+      return;
+    }
+
+    const requested = parseInt(url.searchParams.get('w') || '320', 10) || 320;
+    const width = THUMB_WIDTHS.find((w) => w >= requested) ?? THUMB_WIDTHS[THUMB_WIDTHS.length - 1];
+    const key = this.thumbKey(full, fileStat, String(width));
+    const send = (data: Buffer, type: 'jpeg' | 'png') => {
+      res.writeHead(200, { 'Content-Type': `image/${type}`, 'Content-Length': data.length, 'Cache-Control': 'max-age=86400' });
+      res.end(req.method === 'HEAD' ? undefined : data);
+    };
+
+    if (put) {
+      const body = await readBody(req, 2 * 1024 * 1024);
+      if (!body || body[0] !== 0xff || body[1] !== 0xd8) {
+        res.writeHead(400);
+        res.end();
+        return;
+      }
+      await this.storeThumbFile(join(thumbDir, key + '.jpeg'), body);
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    // One job per key covers reading the cache AND making + storing a missing one, so tiles asking
+    // at the same moment never make the same thumbnail twice.
+    let job = this.thumbJobs.get(key);
+    if (!job) {
+      const make = isVideo ? null : thumbnailer;
+      job = (async () => {
+        for (const type of ['jpeg', 'png'] as const) {
+          const cached = await readFile(join(thumbDir, `${key}.${type}`)).catch(() => null);
+          if (cached) return { data: cached, type };
+        }
+        const made = make ? await make(full, width).catch(() => null) : null;
+        if (made) await this.storeThumbFile(join(thumbDir, `${key}.${made.type}`), made.data);
+        return made;
+      })();
+      this.thumbJobs.set(key, job);
+      void job.finally(() => this.thumbJobs.delete(key));
+    }
+    const result = await job;
+    if (!result) {
+      res.writeHead(404);
+      res.end();
+      return;
+    }
+    send(result.data, result.type);
+  }
+
+  /** Write into the cache, now and then trimming it to the newest files. */
+  private async storeThumbFile(file: string, data: Buffer): Promise<void> {
+    try {
+      await mkdir(thumbDir, { recursive: true });
+      await writeFile(file, data);
+    } catch {
+      return;
+    }
+    if (++this.thumbWrites % 100 !== 1) return;
+    try {
+      const names = await readdir(thumbDir);
+      if (names.length <= MAX_THUMB_FILES) return;
+      const dated = await Promise.all(
+        names.map(async (name) => ({ name, at: (await stat(join(thumbDir, name)).catch(() => null))?.mtimeMs ?? 0 })),
+      );
+      dated.sort((a, b) => a.at - b.at);
+      for (const { name } of dated.slice(0, names.length - Math.floor(MAX_THUMB_FILES * 0.8)))
+        await unlink(join(thumbDir, name)).catch(() => undefined);
+    } catch {
+      /* the cache is only a cache */
+    }
   }
 
   private listDir(dir: string): Promise<{ dirs: string[]; files: ListedFile[] }> {

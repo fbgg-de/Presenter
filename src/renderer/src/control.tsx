@@ -19,6 +19,7 @@
  */
 import { StrictMode, useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { mountRoot } from './mountRoot';
+import { sendRelayAuth } from './utils/relayTicket';
 
 interface AgendaEntry {
   type: string;
@@ -660,7 +661,7 @@ const ControlApp = () => {
 
       // `client` tells the relay what we are, so the operator's connected-clients chip can
       // list this phone as a remote control rather than an anonymous connection.
-      ws.onopen = () => ws.send(JSON.stringify({ action: 'auth', account, client: { role: 'remote' } }));
+      ws.onopen = () => sendRelayAuth(ws, '', account, { role: 'remote' });
 
       ws.onmessage = (event) => {
         try {

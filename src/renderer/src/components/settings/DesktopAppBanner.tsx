@@ -145,7 +145,8 @@ export const DesktopAppDownloads = () => {
           {LL.DESKTOP_APP.MODAL_DETECT_HINT({ os: osLabel(os) })}
         </Typography>
       )}
-      <Stack direction="row" spacing={2} sx={{ pt: 1 }}>
+      {/* Side by side from tablet width; a phone has room for one card per row. */}
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ pt: 1 }}>
         <OsCard
           label={LL.DESKTOP_APP.OS_WINDOWS()}
           icon={<WindowsIcon color={os === 'windows' ? 'primary' : 'action'} sx={{ fontSize: 36 }} />}
@@ -211,8 +212,11 @@ export const DesktopAppDownloadModal = ({ open, onClose, onDismiss }: DesktopApp
 /**
  * Shows a compact dismissable alert/banner prompting the user to open the download modal.
  * Only shown in a browser context (never inside Electron).
+ *
+ * `persistent` (the sign-in page): always shown, no Dismiss — a signed-out visitor has no account
+ * menu or settings to find the offer in later.
  */
-export const DesktopAppBanner = () => {
+export const DesktopAppBanner = ({ persistent = false }: { persistent?: boolean }) => {
   const { LL } = useI18nContext();
   const { desktopAppDismissed } = useGetSettings('desktopAppDismissed');
   const updateSetting = useUpdateSetting();
@@ -229,11 +233,24 @@ export const DesktopAppBanner = () => {
     setHintOpen(true);
     setModalOpen(false);
   }, [updateSetting]);
+  // Answers without a session too, so the sign-in page can offer the app as well.
+  const { data: installers } = useGetInstallersQuery(undefined, {
+    skip: isElectronApp() || (!persistent && !!desktopAppDismissed),
+  });
 
   if (isElectronApp()) {
     return null;
   }
-  if (desktopAppDismissed) {
+  // Dismissed: only the hint saying where the offer went is left. (It used to vanish with the
+  // banner, unseen — returning null here cut it off.)
+  const hint = (
+    <Snackbar open={hintOpen} autoHideDuration={6000} onClose={() => setHintOpen(false)} message={LL.DESKTOP_APP.DISMISS_HINT()} />
+  );
+  if (desktopAppDismissed && !persistent) {
+    return hint;
+  }
+  // Nothing in /app: no offer to download what is not there.
+  if (!installers?.installers.length) {
     return null;
   }
 
@@ -248,9 +265,11 @@ export const DesktopAppBanner = () => {
             <Button size="small" variant="outlined" onClick={() => setModalOpen(true)}>
               {LL.DESKTOP_APP.MODAL_MORE_OPTIONS()}
             </Button>
-            <Button size="small" onClick={handleDismiss} color="inherit">
-              {LL.DESKTOP_APP.DISMISS()}
-            </Button>
+            {!persistent && (
+              <Button size="small" onClick={handleDismiss} color="inherit">
+                {LL.DESKTOP_APP.DISMISS()}
+              </Button>
+            )}
           </Stack>
         }
       >
@@ -258,9 +277,7 @@ export const DesktopAppBanner = () => {
           {LL.DESKTOP_APP.BANNER_TITLE()}
         </Typography>
       </Alert>
-      <DesktopAppDownloadModal open={modalOpen} onClose={() => setModalOpen(false)} onDismiss={handleDismiss} />
-      {/* Hint snackbar after dismissal */}
-      <Snackbar open={hintOpen} autoHideDuration={6000} onClose={() => setHintOpen(false)} message={LL.DESKTOP_APP.DISMISS_HINT()} />
+      <DesktopAppDownloadModal open={modalOpen} onClose={() => setModalOpen(false)} onDismiss={persistent ? undefined : handleDismiss} />
     </>
   );
 };

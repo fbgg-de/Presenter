@@ -20,6 +20,9 @@ config.php
 
 # Provider discovery and signing keys (classes/OidcProtocol.php); rebuilt on demand.
 /cache
+# error.log and error.1.log (classes/Logging.php); created on demand.
+/logs
+
 copy.config.php
 
 # Annotated captures written by `npm run test:screens`

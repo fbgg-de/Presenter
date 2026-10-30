@@ -49,6 +49,11 @@ export type ShowItem = {
    */
   id?: string;
   type: ShowItemType;
+  /**
+   * How long the entry is planned to take, in seconds — typed in the inspector or taken from the
+   * linked ChurchTools agenda. Drives the "agenda item" countdown on stage and in the top bar.
+   */
+  plannedDuration?: number;
   /** Id of the group this item belongs to (see Show.groups). Items without one fall into Default. */
   groupId?: string;
   songNumber?: number;

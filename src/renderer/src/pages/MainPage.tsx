@@ -15,7 +15,8 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { Shows } from '@/components/show/Shows';
 import type { Show, ShowItem } from '@/api/shows.api';
 import { useSaveShowMutation } from '@/api/shows.api';
-import { useAppDispatch } from '@/store';
+import { store, useAppDispatch } from '@/store';
+import { keepLivePosition } from '@/store/livePosition';
 import { setCurrentShow, closeShowSelector, useGetShow } from '@/store/showSlice';
 import { setSongsOrder as setSongsOrderAction, setSongOrders as setSongOrdersAction, loadShowSongs } from '@/store/songsSlice';
 import { useKeyboardNavigation } from '@/hooks/useKeyboardNavigation';
@@ -28,6 +29,7 @@ import { useShowUpdatePoller } from '@/hooks/useShowUpdatePoller';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { formatRelativeTime } from '@/utils/relativeTime';
 import { DesktopAppBanner } from '@/components/settings/DesktopAppBanner';
+import { MessageFieldsDialog } from '@/components/stage/MessageRequests';
 import { useGetAccountSettingsQuery, useGetSessionQuery } from '@/api/session.api';
 import { useNextcloudAccountCheck } from '@/nextcloud/useNextcloudAccountCheck';
 import { useDefaultScreenGroups } from '@/hooks/useDefaultScreenGroups';
@@ -68,6 +70,9 @@ export const MainPage = () => {
   const { LL, locale } = useI18nContext();
   const isMobile = useIsMobile();
   const [mobileTab, setMobileTab] = useState(0); // 0 = show list / sidebar, 1 = control, 2 = footer
+
+  // Keep the live position for a reload or restart (store/livePosition.ts). Operator page only.
+  useEffect(() => keepLivePosition(store), []);
 
   const { currentShow, isShowSelectorOpen } = useGetShow();
   const [saveShowMutation] = useSaveShowMutation();
@@ -225,6 +230,9 @@ export const MainPage = () => {
       </ErrorBoundary>
       <ErrorBoundary>
         <CompanionHost />
+      </ErrorBoundary>
+      <ErrorBoundary>
+        <MessageFieldsDialog />
       </ErrorBoundary>
       <ErrorBoundary>
         <KeyboardHost />

@@ -2,11 +2,18 @@
  * Presenter WebSocket Relay Server
  *
  * Each client must send an auth message as the first message after connecting.
- * Two auth modes are supported:
+ * Three auth modes are supported:
  *
- *   { "action": "auth", "account": <number> }          — direct account number
+ *   { "action": "auth", "ticket": "<payload.sig>" }    — relay ticket a signed-in
+ *                                                          session got from /rest/WsTicket
+ *                                                          (resolved via BACKEND_URL)
  *   { "action": "auth", "token":   "<hex64>" }         — viewer token (resolved
- *                                                          via BACKEND_URL)
+ *                                                          via BACKEND_URL); receive-only
+ *   { "action": "auth", "account": <number> }          — bare account number, only with
+ *                                                          ALLOW_ACCOUNT_AUTH=1 (anyone can
+ *                                                          guess a number, so it is off)
+ *
+ * Clients send `account` next to `ticket`, so a relay older than tickets still lets them in.
  *
  * The auth message may carry an optional `client` descriptor
  * ({ role, mode, name }) describing what kind of client this is. It is relayed
@@ -21,7 +28,9 @@
  * Environment variables:
  *   PORT              — WebSocket listen port (default: 9001)
  *   BACKEND_URL       — Base URL of the PHP backend, e.g. https://presenter.example.com
- *                       Required for token-based auth.
+ *                       Required for ticket and token auth.
+ *   ALLOW_ACCOUNT_AUTH — 1 = also accept the bare account number (apps older than relay
+ *                       tickets). Leave unset once every app is updated.
  *   SYNC_TTL_SECONDS  — How long the cached selection stays current (default: 3600 = 1 h,
  *                       0 = never expire). See "Selection TTL" below.
  */
@@ -53,6 +62,7 @@ const VERSION = readVersion();
 
 const PORT = Number(process.env.PORT ?? 9001);
 const BACKEND_URL = (process.env.BACKEND_URL ?? '').replace(/\/$/, '');
+const ALLOW_ACCOUNT_AUTH = process.env.ALLOW_ACCOUNT_AUTH === '1';
 
 /**
  * Selection TTL.
@@ -94,6 +104,8 @@ interface AuthedClient {
   info: ClientInfo;
   /** This socket's relay id, handed back in `auth_ok` so peers can address it in `to`. */
   id: string;
+  /** Viewer-token displays only listen: a public viewer link must not be able to drive the show. */
+  readOnly?: boolean;
 }
 
 const KNOWN_ROLES = new Set(['operator', 'musician', 'remote', 'viewer', 'monitor']);
@@ -408,6 +420,47 @@ async function resolveToken(token: string): Promise<number | null> {
 }
 
 /**
+ * Tickets the backend already confirmed, so a flapping tablet reconnects without a round
+ * trip — and still does while the backend is briefly unreachable mid-service.
+ */
+const ticketCache = new Map<string, { account: number; expiresAt: number }>();
+
+/**
+ * Resolve a relay ticket (minted by /rest/WsTicket for a signed-in session) to its account.
+ * Its own endpoint, like monitor tokens: neither a viewer token nor a monitor token is a ticket.
+ */
+async function resolveTicket(ticket: string): Promise<number | null> {
+  const cached = ticketCache.get(ticket);
+  if (cached && cached.expiresAt > Date.now()) return cached.account;
+  ticketCache.delete(ticket);
+  if (!BACKEND_URL) {
+    console.warn('[WS Relay] BACKEND_URL not set — ticket auth unavailable');
+    return null;
+  }
+  try {
+    const res = await fetch(`${BACKEND_URL}/rest/ValidateWsTicket?ticket=${encodeURIComponent(ticket)}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    const body = await res.text();
+    if (!res.ok) {
+      console.warn(`[WS Relay] ValidateWsTicket HTTP ${res.status}: ${body.slice(0, 200)}`);
+      return null;
+    }
+    const json = JSON.parse(body) as Record<string, unknown>;
+    if (typeof json.account !== 'number' || typeof json.expires !== 'number') {
+      console.warn('[WS Relay] ValidateWsTicket unexpected response:', body.slice(0, 200));
+      return null;
+    }
+    for (const [key, entry] of ticketCache) if (entry.expiresAt <= Date.now()) ticketCache.delete(key);
+    ticketCache.set(ticket, { account: json.account, expiresAt: json.expires * 1000 });
+    return json.account;
+  } catch (err) {
+    console.error('[WS Relay] Ticket validation failed:', (err as Error).message);
+    return null;
+  }
+}
+
+/**
  * Last known musician_sync state per account.
  *
  * Replayed to new clients on auth so they immediately see the current position. The replay
@@ -595,7 +648,9 @@ const clientAddress = (req: IncomingMessage): string => {
   return chain[0] ?? socketAddress;
 };
 
-const wss = new WebSocketServer({ port: PORT });
+// Largest real message is a musician_sync or a mixer snapshot, a few KB. ws's default of 100 MiB
+// would let any socket — before it even authenticates — make the relay buffer that much.
+const wss = new WebSocketServer({ port: PORT, maxPayload: 1024 * 1024 });
 
 // Periodic ping — broadcast peer counts every 30 s so the operator footer stays current
 const pingInterval = setInterval(() => {
@@ -611,7 +666,11 @@ wss.on('listening', () => {
   console.log(
     SYNC_TTL_SECONDS > 0 ? `[WS Relay] Selection TTL: ${SYNC_TTL_SECONDS}s` : '[WS Relay] Selection TTL: disabled (SYNC_TTL_SECONDS=0)',
   );
-  console.log(BACKEND_URL ? `[WS Relay] Backend: ${BACKEND_URL}` : '[WS Relay] Backend: not configured — viewer token auth unavailable');
+  console.log(
+    BACKEND_URL ? `[WS Relay] Backend: ${BACKEND_URL}` : '[WS Relay] Backend: not configured — ticket and viewer token auth unavailable',
+  );
+  if (ALLOW_ACCOUNT_AUTH)
+    console.warn('[WS Relay] ALLOW_ACCOUNT_AUTH=1 — bare account numbers are accepted; unset it once every app is updated');
   console.log(`[WS Relay] Trace buffer: ${traceBufferSize} entries/account (in memory only)`);
 });
 
@@ -709,6 +768,7 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         return;
       }
 
+      const via = typeof msg.ticket === 'string' ? 'ticket' : typeof msg.token === 'string' ? 'token' : 'account';
       const finishAuth = (account: number) => {
         if (client.authTimer) {
           clearTimeout(client.authTimer);
@@ -725,7 +785,7 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
           ...(client.info.name ? { name: client.info.name } : {}),
           event: 'auth',
           bytes: 0,
-          payload: JSON.stringify({ ip, client: client.info, via: typeof msg.token === 'string' ? 'token' : 'account' }),
+          payload: JSON.stringify({ ip, client: client.info, via }),
         });
 
         const accountPeers = [...clients].filter((c) => c.account === client.account);
@@ -776,12 +836,12 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         }
       };
 
-      // ── Token auth ────────────────────────────────────────────────────────
-      if (typeof msg.token === 'string') {
-        resolveToken(msg.token as string).then((account) => {
+      // ── Ticket auth (signed-in apps) ──────────────────────────────────────
+      if (typeof msg.ticket === 'string') {
+        void resolveTicket(msg.ticket).then((account) => {
           if (account === null) {
-            ws.send(JSON.stringify({ type: 'auth_error', error: 'Invalid or inactive viewer token.' }));
-            ws.close(4003, 'Invalid token');
+            sendJson(ws, { type: 'auth_error', error: 'Invalid or expired relay ticket.' });
+            ws.close(4003, 'Invalid ticket');
           } else {
             finishAuth(account);
           }
@@ -789,21 +849,36 @@ wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
         return;
       }
 
-      // ── Direct account number auth ────────────────────────────────────────
-      if (typeof msg.account !== 'number') {
-        ws.send(
-          JSON.stringify({
-            type: 'error',
-            error: 'Provide account number or viewer token: { action: "auth", account: <number> } or { action: "auth", token: "<hex>" }',
-          }),
-        );
-        ws.close(4002, 'Authentication required');
+      // ── Token auth (viewer displays) ──────────────────────────────────────
+      if (typeof msg.token === 'string') {
+        void resolveToken(msg.token).then((account) => {
+          if (account === null) {
+            sendJson(ws, { type: 'auth_error', error: 'Invalid or inactive viewer token.' });
+            ws.close(4003, 'Invalid token');
+          } else {
+            client.readOnly = true;
+            finishAuth(account);
+          }
+        });
         return;
       }
 
-      finishAuth(msg.account as number);
+      // ── Bare account number — apps older than tickets, opt-in only ────────
+      if (ALLOW_ACCOUNT_AUTH && typeof msg.account === 'number') {
+        finishAuth(msg.account);
+        return;
+      }
+
+      sendJson(ws, {
+        type: 'error',
+        error: 'Provide a relay ticket or viewer token: { action: "auth", ticket: "<ticket>" } or { action: "auth", token: "<hex>" }',
+      });
+      ws.close(4002, 'Authentication required');
       return;
     }
+
+    // A viewer token only ever listens — nothing it sends reaches the account.
+    if (client.readOnly) return;
 
     // ── Client describes itself again (e.g. musician switched sync mode) ─────
     // Cheaper and less disruptive than reconnecting just to change the descriptor.

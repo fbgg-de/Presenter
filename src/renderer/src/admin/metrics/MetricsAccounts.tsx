@@ -13,8 +13,6 @@ import {
   TableRow,
   TableSortLabel,
   TextField,
-  Tooltip,
-  Typography,
 } from '@mui/material';
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import type { MetricsSummary } from '@/api/metrics.api';

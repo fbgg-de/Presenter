@@ -2,8 +2,9 @@
  * Presentation Window Manager — Electron main process.
  * Creates, tracks, and controls presentation BrowserWindows (§7.2, §12, §13).
  */
-import { BrowserWindow, screen, type Rectangle, type WebContents } from 'electron';
+import { BrowserWindow, screen, shell, type Rectangle, type WebContents } from 'electron';
 import { join } from 'path';
+import { execFile } from 'child_process';
 import { is } from '@electron-toolkit/utils';
 import type { WindowConfig, WindowState, ScreenInfo, MusicianViewConfig, PresentationContentIPC } from '../shared/types';
 
@@ -19,6 +20,43 @@ interface ManagedWindow {
 }
 
 let windowCounter = 0;
+
+/** Output windows show only the app's own pages: no pop-ups, no navigating away. */
+function lockToApp(win: BrowserWindow): void {
+  const devRenderer = process.env['ELECTRON_RENDERER_URL'];
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('file:') && !(devRenderer && url.startsWith(devRenderer))) event.preventDefault();
+  });
+}
+
+/**
+ * Keep an output above everything a Windows or macOS desktop throws up mid-service. The default
+ * 'floating' level let the taskbar, Teams or Windows Update toasts and full-screen apps cover the
+ * projector; FreeShow uses the same levels. On Windows the window is also excluded from Aero Peek,
+ * which otherwise blanks every other window while the operator hovers a taskbar thumbnail.
+ */
+function setOutputOnTop(win: BrowserWindow, on: boolean): void {
+  if (win.isDestroyed()) return;
+  win.setAlwaysOnTop(on, process.platform === 'win32' ? 'screen-saver' : 'pop-up-menu', 1);
+  if (process.platform === 'win32') excludeFromPeek(win, on);
+}
+
+/**
+ * DWMWA_EXCLUDED_FROM_PEEK (12) through a short PowerShell call — Electron has no API for it and a
+ * native module is not worth one attribute. DWM accepts it from another process, as FreeShow's
+ * helper exe shows. Runs once per output (and per toggle), detached from the UI.
+ */
+function excludeFromPeek(win: BrowserWindow, on: boolean): void {
+  const handle = win.getNativeWindowHandle();
+  const hwnd = handle.length === 8 ? handle.readBigInt64LE(0).toString() : String(handle.readInt32LE(0));
+  const script =
+    'Add-Type -Namespace PresenterDwm -Name Api -MemberDefinition \'[DllImport("dwmapi.dll")] public static extern int DwmSetWindowAttribute(IntPtr h, int a, ref int v, int s);\'; ' +
+    `$v = ${on ? 1 : 0}; exit [PresenterDwm.Api]::DwmSetWindowAttribute([IntPtr]${hwnd}, 12, [ref]$v, 4)`;
+  execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', script], { windowsHide: true }, (error) => {
+    if (error) console.warn('[Windows] Could not exclude an output from Aero Peek:', error.message);
+  });
+}
 
 export class PresentationWindowManager {
   private windows: Map<string, ManagedWindow> = new Map();
@@ -138,6 +176,7 @@ export class PresentationWindowManager {
 
     const queryString = queryParams.toString();
 
+    lockToApp(win);
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       const baseUrl = process.env['ELECTRON_RENDERER_URL'];
       win.loadURL(`${baseUrl}/presentation.html?${queryString}`);
@@ -152,6 +191,7 @@ export class PresentationWindowManager {
       if (config.fullscreen) {
         win.setFullScreen(true);
       }
+      if (config.alwaysOnTop) setOutputOnTop(win, true);
     });
 
     // Debounce bounds notifications (move/resize fire many times during drag)
@@ -473,6 +513,12 @@ export class PresentationWindowManager {
       },
     });
 
+    // Links open in the browser, never in a window with this preload. Navigation stays free:
+    // this window may still need to pass through the sign-in pages.
+    win.webContents.setWindowOpenHandler(({ url }) => {
+      if (/^https?:/i.test(url)) void shell.openExternal(url);
+      return { action: 'deny' };
+    });
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/musician.html`);
     } else {
@@ -533,7 +579,7 @@ export class PresentationWindowManager {
     if (partial.alwaysOnTop !== undefined && partial.alwaysOnTop !== cfg.alwaysOnTop) {
       cfg.alwaysOnTop = partial.alwaysOnTop;
       try {
-        win.setAlwaysOnTop(partial.alwaysOnTop);
+        setOutputOnTop(win, partial.alwaysOnTop);
         applied.push('alwaysOnTop');
       } catch {
         /* noop */
@@ -692,6 +738,7 @@ export class PresentationWindowManager {
     if (config.streamTransparentBg) queryParams.set('transparent', '1');
     const queryString = queryParams.toString();
 
+    lockToApp(win);
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/presentation.html?${queryString}`);
     } else {
@@ -702,6 +749,7 @@ export class PresentationWindowManager {
       this.recreating.delete(id);
       win.show();
       if (config.fullscreen) win.setFullScreen(true);
+      if (config.alwaysOnTop) setOutputOnTop(win, true);
     });
 
     win.on('closed', () => {

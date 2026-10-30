@@ -2,7 +2,61 @@
 
 class Logging
 {
-    private static string $filename = __DIR__ . '/../error.log';
+    /** Resolved on first use, so config.php's LOG_DIR is defined by then. */
+    private static ?string $filename = null;
+
+    /**
+     * Past this size error.log moves to error.1.log (replacing the previous one) and starts over.
+     * Anyone can write to it — POST /rest/Log is open so blank-page errors still arrive — so
+     * without a cap it could fill the disk, and the admin log view reads the file whole.
+     * ponytail: two requests rotating at the same instant may drop a few lines; add flock if that matters.
+     */
+    public const MAX_BYTES = 5 * 1024 * 1024;
+
+    /**
+     * The log file: logs/error.log in the app folder, or error.log in config.php's LOG_DIR — best
+     * outside the web root, where no web server rule is needed to keep it private.
+     */
+    public static function file(): string
+    {
+        if (self::$filename === null) {
+            $dir = defined('LOG_DIR') && LOG_DIR !== '' ? rtrim(LOG_DIR, '/\\') : __DIR__ . '/../logs';
+            self::$filename = $dir . '/error.log';
+        }
+        return self::$filename;
+    }
+
+    /** Where the previous log goes: error.log → error.1.log. */
+    public static function rotatedFile(): string
+    {
+        return preg_replace('/(\.log)?$/', '.1$1', self::file(), 1);
+    }
+
+    /** Append one finished line, rotating first when the file is full. Every writer goes through here. */
+    public static function append(string $line): bool
+    {
+        $file = self::file();
+        $dir = dirname($file);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        // The folder guards itself, like cache/: private even without the root .htaccess.
+        if (!is_file($dir . '/.htaccess')) {
+            @file_put_contents($dir . '/.htaccess', "Require all denied\n");
+        }
+
+        clearstatcache(true, $file);
+        if (@filesize($file) > self::MAX_BYTES) {
+            @rename($file, self::rotatedFile());
+        }
+
+        if (@file_put_contents($file, $line, FILE_APPEND) !== false) {
+            return true;
+        }
+        // Folder not writable: hand the line to the web server's own error log rather than lose it.
+        error_log(rtrim($line));
+        return false;
+    }
 
     /**
      * Write a log message with automatic context information (file, class, method, line)
@@ -41,7 +95,7 @@ class Logging
             $message
         );
 
-        return file_put_contents(self::$filename, $logEntry, FILE_APPEND) !== false;
+        return self::append($logEntry);
     }
 
     /**
@@ -81,10 +135,10 @@ class Logging
      */
     public static function read(): string
     {
-        if (!file_exists(self::$filename)) {
+        if (!file_exists(self::file())) {
             return '';
         }
-        return file_get_contents(self::$filename);
+        return file_get_contents(self::file());
     }
 
     /**
@@ -92,7 +146,7 @@ class Logging
      */
     public static function clear(): bool
     {
-        return file_put_contents(self::$filename, '') !== false;
+        return file_put_contents(self::file(), '') !== false;
     }
 
     /**
@@ -100,11 +154,11 @@ class Logging
      */
     public static function tail(int $lines = 100): string
     {
-        if (!file_exists(self::$filename)) {
+        if (!file_exists(self::file())) {
             return '';
         }
 
-        $file = file(self::$filename);
+        $file = file(self::file());
         if ($file === false) {
             return '';
         }

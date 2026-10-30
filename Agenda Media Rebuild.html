@@ -1,0 +1,826 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Agenda Media Rebuild</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#F4F5F2; --surface:#FFFFFF; --ink:#1B2026; --muted:#5B636C; --faint:#8A929A; --line:#DCDFDA;
+  --accent:#B86A12; --accent-soft:#F6E7D2;
+  --bg-layer:#2E9E91; --slides:#6E75E0; --cue:#D38A28; --audio:#C2569F; --live:#D23B43; --ok:#3F8F52;
+  --op-ground:#16191D; --op-panel:#1F2328; --op-raised:#2A2F35; --op-line:#343A41; --op-text:#E9ECEF; --op-dim:#9AA3AB;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#121417; --surface:#1A1D21; --ink:#E8EBEE; --muted:#A3ABB3; --faint:#7C848C; --line:#2E3338;
+    --accent:#E9A04E; --accent-soft:#3A2B18; --op-ground:#0D0F11; --op-panel:#171A1E; --op-raised:#22262B; --op-line:#30353B;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#121417; --surface:#1A1D21; --ink:#E8EBEE; --muted:#A3ABB3; --faint:#7C848C; --line:#2E3338;
+  --accent:#E9A04E; --accent-soft:#3A2B18; --op-ground:#0D0F11; --op-panel:#171A1E; --op-raised:#22262B; --op-line:#30353B;
+}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font:400 15.5px/1.6 var(--body);padding-inline:20px;padding-block:32px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(2rem,4.5vw,2.9rem);letter-spacing:-.01em}
+h2{font-size:1.65rem}
+h3{font-size:1.1rem;font-family:var(--body);font-weight:700}
+p{margin:0;max-width:68ch}
+.eyebrow{font:600 .72rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.lede{font-size:1.1rem;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:10px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.note ul{margin:0;padding-left:1.1em;display:flex;flex-direction:column;gap:4px}
+.done{border-left:4px solid var(--ok)}
+code,.mono{font-family:var(--mono);font-size:.86em}
+pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px;overflow-x:auto;font:400 .82rem/1.55 var(--mono)}
+.k{color:var(--accent);font-weight:600}.c{color:var(--faint)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:600 .72rem/1 var(--body);padding:5px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.chip.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+.tablewrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .72rem/1.2 var(--body);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+
+/* operator mockups — dark, like the app */
+.mock{background:var(--op-ground);color:var(--op-text);border-radius:12px;padding:14px;font:500 13px/1.35 var(--body);border:1px solid var(--op-line);overflow:hidden}
+.mock .cap{font:600 .64rem/1 var(--body);letter-spacing:.12em;text-transform:uppercase;color:var(--op-dim)}
+.mockcap{font-size:.85rem;color:var(--muted)}
+.fig{display:flex;flex-direction:column;gap:8px;min-width:0}
+.side{display:flex;flex-direction:column;gap:6px;position:relative}
+.group{border-radius:8px;background:var(--op-panel);border:1px solid var(--op-line);padding:8px;display:flex;flex-direction:column;gap:5px}
+.ghead{display:flex;align-items:center;gap:8px;font-weight:700}
+.ghead .sp{flex:1}
+.gear{font:600 .66rem/1 var(--body);color:var(--op-dim);border:1px solid var(--op-line);border-radius:6px;padding:4px 6px}
+.item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:var(--op-raised)}
+.item .t{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .m{font:400 .7rem/1 var(--mono);color:var(--op-dim)}
+.dot{width:8px;height:8px;border-radius:2px;flex:none}
+.item.live{box-shadow:inset 3px 0 0 var(--live)}
+.tag{font:600 .6rem/1 var(--body);padding:3px 6px;border-radius:4px;background:var(--op-ground);color:var(--op-dim)}
+.drop{position:absolute;inset:40px 0 0 0;border:2px dashed var(--cue);border-radius:10px;background:rgba(211,138,40,.13);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:var(--op-text);font-weight:700;text-align:center;padding:10px}
+.drop small{font-weight:500;color:var(--op-dim)}
+.dialog{background:var(--op-panel);border:1px solid var(--op-line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.btn{font:600 .74rem/1 var(--body);padding:7px 10px;border-radius:6px;border:1px solid var(--op-line);color:var(--op-text);background:var(--op-raised)}
+.btn.pri{background:#E9A04E;color:#1B1307;border-color:#E9A04E}
+.path{font:400 .74rem/1.3 var(--mono);color:var(--op-dim)}
+.tree{display:flex;flex-direction:column;gap:2px;font:400 .78rem/1.3 var(--mono);background:var(--op-ground);border-radius:6px;padding:8px}
+.tree .sel{background:rgba(233,160,78,.18);color:#F1B56E;border-radius:4px}
+.tree div{padding:2px 6px}
+.deck{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.tile{background:var(--op-panel);border:1px solid var(--op-line);border-radius:8px;padding:8px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.tile.playing{border-color:var(--live)}
+.thumb{aspect-ratio:16/9;max-width:100%;border-radius:5px;background:linear-gradient(135deg,#2b3a44,#1a2127);position:relative}
+.thumb .z{position:absolute;left:5px;top:5px}
+.bar{height:4px;border-radius:2px;background:var(--op-line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--live)}
+.time{font:600 .72rem/1 var(--mono);color:var(--op-dim);display:flex;justify-content:space-between}
+.tl{position:relative;height:74px;background:var(--op-ground);border-radius:6px;overflow:hidden}
+.wave{position:absolute;inset:26px 0 8px 0;background:repeating-linear-gradient(90deg,rgba(154,163,171,.35) 0 2px,transparent 2px 5px);mask:linear-gradient(0deg,transparent,#000 30%,#000 70%,transparent)}
+.reg{position:absolute;top:6px;height:16px;border-radius:3px;font:600 .6rem/16px var(--body);padding:0 5px;color:#fff;white-space:nowrap;overflow:hidden}
+.ph{position:absolute;top:0;bottom:0;width:2px;background:var(--live)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--op-line)}
+.tabs span{padding:6px 10px;color:var(--op-dim);font-weight:600}
+.tabs .on{color:var(--op-text);box-shadow:inset 0 -2px 0 #E9A04E}
+.ta{font:400 .78rem/1.55 var(--mono);background:var(--op-ground);border-radius:6px;padding:10px 12px;white-space:pre;overflow-x:auto;color:var(--op-text)}
+.ta .h{color:#F1B56E;font-weight:600}.ta .s{color:#9AA3AB}.ta .l{color:#8FD0C7}
+.seg{display:inline-flex;border:1px solid var(--op-line);border-radius:6px;overflow:hidden}
+.seg span{padding:5px 8px;font-weight:600;font-size:.72rem;color:var(--op-dim)}
+.seg .on{background:var(--op-raised);color:var(--op-text)}
+.q{display:flex;flex-direction:column;gap:14px}
+.q li{display:flex;flex-direction:column;gap:6px}
+.q ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:18px}
+.opt{color:var(--muted);font-size:.93rem}
+.opt b{color:var(--ink)}
+.rec{color:var(--accent);font-weight:600}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+
+<div class="wrap">
+
+<header class="head">
+  <span class="eyebrow">Plan · revision 6 · 23 Sep 2026 · all 10 phases built, review below</span>
+  <h1>Agenda media rebuild</h1>
+  <p class="lede">Media moves out of songs and themes and into the agenda. You drop files into the sidebar, they land safely in the synced media folder (or in Nextcloud from the web), and images, videos and audio become items of their own, including backgrounds. A group in the agenda then decides how its media plays together, and groups can be reused from a library.</p>
+  <p class="mockcap">Revision 6: review of the built phases — an entry opens without going live, media can be added straight from the group menu, the plan gaps are listed with what was closed. Revision 5: themes on agenda groups instead of songs, Nextcloud sign-in like the desktop client, previews without a second screen, per-window settings dropped. Revision 4:screen sets for groups that usually show the same thing, and slideshows as their own items so each screen group can run its own. Revision 3:screen groups are the only target and windows stay local placements; Nextcloud is web-only and stored in the browser; several backgrounds per group with switching and a leave behaviour; theme keeps a colour only; library includes past shows.</p>
+</header>
+
+<section>
+  <div class="grid2">
+    <div class="note done">
+      <h3>Fixed already: song editor text view</h3>
+      <p>The lyric editor is reused for every block tab and copied the text only once. So in text mode, switching tabs kept the previous block's text. The text is now derived from the block you opened. Line view and text view always agree. Typecheck is clean.</p>
+    </div>
+    <div class="note">
+      <h3>What stays, what goes</h3>
+      <ul>
+        <li><b>Stays:</b> themes for text (fonts, colours, positions), a plain background colour per theme, stage monitor layouts and overlays, songs, Bible verses, set lists, the operator view structure.</li>
+        <li><b>Goes:</b> background images and videos in themes, the background library and background track, song-remembered backgrounds and media cues, themes set on songs or single items. The agenda takes over all of them.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Review · 23 Sep 2026</span>
+    <h2>What the review changed, and what is still missing</h2>
+    <p>All ten phases were in the code, typecheck and tests clean. Going through the app as an operator showed one flow problem that made everything else harder, a handful of plan items without UI, and one bug.</p>
+  </div>
+  <div class="grid2">
+    <div class="note done">
+      <h3>Built: look at an entry without putting it on screen</h3>
+      <p>Before, the middle column only ever showed the <i>live</i> entry. With the default double-click setting, a single click in the agenda did nothing. To look at a video's settings in Prepare you had to put it on the screens.</p>
+      <ul>
+        <li><b>Click</b> an agenda entry: it opens in the middle column, the preview and the inspector. Nothing reaches the screens. The row gets a blue edge; the live row stays red.</li>
+        <li>A bar above it says <b>Not on screen</b> and names what is on screen, with <b>Back to live</b> and <b>Go live</b> (Enter).</li>
+        <li><b>Double-click</b> the row, click a slide, or press Enter: it goes live, and the view follows the screens again.</li>
+        <li>In Live with “Go live with: click”, a single click still goes live as before.</li>
+      </ul>
+    </div>
+    <div class="note done">
+      <h3>Built: fewer clicks to add media</h3>
+      <ul>
+        <li>A group's <b>Add item</b> menu now offers <b>Add background</b> (added straight as Background) and <b>Add slideshow</b>, each with a one-line explanation. <b>Add media</b> mentions that files can be dropped onto the agenda.</li>
+        <li>A media entry you add <b>opens by itself</b>, so its role, screens and framing are visible without another click.</li>
+        <li>Fixed: a slideshow created empty never showed its images once they were added.</li>
+        <li>“Start playing when opened” now reads “Play as soon as it is on screen”, because “opened” means something else now.</li>
+      </ul>
+    </div>
+    <div class="note done">
+      <h3>Built: plan items that had no UI</h3>
+      <ul>
+        <li><b>A different file per screen</b> (part 3, versions): the framing rows have a file menu with <b>Other file…</b>, so LED left and LED right can show the two halves of a panorama. The outputs already supported it.</li>
+        <li><b>◀ ▶ for slideshows in the layer bar</b> (part 3): each running slideshow steps on its own, like in the mockup.</li>
+        <li><b>Duplicate group</b> on screen groups (part 3, screen sets): a second group with the same settings in one click.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>Still missing from the plan</h3>
+      <ul>
+        <li><b>Audio on the timeline</b> (part 2): playback tracks cannot use sections, loops or follow the lyrics yet. Audio has its own player and is not on the shared transport. This is the largest gap.</li>
+        <li><b>Preview size per screen group</b> (part 3d): without an open window the preview draws 16:9, and the media card uses one aspect setting for everything.</li>
+        <li><b>Nextcloud thumbnails</b> in the web media browser (part 1).</li>
+        <li><b>Trim in/out</b> per version (data model): sections and pauses in the timeline cover most uses today.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="q">
+  <div class="head">
+    <span class="eyebrow">Next · pick what to build</span>
+    <h2>More ways to cut clicks</h2>
+    <p>Answer by letter. Each one is independent.</p>
+  </div>
+  <ol type="A">
+    <li><h3>Ready check before the service</h3>
+      <span class="opt">One panel in Prepare that lists everything that would go wrong on Sunday: missing files, songs whose arrangement changed after a video was mapped, screen groups with no window on this computer, groups with the text layer off, empty slideshows. Each line has its fix as a button. <span class="rec">Recommended: the most useful single overview for a volunteer.</span></span></li>
+    <li><h3>Keyboard-only preparing</h3>
+      <span class="opt">With the agenda focused, ↑/↓ open the previous or next entry without going live and Enter sends it. Today the arrows move lines on screen.</span></li>
+    <li><h3>Group summary on the header</h3>
+      <span class="opt">Under each agenda group's name: “3 songs · 2 backgrounds · plays one after another · theme Sunday”, so the group settings are readable without opening the dialog.</span></li>
+    <li><h3>Audio on the shared timeline</h3>
+      <span class="opt">Close the largest gap: audio entries get versions, sections, loops and lyric follow like videos, and play on the operator computer through the same transport.</span></li>
+    <li><h3>Preview size per screen group</h3>
+      <span class="opt">A “Preview shape” on each screen group (16:9, 4:3, 32:9 for an LED wall…) used by the preview and the media card when no window of that group is open.</span></li>
+  </ol>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 1</span>
+    <h2>Drag and drop into the agenda</h2>
+    <p>Anything you can use in a service can be dropped onto the agenda sidebar: onto a group, between items or on the empty area. What happens depends on the file.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>File</th><th>Becomes</th><th>Where the file goes</th></tr></thead>
+      <tbody>
+        <tr><td>.sng, CCLI .txt (later OpenLyrics, ChordPro)</td><td>Song, imported into the library and added</td><td>Nothing is kept: the text is stored in the database</td></tr>
+        <tr><td>Image .jpg .png .webp</td><td>Image item</td><td rowspan="3">Must live in the media folder. Inside it: used by its relative path. Outside it: you pick a folder and it is copied there.</td></tr>
+        <tr><td>Video .mp4 .webm .mov</td><td>Video item</td></tr>
+        <tr><td>Audio .mp3 .wav .m4a .ogg</td><td>Audio item (operator only)</td></tr>
+        <tr><td>.pdf, .pptx</td><td>Later: document item with pages as slides</td><td>Same rule, planned now in the data model</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid2">
+    <div class="fig">
+      <div class="mock">
+        <div class="side">
+          <div class="cap">Agenda · Sunday 20 Sep</div>
+          <div class="group">
+            <div class="ghead"><span class="dot" style="background:#6E75E0"></span>Worship<span class="sp"></span><span class="gear">Media · one after another</span></div>
+            <div class="item"><span class="dot" style="background:var(--slides)"></span><span class="t">Großer Gott, wir loben dich</span><span class="tag">Short</span></div>
+            <div class="item live"><span class="dot" style="background:var(--cue)"></span><span class="t">Worship loop — clouds</span><span class="m">2 screens</span></div>
+            <div class="item"><span class="dot" style="background:var(--audio)"></span><span class="t">Piano pad in G</span><span class="m">3:12</span></div>
+          </div>
+          <div class="group">
+            <div class="ghead"><span class="dot" style="background:#2E9E91"></span>Welcome<span class="sp"></span></div>
+            <div class="item"><span class="dot" style="background:var(--cue)"></span><span class="t">Announcements</span><span class="m">image</span></div>
+          </div>
+          <div class="drop">3 files<small>1 song · 1 video · 1 audio<br>add to “Welcome”</small></div>
+        </div>
+      </div>
+      <span class="mockcap">While dragging, the sidebar shows what the drop will create and where it lands.</span>
+    </div>
+
+    <div class="fig">
+      <div class="mock">
+        <div class="dialog">
+          <div class="cap">Copy into the media folder</div>
+          <p style="color:var(--op-dim);font-size:.82rem">2 files are not in your media folder yet. Other computers only see files that are in it.</p>
+          <div class="row"><span class="dot" style="background:var(--cue)"></span><span>intro-clouds.mp4</span><span class="path">Downloads · 184 MB</span></div>
+          <div class="row"><span class="dot" style="background:var(--audio)"></span><span>pad-G.mp3</span><span class="path">Desktop · 7 MB</span></div>
+          <div class="tree">
+            <div>Media/</div>
+            <div>&nbsp;&nbsp;Backgrounds/</div>
+            <div class="sel">&nbsp;&nbsp;Worship/2026/</div>
+            <div>&nbsp;&nbsp;Audio/</div>
+            <div>&nbsp;&nbsp;+ New folder</div>
+          </div>
+          <div class="row" style="justify-content:space-between">
+            <span class="path">→ Worship/2026/intro-clouds.mp4</span>
+            <span class="row"><span class="btn">Cancel</span><span class="btn pri">Copy and add</span></span>
+          </div>
+        </div>
+      </div>
+      <span class="mockcap">Your last folder is preselected. A file with the same name and size is reused instead of copied twice.</span>
+    </div>
+  </div>
+
+  <div class="note">
+    <h3>How a file is referenced</h3>
+    <ul>
+      <li>Always a path <b>relative to the media folder</b> with forward slashes, e.g. <code>Worship/2026/intro-clouds.mp4</code>. Absolute paths are never stored, so every synced computer resolves the same file.</li>
+      <li>Every media item shows a <b>missing file</b> warning if the path is not found, with <i>Find in media folder</i> to relink it.</li>
+      <li>The desktop app copies through the existing import in the media server.</li>
+    </ul>
+  </div>
+
+  <div class="grid2">
+    <div class="note">
+      <h3>Web version only: Nextcloud</h3>
+      <p>A browser cannot see a dropped file's location or write into a local folder. With a Nextcloud connection it can do the same things as the desktop app. The desktop app does not use it: there the Nextcloud client syncs the media folder, which also works offline.</p>
+      <ul>
+        <li><b>Connect once per browser, exactly like the Nextcloud desktop client:</b> Settings opens Nextcloud's login page (Login Flow v2). When Nextcloud signs in through the same identity provider as the presenter, you are already logged in and only click <i>Grant access</i>. Nextcloud then hands out an app password for this browser.</li>
+        <li><b>Permissions come from Nextcloud:</b> the connection acts as your Nextcloud user, so only folders shared with you are visible and writable. Access is managed where it already is.</li>
+        <li>The app password is stored <b>only in this browser</b>, never in the database, and shows up in Nextcloud under <i>Devices &amp; sessions</i>, where it can be revoked.</li>
+        <li><b>Choose the media root</b> in Nextcloud, e.g. <code>/Gemeinde/Presenter-Media</code>. Desktop computers sync that same folder with the Nextcloud client, so relative paths match everywhere.</li>
+        <li><b>Drop:</b> the same folder picker, browsing Nextcloud. The file is uploaded in small chunks, so large videos work with any upload limit. A file already there with the same name and size is reused.</li>
+        <li><b>Media browser</b> in the web version browses Nextcloud too (thumbnails from Nextcloud's previews).</li>
+        <li><b>Without Nextcloud</b> the web version matches a dropped file by name in the media folder and explains when nothing matches.</li>
+      </ul>
+    </div>
+    <div class="fig">
+      <div class="mock">
+        <div class="dialog">
+          <div class="cap">Settings · Media · Nextcloud (this browser)</div>
+          <div class="row" style="justify-content:space-between"><span class="row"><span class="dot" style="background:var(--ok)"></span>Connected as <b>technik</b></span><span class="path">cloud.efsh.de</span></div>
+          <div class="row" style="justify-content:space-between"><span>Media folder</span><span class="path">/Gemeinde/Presenter-Media</span></div>
+          <div class="row" style="justify-content:space-between"><span>Playback link</span><span class="path">read-only share · set</span></div>
+          <div class="row"><span class="btn">Change folder</span><span class="btn">Disconnect</span></div>
+          <p style="color:var(--op-dim);font-size:.78rem">Stored in this browser only. Other browsers connect on their own.</p>
+        </div>
+      </div>
+      <span class="mockcap">Not shown in the desktop app. How the browser talks to Nextcloud is open question 1.</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 1b</span>
+    <h2>Screen groups are the only target</h2>
+    <p>Everything that decides <b>what</b> a screen shows lives on its screen group, which is stored in the database and is the same on every device. A window only says <b>where</b> it is and which group it belongs to, and that stays on the computer that opens it. Nothing targets a single window any more.</p>
+  </div>
+  <div class="grid2">
+    <div class="note">
+      <h3>What moves where</h3>
+      <ul>
+        <li><b>Screen group (database, all devices):</b> kind, layers, stage layout, languages, display mode (normal or stream lines), transparent output, and every media, background and stage overlay assignment.</li>
+        <li><b>Window (this computer only):</b> display, size and position, fullscreen, frameless, always on top, hide mouse, and its group. A window without a group is not possible: new windows join the first Audience group.</li>
+        <li><b>Removed:</b> per-window theme and item styles by window name, per-window languages and hide flags, output roles for media cues, stage layers picked per window.</li>
+        <li>Two windows that need different content get two groups. A panorama over two LED screens becomes “LED left” and “LED right”, each with its own crop.</li>
+        <li>No computer profiles and nothing about windows in the database. Each computer keeps a copy of the groups, so it can open its windows when the server cannot be reached.</li>
+      </ul>
+    </div>
+    <div class="fig">
+      <div class="mock">
+        <div class="dialog">
+          <div class="cap">Screen groups · all devices</div>
+          <div class="row" style="justify-content:space-between"><b>Audience</b><span class="row"><span class="tag">de</span><span class="tag">backgrounds on</span></span></div>
+          <div class="row" style="justify-content:space-between"><b>Stream</b><span class="row"><span class="tag">2 lines</span><span class="tag">de · en</span><span class="tag">transparent</span></span></div>
+          <div class="row" style="justify-content:space-between"><b>Stage</b><span class="row"><span class="tag">Band layout</span><span class="tag">overlays</span></span></div>
+          <div class="cap" style="border-top:1px solid var(--op-line);padding-top:10px">Windows on this computer</div>
+          <div class="row" style="justify-content:space-between"><span>Display 2 · 1920×1080 · fullscreen</span><span class="seg"><span class="on">Audience</span><span>Stream</span><span>Stage</span></span></div>
+          <div class="row" style="justify-content:space-between"><span>Display 3 · 1280×720 · fullscreen</span><span class="seg"><span>Audience</span><span>Stream</span><span class="on">Stage</span></span></div>
+        </div>
+      </div>
+      <span class="mockcap">The groups are shared; the windows below them are just placements on this computer, one click to join a group.</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 1c</span>
+    <h2>Themes belong to the agenda group</h2>
+    <p>Songs become pure content: text, languages, arrangements. How they look is decided by the agenda group they are in. This makes things simpler, not more complicated, because there is exactly one place to look when a slide looks wrong.</p>
+  </div>
+  <div class="grid2">
+    <div class="note">
+      <h3>Where the look comes from</h3>
+      <ul>
+        <li><b>Agenda group theme</b> → otherwise the <b>show theme</b> → otherwise the <b>account default theme</b>. Three levels, all in the agenda.</li>
+        <li>Screens that need a different look (a stream lower third, a smaller text on the LED wall) use the theme's existing <b>screen group variants</b>, so the group's theme adapts per screen by itself. Screen groups do not pick a theme of their own.</li>
+        <li><b>Removed:</b> the theme on a song, the theme on a single agenda item, and “use the show's look” on items. The song editor loses its look section.</li>
+        <li><b>A song that must look different</b> (e.g. a hymn with long lines) goes into its own small agenda group with another theme. That keeps the exception visible in the agenda instead of hidden in the song.</li>
+        <li>The group header shows its theme as a chip; one click changes it for every item in the group.</li>
+        <li>Library entries keep their group's theme, so a reused worship set keeps its look.</li>
+      </ul>
+    </div>
+    <div class="fig">
+      <div class="mock">
+        <div class="side">
+          <div class="group">
+            <div class="ghead"><span class="dot" style="background:#6E75E0"></span>Worship<span class="sp"></span><span class="gear">Theme · Sunday</span></div>
+            <div class="item"><span class="dot" style="background:var(--slides)"></span><span class="t">Großer Gott, wir loben dich</span></div>
+            <div class="item"><span class="dot" style="background:var(--slides)"></span><span class="t">10.000 Reasons</span></div>
+          </div>
+          <div class="group">
+            <div class="ghead"><span class="dot" style="background:#C2569F"></span>Hymn<span class="sp"></span><span class="gear">Theme · Hymn small</span></div>
+            <div class="item"><span class="dot" style="background:var(--slides)"></span><span class="t">Befiehl du deine Wege</span></div>
+          </div>
+          <div class="group">
+            <div class="ghead"><span class="dot" style="background:#2E9E91"></span>Sermon<span class="sp"></span><span class="gear" style="color:#9AA3AB">Theme · from show</span></div>
+            <div class="item"><span class="dot" style="background:var(--slides)"></span><span class="t">Psalm 23, 1–4</span></div>
+          </div>
+        </div>
+      </div>
+      <span class="mockcap">The theme is visible on every group header; a group without one follows the show.</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 2</span>
+    <h2>Audio items</h2>
+    <p>Played only on the operator computer, never sent to presentation windows. Useful for pads, walk-in music and playback tracks.</p>
+  </div>
+  <div class="grid2">
+    <div class="note">
+      <h3>Controls</h3>
+      <ul>
+        <li>Play, pause, stop, seek, volume, loop.</li>
+        <li><b>Fade out</b> (e.g. 3 s) as its own button, because stopping a pad mid-note sounds bad.</li>
+        <li>Keeps playing while you move through songs until you stop it, like a pad under the whole worship set.</li>
+        <li>Visible in the layer bar's <i>Media</i> row, so it can be stopped from anywhere.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>Shares the video playback engine</h3>
+      <p>Audio uses the same transport as videos (sections, loops, pause points, waveform). A playback track can use the timeline editor and follow the lyrics exactly like a video. Groups can play audio and video together.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 3</span>
+    <h2>Videos as agenda items, played together by their group</h2>
+    <p>Today a media cue lives on the show, is bound to a song item and is remembered by the song. That goes away. A video is an item in the agenda. Its group decides how the videos in it play together.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="fig">
+      <div class="mock">
+        <div class="dialog">
+          <div class="cap">Group “Worship” · media playback</div>
+          <div class="row" style="justify-content:space-between"><span>Order</span><span class="seg"><span class="on">One after another</span><span>All together</span></span></div>
+          <div class="row" style="justify-content:space-between"><span>Start the next video when one ends</span><span class="chip on">On</span></div>
+          <div class="row" style="justify-content:space-between"><span>Play at most at once</span><span class="seg"><span>1</span><span class="on">2</span><span>3</span><span>All</span></span></div>
+          <div class="row" style="justify-content:space-between"><span>Top layer</span><span class="seg"><span class="on">Last started</span><span>Agenda order</span></span></div>
+          <div class="row" style="justify-content:space-between"><span>Media when the group is left</span><span class="seg"><span>Keep playing</span><span class="on">Fade out 2 s</span><span>Stop</span></span></div>
+          <div class="row" style="justify-content:space-between"><span>Background when the group is left</span><span class="seg"><span class="on">Keep</span><span>Fade out</span><span>Hide immediately</span></span></div>
+        </div>
+      </div>
+      <span class="mockcap">One settings sheet per agenda group. The defaults match today's behaviour: one video, no auto-advance. “At once” and “top layer” count <b>per screen group</b>, so a video on LED left and a slideshow on LED right never compete for a slot.</span>
+    </div>
+
+    <div class="fig">
+      <div class="mock">
+        <div class="cap" style="margin-bottom:8px">Layer bar · Media row · group “Worship”</div>
+        <div class="deck">
+          <div class="tile playing"><div class="thumb"><span class="tag z">LIVE · top</span></div><span>Worship loop — clouds</span><div class="bar"><i style="width:62%"></i></div><div class="time"><span>1:58</span><span>−1:12</span></div><div class="row"><span class="btn">❚❚</span><span class="btn">Fade</span><span class="tag">Audience · Stage</span></div></div>
+          <div class="tile"><div class="thumb"><span class="tag z">Next</span></div><span>Lyrics BG — light rays</span><div class="bar"><i style="width:0"></i></div><div class="time"><span>0:00</span><span>4:20</span></div><div class="row"><span class="btn">▶</span><span class="tag">Audience</span></div></div>
+          <div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#4a2a40,#221620)"><span class="tag z">Audio</span></div><span>Piano pad in G</span><div class="bar"><i style="width:30%;background:var(--audio)"></i></div><div class="time"><span>0:57</span><span>loop</span></div><div class="row"><span class="btn">❚❚</span><span class="btn">Fade</span></div></div>
+        </div>
+        <div class="row" style="margin-top:10px;justify-content:space-between"><span class="row"><span class="btn pri">Go · next media</span><span class="btn">Fade all</span><span class="btn">Stop all</span></span><span class="path">Space = play/pause · N = Go</span></div>
+      </div>
+      <span class="mockcap">Everything in the current group at a glance. Red means on screen. <i>Go</i> starts whatever is next.</span>
+    </div>
+  </div>
+
+  <div class="fig">
+    <div class="mock">
+      <div class="row" style="justify-content:space-between;margin-bottom:8px"><span style="font-weight:700;font-size:15px">Worship loop — clouds</span><span class="path">Worship/2026/intro-clouds.mp4 · 3:10 · 1920×1080</span></div>
+      <div class="tabs"><span class="on">Full</span><span>Short (for Großer Gott)</span><span>Loop only</span><span>+ Version</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:10px">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div class="cap">Role</div>
+          <div class="row"><span class="seg"><span>Content</span><span class="on">Background</span></span><span class="path">behind the lyrics of this group</span></div>
+          <div class="cap">Show on</div>
+          <div class="row"><span class="chip on">Audience</span><span class="chip on">Stage</span><span class="chip">Stream</span><span class="chip on">LED wall · left + right</span></div>
+          <div class="cap">Per screen</div>
+          <div class="row"><span>Audience</span><span class="tag">cover · no crop</span><span class="btn">Frame &amp; effects</span></div>
+          <div class="row"><span>Stage</span><span class="tag">contain · blur 8</span><span class="btn">Frame &amp; effects</span></div>
+          <div class="row"><span>LED left</span><span class="tag">left half</span><span class="btn">Frame &amp; effects</span></div>
+          <div class="row"><span>LED right</span><span class="tag">right half</span><span class="btn">Frame &amp; effects</span></div>
+          <div class="cap">Sound &amp; playback</div>
+          <div class="row"><span class="chip on">Audio on operator PC</span><span class="chip">Loop whole file</span><span class="chip on">Follow lyrics of “Großer Gott”</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;min-width:0">
+          <div class="cap">Timeline · this version</div>
+          <div class="tl">
+            <span class="reg" style="left:2%;width:18%;background:#6E75E0">Verse 1</span>
+            <span class="reg" style="left:21%;width:16%;background:#6E75E0">Chorus</span>
+            <span class="reg" style="left:38%;width:24%;background:#8C4FC2">Loop · Bridge</span>
+            <span class="reg" style="left:64%;width:5%;background:var(--live)">❚❚</span>
+            <span class="reg" style="left:70%;width:20%;background:#6E75E0">Chorus</span>
+            <div class="wave"></div>
+            <div class="ph" style="left:48%"></div>
+          </div>
+          <p style="color:var(--op-dim);font-size:.8rem">The existing editor, unchanged: draw sections, loops and pauses, map them to the blocks of a song in the same group.</p>
+        </div>
+      </div>
+    </div>
+    <span class="mockcap">A video item with versions. Each version has its own trim, timeline and lyric mapping. Screens and framing can differ per version.</span>
+  </div>
+
+  <div class="grid2">
+    <div class="note">
+      <h3>Versions (arrangements) of a media item</h3>
+      <ul>
+        <li>Like song orders: a named version, chosen per agenda item.</li>
+        <li>A version has its own <b>in/out trim</b>, timeline (sections, loops, pauses), <b>lyric mapping</b> and optionally different files per screen (panorama left/right).</li>
+        <li>When a song's arrangement changes, the mapping asks for review, as today.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>Belonging together through the group</h3>
+      <ul>
+        <li>A video follows a song only if both are in the <b>same group</b>. With several songs in the group you pick which one.</li>
+        <li>Starting a song whose group has a mapped video can start that video on the first slide (a setting on the group).</li>
+        <li>Screens are chosen only by <b>screen group</b> (Audience, Stage, LED left, …), any number at once.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="head" style="margin-top:12px">
+    <h3>Several screen groups at once, and screen sets</h3>
+    <p>Every item can already show on any number of screen groups. To keep a split LED wall easy, groups that usually show the same thing can be bundled into a <b>screen set</b>, e.g. “LED wall” = LED left + LED right.</p>
+  </div>
+  <div class="grid2">
+    <div class="note">
+      <h3>How screen sets work</h3>
+      <ul>
+        <li>A screen set is only a named shortcut, managed next to the screen groups. It appears as one chip in every “Show on” picker and turns all its groups on or off together.</li>
+        <li>After choosing the set, each group still gets its own row under <i>Per screen</i>, so LED left and LED right can crop the halves of one panorama, or both show the whole picture.</li>
+        <li>New groups in the set start with <b>Same as LED left</b> framing, so the usual case needs no extra clicks.</li>
+        <li>To show something on only one half, open the set chip and untick the other group.</li>
+        <li>Screen group settings themselves (theme, languages) are not shared; <b>Duplicate group</b> makes a second group with the same settings in one step.</li>
+      </ul>
+    </div>
+    <div class="note">
+      <h3>Slideshows are their own items</h3>
+      <ul>
+        <li>A <b>slideshow item</b> holds a list of images with duration, cut or fade, and repeat, and has its own <i>Show on</i> and role (content or background), like a video.</li>
+        <li>Two slideshows in the same agenda group can therefore run side by side on different screen groups: announcements on LED left, photos of the youth camp on LED right.</li>
+        <li>Dropping several images at once offers <b>Create slideshow</b>; images can be reordered by drag and drop inside it.</li>
+        <li>Timing can be set per slideshow; a later extension could add per-image durations or captions.</li>
+        <li>This replaces the group-wide slideshow switch from revision 3.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="fig">
+    <div class="mock">
+      <div class="cap" style="margin-bottom:8px">Agenda group “Welcome” · two slideshows on two screen groups</div>
+      <div class="deck" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+        <div class="tile playing">
+          <div class="row" style="justify-content:space-between"><b>Announcements</b><span class="tag">LED left</span></div>
+          <div class="row" style="flex-wrap:nowrap;gap:4px"><div class="thumb" style="flex:1;border:2px solid var(--live)"></div><div class="thumb" style="flex:1;background:linear-gradient(135deg,#4a3b20,#1f1a10)"></div><div class="thumb" style="flex:1;background:linear-gradient(135deg,#2a2f3c,#121418)"></div></div>
+          <div class="time"><span>1 of 3 · 8 s · fade</span><span>next in 5 s</span></div>
+        </div>
+        <div class="tile playing">
+          <div class="row" style="justify-content:space-between"><b>Youth camp photos</b><span class="tag">LED right</span></div>
+          <div class="row" style="flex-wrap:nowrap;gap:4px"><div class="thumb" style="flex:1;background:linear-gradient(135deg,#27402f,#101a13)"></div><div class="thumb" style="flex:1;border:2px solid var(--live);background:linear-gradient(135deg,#40302a,#1a1310)"></div><div class="thumb" style="flex:1;background:linear-gradient(135deg,#2b3a44,#1a2127)"></div><div class="thumb" style="flex:1"></div></div>
+          <div class="time"><span>2 of 24 · 5 s · cut</span><span>repeat</span></div>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px"><span class="btn">❚❚ both</span><span class="btn">◀ ▶ step</span><span class="path">each tile pauses and steps its own slideshow</span></div>
+    </div>
+    <span class="mockcap">Each slideshow runs on its own screen group and has its own transport in the layer bar.</span>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 3b</span>
+    <h2>Backgrounds come from the agenda</h2>
+    <p>Themes no longer hold background images or videos. An image or video item gets a <b>role</b>: <i>Content</i> fills the screen as the item itself, <i>Background</i> sits behind the lyrics of its group.</p>
+  </div>
+  <div class="grid2">
+    <div class="note">
+      <h3>How a background item behaves</h3>
+      <ul>
+        <li>A group can hold <b>any number of background items</b>. The first one starts when the group is entered; the others wait to be switched to.</li>
+        <li>Only one background runs at a time per screen group. Switching crossfades (cut or fade, set per group).</li>
+        <li>It shows only on screen groups that show backgrounds; Stage and Stream keep their own switches.</li>
+        <li>The existing <b>Hide background</b> button and shortcut hide it without stopping it, so a video keeps its place.</li>
+        <li><b>When the group is left</b> the group decides: keep it running, fade it out, or hide it immediately. A kept background runs until another one starts or you hide it.</li>
+        <li>A background video loops by default and can follow the song's sections through its timeline, which replaces the old “background per section” setting.</li>
+        <li>A slideshow item with the Background role steps through its images behind the lyrics.</li>
+        <li>Switching is per screen group: a background that shows only on LED left leaves the Audience background untouched.</li>
+        <li>With no background at all, a screen shows the theme's colour.</li>
+      </ul>
+    </div>
+    <div class="fig">
+      <div class="mock">
+        <div class="side">
+          <div class="group">
+            <div class="ghead"><span class="dot" style="background:#6E75E0"></span>Worship<span class="sp"></span><span class="gear">3 backgrounds</span></div>
+            <div class="item live"><span class="dot" style="background:var(--bg-layer)"></span><span class="t">Clouds loop</span><span class="tag">BG</span></div>
+            <div class="item"><span class="dot" style="background:var(--slides)"></span><span class="t">Großer Gott, wir loben dich</span></div>
+            <div class="item"><span class="dot" style="background:var(--bg-layer)"></span><span class="t">Light rays</span><span class="tag">BG</span></div>
+            <div class="item"><span class="dot" style="background:var(--slides)"></span><span class="t">10.000 Reasons</span></div>
+            <div class="item"><span class="dot" style="background:var(--bg-layer)"></span><span class="t">Cross still</span><span class="tag">BG</span></div>
+          </div>
+        </div>
+        <div class="cap" style="margin:12px 0 6px">Layer bar · Background row</div>
+        <div class="deck" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+          <div class="tile playing"><div class="thumb"><span class="tag z">1 · LIVE</span></div><span>Clouds loop</span></div>
+          <div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#4a3b20,#1f1a10)"><span class="tag z">2</span></div><span>Light rays</span></div>
+          <div class="tile"><div class="thumb" style="background:linear-gradient(135deg,#2a2f3c,#121418)"><span class="tag z">3</span></div><span>Cross still</span></div>
+        </div>
+        <div class="row" style="margin-top:10px;justify-content:space-between"><span class="row"><span class="btn">Hide background</span><span class="btn">Fade out</span></span><span class="path">Alt+1…9 switch · Alt+B hide</span></div>
+      </div>
+      <span class="mockcap">Backgrounds can sit anywhere in the group, e.g. before the song they belong to. Clicking one in the agenda or its tile in the layer bar switches to it.</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 3c</span>
+    <h2>Library of groups and media</h2>
+    <p>Reusing a group should be as easy as adding a song. The library holds saved groups (with their songs, media items, versions, mappings and playback settings) and single media items.</p>
+  </div>
+  <div class="grid2">
+    <div class="fig">
+      <div class="mock">
+        <div class="dialog">
+          <div class="row" style="justify-content:space-between"><span class="cap">Library</span><span class="seg"><span class="on">Groups</span><span>Media items</span></span></div>
+          <div class="row"><span class="btn" style="flex:1;text-align:left;color:var(--op-dim)">Search “Großer Gott”</span></div>
+          <div class="item"><span class="dot" style="background:#6E75E0"></span><span class="t">Worship — Großer Gott set</span><span class="m">3 songs · 2 videos · last 06 Sep</span></div>
+          <div class="item"><span class="dot" style="background:#2E9E91"></span><span class="t">Welcome with countdown</span><span class="m">1 video · slideshow</span></div>
+          <div class="item"><span class="dot" style="background:#C2569F"></span><span class="t">Communion — piano pad</span><span class="m">1 audio · 1 image</span></div>
+          <div class="row" style="justify-content:flex-end"><span class="btn">Preview</span><span class="btn pri">Add to show</span></div>
+        </div>
+      </div>
+      <span class="mockcap">Drag an entry into the agenda or use Add to show.</span>
+    </div>
+    <div class="note">
+      <h3>How reuse works</h3>
+      <ul>
+        <li><b>Save to library</b> on any group in the agenda. The entry is a copy, so later changes in a show never change the library or old shows.</li>
+        <li><b>Update library entry</b> from a changed group, with confirmation (like today's “Save to song”).</li>
+        <li><b>Past shows count too:</b> the library also lists groups from previous shows, marked “from 06 Sep”, without saving them explicitly.</li>
+        <li><b>Suggestions:</b> adding a song to a show offers the media items it had in its group last time (“Clouds loop was used with this song, add it?”).</li>
+        <li>Missing files in an entry are flagged before it is added.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 3d</span>
+    <h2>Preview without a second screen</h2>
+    <p>Editors should see exactly how something will look, on a laptop with one display, without opening output windows and without anything reaching the real screens.</p>
+  </div>
+  <div class="grid2">
+    <div class="fig">
+      <div class="mock">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px"><span class="cap">Preview · not on screen</span><span class="seg"><span class="on">Audience</span><span>Stream</span><span>Stage</span><span>LED wall</span></span></div>
+        <div class="thumb" style="aspect-ratio:16/9;background:linear-gradient(160deg,#35506a,#1b2633 60%,#0f151c);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;border-radius:8px">
+          <span style="font:700 clamp(12px,2.4vw,20px)/1.3 var(--body);text-align:center;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.6)">Großer Gott, wir loben dich,<br>Herr, wir preisen deine Stärke.</span>
+          <span style="font:500 clamp(9px,1.6vw,13px)/1.2 var(--body);color:rgba(255,255,255,.75);font-style:italic">Holy God, we praise thy name</span>
+          <span class="tag" style="position:absolute;left:8px;bottom:8px">Theme Sunday · Clouds loop</span>
+        </div>
+        <div class="row" style="margin-top:10px;justify-content:space-between"><span class="row"><span class="btn">◀</span><span class="btn">▶</span><span class="path">Verse 1 · 1 of 2</span></span><span class="row"><span class="btn">Pop out</span><span class="btn">Muted 🔈</span></span></div>
+      </div>
+      <span class="mockcap">The real output renderer at the screen group's aspect ratio, with the group's theme, variant, background and media.</span>
+    </div>
+    <div class="note">
+      <h3>How previews work</h3>
+      <ul>
+        <li><b>Preview panel</b> in Prepare mode: whatever you select in the agenda is drawn exactly as a screen group would show it. Tabs switch between screen groups, arrow keys step through slides, nothing goes live.</li>
+        <li><b>Media:</b> videos, audio and slideshows play inside the preview with their own clock, muted by default, with scrubbing, loops and pauses. The live outputs are never touched, like today's audition in the cue editor.</li>
+        <li><b>Pop out</b> opens the preview in a resizable window on the same screen, handy beside the agenda on a laptop.</li>
+        <li><b>Hover previews:</b> media items and library entries show a short muted preview when hovered, as the media browser already does.</li>
+        <li><b>Editors use it too:</b> the theme editor, song editor and media item editor show the same preview, so a theme change is judged on real lyrics and real backgrounds.</li>
+        <li>The aspect ratio comes from an open window of that group on this computer, otherwise from a <b>preview size</b> setting on the screen group (default 16:9).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Part 4</span>
+    <h2>Edit the whole song as text</h2>
+    <p>A <b>Text</b> tab next to the info tab in the song editor. It holds the entire song. Your idea of Markdown-style headings works well: they cannot clash with lyric lines, and <code>---</code> already means page break. A how-to sits beside the text, so nobody has to remember the syntax.</p>
+  </div>
+  <div class="fig">
+    <div class="mock" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px">
+      <div class="ta"><span class="h"># Verse 1</span>
+Großer Gott, wir loben dich,
+<span class="l">[en]</span> Holy God, we praise thy name,
+Herr, wir preisen deine Stärke.
+<span class="s">---</span>
+Vor dir neigt die Erde sich
+und bewundert deine Werke.
+
+<span class="h"># Chorus</span>
+Wie du warst vor aller Zeit,
+so bleibst du in Ewigkeit.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;background:var(--op-panel);border:1px solid var(--op-line);border-radius:8px;padding:12px">
+        <div class="cap">How it works</div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:baseline">
+          <span class="ta" style="padding:3px 7px"><span class="h"># Chorus</span></span><span>Starts a block. Everything below belongs to it until the next <b>#</b>.</span>
+          <span class="ta" style="padding:3px 7px"><span class="s">---</span></span><span>New slide inside the block.</span>
+          <span class="ta" style="padding:3px 7px"><span class="l">[en]</span> text</span><span>Translation of the line above, in English.</span>
+          <span class="ta" style="padding:3px 7px">empty line</span><span>Ignored, use it for spacing.</span>
+        </div>
+        <div class="cap">Good to know</div>
+        <ul style="margin:0;padding-left:1.1em;color:var(--op-dim);font-size:.8rem;display:flex;flex-direction:column;gap:3px">
+          <li>Renaming a heading renames the block in every order.</li>
+          <li>Removing a heading asks first if orders use it.</li>
+          <li>Orders are edited below, not in the text.</li>
+        </ul>
+        <div class="row"><span class="btn"># Block</span><span class="btn">---</span><span class="btn">[en]</span><span class="path">insert at cursor</span></div>
+        <div class="row" style="color:#8FD0C7;font-size:.8rem"><span class="dot" style="background:var(--ok)"></span>4 blocks · 9 slides · languages de, en</div>
+      </div>
+    </div>
+    <span class="mockcap">Beside the text on wide screens, collapsible below it on phones. The status line checks the text live and names the line of any error, e.g. “Line 14: Chorus appears twice”.</span>
+  </div>
+  <div class="grid2">
+    <div class="note">
+      <h3>Rules</h3>
+      <ul>
+        <li><code># Name</code> starts a block; the name is the rest of the line.</li>
+        <li>Text before the first heading goes into a block named with your default verse name.</li>
+        <li>A duplicate heading shows an error and nothing is applied until it is fixed.</li>
+        <li><b>Renaming</b> a heading renames the block and updates every order. Renames are detected when the blocks keep their position.</li>
+        <li><b>Removing</b> a heading removes that block from orders after a confirmation listing the orders it was used in.</li>
+        <li>Orders stay in the order editor below the text; they are not written into the text.</li>
+        <li>Can be built right away, independent of the media work.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Data</span>
+    <h2>What changes in storage</h2>
+    <p>Production is at migration 25, so everything added since (media cue library, song cues, stage layouts) has only ever run on dev. Migrations 26+ can be rewritten instead of converted, and you copy prod to dev again before testing.</p>
+  </div>
+<pre><span class="c">// Every agenda item gets a stable id (needed for groups playing items, mappings, remote control)</span>
+<span class="k">type</span> ShowItem = { id: string; type: <span class="k">'song'</span> | <span class="k">'bible_verse'</span> | <span class="k">'media'</span> | <span class="k">'slideshow'</span> | <span class="k">'document'</span>; groupId: string; … }
+
+<span class="c">// A file, always relative to the media folder. `kind` is derived from the extension.</span>
+<span class="k">type</span> MediaRef = { path: <span class="k">'Worship/2026/intro-clouds.mp4'</span>; kind: <span class="k">'image'</span> | <span class="k">'video'</span> | <span class="k">'audio'</span> | <span class="k">'pdf'</span> | <span class="k">'pptx'</span> }
+
+<span class="k">type</span> MediaItem = ShowItem & {
+  type: <span class="k">'media'</span>; name: string; version: string;                 <span class="c">// chosen version, like a song order</span>
+  role: <span class="k">'content'</span> | <span class="k">'background'</span>;                                 <span class="c">// background = behind the group's lyrics, hidden by Hide background</span>
+  versions: Record&lt;string, MediaVersion&gt;;
+}
+<span class="k">type</span> MediaVersion = {
+  sources: MediaSource[]; trim?: { in: number; out: number };   <span class="c">// sources reference MediaRef paths</span>
+  regions: MediaRegion[];                                          <span class="c">// sections, loops, pauses — today's editor</span>
+  screens: { screenGroupId: number; sourceId: string; frame: MediaFrame }[];
+  audio: { enabled: boolean; volume: number; loop: boolean };
+  lyrics?: { songItemId: string; arrangement: string; map: Record&lt;string, string | 'clear'&gt;; followLyrics: boolean; followVideo: boolean };
+}
+<span class="k">type</span> ShowGroup = { id; name; color; collapsed; styleId?: number;      <span class="c">// theme for every item in the group</span>
+  media?: { mode: <span class="k">'sequence'</span> | <span class="k">'together'</span>; autoAdvance: boolean; maxAtOnce: number | <span class="k">'all'</span>;
+            topLayer: <span class="k">'lastStarted'</span> | <span class="k">'agendaOrder'</span>; onLeave: <span class="k">'keep'</span> | <span class="k">'fade'</span> | <span class="k">'stop'</span>; startWithSong: boolean };  <span class="c">// slots counted per screen group</span>
+  backgrounds?: { transition: <span class="k">'cut'</span> | <span class="k">'fade'</span>; onLeave: <span class="k">'keep'</span> | <span class="k">'fade'</span> | <span class="k">'hide'</span> } }
+
+<span class="c">// Slideshow: its own item, with its own screen groups and role</span>
+<span class="k">type</span> SlideshowItem = ShowItem & { type: <span class="k">'slideshow'</span>; name: string; role: <span class="k">'content'</span> | <span class="k">'background'</span>;
+  images: MediaRef[]; seconds: number; transition: <span class="k">'cut'</span> | <span class="k">'fade'</span>; repeat: boolean;
+  screens: { screenGroupId: number; frame: MediaFrame }[] }
+
+<span class="c">// Screen set (database): a named shortcut for several screen groups in every “Show on” picker</span>
+<span class="k">type</span> ScreenSet = { id: number; name: <span class="k">'LED wall'</span>; screenGroupIds: number[] }
+
+<span class="c">// Screen groups (database) take over everything a window used to decide about content</span>
+<span class="k">type</span> ScreenGroupData = { kind; layers; stage?;
+  languages: string[]; display: { mode: <span class="k">'normal'</span> | <span class="k">'stream'</span>; lines?: number }; transparent: boolean; previewAspect: <span class="k">'16:9'</span> }
+<span class="c">// Window (local only): { id, name, display bounds, fullscreen, frameless, alwaysOnTop, hideMouse, screenGroupId }</span>
+
+<span class="c">// Library: saved copies of groups and media items (table library_entries, JSON data, account-scoped)</span>
+<span class="k">type</span> LibraryEntry = { id: number; kind: <span class="k">'group'</span> | <span class="k">'media'</span>; name: string; data: { group?: ShowGroup; items: ShowItem[] }; updated_at: string }
+
+<span class="c">// Nextcloud (web version, this browser only): server URL, login name, app password, media root, playback share link</span>
+
+<span class="c">// Later: document items (PDF/PPTX) — pages become slide cards; PPTX converted to PDF by the desktop app</span>
+<span class="k">type</span> DocumentItem = ShowItem & { type: <span class="k">'document'</span>; file: MediaRef; pages: number[] }
+
+<span class="c">// Removed: Show.mediaCues, ShowItem.mediaCue, songs.media_cue, media_cues table, SongLook.mediaCue,</span>
+<span class="c">//          background images/videos in styles, backgrounds table, BackgroundRef on account/show/song/item,</span>
+<span class="c">//          per-window styleId/languages/displayMode/hide flags/stageLayerIds/mediaRole, itemStyleByWindow,</span>
+<span class="c">//          songs.style_id and song look, ShowItem.styleId, ShowItem.useShowLook</span></pre>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Order of work</span>
+    <h2>Phases</h2>
+    <p>Each phase ends in something you can deploy and test. Phase numbers matter here: later phases build on earlier ones.</p>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Phase</th><th>Contents</th><th>Testable result</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Whole-song text tab with the how-to panel</td><td>Edit a song in one textarea, orders follow renames</td></tr>
+        <tr><td>2</td><td>Screen groups as the only target: languages, display mode and transparency move onto groups; windows keep only placement and group; per-window settings dropped; offline copy of groups. Themes on agenda groups; song and item themes removed.</td><td>Set the stream's languages once on the group; change the worship group's theme with one click</td></tr>
+        <tr><td>3</td><td>Preview panel in Prepare mode for songs and verses, per screen group, pop-out window; same preview in the theme and song editors</td><td>Check a theme change on a laptop without output windows</td></tr>
+        <tr><td>4</td><td>Stable item ids, <code>MediaRef</code>, drop into agenda (all file types), copy-to-media-folder dialog, missing-file warning and relink (desktop)</td><td>Drop songs, images, videos from Explorer into a group</td></tr>
+        <tr><td>5</td><td>Audio items, operator-side player, Media row in the layer bar, fade out</td><td>A pad plays across songs and fades out</td></tr>
+        <tr><td>6</td><td>Media items with roles and versions, screens per screen group, framing, output windows with several media layers, media in the preview. Backgrounds from the agenda; theme backgrounds, background library, old cues and song cues removed.</td><td>A background loop behind the worship songs and a different video on the LED wall</td></tr>
+        <tr><td>7</td><td>Group playback: sequence/together, auto-advance, max at once, top layer, on-leave for media and backgrounds, several backgrounds with switching, slideshow items per screen group, screen sets, Go / Fade all / Stop all, shortcuts</td><td>A welcome group runs its slideshow by itself; worship switches between three backgrounds</td></tr>
+        <tr><td>8</td><td>Timeline editor per version, lyric mapping to a song in the same group, start with song</td><td>Lyrics follow the video and the reverse</td></tr>
+        <tr><td>9</td><td>Library of groups and media items, past-show groups, song suggestions, hover previews</td><td>Last Sunday's worship group added in two clicks</td></tr>
+        <tr><td>10</td><td>Nextcloud for the web version, stored in the browser: login like the desktop client (same identity provider), media root, browsing and chunked upload for web drops, playback link</td><td>Drop a video in the browser; it appears in the desktop app after sync</td></tr>
+        <tr><td>later</td><td>PDF and PPTX document items</td><td>Out of scope for this rebuild</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="head">
+    <span class="eyebrow">Decided</span>
+    <h2>Your answers so far</h2>
+  </div>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Topic</th><th>Decision</th></tr></thead>
+      <tbody>
+        <tr><td>Web drops</td><td>Nextcloud connection in the web version only, stored in the browser; match-by-name fallback when none is set up. The desktop app syncs with the Nextcloud client.</td></tr>
+        <tr><td>Audio output</td><td>The computer's default output for now</td></tr>
+        <tr><td>Reuse</td><td>Library of groups and media items plus song suggestions</td></tr>
+        <tr><td>Group settings</td><td>As proposed</td></tr>
+        <tr><td>Versions</td><td>May use different files</td></tr>
+        <tr><td>Images</td><td>Slideshow items with their own screen groups, so different screens can run different slideshows; to be extended later</td></tr>
+        <tr><td>Split screens</td><td>Items show on any number of screen groups; screen sets (e.g. LED wall = left + right) select several with one chip, framing stays per group</td></tr>
+        <tr><td>Theme backgrounds</td><td>Removed from themes, which keep a colour only; image and video items get a Background role, hidden by Hide background</td></tr>
+        <tr><td>Backgrounds in a group</td><td>Several per group with easy switching; the group decides keep, fade out or hide immediately when it is left</td></tr>
+        <tr><td>Screens</td><td>Screen groups are the only target; windows are local placements that join a group; no computer profiles</td></tr>
+        <tr><td>Library</td><td>Saved groups and groups from past shows, with a filter</td></tr>
+        <tr><td>Song text editor</td><td>How-to panel beside the textarea</td></tr>
+        <tr><td>Themes</td><td>Set on the agenda group (then show, then account default); songs and items no longer carry a theme; screen differences through theme variants</td></tr>
+        <tr><td>Per-window settings</td><td>Dropped</td></tr>
+        <tr><td>Nextcloud sign-in</td><td>Login Flow v2 like the desktop client, so the shared identity provider signs you in and Nextcloud permissions apply</td></tr>
+        <tr><td>Preview</td><td>Preview panel, pop-out and editor previews, never sent to outputs</td></tr>
+        <tr><td>Nextcloud access</td><td>Through a stateless relay on the presenter server; playback from a read-only share link. The Nextcloud address is set per account.</td></tr>
+        <tr><td>Preview in Live</td><td>Optional “next” monitor in the View menu, off by default</td></tr>
+        <tr><td>Opening vs. going live</td><td>A click opens an entry without touching the screens; double-click, a slide click or Enter goes live (revision 6)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+
+</div>
+
+</body></html>

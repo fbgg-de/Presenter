@@ -78,6 +78,8 @@ const api = {
   // ── Built-in WebSocket server status ──
   getWsServerInfo: () => electronAPI.ipcRenderer.invoke('get-ws-server-info'),
   setWsCommandHandlingEnabled: (enabled: boolean) => electronAPI.ipcRenderer.invoke('set-ws-command-handling-enabled', enabled),
+  setWsAllowNetwork: (allow: boolean) => electronAPI.ipcRenderer.invoke('set-ws-allow-network', allow),
+
   onWsClientCount: (callback: (data: { count: number }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: unknown) => callback(data as { count: number });
     ipcRenderer.on('ws-client-count', handler);
@@ -199,19 +201,22 @@ const api = {
   },
 };
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI);
-    contextBridge.exposeInMainWorld('api', api);
-  } catch (error) {
-    console.error(error);
+// Only the app's own pages get the bridge. The main window also shows the identity provider's
+// pages during sign-in, and a bridge there would hand any script on them the app's IPC — files,
+// shell, screens. file:// is the packaged app, ELECTRON_RENDERER_URL the dev server. The generic
+// `window.electron` (any IPC channel) is not exposed at all: nothing in the renderer uses it.
+const devRenderer = process.env['ELECTRON_RENDERER_URL'];
+const ownPage = location.protocol === 'file:' || (!!devRenderer && location.origin === new URL(devRenderer).origin);
+
+if (ownPage) {
+  if (process.contextIsolated) {
+    try {
+      contextBridge.exposeInMainWorld('api', api);
+    } catch (error) {
+      console.error(error);
+    }
+  } else {
+    // @ts-ignore (define in dts)
+    window.api = api;
   }
-} else {
-  // @ts-ignore (define in dts)
-  window.electron = electronAPI;
-  // @ts-ignore (define in dts)
-  window.api = api;
 }

@@ -17,9 +17,13 @@ services:
     restart: unless-stopped
     environment:
       PORT: '9001'
-      # Base URL of the PHP backend — required for viewer token authentication.
-      # The WS server calls /rest/ValidateToken?token=... to resolve tokens.
+      # Base URL of the PHP backend — required for relay tickets and viewer tokens.
+      # The WS server calls /rest/ValidateWsTicket and /rest/ValidateToken to resolve them.
       BACKEND_URL: 'https://presenter.efsh.de'
+      # 1 = also accept a bare account number, as apps older than relay tickets send.
+      # Anyone can guess an account number — remove this once every app is updated.
+      # ALLOW_ACCOUNT_AUTH: '1'
+
       # How long the last selection stays current, in seconds (default 3600 = 1 hour).
       # After this long without an update the relay drops the cached text and tells the
       # viewers, so a screen left running does not keep showing last week's verse.

@@ -10,7 +10,11 @@ import type { WSCommand, WSResponse } from '../shared/types';
 
 export class PresenterWebSocketServer {
   private wss: WSServer | null = null;
+  /** The configured port; `port` is where the server actually listens (the next free one if taken). */
+  private preferredPort: number;
   private port: number;
+  /** Off: only this computer may connect. Anyone on the network could otherwise drive the screens. */
+  private allowNetwork: boolean;
   private windowManager: PresentationWindowManager;
   private mainWindow: BrowserWindow | null = null;
   private clients: Set<WebSocket> = new Set();
@@ -18,8 +22,9 @@ export class PresenterWebSocketServer {
   /** The renderer's last `state_update`, so `get_state` and a fresh connection get an answer at once. */
   private lastState: Record<string, unknown> | null = null;
 
-  constructor(port: number, windowManager: PresentationWindowManager) {
-    this.port = port;
+  constructor(port: number, windowManager: PresentationWindowManager, allowNetwork = false) {
+    this.preferredPort = this.port = port;
+    this.allowNetwork = allowNetwork;
     this.windowManager = windowManager;
   }
 
@@ -37,10 +42,39 @@ export class PresenterWebSocketServer {
     if (this.wss) {
       this.stop();
     }
+    this.listen(this.preferredPort, 10);
+  }
 
-    this.wss = new WSServer({ port: this.port });
+  private listen(port: number, retries: number): void {
+    const wss = new WSServer({
+      port,
+      maxPayload: 1024 * 1024, // commands are tiny; ws defaults to 100 MiB
 
-    this.wss.on('connection', (ws) => {
+      host: this.allowNetwork ? undefined : '127.0.0.1',
+      // Browsers always send an Origin; Companion and other tools never do. Without this any web
+      // page open on this computer could connect and drive the presentation.
+      verifyClient: ({ origin }) => !origin,
+    });
+    this.wss = wss;
+
+    wss.on('listening', () => {
+      this.port = port;
+      console.log(`[WS Server] Started on ${this.allowNetwork ? 'all interfaces' : '127.0.0.1'}:${port}`);
+    });
+
+    wss.on('error', (err: NodeJS.ErrnoException) => {
+      // A relay or another app often holds 9001 on a dev machine — take the next free port like
+      // the media server does; the Companion dialog shows the one in use.
+      if (err.code === 'EADDRINUSE' && retries > 0 && this.wss === wss) {
+        console.warn(`[WS Server] Port ${port} in use, trying ${port + 1}`);
+        wss.close();
+        this.listen(port + 1, retries - 1);
+        return;
+      }
+      console.error(`[WS Server] Error on port ${port}:`, err.message);
+    });
+
+    wss.on('connection', (ws) => {
       this.clients.add(ws);
       this.notifyClientCount();
       if (this.lastState)
@@ -75,36 +109,35 @@ export class PresenterWebSocketServer {
         this.notifyClientCount();
       });
     });
-
-    this.wss.on('error', (err) => {
-      console.error(`[WS Server] Error on port ${this.port}:`, err.message);
-    });
-
-    console.log(`[WS Server] Started on port ${this.port}`);
   }
 
   /**
    * Stop the WebSocket server.
    */
-  stop(): void {
+  stop(onClosed?: () => void): void {
     if (this.wss) {
       for (const client of this.clients) {
         client.close();
       }
       this.clients.clear();
-      this.wss.close();
+      this.wss.close(() => onClosed?.());
       this.wss = null;
       console.log('[WS Server] Stopped');
+    } else {
+      onClosed?.();
     }
   }
 
-  /**
-   * Restart with a new port.
-   */
-  restart(port: number): void {
-    this.port = port;
-    this.stop();
-    this.start();
+  /** Accept other computers (remote Companion) or only this one. Restarts the server. */
+  setAllowNetwork(allow: boolean): void {
+    if (allow === this.allowNetwork) return;
+    this.allowNetwork = allow;
+    // Re-listen only once the port is released, or it would hop to the next one.
+    if (this.wss) this.stop(() => this.start());
+  }
+
+  allowsNetwork(): boolean {
+    return this.allowNetwork;
   }
 
   /** Return current number of connected WS clients. */
@@ -112,7 +145,7 @@ export class PresenterWebSocketServer {
     return this.clients.size;
   }
 
-  /** Return the configured WS server port. */
+  /** Return the port the server listens on. */
   getPort(): number {
     return this.port;
   }

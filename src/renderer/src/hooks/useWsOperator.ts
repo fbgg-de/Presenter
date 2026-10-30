@@ -11,6 +11,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { WS_CLOSE_OPERATOR_DISCONNECT, type WsClientInfo } from './useWsSync';
 import type { SyncOrigin } from '@/utils/syncProtocol';
+import { getBackendBaseUrl } from '@/api/base.api';
+import { sendRelayAuth } from '@/utils/relayTicket';
 
 const RECONNECT_DELAY_MS = 5000;
 
@@ -128,7 +130,7 @@ export const useWsOperator = (
           return;
         }
         const client: WsClientInfo = { role: 'operator' };
-        ws.send(JSON.stringify({ action: 'auth', account, client }));
+        sendRelayAuth(ws, getBackendBaseUrl(), account, client);
       };
 
       ws.onmessage = (event) => {

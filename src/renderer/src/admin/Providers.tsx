@@ -182,7 +182,7 @@ const ProviderDialog = ({
         name: provider?.name || '',
         discovery_url: provider?.discovery_url || '',
         client_id: provider?.client_id || '',
-        client_secret: provider?.client_secret || '',
+        client_secret: '',
         scopes: provider?.scopes || 'openid email profile groups',
         required_group: provider?.required_group || '',
         enabled: provider?.enabled ?? true,

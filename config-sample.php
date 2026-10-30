@@ -13,13 +13,22 @@ const DOMAIN = 'localhost';
 const BASE_URL = 'http://' . DOMAIN . '/';
 
 // CORS: list of origins that may call the API.
+// Never add 'null': sandboxed iframes on any website send it too, and with credentials allowed
+// they could read every account's data. The desktop app does not need it — its file:// pages
+// send no Origin header at all.
 const CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',  // Vite dev server
     'http://localhost:4173',  // Vite preview
-    'null',                   // Electron packaged (file:// sends Origin: null)
 ];
 
+
 const DEFAULT_LANGUAGE = 'de'; // Default language: 'en' (English) or 'de' (German)
+
+// Where error.log goes. Default: the logs/ folder next to this file, created on first write and
+// guarded by its own .htaccess. A folder outside the web root is safer still — then no web
+// server rule (Apache or nginx) is needed to keep the log private. Must be writable by PHP.
+// const LOG_DIR = '/volume1/presenter-logs';
+
 
 // Database
 const DB = [

@@ -80,6 +80,7 @@ import { useAppDispatch, useAppSelector, type RootState } from '@/store';
 import {
   setCurrentShow,
   addShowItem,
+  insertShowItem,
   removeShowItem,
   setDirty,
   updateShowItem,
@@ -147,6 +148,7 @@ import { useGetSettings } from '@/store/settingsSlice';
 import { useLogout } from '@/hooks/useLogout';
 import { LogoutResetDialog } from '@/components/layout/LogoutResetDialog';
 import { DEFAULT_SONG_ITEM_COLOR, DEFAULT_MEDIA_ITEM_COLOR, DEFAULT_BIBLE_ITEM_COLOR } from '@/theme';
+import { importerFor, type ImportedSong } from '@/song/importers';
 
 export interface SidebarHandle {
   openShowSwitcher: () => void;
@@ -572,8 +574,12 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
   const hasExtension = (file: File, ext: string): boolean => file.name.toLowerCase().endsWith(ext);
   const isSngFile = (file: File): boolean => hasExtension(file, '.sng');
 
-  /** Parse a supported song file into an ISong. */
-  const parseSongFile = (file: File, content: string): ISong => (isSngFile(file) ? SngSong(content) : CCLISong(file.name, content));
+  /** Parse a supported song file into an ISong — OpenLyrics, ChordPro and FreeShow via song/importers. */
+  const parseSongFile = (file: File, content: string): ImportedSong => {
+    const importer = importerFor(file.name);
+    if (importer) return importer(content);
+    return isSngFile(file) ? SngSong(content) : CCLISong(file.name, content);
+  };
 
   /** Read and import a single supported song file into the store. */
   const importSongFile = (file: File) => {
@@ -601,6 +607,8 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
           order: parsed.order,
           blocks: parsed.blocks,
           languages: parsed.languages,
+          ...(parsed.ccliNumber ? { ccliNumber: parsed.ccliNumber } : {}),
+          ...(parsed.key ? { key: parsed.key } : {}),
         }).unwrap();
 
         const savedSong = new Song({ ...parsed, songNumber: result.songNumber });
@@ -608,7 +616,7 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
         dispatch(addToSongsOrder(savedSong.songNumber));
         dispatch(addShowItem({ type: 'song', songNumber: savedSong.songNumber, order: 'Default' }));
         trackEvent('song_imported', 'song', String(result.songNumber), {
-          source: isSngFile(file) ? 'sng' : 'ccli_txt',
+          source: isSngFile(file) ? 'sng' : importerFor(file.name) ? (file.name.split('.').pop() ?? '').toLowerCase() : 'ccli_txt',
         });
       } catch (err) {
         console.error('Failed to upload imported song:', err);
@@ -902,6 +910,19 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
       if (activeItemIndex > 0 && itemMenuIndex <= activeItemIndex) {
         dispatch(setActiveItemIndex(activeItemIndex - 1));
       }
+    }
+    handleItemMenuClose();
+  };
+
+  /** A copy with all its settings, right below the original — for an entry needed more than once. */
+  const handleItemDuplicate = () => {
+    const original = currentShow?.order[itemMenuIndex];
+    if (original) {
+      const id = genItemId();
+      dispatch(insertShowItem({ index: itemMenuIndex + 1, item: { ...original, id } }));
+      const activeItemIndex = liveIndex();
+      if (activeItemIndex > itemMenuIndex) dispatch(setActiveItemIndex(activeItemIndex + 1));
+      setOpenWhenAdded(id);
     }
     handleItemMenuClose();
   };
@@ -1649,6 +1670,12 @@ const Sidebar = forwardRef<SidebarHandle, SidebarProps>(({ toolbarSlots, collaps
             <ChevronRightIcon fontSize="small" sx={{ ml: 1 }} />
           </MenuItem>
         )}
+        <MenuItem onClick={handleItemDuplicate}>
+          <ListItemIcon>
+            <CopyIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>{LL.SHOW_ITEMS.DUPLICATE()}</ListItemText>
+        </MenuItem>
         <Divider />
         {/* Delete */}
         <MenuItem onClick={handleItemRemove}>

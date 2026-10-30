@@ -21,7 +21,7 @@ import { useGetShow } from '@/store/showSlice';
 import { useGetPresentationSettings } from '@/store/presentationSlice';
 import { pruneStageLayers, stageGo, stageSetCue, stageSetHidden, stageStart, useGetStageState } from '@/store/stageSlice';
 import { broadcastStage } from '@/utils/presentationBridge';
-import { cueEndsAt, resolveStagePayload, type StageCueRuntime, type StageLayerEntity } from '@/stage/types';
+import { cueEndsAt, resolveStagePayload, setAgendaItemEnd, type StageCueRuntime, type StageLayerEntity } from '@/stage/types';
 import type { StageTrigger } from '@/api/shows.api';
 
 /** How the engine reports a layer to the transport UI in the footer and the stage panel. */
@@ -38,6 +38,8 @@ export interface StageLayerStatus {
   hidden: boolean;
   /** The operator's correction to the running timer, ms. */
   adjustMs?: number;
+  /** Filled-in `{fields}` of the message up. */
+  fields?: Record<string, string>;
   /**
    * The layer has been started in this session. Before that `cue` is only the first cue it would
    * show — nothing is on screen and there is no clock to read.
@@ -94,6 +96,7 @@ const useStageStatuses = (layers: StageLayerEntity[], runtimes: Record<number, S
           hidden: runtime?.hidden ?? false,
           started: !!runtime,
           adjustMs: runtime?.adjustMs,
+          fields: runtime?.fields,
           finished: layer.data.cues.length > 0 && cueIndex >= layer.data.cues.length,
         };
       }),
@@ -113,15 +116,22 @@ export const useStageEngine = (): StageEngine => {
   const stage = useGetStageState();
   const { uiLanguage } = useGetSettings('uiLanguage');
   const { currentShow } = useGetShow();
-  const { activeItemIndex } = useGetPresentationSettings('activeItemIndex');
+  const { activeItemIndex, activeItemSince } = useGetPresentationSettings('activeItemIndex', 'activeItemSince');
 
   const locale = uiLanguage || 'en';
+
+  // The live entry's planned end, for countdowns that follow the agenda. Set before resolving.
+  const plannedSec = currentShow?.order?.[activeItemIndex]?.plannedDuration;
+  const agendaEnd = plannedSec && plannedSec > 0 ? activeItemSince + plannedSec * 1000 : null;
+  setAgendaItemEnd(agendaEnd);
 
   // ── Resolve and push ────────────────────────────────────────────────────────
 
   const payload = useMemo(
     () => resolveStagePayload(layers, stage.layers, stage.allHidden, locale),
-    [layers, stage.layers, stage.allHidden, locale],
+    // agendaEnd: read by resolveCue through setAgendaItemEnd above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [layers, stage.layers, stage.allHidden, locale, agendaEnd],
   );
 
   /**
@@ -183,7 +193,9 @@ export const useStageEngine = (): StageEngine => {
       if (at !== null) due.push({ layerId: layer.id, at, cueCount: layer.data.cues.length });
     }
     return due;
-  }, [layers, stage.layers]);
+    // agendaEnd: an agenda-item countdown ends when the live entry's planned time does.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers, stage.layers, agendaEnd]);
 
   const nextDue = useMemo(() => (dueList.length ? dueList.reduce((a, b) => (b.at < a.at ? b : a)) : null), [dueList]);
 

@@ -17,8 +17,11 @@ const EXTENSIONS: Record<MediaFileKind, string[]> = {
   document: ['.pdf', '.pptx', '.ppsx'],
 };
 
-/** Lyric files the agenda imports as songs. */
-export const SONG_FILE_EXTENSIONS = ['.sng', '.txt'];
+/**
+ * Lyric files the agenda imports as songs: SongBeamer, CCLI SongSelect text, OpenLyrics (OpenLP),
+ * ChordPro and FreeShow — see song/importers.ts.
+ */
+export const SONG_FILE_EXTENSIONS = ['.sng', '.txt', '.xml', '.cho', '.chopro', '.chordpro', '.crd', '.show'];
 
 /** Everything the agenda takes, as a file input's `accept`: songs, media and documents alike. */
 export const AGENDA_FILE_ACCEPT = [...SONG_FILE_EXTENSIONS, ...Object.values(EXTENSIONS).flat()].join(',');

@@ -33,6 +33,9 @@ class AdminProviders extends RestController
         foreach ($providers as &$provider) {
             $provider['id'] = (int)$provider['id'];
             $provider['enabled'] = (bool)$provider['enabled'];
+            // Never send the secret to the browser — only whether one is set.
+            $provider['client_secret_set'] = ($provider['client_secret'] ?? '') !== '';
+            unset($provider['client_secret']);
         }
 
         $res->success($providers);
@@ -87,7 +90,8 @@ class AdminProviders extends RestController
 
         $fields = ['name', 'discovery_url', 'client_id', 'client_secret', 'scopes', 'required_group'];
         foreach ($fields as $field) {
-            if ($req->params->has($field)) {
+            // An empty secret means "keep the stored one": the form never receives it.
+            if ($req->params->has($field) && !($field === 'client_secret' && $req->params->get($field) === '')) {
                 $updates[] = "$field = ?";
                 $types .= 's';
                 $values[] = $req->params->get($field);

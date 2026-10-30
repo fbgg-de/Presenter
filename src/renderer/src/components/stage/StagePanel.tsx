@@ -104,6 +104,7 @@ import { StageCueEditor, cueKindLabel } from './StageCueEditor';
 import { StageLiveValue } from './StageTransport';
 import { TimerAdjustControls, TimerAdjustTrigger, isAdjustableTimer } from './TimerAdjust';
 import { stillWhileClosed } from '@/components/common/stillWhileClosed';
+import { askMessageFields } from '@/stage/messageRequests';
 
 const CUE_KINDS: Array<{ kind: StageCueKind; Icon: typeof ClockIcon }> = [
   { kind: 'clock', Icon: ClockIcon },
@@ -917,7 +918,10 @@ const StagePanelBody = ({ open, onClose, layerId }: { open: boolean; onClose: ()
                             <TransportButton
                               primary
                               label={S.GO()}
-                              onClick={() => dispatch(stageGo({ layerId: selected.id, cueCount: selected.data.cues.length, at: at() }))}
+                              onClick={() =>
+                                askMessageFields(selected, status?.started ? status.cueIndex + 1 : 0) ||
+                                dispatch(stageGo({ layerId: selected.id, cueCount: selected.data.cues.length, at: at() }))
+                              }
                             >
                               <GoIcon />
                             </TransportButton>
@@ -942,7 +946,7 @@ const StagePanelBody = ({ open, onClose, layerId }: { open: boolean; onClose: ()
                             primary
                             label={S.START()}
                             disabled={selected.data.cues.length === 0}
-                            onClick={() => dispatch(stageStart({ layerId: selected.id, at: at() }))}
+                            onClick={() => askMessageFields(selected, 0) || dispatch(stageStart({ layerId: selected.id, at: at() }))}
                           >
                             <PlayIcon />
                           </TransportButton>

@@ -7,6 +7,8 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SyncOrigin } from '@/utils/syncProtocol';
+import { getBackendBaseUrl } from '@/api/base.api';
+import { sendRelayAuth } from '@/utils/relayTicket';
 
 export type WsSyncStatus = 'disconnected' | 'connecting' | 'connected' | 'error' | 'dropped_by_operator';
 
@@ -150,11 +152,7 @@ export const useWsSync = ({
           return;
         }
         setStatus('connecting');
-        try {
-          ws.send(JSON.stringify({ action: 'auth', account, client: clientInfoRef.current }));
-        } catch (err) {
-          console.warn('[WsSync] failed to send auth:', err);
-        }
+        sendRelayAuth(ws, getBackendBaseUrl(), account, clientInfoRef.current);
       };
 
       ws.onmessage = (event) => {

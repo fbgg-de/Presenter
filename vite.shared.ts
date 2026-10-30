@@ -104,6 +104,7 @@ export const rendererInputs: Record<string, string> = {
   admin: resolve(__dirname, 'src/renderer/admin.html'),
   control: resolve(__dirname, 'src/renderer/control.html'),
   login: resolve(__dirname, 'src/renderer/login.html'),
+  message: resolve(__dirname, 'src/renderer/message.html'),
   main: resolve(__dirname, 'src/renderer/index.html'),
   musician: resolve(__dirname, 'src/renderer/musician.html'),
   presentation: resolve(__dirname, 'src/renderer/presentation.html'),

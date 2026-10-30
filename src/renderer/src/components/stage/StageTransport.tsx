@@ -28,6 +28,7 @@ import { TimerAdjustTrigger } from './TimerAdjust';
 import { useGetSettings } from '@/store/settingsSlice';
 import { STAGE_MONO_FONT, renderStageCue, resolveCue, stageUrgency } from '@/stage/types';
 import type { StageLayerStatus } from '@/hooks/useStageEngine';
+import { askMessageFields } from '@/stage/messageRequests';
 
 /** Same cadence as the overlay: fast enough that a seconds digit never appears to skip. */
 const TICK_MS = 250;
@@ -50,6 +51,7 @@ export const StageLiveValue = ({ status, fontSize = '0.8125rem' }: { status: Sta
           pausedAt: status.pausedAt,
           hidden: status.hidden,
           adjustMs: status.adjustMs,
+          fields: status.fields,
         },
         locale,
       )
@@ -176,7 +178,10 @@ const StageRow = ({ status, onOpen }: { status: StageLayerStatus; onOpen?: () =>
           )}
           <RowButton
             title={next ? LL.STAGE.NEXT_CUE({ name: next.name || cueKindLabel(next.kind, LL) }) : LL.STAGE.GO_TO_END()}
-            onClick={() => dispatch(stageGo({ layerId, cueCount: status.cueCount, at: at() }))}
+            onClick={() =>
+              askMessageFields(status.layer, status.started ? status.cueIndex + 1 : 0) ||
+              dispatch(stageGo({ layerId, cueCount: status.cueCount, at: at() }))
+            }
           >
             <GoIcon sx={{ fontSize: 16 }} />
           </RowButton>
@@ -190,7 +195,7 @@ const StageRow = ({ status, onOpen }: { status: StageLayerStatus; onOpen?: () =>
           color="inherit"
           variant="outlined"
           startIcon={<ResumeIcon sx={{ fontSize: 16 }} />}
-          onClick={() => dispatch(stageStart({ layerId, at: at() }))}
+          onClick={() => askMessageFields(status.layer, 0) || dispatch(stageStart({ layerId, at: at() }))}
           sx={{ textTransform: 'none', py: 0, minWidth: 0, height: 24 }}
         >
           {LL.STAGE.START()}

@@ -1,0 +1,1442 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "contact": {
+      "email": "support@churchtools.de",
+      "name": "German ChurchTools Forum",
+      "url": "https://forum.church.tools/category/22/churchtools-schnittstellen"
+    },
+    "description": "The ChurchTools REST API is the best entry point for developers to access ChurchTools. <br><br> **Authentication:** You need to be authorized to use some endpoints. Those endpoints are marked by a gray lock symbol. If you view the documentation, while you are logged into ChurchTools, all requests are already authorized. If you want to authorized a request, you need to provide a `Login Token` as `Authorization` header in the format `Authorization: Login <token>` or send a valid cookie. You can use the green \"Authorize\" dialog to enter those details and see how a request would look like in detail. <br><br> **Missing Endpoints:** Not all features are yet available by our new REST API. This documentation will grow in the future. We are working hard to add new endpoints with every ChurchTools version. The documentation will always show only those endpoints you can use with your ChurchTools installation.",
+    "license": {
+      "name": "CC BY 4.0",
+      "url": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "title": "ChurchTools REST API",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "description": "ChurchTools",
+      "url": "/api"
+    },
+    {
+      "description": "Local",
+      "url": "http://churchtools.test/api"
+    }
+  ],
+  "security": [
+    {
+      "Login-Token-Header": []
+    }
+  ],
+  "tags": [
+    {
+      "description": "CRUD methods for files",
+      "name": "File"
+    }
+  ],
+  "paths": {
+    "/files/{domainType}": {
+      "get": {
+        "description": "Returns all files for the given domain type that are visible to the current user. Files marked as visible only while editable are omitted if the current user cannot edit files of that domain type.",
+        "operationId": "get-files-domainType",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DomainType"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/CtFile"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          }
+        },
+        "summary": "Get all files for a domain type",
+        "tags": ["File"]
+      }
+    },
+    "/files/{domainType}/{domainIdentifier}": {
+      "delete": {
+        "description": "Deletes all files that belong to the given domain object.",
+        "operationId": "delete-files-domainType-domainIdentifier",
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete files that are matching the domainType and domainIdentifier",
+        "tags": ["File"]
+      },
+      "get": {
+        "description": "Returns all files that belong to the given domain object.",
+        "operationId": "get-files-domainType-domainIdentifier",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/CtFile"
+                      },
+                      "type": "array"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get all files for a specific domain object",
+        "tags": ["File"]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DomainType"
+        },
+        {
+          "$ref": "#/components/parameters/DomainIdentifier"
+        }
+      ],
+      "patch": {
+        "description": "Renames all files for the given domain object or updates their sort key.",
+        "operationId": "patch-files-domainType-domainIdentifier",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "description": "New display name for all files of this domain object",
+                    "example": "Updated attachment name",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "sortKey": {
+                    "description": "New sort key for all files of this domain object",
+                    "example": 10,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update files for a domain object",
+        "tags": ["File"]
+      },
+      "post": {
+        "description": "Uploads one or more files for the given domain object.",
+        "operationId": "post-files-domainType-domainIdentifier",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "files[]": {
+                    "description": "Files to upload",
+                    "items": {
+                      "format": "binary",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "image_options": {
+                    "description": "Optional image crop and focus settings",
+                    "type": "object"
+                  },
+                  "max_height": {
+                    "description": "Maximum image height in pixels",
+                    "type": "string"
+                  },
+                  "max_width": {
+                    "description": "Maximum image width in pixels",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "items": {
+                        "$ref": "#/components/schemas/CtFile"
+                      },
+                      "type": "array"
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaCount"
+                    }
+                  },
+                  "required": ["data", "meta"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "return new files"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Upload files",
+        "tags": ["File"]
+      }
+    },
+    "/files/{domainType}/{domainIdentifier}/link": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/DomainType"
+        },
+        {
+          "$ref": "#/components/parameters/DomainIdentifier"
+        }
+      ],
+      "post": {
+        "description": "Adds the given external link to the specified domain object.",
+        "operationId": "post-files-domainType-domainIdentifier-link",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "name": {
+                    "description": "Optional display name for the link",
+                    "example": "Example Link",
+                    "maxLength": 255,
+                    "type": ["string", "null"]
+                  },
+                  "securityLevelId": {
+                    "description": "Optional security level for the link",
+                    "example": 2,
+                    "type": ["integer", "null"]
+                  },
+                  "url": {
+                    "description": "URL to store as link",
+                    "example": "https://www.example.com",
+                    "maxLength": 255,
+                    "type": "string"
+                  }
+                },
+                "required": ["url"],
+                "type": "object"
+              }
+            }
+          },
+          "description": "Link data",
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CtFile"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The newly created link"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Add link",
+        "tags": ["File"]
+      }
+    },
+    "/files/{fileId}/metadata": {
+      "get": {
+        "deprecated": true,
+        "operationId": "get-files-id-metadata",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "bezeichnung": {
+                      "type": "string"
+                    },
+                    "deletion_date": {
+                      "type": "string"
+                    },
+                    "domain_id": {
+                      "type": "string"
+                    },
+                    "domain_type": {
+                      "type": "string"
+                    },
+                    "filename": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "image_options": {
+                      "type": "string"
+                    },
+                    "modified_date": {
+                      "type": "string"
+                    },
+                    "modified_pid": {
+                      "type": "string"
+                    },
+                    "securitylevel_id": {
+                      "type": "string"
+                    },
+                    "showonlywheneditable_yn": {
+                      "type": "string"
+                    },
+                    "sortkey": {
+                      "type": "string"
+                    },
+                    "url": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object",
+                  "x-examples": {
+                    "example-1": {
+                      "bezeichnung": "intern.church.tools.jpeg",
+                      "deletion_date": null,
+                      "domain_id": "1",
+                      "domain_type": "avatar",
+                      "filename": "e506915aef806b9134c34762b6a90095d2c1ef52aee1840bc32140c712424112",
+                      "id": "2277",
+                      "image_options": "{\"crop\":{\"top\":0,\"left\":0,\"bottom\":0,\"right\":0},\"focus\":{\"x\":0.44375,\"y\":0.425}}",
+                      "modified_date": "2021-04-14 20:14:30",
+                      "modified_pid": "1",
+                      "securitylevel_id": null,
+                      "showonlywheneditable_yn": "0",
+                      "sortkey": "0",
+                      "url": "?q=public/filedownload&filename=e506915aef806b9134c34762b6a90095d2c1ef52aee1840bc32140c712424112"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get Metadata for file",
+        "tags": ["File"]
+      },
+      "parameters": [
+        {
+          "in": "path",
+          "name": "fileId",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "/files/{id}": {
+      "delete": {
+        "description": "Deletes the file with the given ID.",
+        "operationId": "delete-files-id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-Deleted"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Delete a file by ID",
+        "tags": ["File"]
+      },
+      "patch": {
+        "description": "Updates metadata for the file with the given ID. Provide `name` to rename the file, `sortKey` to change its sort order, or `copyTo` to copy the file to another domain object.",
+        "operationId": "patch-files-id",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "copyTo": {
+                    "description": "Optional target domain object to copy this file to",
+                    "properties": {
+                      "domainId": {
+                        "description": "Target domain identifier",
+                        "example": "1",
+                        "type": "string"
+                      },
+                      "domainType": {
+                        "description": "Target domain type",
+                        "example": "person",
+                        "type": "string"
+                      }
+                    },
+                    "required": ["domainId", "domainType"],
+                    "type": "object"
+                  },
+                  "name": {
+                    "description": "New display name for the file",
+                    "example": "screenshot.jpeg",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "sortKey": {
+                    "description": "New sort key for the file",
+                    "example": 10,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/204-NoContent"
+          },
+          "400": {
+            "$ref": "#/components/responses/400-BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Update file metadata by ID",
+        "tags": ["File"]
+      }
+    },
+    "/files/{id}/meta": {
+      "get": {
+        "description": "Returns metadata for the file with the given ID.",
+        "operationId": "get-files-id-meta",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Id"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/CtFile"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "401": {
+            "$ref": "#/components/responses/401-Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/403-Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get file metadata by ID",
+        "tags": ["File"]
+      }
+    },
+    "/images/{fileId}/{hash}": {
+      "get": {
+        "description": "Returns the image with the given file ID and hash. Optional query parameters are passed to the League Glide image manipulation service; see the Glide documentation for supported manipulation parameters such as `w`, `h`, `fit`, `crop`, `fm`, and `q`. ChurchTools also supports `crop=original` to bypass the stored crop. The requested output format can also be supplied as a suffix on the hash, for example `{hash}.webp`.",
+        "externalDocs": {
+          "description": "League Glide manipulation parameters",
+          "url": "https://glide.thephpleague.com/3.0/api/quick-reference/"
+        },
+        "operationId": "get-images-fileId-hash",
+        "parameters": [
+          {
+            "description": "ID of the image file",
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "example": 985,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Hash of the image file, optionally suffixed with an output format",
+            "in": "path",
+            "name": "hash",
+            "required": true,
+            "schema": {
+              "example": "939a6896d5de0314d8a38de6b5125195e7b15a834b9af78022d061ce6a829e16",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/avif": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/heic": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Image binary",
+            "headers": {
+              "Content-Disposition": {
+                "description": "Provides the original file name as suggested filename. Includes `filename*` for UTF-8 names.",
+                "schema": {
+                  "example": "inline; filename=\"M_ller.webp\"; filename*=UTF-8''M%C3%BCller.webp",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get a public image",
+        "tags": ["File"]
+      }
+    },
+    "/images/{fileId}/{hash}/{queryParams}": {
+      "get": {
+        "description": "Returns the image with the given file ID and hash. The `queryParams` path parameter contains URL-encoded image manipulation parameters in the same format as a regular query string, for example `fm%3Dwebp%26q%3D80%26w%3D700%26h%3Dauto`. Only the path-encoded parameters are used; additional query parameters are ignored. The parameters are passed to the League Glide image manipulation service; see the Glide documentation for supported manipulation parameters such as `w`, `h`, `fit`, `crop`, `fm`, and `q`. ChurchTools also supports `crop=original` to bypass the stored crop. The requested output format can also be supplied as a suffix on the hash, for example `{hash}.webp`.",
+        "externalDocs": {
+          "description": "League Glide manipulation parameters",
+          "url": "https://glide.thephpleague.com/3.0/api/quick-reference/"
+        },
+        "operationId": "get-images-fileId-hash-queryParams",
+        "parameters": [
+          {
+            "description": "ID of the image file",
+            "in": "path",
+            "name": "fileId",
+            "required": true,
+            "schema": {
+              "example": 985,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Hash of the image file, optionally suffixed with an output format",
+            "in": "path",
+            "name": "hash",
+            "required": true,
+            "schema": {
+              "example": "939a6896d5de0314d8a38de6b5125195e7b15a834b9af78022d061ce6a829e16",
+              "type": "string"
+            }
+          },
+          {
+            "description": "URL-encoded image manipulation query string. It is interpreted like the query parameters of `/images/{fileId}/{hash}`. Additional query parameters on this route are ignored.",
+            "in": "path",
+            "name": "queryParams",
+            "required": true,
+            "schema": {
+              "example": "fm%3Dwebp%26q%3D80%26w%3D700%26h%3Dauto",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/avif": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/heic": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/tiff": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Image binary",
+            "headers": {
+              "Content-Disposition": {
+                "description": "Provides the original file name as suggested filename. Includes `filename*` for UTF-8 names.",
+                "schema": {
+                  "example": "inline; filename=\"M_ller.webp\"; filename*=UTF-8''M%C3%BCller.webp",
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/404-NotFound"
+          }
+        },
+        "summary": "Get a public image with path-encoded parameters",
+        "tags": ["File"]
+      }
+    },
+    "/images/{id}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "patch": {
+        "description": "Sets additional information on the image, like annotation, AI generation status, cropping, and focus point",
+        "operationId": "patch-images-id",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "aiGenerated": {
+                    "description": "Whether the image was generated by artificial intelligence.",
+                    "example": false,
+                    "type": "boolean"
+                  },
+                  "annotation": {
+                    "example": "Sample Annotation",
+                    "maxLength": 200,
+                    "type": ["string", "null"]
+                  },
+                  "annotationLink": {
+                    "example": "https://churchtools.test",
+                    "maxLength": 300,
+                    "type": ["string", "null"]
+                  },
+                  "description": {
+                    "example": "Sample Description",
+                    "maxLength": 1000,
+                    "type": ["string", "null"]
+                  },
+                  "options": {
+                    "example": "{\"crop\":{\"top\":\"0.0\",\"left\":\"0.0\",\"bottom\":\"0.0\",\"right\":\"0.4\"},\"focus\":{\"x\":\"0.5\",\"y\":\"0.5\"}}",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "aiGenerated": {
+                          "description": "Whether the image was generated by artificial intelligence.",
+                          "example": false,
+                          "type": "boolean"
+                        },
+                        "annotation": {
+                          "type": ["string", "null"]
+                        },
+                        "annotationLink": {
+                          "type": ["string", "null"]
+                        },
+                        "description": {
+                          "type": ["string", "null"]
+                        },
+                        "domainIdentifier": {
+                          "type": "string"
+                        },
+                        "domainType": {
+                          "type": "string"
+                        },
+                        "filename": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "securityLevelId": {
+                          "type": "integer"
+                        },
+                        "size": {
+                          "type": "integer"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "annotation",
+                        "annotationLink",
+                        "aiGenerated",
+                        "description",
+                        "domainIdentifier",
+                        "domainType",
+                        "filename",
+                        "id",
+                        "name",
+                        "securityLevelId",
+                        "size",
+                        "url"
+                      ],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object",
+                  "x-examples": {
+                    "example-1": {
+                      "data": {
+                        "aiGenerated": false,
+                        "annotation": "Sample Annotation",
+                        "annotationLink": "https://example.com/pic/52345987",
+                        "description": "Sample Description",
+                        "domainIdentifier": "1373",
+                        "domainType": "avatar",
+                        "filename": "095db3167f133b175c072e9d1446f84ca78ba7669d3bd49aca339de7224ba15b",
+                        "id": 2392,
+                        "name": "05_seminar-gefühle.jpg",
+                        "securityLevelId": 0,
+                        "size": null,
+                        "url": "https://meinegemeinde.church.tools/images/2392/5aab1d8f4626aac24c62c21e7392883d3a35930564a2cbbaa92821a99266558a"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "Set additional image data",
+        "tags": ["File"]
+      }
+    },
+    "/images/{id}/options": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Id"
+        }
+      ],
+      "put": {
+        "description": "Sets options as JSON like cropping and focus point",
+        "operationId": "put-images-id-options",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "properties": {
+                  "image_options": {
+                    "example": "{\"crop\":{\"top\":\"0.0\",\"left\":\"0.0\",\"bottom\":\"0.0\",\"right\":\"0.4\"},\"focus\":{\"x\":\"0.5\",\"y\":\"0.5\"}}",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "properties": {
+                    "data": {
+                      "properties": {
+                        "domainIdentifier": {
+                          "type": "string"
+                        },
+                        "domainType": {
+                          "type": "string"
+                        },
+                        "filename": {
+                          "type": "string"
+                        },
+                        "id": {
+                          "type": "integer"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "securityLevelId": {
+                          "type": "integer"
+                        },
+                        "size": {
+                          "type": "integer"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": ["domainIdentifier", "domainType", "filename", "id", "name", "securityLevelId", "size", "url"],
+                      "type": "object"
+                    }
+                  },
+                  "required": ["data"],
+                  "type": "object",
+                  "x-examples": {
+                    "example-1": {
+                      "data": {
+                        "domainIdentifier": "1373",
+                        "domainType": "avatar",
+                        "filename": "095db3167f133b175c072e9d1446f84ca78ba7669d3bd49aca339de7224ba15b",
+                        "id": 2392,
+                        "name": "05_seminar-gefühle.jpg",
+                        "securityLevelId": 0,
+                        "size": null,
+                        "url": "http://churchtools.test/images/2392/5aab1d8f4626aac24c62c21e7392883d3a35930564a2cbbaa92821a99266558a"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "set image-options",
+        "tags": ["File"]
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "DomainIdentifier": {
+        "description": "the domain identifier",
+        "in": "path",
+        "name": "domainIdentifier",
+        "required": true,
+        "schema": {
+          "example": "35",
+          "type": "string"
+        }
+      },
+      "DomainType": {
+        "description": "The domain type. Currently supported are 'avatar', 'groupimage', 'appointment_image', 'logo', 'attachments', 'bulkletter_template', 'service', 'song_arrangement', 'importtable', 'person', 'familyavatar', 'post', 'wiki_.?'.",
+        "in": "path",
+        "name": "domainType",
+        "required": true,
+        "schema": {
+          "example": "logo",
+          "type": "string"
+        }
+      },
+      "Id": {
+        "description": "ID of Entity",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "example": 1,
+          "type": "integer"
+        }
+      }
+    },
+    "responses": {
+      "204-Deleted": {
+        "description": "Successfully deleted"
+      },
+      "204-NoContent": {
+        "description": "No Content"
+      },
+      "400-BadRequest": {
+        "description": "Bad Request"
+      },
+      "401-Unauthorized": {
+        "content": {
+          "text/plain": {
+            "schema": {
+              "example": "Session expired!",
+              "type": "string"
+            }
+          }
+        },
+        "description": "Unauthorized"
+      },
+      "403-Forbidden": {
+        "description": "Forbidden to see, create, update, or delete resource"
+      },
+      "404-NotFound": {
+        "description": "Resource not found"
+      }
+    },
+    "schemas": {
+      "Color": {
+        "description": "Value for Tailwind color",
+        "properties": {
+          "key": {
+            "$ref": "#/components/schemas/CtColor"
+          },
+          "shade": {
+            "enum": [100, 200, 300, 400, 50, 500, 600, 700, 800, 900, null],
+            "example": 500,
+            "type": ["integer", "null"]
+          }
+        },
+        "required": ["key", "shade"],
+        "title": "Color",
+        "type": "object"
+      },
+      "CtColor": {
+        "description": "A color in ChurchTools",
+        "enum": [
+          "accent",
+          "amber",
+          "basic",
+          "blue",
+          "constructive",
+          "critical",
+          "cyan",
+          "destructive",
+          "emerald",
+          "error",
+          "fuchsia",
+          "green",
+          "indigo",
+          "info",
+          "lime",
+          "magic",
+          "orange",
+          "pink",
+          "purple",
+          "red",
+          "rose",
+          "sky",
+          "success",
+          "teal",
+          "violet",
+          "warning",
+          "yellow"
+        ],
+        "example": "accent",
+        "type": "string"
+      },
+      "CtFile": {
+        "properties": {
+          "additionalInfos": {
+            "additionalProperties": true,
+            "description": "Domain-specific extra data. Empty for most files (serialized as an empty array), but some domains add a key-value object (e.g. statement uploads return `{ \"statementId\": 1 }`).",
+            "type": ["object", "array"]
+          },
+          "aiGenerated": {
+            "description": "Whether the image was generated by artificial intelligence.",
+            "example": false,
+            "type": "boolean"
+          },
+          "annotation": {
+            "type": ["string", "null"]
+          },
+          "annotationLink": {
+            "type": ["string", "null"]
+          },
+          "description": {
+            "type": ["string", "null"]
+          },
+          "domainId": {
+            "type": "string"
+          },
+          "domainType": {
+            "type": "string"
+          },
+          "fileUrl": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "id": {
+            "type": "integer"
+          },
+          "imageMetadata": {
+            "description": "Read-only image dimensions calculated from the file. Cannot be modified via API.",
+            "properties": {
+              "aspectRatio": {
+                "type": "number"
+              },
+              "height": {
+                "type": "integer"
+              },
+              "width": {
+                "type": "integer"
+              }
+            },
+            "type": ["object", "null"]
+          },
+          "imageOption": {
+            "properties": {
+              "crop": {
+                "properties": {
+                  "bottom": {
+                    "type": "number"
+                  },
+                  "left": {
+                    "type": "number"
+                  },
+                  "right": {
+                    "type": "number"
+                  },
+                  "top": {
+                    "type": "number"
+                  }
+                },
+                "required": ["top", "left", "bottom", "right"],
+                "type": "object"
+              },
+              "focus": {
+                "properties": {
+                  "x": {
+                    "type": "number"
+                  },
+                  "y": {
+                    "type": "number"
+                  }
+                },
+                "required": ["x", "y"],
+                "type": "object"
+              }
+            },
+            "required": ["crop", "focus"],
+            "type": ["object", "null"]
+          },
+          "imageUrl": {
+            "type": ["string", "null"]
+          },
+          "meta": {
+            "$ref": "#/components/schemas/FileMetaData"
+          },
+          "name": {
+            "type": "string"
+          },
+          "relativeUrl": {
+            "type": "string"
+          },
+          "securityLevelId": {
+            "type": ["integer", "null"]
+          },
+          "showOnlyWhenEditable": {
+            "type": "boolean"
+          },
+          "size": {
+            "description": "The file size in byte",
+            "type": ["integer", "null"]
+          },
+          "type": {
+            "enum": ["file", "link"],
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "domainType",
+          "domainId",
+          "name",
+          "filename",
+          "fileUrl",
+          "imageUrl",
+          "relativeUrl",
+          "showOnlyWhenEditable",
+          "securityLevelId",
+          "description",
+          "annotation",
+          "annotationLink",
+          "aiGenerated",
+          "imageOption",
+          "imageMetadata",
+          "type",
+          "size",
+          "meta"
+        ],
+        "type": "object"
+      },
+      "DateStringNullable": {
+        "description": "A simple date in ISO format, e.g. '2022-10-19'",
+        "example": "2022-10-19",
+        "format": "date",
+        "type": ["string", "null"]
+      },
+      "DomainObject": {
+        "description": "Compact, domain-independent representation for displaying a link to a ChurchTools object. It is not the full resource returned by the object’s own API.",
+        "properties": {
+          "apiUrl": {
+            "description": "URL for the full API resource, if available. Some legacy domain implementations produce inconsistent URLs.",
+            "type": ["string", "null"]
+          },
+          "color": {
+            "description": "Optional display color.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Color"
+              },
+              {
+                "$ref": "#/components/schemas/CtColor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "domainIdentifier": {
+            "description": "Opaque identifier within the domain; do not assume that every domain uses a numeric ID.",
+            "type": "string"
+          },
+          "imageUrl": {
+            "description": "Optional image URL.",
+            "type": ["string", "null"]
+          },
+          "infos": {
+            "description": "Additional localized display lines; not structured resource fields.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "initials": {
+            "description": "Optional initials for an avatar fallback.",
+            "type": ["string", "null"]
+          },
+          "title": {
+            "description": "Display title of the referenced object.",
+            "type": "string"
+          }
+        },
+        "required": ["domainIdentifier", "title"],
+        "type": "object"
+      },
+      "DomainObjectPerson": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/DomainObject"
+          },
+          {
+            "properties": {
+              "apiUrl": {
+                "type": "string"
+              },
+              "domainAttributes": {
+                "properties": {
+                  "dateOfDeath": {
+                    "$ref": "#/components/schemas/DateStringNullable"
+                  },
+                  "firstName": {
+                    "example": "Vanessa",
+                    "type": "string"
+                  },
+                  "guid": {
+                    "description": "Globally Unique Identifier",
+                    "example": "D7AC4C66-8DA4-405A-B492-39B5870D2DB6",
+                    "type": ["string", "null"]
+                  },
+                  "isArchived": {
+                    "type": "boolean"
+                  },
+                  "lastName": {
+                    "example": "Fischer",
+                    "type": "string"
+                  }
+                },
+                "required": ["dateOfDeath", "firstName", "guid", "isArchived", "lastName"],
+                "type": "object"
+              },
+              "domainType": {
+                "enum": ["person"],
+                "type": "string"
+              },
+              "frontendUrl": {
+                "type": "string"
+              },
+              "icon": {
+                "description": "user for an ordinary person; user-shield for a censored person placeholder.",
+                "enum": ["user", "user-shield"],
+                "example": "user",
+                "type": "string"
+              },
+              "infos": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": ["frontendUrl", "domainAttributes", "domainType", "icon", "infos", "apiUrl"],
+            "type": "object"
+          }
+        ],
+        "description": "Person as Domain Object"
+      },
+      "FileMetaData": {
+        "properties": {
+          "createdDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          "createdPerson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetaDataPersonId"
+              },
+              {
+                "$ref": "#/components/schemas/DomainObjectPerson"
+              }
+            ]
+          },
+          "modifiedDate": {
+            "$ref": "#/components/schemas/ZuluDate"
+          },
+          "modifiedPerson": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetaDataPersonId"
+              },
+              {
+                "$ref": "#/components/schemas/DomainObjectPerson"
+              }
+            ]
+          }
+        },
+        "required": ["createdDate", "createdPerson", "modifiedDate", "modifiedPerson"],
+        "type": "object"
+      },
+      "MetaCount": {
+        "properties": {
+          "count": {
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "MetaDataPersonId": {
+        "properties": {
+          "id": {
+            "type": "integer"
+          }
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "ZuluDate": {
+        "description": "A timestamp in Zulu time format, e.g. '2022-10-19T12:00:00Z'",
+        "example": "2022-10-19T12:00:00Z",
+        "format": "date-time",
+        "type": "string"
+      }
+    },
+    "securitySchemes": {
+      "Login-Token-Header": {
+        "description": "Format: `Login <token>`",
+        "in": "header",
+        "name": "Authorization",
+        "type": "apiKey"
+      }
+    }
+  }
+}

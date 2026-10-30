@@ -10,9 +10,10 @@ A worship-lyrics presentation tool. Display song lyrics on one or more screens d
 
 ### Prerequisites
 
-- **Node.js** 20+
-- **Yarn** 4 (`corepack enable && corepack prepare yarn@4.13.0 --activate`)
-- **PHP** 8.2+ (for backend dev server)
+- **Node.js** 22+ (Vite 8 needs 20.19+ at the very least)
+- **Yarn** 4 — the repo pins its own release (`.yarn/releases`, `packageManager` in package.json); `corepack enable` is all it takes
+
+- **PHP** 8.5+ (with mysqli, curl, mbstring and openssl)
 - **MySQL** 9+ / MariaDB 11+ (for database)
 
 ### Install Dependencies
@@ -61,7 +62,9 @@ This produces a self-contained `dist/` folder ready for Apache/Nginx + PHP:
 1. Copy `dist/` contents to your web server
 2. Copy `config-sample.php` to `config.php` and configure database + OIDC
 3. Import `install.sql` into your MySQL database
-4. Ensure `data/` directory is writable by PHP
+4. Ensure the `data/` directory is writable by PHP, and that PHP may create `logs/` (or set
+   `LOG_DIR` in `config.php` to a writable folder outside the web root)
+
 
 #### For a Dev Subdomain
 

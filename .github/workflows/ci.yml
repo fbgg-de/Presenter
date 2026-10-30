@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      # No suite in `npm test` starts Electron, so skip its ~100 MB download.
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      # test:oidc, test:security and test:php-api run the PHP backend itself.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mysqli, curl, mbstring, openssl
+          coverage: none
+      - run: corepack enable
+      - run: yarn install --immutable
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+

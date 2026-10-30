@@ -13,9 +13,7 @@ import { selectCurrentSongOrder, useGetSongs } from '@/store/songsSlice';
 import { useGetShow } from '@/store/showSlice';
 import { versePages } from '@/utils/itemBlocks';
 import { sectionColor } from '@/utils/sectionColor';
-import { mediaItemLabel } from '@/media/mediaItem';
-import type { ShowItem } from '@/api/shows.api';
-import type { ISong } from '@/song';
+import { itemTitle } from '@/utils/agendaTarget';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useStageStatus } from '@/hooks/useStageEngine';
 import { resolveCue } from '@/stage/types';
@@ -91,14 +89,6 @@ const useCompanionExtras = () => {
   }, [operatorMode, uiLanguage, previewTarget, videoVisible, mediaVisible, stage, playbacks, clock, checks, masterRate]);
 };
 
-/** What an agenda entry is called on a Companion button. */
-const itemTitle = (item: ShowItem | undefined, songs: Record<number, ISong>): string => {
-  if (!item) return '';
-  if (item.type === 'song')
-    return (item.songNumber != null ? songs[item.songNumber]?.title : undefined) ?? item.label ?? `#${item.songNumber ?? ''}`;
-  if (item.type === 'bible_verse') return item.bibleRef || item.label || '';
-  return mediaItemLabel(item);
-};
 
 /** Shared mutable trigger set by useWsCompanionCommands before each dispatch. */
 export const wsActionTrigger = {
@@ -203,7 +193,7 @@ export const useBroadcastCompanionState = () => {
       itemTitle: itemTitle(showItem, s.songs),
       nextItemTitle: itemTitle(s.currentShow?.order?.[s.activeItemIndex + 1], s.songs),
       // For the Companion module's generated buttons: one per agenda entry, one per section.
-      items: (s.currentShow?.order ?? []).map((item) => ({ title: itemTitle(item, s.songs), type: item.type })),
+      items: (s.currentShow?.order ?? []).map((item) => ({ id: item.id, title: itemTitle(item, s.songs), type: item.type })),
       blocks: nonCopyrightBlocks.map((b) => ({ name: b.name, color: sectionColor(b.name) })),
       ...s.extras,
       // Presenter's clock at sending, so the module can correct timer anchors for its own.

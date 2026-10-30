@@ -75,6 +75,15 @@ export interface CtCcliDetail {
 
 // ── Endpoints ─────────────────────────────────────────────────────────────────
 
+/** One entry of a ChurchTools event agenda; `duration` in seconds. */
+export type CtAgendaItem = {
+  title: string;
+  type: string;
+  duration: number;
+  start: string | null;
+  songTitle: string | null;
+};
+
 const churchToolsApi = presenterApi.injectEndpoints({
   endpoints: (build) => ({
     /** Search the global CCLI SongSelect catalogue (via the legacy churchservice endpoint). */
@@ -99,6 +108,10 @@ const churchToolsApi = presenterApi.injectEndpoints({
     }),
 
     /** ChurchTools events for linking a show to an event — paginated forward/backward in time. */
+    /** The linked event's agenda with planned durations (api/ChurchToolsEvents.php). */
+    getChurchToolsEventAgenda: build.query<ApiSuccess<{ items: CtAgendaItem[] }>, number>({
+      query: (eventId) => `rest/ChurchToolsEvents/${eventId}/agenda`,
+    }),
     getChurchToolsEvents: build.query<
       ApiSuccess<{ events: CtEvent[] }>,
       { limit?: number; from?: string; to?: string; direction?: 'forward' | 'backward' } | void
@@ -136,6 +149,7 @@ const churchToolsApi = presenterApi.injectEndpoints({
 });
 
 export const {
+  useLazyGetChurchToolsEventAgendaQuery,
   useSearchChurchToolsSongsQuery,
   useLazySearchChurchToolsSongsQuery,
   useGetChurchToolsSongQuery,

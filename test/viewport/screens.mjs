@@ -110,8 +110,10 @@ export const screens = [
       await ui.loadShow();
       await ui.tab('Shows');
       await ui.waitFor({ text: 'Way Maker' });
-      // The row's trailing ⋮; the toolbar above has no MoreVert, so the first one is the item's.
-      await ui.click({ css: 'button:has([data-testid="MoreVertIcon"])' });
+      // The row's trailing ⋮. The group header above has one too ("Group settings", a drawer),
+      // so pick the item's by its label.
+      await ui.click({ css: 'button[aria-label="More actions"]:has([data-testid="MoreVertIcon"])' });
+
       await ui.waitFor({ css: MENU });
       await ui.settle();
     },

@@ -37,6 +37,7 @@ import {
   Palette as PaletteIcon,
   PictureAsPdf as PdfIcon,
   Slideshow as PresentationIcon,
+  Audiotrack as AudioIcon,
   Close as CloseIcon,
   Add as AddIcon,
   Search as SearchIcon,
@@ -58,7 +59,7 @@ import { ColorPicker } from '@/components/style/ColorPicker';
 import type { MediaSubType } from '@/api/shows.api';
 import { useGetSettings } from '@/store/settingsSlice';
 import { formatFileSize, formatTime, getMediaBaseUrl, isElectronApp } from '@/utils';
-import { useVideoThumbnails } from './useVideoThumbnails';
+import { useVideoThumbnails, type VideoCache } from './useVideoThumbnails';
 import { VideoPreview } from './VideoPreview';
 import { MEDIA_SERVER_BASE } from '@/utils/mediaUrl';
 import { useMediaFolderConfigured, type MediaFolderIssue } from '@/media/useMediaFolder';
@@ -67,22 +68,16 @@ import { nextcloudFileUrl, nextcloudMediaActive, nextcloudPath, useNextcloud } f
 import { listFolder, uploadFile } from '@/nextcloud/relay';
 import { stillWhileClosed } from '@/components/common/stillWhileClosed';
 import { documentKindOf } from '@/document/document';
+import { mediaKindOf, type MediaFileKind } from '@/media/mediaFiles';
 
-const VIDEO_EXTENSIONS = ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'];
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg', '.bmp', '.ico'];
 const PAGE_SIZE = 50;
 const VIEW_KEY = 'mediaBrowser.view';
 const SORT_KEY = 'mediaBrowser.sort';
 
-/** `document`: PDFs and PowerPoints, added as document entries (Add mode only). */
-type BrowseType = 'image' | 'video' | 'document';
+/** `document`: PDFs and PowerPoints, added as document entries. `audio` and `document`: Add mode or their own pick. */
+type BrowseType = MediaFileKind;
 
-const typeOfName = (name: string): BrowseType | null => {
-  const ext = name.substring(name.lastIndexOf('.')).toLowerCase();
-  if (VIDEO_EXTENSIONS.includes(ext)) return 'video';
-  if (IMAGE_EXTENSIONS.includes(ext)) return 'image';
-  return documentKindOf(name) ? 'document' : null;
-};
+const typeOfName = (name: string): BrowseType | null => mediaKindOf(name) ?? null;
 type ViewMode = 'grid' | 'list';
 type SortKey = 'name' | 'date' | 'size' | 'duration';
 interface Sort {
@@ -104,6 +99,11 @@ interface MediaFile {
   size?: number;
   /** ms since epoch */
   mtime?: number;
+  /** Pixel size of an image, read from its header by the media server. */
+  width?: number;
+  height?: number;
+  /** The media server's thumbnail cache for this file (absent for Nextcloud). */
+  cache?: VideoCache;
 }
 
 /** Remembered per device; storage can be missing or full, which just means the choice isn't kept. */
@@ -156,10 +156,12 @@ const MediaBrowserBody = ({
   const allowedTypes = useMemo(() => {
     // Finding a PDF or PowerPoint again (relink) shows those only.
     if (mode === 'pick' && pickType === 'document') return ['document' as const];
+    if (mode === 'pick' && pickType === 'audio') return ['audio' as const];
     const types: Array<BrowseType | 'color'> = [];
     if (mode === 'add' || pickType !== 'video') types.push('image');
     if (mode === 'add' || pickType !== 'image') types.push('video');
-    if (mode === 'add' && allowDocuments) types.push('document');
+    // Audio and documents are entries of their own, never a background.
+    if (mode === 'add' && allowDocuments) types.push('audio', 'document');
     if (mode === 'add') types.push('color');
     return types;
   }, [mode, pickType, allowDocuments]);
@@ -353,7 +355,7 @@ const MediaBrowserBody = ({
         const data: {
           dirs: string[];
           files: string[];
-          items?: { name: string; size: number; mtime: number }[];
+          items?: { name: string; size: number; mtime: number; width?: number; height?: number }[];
           totalFiles: number;
           nextOffset?: number;
         } = await response.json();
@@ -373,6 +375,13 @@ const MediaBrowserBody = ({
             url: `${baseUrl}/${relPath.split('/').map(encodeURIComponent).join('/')}`,
             size: meta.get(name)?.size,
             mtime: meta.get(name)?.mtime,
+            width: meta.get(name)?.width,
+            height: meta.get(name)?.height,
+            // A server without the cache answers 404 and the tile falls back to the file itself.
+            cache: {
+              thumb: `${baseUrl}/thumb?path=${encodeURIComponent(relPath)}&w=320`,
+              meta: `${baseUrl}/meta?path=${encodeURIComponent(relPath)}`,
+            },
           });
         }
 
@@ -460,9 +469,11 @@ const MediaBrowserBody = ({
     return files.filter((f) => f.type === currentType && (!query || f.name.toLowerCase().includes(query)));
   }, [files, currentType, searchQuery]);
 
+  const filesByUrl = useMemo(() => new Map(files.map((f) => [f.url, f])), [files]);
   const videoInfo = useVideoThumbnails(
     filteredFiles.filter((f) => f.type === 'video').map((f) => f.url),
     open && !isColor && currentType === 'video',
+    useCallback((url: string) => filesByUrl.get(url)?.cache, [filesByUrl]),
   );
 
   // The server already sorts before paging; sorting again here covers durations and servers that can't sort.
@@ -489,7 +500,7 @@ const MediaBrowserBody = ({
 
   const dateFormat = useMemo(() => new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' }), [locale]);
   const resolutionOf = (file: MediaFile) => {
-    const size = file.type === 'video' ? videoInfo[file.url] : imageSizes[file.url];
+    const size = file.type === 'video' ? videoInfo[file.url] : file.width ? file : imageSizes[file.url];
     return size?.width && size.height ? `${size.width}×${size.height}` : undefined;
   };
   const durationOf = (file: MediaFile) => {
@@ -686,7 +697,11 @@ const MediaBrowserBody = ({
   const showDirs = !searchQuery && dirs.length > 0;
 
   const renderThumb = (file: MediaFile, small?: boolean) =>
-    file.type === 'document' ? (
+    file.type === 'audio' ? (
+      <Box sx={{ height: '100%', display: 'grid', placeItems: 'center' }}>
+        <AudioIcon sx={{ fontSize: small ? 18 : 48, color: 'grey.500' }} />
+      </Box>
+    ) : file.type === 'document' ? (
       // An icon: a picture of the first page would load the PowerPoint renderer just to browse.
       <Box sx={{ height: '100%', display: 'grid', placeItems: 'center' }}>
         {documentKindOf(file.name) === 'pdf' ? (
@@ -700,11 +715,18 @@ const MediaBrowserBody = ({
         component="img"
         loading="lazy"
         decoding="async"
-        src={file.url}
+        // The small cached picture; the full file only when the server has no thumbnail for it.
+        src={file.cache?.thumb ?? file.url}
         alt={file.name}
-        onLoad={(e) => noteImageSize(file.url, e.currentTarget)}
+        onLoad={(e) => {
+          if (e.currentTarget.dataset.full === '1' || !file.cache) noteImageSize(file.url, e.currentTarget);
+        }}
         onError={(e) => {
-          e.currentTarget.style.display = 'none';
+          const img = e.currentTarget;
+          if (file.cache && img.dataset.full !== '1') {
+            img.dataset.full = '1';
+            img.src = file.url;
+          } else img.style.display = 'none';
         }}
         sx={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}
       />
@@ -976,6 +998,8 @@ const MediaBrowserBody = ({
           <BrokenImageIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
         ) : currentType === 'document' ? (
           <PresentationIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
+        ) : currentType === 'audio' ? (
+          <AudioIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
         ) : (
           <VideocamIcon sx={{ fontSize: 48, color: 'text.disabled' }} />
         )}
@@ -1024,10 +1048,17 @@ const MediaBrowserBody = ({
         .join(' · ')
     : '';
 
-  const typeLabels = { image: LL.MEDIA.IMAGES(), video: LL.MEDIA.VIDEOS(), document: LL.MEDIA.PRESENTATIONS(), color: LL.MEDIA.COLOR() };
+  const typeLabels = {
+    image: LL.MEDIA.IMAGES(),
+    video: LL.MEDIA.VIDEOS(),
+    audio: LL.MEDIA.AUDIO(),
+    document: LL.MEDIA.PRESENTATIONS(),
+    color: LL.MEDIA.COLOR(),
+  };
   const typeIcons = {
     image: <ImageIcon fontSize="small" />,
     video: <VideocamIcon fontSize="small" />,
+    audio: <AudioIcon fontSize="small" />,
     document: <PresentationIcon fontSize="small" />,
     color: <PaletteIcon fontSize="small" />,
   };
@@ -1095,7 +1126,9 @@ const MediaBrowserBody = ({
                   ? LL.MEDIA.SEARCH_IMAGES()
                   : currentType === 'document'
                     ? LL.MEDIA.SEARCH_PRESENTATIONS()
-                    : LL.MEDIA.SEARCH_VIDEOS()
+                    : currentType === 'audio'
+                      ? LL.MEDIA.SEARCH_AUDIO()
+                      : LL.MEDIA.SEARCH_VIDEOS()
               }
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -1169,7 +1202,7 @@ const MediaBrowserBody = ({
                       ref={fileInputRef}
                       type="file"
                       multiple
-                      accept="image/*,video/*,.pdf,.pptx,.ppsx"
+                      accept="image/*,video/*,audio/*,.pdf,.pptx,.ppsx"
                       hidden
                       onChange={(e) => {
                         void uploadToNextcloud(Array.from(e.target.files ?? []));
@@ -1192,7 +1225,7 @@ const MediaBrowserBody = ({
               <TextField
                 size="small"
                 sx={{ flex: '1 1 300px' }}
-                placeholder={`https://example.com/${currentType === 'image' ? 'image.jpg' : currentType === 'document' ? 'slides.pdf' : 'video.mp4'}`}
+                placeholder={`https://example.com/${currentType === 'image' ? 'image.jpg' : currentType === 'document' ? 'slides.pdf' : currentType === 'audio' ? 'song.mp3' : 'video.mp4'}`}
                 value={urlInput}
                 onChange={(e) => setUrlInput(e.target.value)}
                 onKeyDown={(e) => {

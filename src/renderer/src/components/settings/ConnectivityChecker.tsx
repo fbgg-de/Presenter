@@ -139,7 +139,7 @@ export const ConnectivityChecker = ({ children }: { children?: ReactNode }) => {
   }, [urlInput, updateSetting, refetch]);
 
   // ── Snackbar close handler — ignore clickaway ──
-  const handleSnackClose = (_event?: SyntheticEvent | Event, reason?: string) => {
+  const handleSnackClose = (_event?: SyntheticEvent | Event | null, reason?: string) => {
     if (reason === 'clickaway') return;
     setSnackOpen(false);
   };

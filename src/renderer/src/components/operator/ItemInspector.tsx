@@ -12,17 +12,28 @@
  * Prepare describes the entry open in the operator view; Live describes what is on screen, and
  * marks itself read-only — switching backgrounds stays possible, because that is what they are for.
  */
+import { useState } from 'react';
 import { Box, ButtonBase, IconButton, MenuItem, Select, Stack, Tooltip, Typography } from '@mui/material';
-import { Add as AddIcon, Edit as EditIcon, Lock as LockIcon, TuneOutlined as GroupSettingsIcon } from '@mui/icons-material';
+import {
+  Add as AddIcon,
+  Edit as EditIcon,
+  Lock as LockIcon,
+  Sync as SyncIcon,
+  TuneOutlined as GroupSettingsIcon,
+} from '@mui/icons-material';
 import { useAppDispatch } from '@/store';
-import { setShowGroups } from '@/store/showSlice';
+import { setShowGroups, updateShowItem, updateShowOrder } from '@/store/showSlice';
+import { useGetSongs } from '@/store/songsSlice';
+import { useLazyGetChurchToolsEventAgendaQuery } from '@/api/churchtools.api';
+import { matchAgendaDurations } from '@/utils/agendaTarget';
+import { DurationField, formatMmss } from '@/components/stage/StageCueEditor';
 import { useGetStylesQuery } from '@/api/styles.api';
 import { emitAppEvent } from '@/utils/appEvents';
 import { parseOrderKey } from '@/utils/orderKeyUtils';
 import { useI18nContext } from '@/i18n/i18n-react';
 import { useGetSettings } from '@/store/settingsSlice';
 import { useGetShow } from '@/store/showSlice';
-import { useOpenItem } from '@/store/presentationSlice';
+import { useGetPresentationSettings, useOpenItem } from '@/store/presentationSlice';
 import { useGetScreenGroupsQuery } from '@/api/screenGroups.api';
 import { useGetStageLayersQuery } from '@/api/stage.api';
 import { useActiveLook } from '@/hooks/useActiveLook';
@@ -156,6 +167,25 @@ export const ItemInspector = ({ width = 290 }: { width?: number | string }) => {
 
   const theme = themeSource(input);
   const dispatch = useAppDispatch();
+  const { activeItemIndex } = useGetPresentationSettings('activeItemIndex');
+  const entryIndex = itemIndex ?? activeItemIndex;
+  const { songs } = useGetSongs();
+  const [fetchAgenda, { isFetching: agendaLoading }] = useLazyGetChurchToolsEventAgendaQuery();
+  const [durationNote, setDurationNote] = useState<string | null>(null);
+  /** Planned durations for the whole show from the linked ChurchTools event's agenda. */
+  const takeDurations = async () => {
+    if (!currentShow?.eventId) return;
+    const agenda = await fetchAgenda(currentShow.eventId)
+      .unwrap()
+      .catch(() => null);
+    if (!agenda) {
+      setDurationNote(O.DURATIONS_FAILED());
+      return;
+    }
+    const { order, matched } = matchAgendaDurations(currentShow.order, songs, agenda.items ?? []);
+    dispatch(updateShowOrder(order));
+    setDurationNote(O.DURATIONS_TAKEN({ count: matched }));
+  };
   const { data: styles = [] } = useGetStylesQuery();
   const parsed = item?.type === 'song' ? parseOrderKey(item.order) : undefined;
   const songKey = item?.type === 'song' ? item.key || parsed?.key : undefined;
@@ -222,6 +252,40 @@ export const ItemInspector = ({ width = 290 }: { width?: number | string }) => {
                   </Tooltip>
                 )}
               </InspectorRow>
+              {/* Drives the "agenda entry" countdown on stage and the overrun hint in the top bar. */}
+              <InspectorRow labelWidth={LABEL_WIDTH} label={O.PLANNED_DURATION()}>
+                {live ? (
+                  <Value>{item.plannedDuration ? formatMmss(item.plannedDuration) : '—'}</Value>
+                ) : (
+                  <DurationField
+                    seconds={item.plannedDuration}
+                    allowEmpty
+                    placeholder="—"
+                    onChange={(sec) =>
+                      dispatch(updateShowItem({ index: entryIndex, item: { plannedDuration: sec && sec > 0 ? sec : undefined } }))
+                    }
+                  />
+                )}
+                {!live && currentShow?.eventId != null && (
+                  <Tooltip title={O.DURATIONS_FROM_CHURCHTOOLS()}>
+                    <span style={{ marginLeft: 'auto' }}>
+                      <IconButton
+                        size="small"
+                        disabled={agendaLoading}
+                        onClick={() => void takeDurations()}
+                        aria-label={O.DURATIONS_FROM_CHURCHTOOLS()}
+                      >
+                        <SyncIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </span>
+                  </Tooltip>
+                )}
+              </InspectorRow>
+              {durationNote && (
+                <Typography variant="caption" sx={{ display: 'block', px: 1.5, pb: 0.5, color: 'text.secondary' }}>
+                  {durationNote}
+                </Typography>
+              )}
               {item.type === 'song' && (
                 <InspectorRow labelWidth={LABEL_WIDTH} label={O.ARRANGEMENT()}>
                   <Value>{parsed?.order || 'Default'}</Value>

@@ -3,6 +3,15 @@
 require_once(__DIR__ . '/Statement.php');
 require_once(__DIR__ . '/Transaction.php');
 
+/**
+ * A database fault: the server's problem, not the request's. RestController answers it with a
+ * plain 500 and keeps the message (which can contain SQL) in the log, out of the browser.
+ * Extends Error so existing `catch (Error)` blocks still see it.
+ */
+class DbError extends Error
+{
+}
+
 class DB
 {
     private static ?mysqli $db = null;
@@ -26,7 +35,7 @@ class DB
                 // strict mode or truncated at the offending byte.
                 self::$db->set_charset('utf8mb4');
             } catch (Exception $e) {
-                throw new Error($e->getMessage());
+                throw new DbError($e->getMessage());
             }
         }
     }
@@ -38,31 +47,14 @@ class DB
         try {
             $stmt = self::$db->prepare($query);
         } catch (mysqli_sql_exception $e) {
-            throw new Error('could not prepare mysql statement: ' . $e->getMessage());
+            throw new DbError('could not prepare mysql statement: ' . $e->getMessage());
         }
 
         if ($stmt === false) {
-            throw new Error('could not prepare mysql statement (' . $query . ')');
+            throw new DbError('could not prepare mysql statement (' . $query . ')');
         }
 
         return new Statement($stmt);
-    }
-
-    public static function query(string $query): mysqli_result
-    {
-        self::initMysqli();
-
-        try {
-            $stmt = self::$db->query($query);
-        } catch (mysqli_sql_exception $e) {
-            throw new Error('could not query mysql statement: ' . $e->getMessage());
-        }
-
-        if ($stmt === false) {
-            throw new Error('could not query mysql statement (' . $query . ')');
-        }
-
-        return new $stmt();
     }
 
     public static function transaction(): Transaction

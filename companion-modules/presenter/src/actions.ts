@@ -1,5 +1,6 @@
 import type { DropdownChoice } from '@companion-module/base'
 import type ModuleInstance from './main.js'
+import { entryTarget } from './entry.js'
 
 type NoOptions = { options: Record<string, never> }
 
@@ -37,8 +38,13 @@ export function UpdateActions(self: ModuleInstance): void {
 	const state = self.client.getState()
 	const layerChoices: DropdownChoice[] = state.stageLayers.map((layer) => ({ id: String(layer.id), label: layer.name }))
 
-	// The point of the module over a generic websocket: pick an entry by name, not by index.
-	const itemChoices: DropdownChoice[] = state.items.map((item, i) => ({ id: String(i + 1), label: `${i + 1}. ${item.title}` }))
+	// The point of the module over a generic websocket: pick an entry by name, not by index. A picked
+	// entry is stored with its id and title, so the button follows it when the agenda is reordered and
+	// still finds it by title in next week's show, where the entry has a new id (see entryTarget).
+	const itemChoices: DropdownChoice[] = state.items.map((item, i) => ({
+		id: JSON.stringify({ id: item.id, title: item.title, index: i }),
+		label: `${i + 1}. ${item.title}`,
+	}))
 
 	const run = async (action: string, payload?: Record<string, unknown>): Promise<void> => {
 		try {
@@ -67,10 +73,10 @@ export function UpdateActions(self: ModuleInstance): void {
 					default: itemChoices[0]?.id ?? '1',
 					choices: itemChoices,
 					allowCustom: true,
-					tooltip: 'A custom value is the entry number, 1 = first.',
+					tooltip: 'A custom value is the entry number (1 = first) or its title.',
 				},
 			],
-			callback: async ({ options }) => run('set_item', { index: Number(options.index) - 1 }),
+			callback: async ({ options }) => run('set_item', entryTarget(String(options.index))),
 		},
 
 		goSlide: {
@@ -136,7 +142,8 @@ export function UpdateActions(self: ModuleInstance): void {
 
 		masterSpeedSet: {
 			name: 'Master speed: set',
-			description: 'Every video following the master speed plays at this rate. Works well with a fader driving a variable.',
+			description:
+				'Every video following the master speed plays at this rate. Works well with a fader driving a variable.',
 			options: [{ id: 'rate', type: 'number', label: 'Speed (1 = normal)', default: 1, min: 0.25, max: 4, step: 0.05 }],
 			callback: async ({ options }) => run('master_speed', { value: Number(options.rate) }),
 		},

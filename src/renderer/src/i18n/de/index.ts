@@ -633,6 +633,7 @@ const de: Translation = {
     SONG_UPDATED: 'Dieser Song wurde auf dem Server geändert — klicken, um die Änderungen zu laden',
     SONG_UPDATE_APPLIED: 'Song aktualisiert',
     RENAME: 'Umbenennen',
+    DUPLICATE: 'Duplizieren',
     NAME_HINT: 'Leer lassen, um Dateiname oder URL anzuzeigen',
     EDIT_TEXT: 'Text bearbeiten',
     VERSE_TEXT: 'Verstext',
@@ -666,6 +667,7 @@ const de: Translation = {
     SEARCH_IMAGES: 'Bilder suchen...',
     SEARCH_VIDEOS: 'Videos suchen...',
     SEARCH_PRESENTATIONS: 'Präsentationen suchen...',
+    SEARCH_AUDIO: 'Audio suchen...',
     FOLDER_UNSET_TITLE: 'Kein Medienordner eingerichtet',
     FOLDER_UNSET:
       'Bilder, Videos, Audio, PDFs und PowerPoints werden aus einem Medienordner gelesen. Wähle einen aus, dann arbeiten der Medienbrowser und alle Medieneinträge damit.',
@@ -702,6 +704,7 @@ const de: Translation = {
     IMAGES: 'Bilder',
     VIDEOS: 'Videos',
     PRESENTATIONS: 'PDF & PowerPoint',
+    AUDIO: 'Audio',
     VIEW_GRID: 'Rasteransicht',
     VIEW_LIST: 'Listenansicht',
     SORT_BY: 'Sortieren nach',
@@ -753,6 +756,8 @@ const de: Translation = {
     GENERATED_WARNING: 'Kopiere dieses Token jetzt — es wird nicht erneut angezeigt.',
     TOKEN: 'Token',
     VIEWER_URL: 'Viewer-URL',
+    OVERLAY_URL: 'Bauchbinde für den Stream (OBS-Browserquelle)',
+    OVERLAY_URL_HINT: 'Transparent, zwei Zeilen auf einmal, folgt der Präsentation. In OBS als Browserquelle hinzufügen; mit lines=2 lässt sich die Zeilenzahl ändern.',
     COPY_TOKEN: 'Token kopieren',
     COPY_URL: 'URL kopieren',
     COPIED: 'Kopiert',
@@ -1645,6 +1650,7 @@ const de: Translation = {
   },
 
   OPERATOR: {
+    AGENDA_TIMER_HINT: 'Restzeit dieses Punkts (geplant {planned}). Rot, sobald er überzogen wird.',
     NO_STAGE_LAYERS: 'Bühnen-Einblendungen einrichten — Countdowns, Nachrichten, Uhr',
     READINESS: {
       TITLE: 'Bereit für den Gottesdienst?',
@@ -1736,6 +1742,10 @@ const de: Translation = {
     OPEN_WINDOW: 'Fenster öffnen',
     ADD_WINDOW: 'Fenster hinzufügen',
     SECTION_ENTRY: 'Eintrag',
+    PLANNED_DURATION: 'Geplant',
+    DURATIONS_FROM_CHURCHTOOLS: 'Geplante Dauer aller Punkte aus dem ChurchTools-Ablauf übernehmen',
+    DURATIONS_TAKEN: '{count} Punkte haben ihre Dauer aus ChurchTools übernommen.',
+    DURATIONS_FAILED: 'Der ChurchTools-Ablauf konnte nicht gelesen werden.',
     ENTRY_NAME: 'Name',
     AGENDA_GROUP: 'Gruppe',
     ARRANGEMENT: 'Ablauf',
@@ -1829,6 +1839,12 @@ const de: Translation = {
   },
 
   STAGE: {
+    MESSAGE_ON_SCREEN: 'Auf dem Bildschirm',
+    MESSAGE_SHOW: 'Zeigen',
+    MESSAGE_EDIT: 'Vor dem Zeigen ändern',
+    MESSAGE_REQUESTS: 'Über die /message-Seite angefragte Meldungen — nichts erscheint, bevor du es zeigst',
+    MESSAGE_REQUEST_CHIP: 'Anfragen',
+    MESSAGE_GONE: 'Diese Meldung gibt es nicht mehr.',
     SHOWS_AS: 'Anzeige',
     COUNTS: 'Zählt',
     LENGTH: 'Dauer',
@@ -1954,6 +1970,8 @@ const de: Translation = {
     SOURCE: 'Zählt herunter',
     SOURCE_DURATION: 'Über eine Dauer',
     SOURCE_TIME_OF_DAY: 'Bis zu einer Uhrzeit',
+    SOURCE_AGENDA_ITEM: 'Ablaufpunkt',
+    AGENDA_ITEM_HINT: 'Zählt die geplante Dauer des laufenden Ablaufpunkts herunter (im Inspektor eingetragen oder aus ChurchTools übernommen). Punkte ohne Dauer zeigen nichts.',
     DURATION: 'Dauer',
     AT_TIME: 'Zielzeit',
     AT_TIME_HINT: 'Eine Uhrzeit, die heute schon vorbei ist, zählt bis morgen herunter.',
@@ -2644,6 +2662,9 @@ const de: Translation = {
     HELPER_TITLE: 'Bitfocus Companion',
     HELPER_DESC: 'Stream-Deck-Tasten über das Presenter-Modul für Bitfocus Companion.',
     ENABLED: 'Befehle von Companion annehmen',
+    ALLOW_NETWORK: 'Andere Computer zulassen',
+    ALLOW_NETWORK_HINT: 'Nur nötig, wenn Companion auf einem anderen Computer läuft. Dann kann jeder im selben Netzwerk die Präsentation steuern.',
+
     CONNECTIONS: '{count} aktive Verbindung{{en}}',
     SETUP_1:
       'Presenter-Modul installieren: companion-module-efsh-presenter.zip (liegt jedem Presenter-Release bei) in Companions Ordner für Entwicklermodule entpacken und Companion neu starten.',

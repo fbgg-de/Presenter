@@ -116,7 +116,7 @@ export const RelinkMediaDialog = ({
       <MediaBrowser
         open={!!item && browsing}
         mode="pick"
-        pickType={isDocument ? 'document' : undefined}
+        pickType={isDocument ? 'document' : item?.mediaSubType === 'audio' ? 'audio' : undefined}
         initialType={item?.mediaSubType === 'video' ? 'video' : 'image'}
         selectLabel={A.RELINK_USE()}
         onClose={() => setBrowsing(false)}

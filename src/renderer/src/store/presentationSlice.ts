@@ -2,11 +2,14 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { shallowEqual } from 'react-redux';
 import { useAppSelector, useSliceFields } from './hooks';
 import type { WsPeerInfo } from '@/hooks/useWsOperator';
+import { restoreLivePosition } from './livePosition';
 
 export interface PresentationState {
   blockChangeOrigin: 'operator' | 'media';
   blockChangeRevision: number;
   activeItemIndex: number;
+  /** When the live entry became live (epoch ms) — the start of its planned-duration countdown. */
+  activeItemSince: number;
   activeBlockIndex: number;
   activeLineIndex: number;
   isBlack: boolean;
@@ -49,6 +52,7 @@ const initialState: PresentationState = {
   blockChangeOrigin: 'operator',
   blockChangeRevision: 0,
   activeItemIndex: 0,
+  activeItemSince: Date.now(),
   activeBlockIndex: 0,
   activeLineIndex: 0,
   isBlack: false,
@@ -64,6 +68,8 @@ const initialState: PresentationState = {
   wsOperatorConnected: false,
   previewTarget: null,
   openItemIndex: null,
+  // Where the screens were before a reload or restart — the first broadcast must not jump to item 0.
+  ...restoreLivePosition(),
 };
 
 export const presentationSlice = createSlice({
@@ -82,6 +88,9 @@ export const presentationSlice = createSlice({
       state.activeLineIndex = 0;
     },
     setActiveItemIndex: (state, action: PayloadAction<number>) => {
+      // A timestamp in a reducer: the moment of the switch is what the countdown measures from,
+      // and taking it anywhere else would let two components disagree about it.
+      if (state.activeItemIndex !== action.payload) state.activeItemSince = Date.now();
       state.activeItemIndex = action.payload;
       state.openItemIndex = null;
       state.blockChangeOrigin = 'operator';
@@ -222,6 +231,7 @@ export const presentationSlice = createSlice({
       state.wsOperatorConnected = action.payload;
     },
     setActiveItemAndBlock: (state, action: PayloadAction<{ itemIndex: number; blockIndex: number }>) => {
+      if (state.activeItemIndex !== action.payload.itemIndex) state.activeItemSince = Date.now();
       state.activeItemIndex = action.payload.itemIndex;
       state.openItemIndex = null;
       state.blockChangeOrigin = 'operator';
